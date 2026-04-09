@@ -1,21 +1,60 @@
-vscode*
-VS*/*
-VSCode*
-VSCodium*
-.DS_Store
-*.env
+# ============================================================
+# Director-Code .gitignore
+# ============================================================
+
+# --- 构建产物 (顶层) ---
+VSCode-*/
+VSCodium*/
 assets/
+sourcemaps/
+
+# --- macOS ---
+.DS_Store
+
+# --- 环境/密钥 ---
+*.env
+
+# --- vscode 子目录: 排除内部 git、依赖、编译产物 ---
+vscode/.git/
+vscode/.git.bak/
+vscode/node_modules/
+vscode/remote/node_modules/
+vscode/extensions/*/node_modules/
+vscode/.build/
+vscode/out/
+vscode/out-build/
+vscode/out-vscode/
+vscode/out-vscode-min/
+vscode/out-vscode-reh/
+vscode/out-vscode-reh-min/
+vscode/out-vscode-reh-web/
+vscode/out-vscode-reh-web-min/
+vscode/out-editor/
+vscode/out-monaco-editor-core/
+vscode/.vscode-test/
+vscode/.profile-oss/
+
+# --- sub-projects (独立参考项目，不入库) ---
+sub-projects/
+
+# --- Linux 构建 ---
 build/linux/appimage/out
 build/linux/appimage/pkg2appimage.AppDir
 build/linux/appimage/pkg2appimage-*.AppImage
 build/linux/appimage/pkg2appimage.AppImage
 build/linux/appimage/squashfs-root
 build/linux/appimage/VSCodium
+
+# --- Windows MSI 构建 ---
 build/windows/msi/releasedir
 build/windows/msi/Files*.wxs
 build/windows/msi/Files*.wixobj
-sourcemaps/
+build/windows/msi/bin/
+
+# --- Snap ---
 stores/snapcraft/insider/*.snap
 stores/snapcraft/stable/*.snap
+
+# --- font-size ---
 font-size/node_modules/
 font-size/generate-css.js
