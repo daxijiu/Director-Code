@@ -193,4 +193,66 @@ suite("AgentEngine - ProgressBridge", () => {
 			assert.strictEqual(progress.length, 0);
 		});
 	});
+
+	// ---------------------------------------------------------------
+	// Streaming Delta Events
+	// ---------------------------------------------------------------
+	suite("streaming delta events", () => {
+
+		test("text_delta converts to markdownContent", () => {
+			const event: AgentEvent = {
+				type: 'text_delta',
+				text: 'Hello ',
+			} as any;
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 1);
+			assert.strictEqual(progress[0].kind, 'markdownContent');
+			assert.strictEqual((progress[0] as any).content.value, 'Hello ');
+		});
+
+		test("empty text_delta produces no progress", () => {
+			const event: AgentEvent = {
+				type: 'text_delta',
+				text: '',
+			} as any;
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 0);
+		});
+
+		test("thinking_delta converts to thinking part", () => {
+			const event: AgentEvent = {
+				type: 'thinking_delta',
+				thinking: 'Let me analyze...',
+			} as any;
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 1);
+			assert.strictEqual(progress[0].kind, 'thinking');
+			assert.strictEqual((progress[0] as any).value, 'Let me analyze...');
+		});
+
+		test("empty thinking_delta produces no progress", () => {
+			const event: AgentEvent = {
+				type: 'thinking_delta',
+				thinking: '',
+			} as any;
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 0);
+		});
+
+		test("multiple text_delta events simulate streaming", () => {
+			const deltas = ['Hello', ', ', 'world', '!'];
+			const allProgress = deltas.map(text =>
+				agentEventToProgress({ type: 'text_delta', text } as any)
+			).flat();
+
+			assert.strictEqual(allProgress.length, 4);
+			for (const p of allProgress) {
+				assert.strictEqual(p.kind, 'markdownContent');
+			}
+		});
+	});
 });

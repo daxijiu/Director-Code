@@ -11,7 +11,7 @@
  */
 
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import type { AgentEvent, AgentToolUseEvent, AgentToolResultEvent, AgentSystemEvent } from '../../common/agentEngine/agentEngineTypes.js';
+import type { AgentEvent, AgentToolUseEvent, AgentToolResultEvent, AgentSystemEvent, AgentTextDeltaEvent, AgentThinkingDeltaEvent } from '../../common/agentEngine/agentEngineTypes.js';
 import type { IChatProgress, IChatMarkdownContent, IChatProgressMessage, IChatThinkingPart } from '../../common/chatService/chatService.js';
 
 /**
@@ -25,6 +25,12 @@ export function agentEventToProgress(event: AgentEvent): IChatProgress[] {
 	switch (event.type) {
 		case 'assistant':
 			return convertAssistantEvent(event);
+
+		case 'text_delta':
+			return convertTextDeltaEvent(event);
+
+		case 'thinking_delta':
+			return convertThinkingDeltaEvent(event);
 
 		case 'tool_use':
 			return convertToolUseEvent(event);
@@ -46,7 +52,33 @@ export function agentEventToProgress(event: AgentEvent): IChatProgress[] {
 }
 
 // ============================================================================
-// Assistant Event → Markdown Content + Thinking
+// Text Delta → Incremental Markdown Content (streaming)
+// ============================================================================
+
+function convertTextDeltaEvent(event: AgentTextDeltaEvent): IChatProgress[] {
+	if (!event.text) { return []; }
+	const markdownContent: IChatMarkdownContent = {
+		kind: 'markdownContent',
+		content: new MarkdownString(event.text),
+	};
+	return [markdownContent];
+}
+
+// ============================================================================
+// Thinking Delta → Incremental Thinking Part (streaming)
+// ============================================================================
+
+function convertThinkingDeltaEvent(event: AgentThinkingDeltaEvent): IChatProgress[] {
+	if (!event.thinking) { return []; }
+	const thinkingPart: IChatThinkingPart = {
+		kind: 'thinking',
+		value: event.thinking,
+	};
+	return [thinkingPart];
+}
+
+// ============================================================================
+// Assistant Event → Markdown Content + Thinking (non-streaming fallback)
 // ============================================================================
 
 function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChatProgress[] {

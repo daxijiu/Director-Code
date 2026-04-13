@@ -634,4 +634,89 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			assert.ok((allProgress[1] as any).content.value.includes('compact'));
 		});
 	});
+
+	// ====================================================================
+	// Streaming Delta Events
+	// ====================================================================
+
+	suite('Streaming Delta Events', () => {
+		test('text_delta events produce incremental markdownContent', () => {
+			const deltas: AgentEvent[] = [
+				{ type: 'text_delta', text: 'Hello' } as any,
+				{ type: 'text_delta', text: ' world' } as any,
+				{ type: 'text_delta', text: '!' } as any,
+			];
+
+			const allProgress = deltas.flatMap(e => agentEventToProgress(e));
+			assert.strictEqual(allProgress.length, 3);
+			assert.strictEqual((allProgress[0] as any).content.value, 'Hello');
+			assert.strictEqual((allProgress[1] as any).content.value, ' world');
+			assert.strictEqual((allProgress[2] as any).content.value, '!');
+		});
+
+		test('thinking_delta events produce thinking parts', () => {
+			const deltas: AgentEvent[] = [
+				{ type: 'thinking_delta', thinking: 'Let me think...' } as any,
+				{ type: 'thinking_delta', thinking: ' about this.' } as any,
+			];
+
+			const allProgress = deltas.flatMap(e => agentEventToProgress(e));
+			assert.strictEqual(allProgress.length, 2);
+			assert.strictEqual(allProgress[0].kind, 'thinking');
+			assert.strictEqual(allProgress[1].kind, 'thinking');
+		});
+
+		test('simulated streaming turn: init → text_delta × N → tool_use → tool_result → text_delta × N → result', () => {
+			const events: AgentEvent[] = [
+				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['read_file'] },
+				// Streaming text deltas (instead of a single assistant event)
+				{ type: 'text_delta', text: 'Let me ' } as any,
+				{ type: 'text_delta', text: 'read that ' } as any,
+				{ type: 'text_delta', text: 'file.' } as any,
+				// Tool use
+				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'app.ts' } },
+				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'const x = 1;' },
+				// More streaming text
+				{ type: 'text_delta', text: 'The file ' } as any,
+				{ type: 'text_delta', text: 'contains x.' } as any,
+				// Final result
+				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0.01, numTurns: 2 },
+			];
+
+			const allProgress = events.flatMap(e => agentEventToProgress(e));
+
+			// init(progressMessage) + 3 text_deltas(markdownContent) + tool_use(progressMessage) + tool_result(progressMessage) + 2 text_deltas(markdownContent) = 8
+			assert.strictEqual(allProgress.length, 8);
+
+			// Verify kinds in order
+			assert.strictEqual(allProgress[0].kind, 'progressMessage'); // init
+			assert.strictEqual(allProgress[1].kind, 'markdownContent'); // text delta
+			assert.strictEqual(allProgress[2].kind, 'markdownContent'); // text delta
+			assert.strictEqual(allProgress[3].kind, 'markdownContent'); // text delta
+			assert.strictEqual(allProgress[4].kind, 'progressMessage'); // tool use
+			assert.strictEqual(allProgress[5].kind, 'progressMessage'); // tool result
+			assert.strictEqual(allProgress[6].kind, 'markdownContent'); // text delta
+			assert.strictEqual(allProgress[7].kind, 'markdownContent'); // text delta
+		});
+
+		test('mixed thinking_delta and text_delta simulate Claude response', () => {
+			const events: AgentEvent[] = [
+				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: [] },
+				{ type: 'thinking_delta', thinking: 'The user wants help with...' } as any,
+				{ type: 'thinking_delta', thinking: ' a coding task.' } as any,
+				{ type: 'text_delta', text: 'Here is ' } as any,
+				{ type: 'text_delta', text: 'my answer.' } as any,
+				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0, numTurns: 1 },
+			];
+
+			const allProgress = events.flatMap(e => agentEventToProgress(e));
+			// init + 2 thinking + 2 text = 5
+			assert.strictEqual(allProgress.length, 5);
+			assert.strictEqual(allProgress[0].kind, 'progressMessage'); // init
+			assert.strictEqual(allProgress[1].kind, 'thinking');
+			assert.strictEqual(allProgress[2].kind, 'thinking');
+			assert.strictEqual(allProgress[3].kind, 'markdownContent');
+			assert.strictEqual(allProgress[4].kind, 'markdownContent');
+		});
+	});
 });

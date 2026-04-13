@@ -124,6 +124,8 @@ export interface AgentEngineConfig {
 
 export type AgentEvent =
 	| AgentAssistantEvent
+	| AgentTextDeltaEvent
+	| AgentThinkingDeltaEvent
 	| AgentToolUseEvent
 	| AgentToolResultEvent
 	| AgentSystemEvent
@@ -135,6 +137,18 @@ export interface AgentAssistantEvent {
 		readonly role: 'assistant';
 		readonly content: ContentBlock[];
 	};
+}
+
+/** Streaming text chunk — emitted as LLM generates text tokens. */
+export interface AgentTextDeltaEvent {
+	readonly type: 'text_delta';
+	readonly text: string;
+}
+
+/** Streaming thinking chunk — emitted as LLM generates thinking tokens. */
+export interface AgentThinkingDeltaEvent {
+	readonly type: 'thinking_delta';
+	readonly thinking: string;
 }
 
 export interface AgentToolUseEvent {

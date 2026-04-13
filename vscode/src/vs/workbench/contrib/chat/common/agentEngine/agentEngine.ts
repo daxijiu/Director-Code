@@ -36,7 +36,9 @@ import type {
 	LLMProvider,
 	NormalizedMessageParam,
 	NormalizedTool,
+	NormalizedContentBlock,
 	TokenUsage,
+	CreateMessageParams,
 } from './providers/providerTypes.js';
 import { estimateCost } from './tokens.js';
 import {
@@ -213,56 +215,165 @@ export class AgentEngine {
 			this.turnCount++;
 			turnsRemaining--;
 
-			// Make API call with retry
+			// Make API call — streaming first, blocking fallback on retry
 			let response: CreateMessageResponse;
 			const apiStart = performance.now();
-			try {
-				response = await withRetry(
-					async () => {
-						return this.provider.createMessage({
-							model: this.config.model,
-							maxTokens: this.config.maxTokens,
-							system: systemPrompt,
-							messages: apiMessages,
-							tools: tools.length > 0 ? tools : undefined,
-							thinking:
-								this.config.thinking?.type === 'enabled' && this.config.thinking.budget_tokens
-									? { type: 'enabled', budget_tokens: this.config.thinking.budget_tokens }
-									: undefined,
-						});
-					},
-					undefined,
-					this.config.abortSignal,
-				);
-			} catch (err: any) {
-				// Handle prompt-too-long by compacting
-				if (isPromptTooLongError(err) && !this.compactState.compacted) {
-					try {
-						const result = await compactConversation(
-							this.provider,
-							this.config.model,
-							this.messages as any[],
-							this.compactState,
-						);
-						this.messages = result.compactedMessages as MutableMessageParam[];
-						this.compactState = result.state;
-						turnsRemaining++;
-						this.turnCount--;
-						continue;
-					} catch {
-						// Can't compact, give up
-					}
-				}
+			const requestParams: CreateMessageParams = {
+				model: this.config.model,
+				maxTokens: this.config.maxTokens,
+				system: systemPrompt,
+				messages: apiMessages,
+				tools: tools.length > 0 ? tools : undefined,
+				thinking:
+					this.config.thinking?.type === 'enabled' && this.config.thinking.budget_tokens
+						? { type: 'enabled', budget_tokens: this.config.thinking.budget_tokens }
+						: undefined,
+			};
 
-				yield {
-					type: 'result',
-					subtype: 'error',
-					usage: this.totalUsage,
-					cost: this.totalCost,
-					numTurns: this.turnCount,
-					error: err.message || String(err),
-				};
-				return;
+			let streamingUsed = false;
+			try {
+				if (this.provider.createMessageStream) {
+					// Streaming path: yield text/thinking deltas inline
+					streamingUsed = true;
+					const contentBlocks: NormalizedContentBlock[] = [];
+					let currentTextBlock: { type: 'text'; text: string } | undefined;
+					let currentToolId: string | undefined;
+					let currentToolName: string | undefined;
+					let currentToolInput = '';
+					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
+					let streamStopReason = 'end_turn';
+
+					for await (const event of this.provider.createMessageStream(requestParams)) {
+						if (this.config.abortSignal?.aborted) { break; }
+
+						switch (event.type) {
+							case 'text':
+								if (!currentTextBlock) {
+									currentTextBlock = { type: 'text', text: '' };
+								}
+								currentTextBlock.text += event.text;
+								yield { type: 'text_delta', text: event.text } as AgentEvent;
+								break;
+
+							case 'thinking':
+								yield { type: 'thinking_delta', thinking: event.thinking } as AgentEvent;
+								break;
+
+							case 'tool_use_start':
+								if (currentTextBlock) {
+									contentBlocks.push(currentTextBlock);
+									currentTextBlock = undefined;
+								}
+								currentToolId = event.id;
+								currentToolName = event.name;
+								currentToolInput = '';
+								break;
+
+							case 'tool_input_delta':
+								currentToolInput += event.json;
+								break;
+
+							case 'tool_call_delta':
+								if (event.id && !currentToolId) { currentToolId = event.id; }
+								if (event.name && !currentToolName) { currentToolName = event.name; }
+								if (event.arguments) { currentToolInput += event.arguments; }
+								break;
+
+							case 'message_complete':
+								streamUsage = event.usage;
+								streamStopReason = event.stopReason;
+								break;
+						}
+					}
+
+					// Finalize remaining blocks
+					if (currentTextBlock) { contentBlocks.push(currentTextBlock); }
+					if (currentToolId && currentToolName) {
+						let parsedInput: any = {};
+						try { if (currentToolInput) { parsedInput = JSON.parse(currentToolInput); } }
+						catch { parsedInput = { raw: currentToolInput }; }
+						contentBlocks.push({
+							type: 'tool_use',
+							id: currentToolId,
+							name: currentToolName,
+							input: parsedInput,
+						});
+					}
+
+					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
+				} else {
+					// Non-streaming fallback
+					response = await withRetry(
+						async () => this.provider.createMessage(requestParams),
+						undefined,
+						this.config.abortSignal,
+					);
+				}
+			} catch (err: any) {
+				// On streaming error, try non-streaming retry
+				if (streamingUsed) {
+					try {
+						response = await withRetry(
+							async () => this.provider.createMessage(requestParams),
+							undefined,
+							this.config.abortSignal,
+						);
+					} catch (retryErr: any) {
+						// Handle prompt-too-long by compacting
+						if (isPromptTooLongError(retryErr) && !this.compactState.compacted) {
+							try {
+								const result = await compactConversation(
+									this.provider,
+									this.config.model,
+									this.messages as any[],
+									this.compactState,
+								);
+								this.messages = result.compactedMessages as MutableMessageParam[];
+								this.compactState = result.state;
+								turnsRemaining++;
+								this.turnCount--;
+								continue;
+							} catch { /* Can't compact */ }
+						}
+
+						yield {
+							type: 'result',
+							subtype: 'error',
+							usage: this.totalUsage,
+							cost: this.totalCost,
+							numTurns: this.turnCount,
+							error: retryErr.message || String(retryErr),
+						};
+						return;
+					}
+				} else {
+					// Handle prompt-too-long by compacting
+					if (isPromptTooLongError(err) && !this.compactState.compacted) {
+						try {
+							const result = await compactConversation(
+								this.provider,
+								this.config.model,
+								this.messages as any[],
+								this.compactState,
+							);
+							this.messages = result.compactedMessages as MutableMessageParam[];
+							this.compactState = result.state;
+							turnsRemaining++;
+							this.turnCount--;
+							continue;
+						} catch { /* Can't compact */ }
+					}
+
+					yield {
+						type: 'result',
+						subtype: 'error',
+						usage: this.totalUsage,
+						cost: this.totalCost,
+						numTurns: this.turnCount,
+						error: err.message || String(err),
+					};
+					return;
+				}
 			}
 
 			// Track API timing
