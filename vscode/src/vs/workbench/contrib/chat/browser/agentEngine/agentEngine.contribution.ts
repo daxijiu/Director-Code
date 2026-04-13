@@ -6,14 +6,15 @@
 /**
  * Agent Engine Contribution
  *
- * Registers the Director Code Agent and Language Model Provider
- * with VS Code's Chat system during workbench startup.
+ * Registers the Director Code Agent, Language Model Provider,
+ * Settings Editor, and API Key Service with VS Code's systems.
  */
 
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../../platform/configuration/common/configurationRegistry.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
+import { IInstantiationService, ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
+import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
 import { Registry } from '../../../../../platform/registry/common/platform.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../../common/contributions.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
@@ -21,6 +22,26 @@ import { IChatAgentService } from '../../common/participants/chatAgents.js';
 import type { IChatAgentData } from '../../common/participants/chatAgents.js';
 import { ChatAgentLocation, ChatModeKind } from '../../common/constants.js';
 import { DirectorCodeAgent } from './directorCodeAgent.js';
+import { DirectorCodeModelProvider } from './directorCodeModelProvider.js';
+import { ILanguageModelsService } from '../../common/languageModels.js';
+import { SyncDescriptor } from '../../../../../platform/instantiation/common/descriptors.js';
+import { IEditorPaneRegistry, EditorPaneDescriptor } from '../../../../browser/editor.js';
+import { EditorExtensions, IEditorFactoryRegistry } from '../../../../common/editor.js';
+import { IEditorService } from '../../../../services/editor/common/editorService.js';
+import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
+import { localize, localize2 } from '../../../../../nls.js';
+import {
+	DirectorCodeSettingsEditor,
+	DirectorCodeSettingsEditorInput,
+	DirectorCodeSettingsEditorInputSerializer,
+} from './directorCodeSettingsEditor.js';
+import { IApiKeyService, ApiKeyService } from '../../common/agentEngine/apiKeyService.js';
+
+// ============================================================================
+// Service Registration
+// ============================================================================
+
+registerSingleton(IApiKeyService, ApiKeyService, InstantiationType.Delayed);
 
 // ============================================================================
 // Configuration Registration
@@ -72,11 +93,54 @@ configurationRegistry.registerConfiguration({
 });
 
 // ============================================================================
-// Agent Registration
+// Editor Registration
+// ============================================================================
+
+Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
+	EditorPaneDescriptor.create(
+		DirectorCodeSettingsEditor,
+		DirectorCodeSettingsEditor.ID,
+		localize('directorCodeSettingsEditor', "Director Code Settings Editor"),
+	),
+	[
+		new SyncDescriptor(DirectorCodeSettingsEditorInput),
+	],
+);
+
+Registry.as<IEditorFactoryRegistry>(EditorExtensions.EditorFactory)
+	.registerEditorSerializer(DirectorCodeSettingsEditorInput.ID, DirectorCodeSettingsEditorInputSerializer);
+
+// ============================================================================
+// Commands
+// ============================================================================
+
+const OPEN_SETTINGS_COMMAND_ID = 'director-code.openSettings';
+
+registerAction2(class extends Action2 {
+	constructor() {
+		super({
+			id: OPEN_SETTINGS_COMMAND_ID,
+			title: localize2('directorCode.openSettings', "Director Code: Open Settings"),
+			category: localize2('directorCode', "Director Code"),
+			f1: true,
+		});
+	}
+	async run(accessor: ServicesAccessor) {
+		const editorService = accessor.get(IEditorService);
+		return editorService.openEditor(
+			new DirectorCodeSettingsEditorInput(),
+			{ pinned: true },
+		);
+	}
+});
+
+// ============================================================================
+// Agent + Model Provider Registration
 // ============================================================================
 
 const AGENT_ID = 'director-code';
 const EXTENSION_ID = new ExtensionIdentifier('director-code.agent');
+const VENDOR = 'director-code';
 
 class DirectorCodeAgentContribution extends Disposable implements IWorkbenchContribution {
 	static readonly ID = 'workbench.contrib.directorCodeAgent';
@@ -85,6 +149,7 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		@IChatAgentService agentService: IChatAgentService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService _configService: IConfigurationService,
+		@ILanguageModelsService languageModelsService: ILanguageModelsService,
 	) {
 		super();
 
@@ -121,9 +186,9 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		const agentImpl = instantiationService.createInstance(DirectorCodeAgent);
 		this._register(agentService.registerDynamicAgent(agentData, agentImpl));
 
-		// Note: Language Model Provider registration will be added in Week 4-5
-		// when the Settings UI is ready. For now, the agent uses the
-		// provider directly without going through VS Code's model selection.
+		// Register the Language Model Provider
+		const modelProvider = instantiationService.createInstance(DirectorCodeModelProvider);
+		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
 	}
 }
 

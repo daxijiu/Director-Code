@@ -14,10 +14,9 @@
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
-import type { ApiType } from '../../common/agentEngine/providers/providerTypes.js';
+import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import type {
 	IChatAgentImplementation,
@@ -40,19 +39,6 @@ const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
-const SECRET_KEY_PREFIX = 'director-code.apiKey';
-
-/**
- * Map configuration provider name to ApiType.
- */
-function resolveApiType(provider: string): ApiType {
-	switch (provider) {
-		case 'anthropic': return 'anthropic-messages';
-		case 'openai': return 'openai-completions';
-		case 'gemini': return 'gemini-generative';
-		default: return 'anthropic-messages';
-	}
-}
 
 // ============================================================================
 // DirectorCodeAgent
@@ -62,7 +48,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
-		@ISecretStorageService private readonly secretService: ISecretStorageService,
+		@IApiKeyService private readonly apiKeyService: IApiKeyService,
 		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
 	) { }
 
@@ -82,19 +68,19 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 
-			// 2. Retrieve API key from secret storage
-			const apiKey = await this.secretService.get(`${SECRET_KEY_PREFIX}.${providerName}`);
+			// 2. Retrieve API key via ApiKeyService
+			const apiKey = await this.apiKeyService.getApiKey(providerName as ProviderName);
 			if (!apiKey) {
 				return {
 					errorDetails: {
-						message: `No API key configured for provider "${providerName}". Please set your API key in Director Code settings.`,
+						message: `No API key configured for provider "${providerName}". Please set your API key in Director Code settings (Ctrl+Shift+P → "Director Code: Open Settings").`,
 					},
 					timings: { totalElapsed: Date.now() - startTime },
 				};
 			}
 
 			// 3. Create LLM provider
-			const apiType = resolveApiType(providerName);
+			const apiType = providerToApiType(providerName as ProviderName);
 			const provider = createProvider(apiType, {
 				apiKey,
 				baseURL,

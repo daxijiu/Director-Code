@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1a Week 1-3 完成，进入 Week 4（设置 UI）
+- **状态**: Phase 1b Week 4 完成，进入 Week 5（模型选择器 + 端到端集成测试）
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -28,7 +28,8 @@ Phase 1: Agent 核心 + Provider 替换 (8-10 周)
   1a. Week 1: Agent 引擎核心 ✅ 完成 (2,004 行)
   1a. Week 2: Provider 层 ✅ 完成 (1,100 行, 73 测试)
   1a. Week 3: 浏览器集成层 ✅ 完成 (870 行, 17 测试)
-  1b. Week 4-5: 设置 UI + API Key 管理 ← 下一步
+  1b. Week 4: Settings UI + API Key 管理 ✅ 完成 (1,030 行, 49 测试)
+  1b. Week 5: 模型选择器 + 端到端集成测试 ← 下一步
   1c. Week 6-7: 配置 UI + 模型选择器
   1d. Week 8-10: 集成测试 + Phase 1 发布
 
@@ -43,9 +44,11 @@ Phase 3: CLI 包装器 (4-5 周)
 3. **工具不重新实现**，通过 ToolBridge 桥接 VS Code 现有的 ILanguageModelToolsService（9 内置 + MCP）
 4. **Agent 通过 registerDynamicAgent 注册**为 Chat Participant，不修改现有 Agent 注册体系
 5. **Provider 全部使用 native fetch**，不引入 @anthropic-ai/sdk 等外部 npm 依赖（避免影响 VS Code 构建系统）
-6. **密钥通过 ISecretStorageService 存储**，键名: `director-code.apiKey.<provider>`
+6. **密钥通过 IApiKeyService → ISecretStorageService 存储**，键名: `director-code.apiKey.<provider>`
 7. **`vendor === 'copilot'` 在 languageModels.ts:631 硬编码为默认**，新 vendor 需处理此逻辑
 8. **Phase 1 为 Phase 2 ACP 预留扩展点**：统一的 registerDynamicAgent + IChatProgress 输出
+9. **Model Catalog 统一定义**在 `common/agentEngine/modelCatalog.ts`，消除重复
+10. **IApiKeyService 作为 singleton 注册**，Agent 和 ModelProvider 都通过它读取密钥
 
 ## 当前进度汇总
 
@@ -56,7 +59,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 1: Engine 核心 | ~1,330 行 | ~670 行 | (在 chat/test 目录) |
 | Week 2: Provider 层 | ~1,100 行 | ~1,200 行 | 73 |
 | Week 3: 浏览器集成 | ~870 行 | ~270 行 | 17 |
-| **合计** | **~3,300 行** | **~2,140 行** | **90 (全通过)** |
+| Week 4: Settings UI | ~1,030 行 | ~470 行 | 49 |
+| **合计** | **~4,330 行** | **~2,610 行** | **139 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -69,6 +73,8 @@ common/agentEngine/                          # Engine 核心 (Week 1)
 ├── retry.ts                                 # 137 行 — 指数退避重试
 ├── tokens.ts                                # 141 行 — Token/成本计算
 ├── compact.ts                               # 198 行 — 上下文压缩
+├── apiKeyService.ts                         # ~200 行 — API Key 管理服务 (Week 4 新增)
+├── modelCatalog.ts                          # ~80 行 — 统一模型目录 (Week 4 新增)
 └── providers/                               # Provider 层 (Week 2)
     ├── providerTypes.ts                     # 123 行 — 接口 + 类型
     ├── anthropicProvider.ts                 # ~260 行 — Anthropic (native fetch + SSE)
@@ -76,15 +82,20 @@ common/agentEngine/                          # Engine 核心 (Week 1)
     ├── geminiProvider.ts                    # ~350 行 — Gemini (native fetch + SSE)
     └── providerFactory.ts                   # ~55 行 — 工厂 + re-export
 
-browser/agentEngine/                         # 浏览器集成 (Week 3)
-├── agentEngine.contribution.ts              # ~120 行 — 注册入口 + 5 配置项
-├── directorCodeAgent.ts                     # ~180 行 — IChatAgentImplementation
-├── directorCodeModelProvider.ts             # ~200 行 — ILanguageModelChatProvider
+browser/agentEngine/                         # 浏览器集成 (Week 3 + Week 4)
+├── agentEngine.contribution.ts              # ~175 行 — 注册入口 (Week 4 大幅扩展)
+├── directorCodeAgent.ts                     # ~180 行 — IChatAgentImplementation (Week 4 重构用 IApiKeyService)
+├── directorCodeModelProvider.ts             # ~200 行 — ILanguageModelChatProvider (Week 4 重构用 modelCatalog)
 ├── toolBridge.ts                            # ~150 行 — IToolExecutor 桥接
 ├── progressBridge.ts                        # ~130 行 — AgentEvent → IChatProgress
-└── messageNormalization.ts                  # ~85 行 — 消息格式转换
+├── messageNormalization.ts                  # ~85 行 — 消息格式转换
+├── apiKeysWidget.ts                         # ~250 行 — API Key 管理 Widget (Week 4 新增)
+├── providerSettingsWidget.ts                # ~200 行 — Provider 设置 Widget (Week 4 新增)
+├── directorCodeSettingsEditor.ts            # ~180 行 — 设置 Editor + Input + Serializer (Week 4 新增)
+└── media/
+    └── directorCodeSettings.css             # ~230 行 — 设置页面样式 (Week 4 新增)
 
-test/common/agentEngine/                     # 测试文件 (90 个测试)
+test/common/agentEngine/                     # 测试文件 (139 个测试)
 ├── retry.test.ts                            # Week 1 旧测试
 ├── tokens.test.ts                           # Week 1 旧测试
 ├── compact.test.ts                          # Week 1 旧测试
@@ -93,8 +104,33 @@ test/common/agentEngine/                     # 测试文件 (90 个测试)
 ├── geminiProvider.test.ts                   # 26 测试 — functionCall/Response/thinking
 ├── providerFactory.test.ts                  # 6 测试 — 工厂路由/穷尽检查
 ├── progressBridge.test.ts                   # 11 测试 — 事件→进度转换
-└── messageNormalization.test.ts             # 6 测试 — 消息双向转换
+├── messageNormalization.test.ts             # 6 测试 — 消息双向转换
+├── apiKeyService.test.ts                    # 24 测试 — CRUD/事件/连接测试 (Week 4 新增)
+├── apiKeysWidget.test.ts                    # 11 测试 — Service 集成逻辑 (Week 4 新增)
+└── providerSettingsWidget.test.ts           # 17 测试 — Model Catalog 逻辑 (Week 4 新增)
 ```
+
+### Week 4 新增功能
+
+1. **IApiKeyService** — 统一 API Key 管理服务
+   - `getApiKey/setApiKey/deleteApiKey/hasApiKey`
+   - `testConnection` — 最小请求验证 key 有效性
+   - `onDidChangeApiKey` — 变更事件
+   - 已注册为 singleton: `registerSingleton(IApiKeyService, ApiKeyService)`
+
+2. **Settings Editor** — `DirectorCodeSettingsEditor`
+   - Command: `director-code.openSettings` (F1 → "Director Code: Open Settings")
+   - 上半部: Provider/Model/BaseURL/MaxTurns/MaxTokens 配置
+   - 下半部: 三个 Provider 的 API Key 输入/测试/删除
+   - 注册为 EditorPane + EditorSerializer
+
+3. **Language Model Provider** — `DirectorCodeModelProvider` 已注册
+   - `registerLanguageModelProvider('director-code', modelProvider)`
+   - 模型出现在 VS Code 的 Chat 面板模型选择器中
+
+4. **Model Catalog** — 统一到 `common/agentEngine/modelCatalog.ts`
+   - 消除了 directorCodeModelProvider 和 providerSettingsWidget 的重复定义
+   - 提供 `getModelsForProvider/getDefaultModel/findModelById` 工具函数
 
 ### 配置项（已注册）
 
@@ -121,10 +157,13 @@ test/common/agentEngine/                     # 测试文件 (90 个测试)
 cd vscode && npm run gulp -- transpile-client-esbuild
 
 # 运行指定测试文件
-node test/unit/node/index.js --run "src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts"
+node test/unit/node/index.js --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts"
 
-# 运行全部 AgentEngine 测试（90 个，~50ms）
+# 运行全部 AgentEngine 测试（139 个，~3s）
 node test/unit/node/index.js \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts" \
@@ -133,24 +172,14 @@ node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts"
 ```
 
-## 下一步计划：Phase 1b Week 4-5
+## 下一步计划：Phase 1b Week 5
 
-### Week 4: Settings UI + API Key 管理
+### Week 5: 模型选择器 + 配置持久化 + 端到端集成测试
 
-1. **API Key 设置界面** — 在 chatManagement 或 settings 中添加 API Key 输入
-   - 使用 `ISecretStorageService` 加密存储
-   - 键名: `director-code.apiKey.anthropic`, `.openai`, `.gemini`
-   - 提供连接测试按钮
-
-2. **Provider 选择 UI** — 在设置中选择 provider + model
-   - 下拉框选择 provider
-   - 模型列表随 provider 切换动态更新
-
-### Week 5: 模型选择器 + 配置持久化
-
-1. 将 `DirectorCodeModelProvider` 注册到 VS Code model picker
-2. 配置文件 `chatLanguageModels.json` 持久化
-3. 端到端集成测试
+1. **模型选择器集成** — 确认 DirectorCodeModelProvider 注册后，模型正确出现在 Chat 面板的模型选择器
+2. **配置持久化** — chatLanguageModels.json 或 settings.json 的模型可见性配置
+3. **端到端集成测试** — 实际调用 API 验证完整流程（需要真实 API Key）
+4. **错误处理增强** — API 调用失败时的用户友好提示
 
 ## 编码规范提醒
 

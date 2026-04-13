@@ -15,7 +15,6 @@ import { Emitter, Event } from '../../../../../base/common/event.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { DeferredPromise } from '../../../../../base/common/async.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
 import type {
 	ILanguageModelChatProvider,
@@ -27,10 +26,12 @@ import type {
 	IChatResponsePart,
 } from '../../common/languageModels.js';
 import { AsyncIterableSource } from '../../../../../base/common/async.js';
-import type { ApiType, NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
+import type { NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
-import { estimateTokens, getContextWindowSize } from '../../common/agentEngine/tokens.js';
+import { estimateTokens } from '../../common/agentEngine/tokens.js';
 import { ChatAgentLocation } from '../../common/constants.js';
+import { IApiKeyService, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { MODEL_CATALOG, findModelById } from '../../common/agentEngine/modelCatalog.js';
 
 // ============================================================================
 // Configuration
@@ -40,38 +41,8 @@ const VENDOR = 'director-code';
 const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
-const SECRET_KEY_PREFIX = 'director-code.apiKey';
 
 const EXTENSION_ID = new ExtensionIdentifier('director-code.agent');
-
-// ============================================================================
-// Model Definitions
-// ============================================================================
-
-interface ModelDefinition {
-	id: string;
-	name: string;
-	family: string;
-	apiType: ApiType;
-	providerName: string;
-	maxInputTokens: number;
-	maxOutputTokens: number;
-}
-
-/** Built-in model catalog. Users can select from these. */
-const MODEL_CATALOG: ModelDefinition[] = [
-	// Anthropic
-	{ id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', family: 'claude-4', apiType: 'anthropic-messages', providerName: 'anthropic', maxInputTokens: 200_000, maxOutputTokens: 8_192 },
-	{ id: 'claude-opus-4-6', name: 'Claude Opus 4.6', family: 'claude-4', apiType: 'anthropic-messages', providerName: 'anthropic', maxInputTokens: 200_000, maxOutputTokens: 8_192 },
-	{ id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', family: 'claude-4', apiType: 'anthropic-messages', providerName: 'anthropic', maxInputTokens: 200_000, maxOutputTokens: 8_192 },
-	// OpenAI
-	{ id: 'gpt-4o', name: 'GPT-4o', family: 'gpt-4', apiType: 'openai-completions', providerName: 'openai', maxInputTokens: 128_000, maxOutputTokens: 4_096 },
-	{ id: 'gpt-4o-mini', name: 'GPT-4o Mini', family: 'gpt-4', apiType: 'openai-completions', providerName: 'openai', maxInputTokens: 128_000, maxOutputTokens: 4_096 },
-	{ id: 'o3', name: 'o3', family: 'o-series', apiType: 'openai-completions', providerName: 'openai', maxInputTokens: 200_000, maxOutputTokens: 100_000 },
-	// Gemini
-	{ id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', family: 'gemini-2', apiType: 'gemini-generative', providerName: 'gemini', maxInputTokens: 1_000_000, maxOutputTokens: 8_192 },
-	{ id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', family: 'gemini-2', apiType: 'gemini-generative', providerName: 'gemini', maxInputTokens: 1_000_000, maxOutputTokens: 8_192 },
-];
 
 // ============================================================================
 // DirectorCodeModelProvider
@@ -84,7 +55,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
-		@ISecretStorageService private readonly secretService: ISecretStorageService,
+		@IApiKeyService private readonly apiKeyService: IApiKeyService,
 	) {
 		// Listen for configuration changes to refresh model list
 		this.configService.onDidChangeConfiguration(e => {
@@ -101,7 +72,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		const providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
 
 		// Filter models by the configured provider
-		const models = MODEL_CATALOG.filter(m => m.providerName === providerName);
+		const models = MODEL_CATALOG.filter(m => m.provider === providerName);
 
 		return models.map(m => ({
 			identifier: `${VENDOR}/${m.id}`,
@@ -136,15 +107,15 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 	): Promise<ILanguageModelChatResponse> {
 		// 1. Find model definition
 		const shortId = modelId.replace(`${VENDOR}/`, '');
-		const modelDef = MODEL_CATALOG.find(m => m.id === shortId);
+		const modelDef = findModelById(shortId);
 		if (!modelDef) {
 			throw new Error(`Unknown model: ${modelId}`);
 		}
 
 		// 2. Get API key
-		const apiKey = await this.secretService.get(`${SECRET_KEY_PREFIX}.${modelDef.providerName}`);
+		const apiKey = await this.apiKeyService.getApiKey(modelDef.provider as ProviderName);
 		if (!apiKey) {
-			throw new Error(`No API key configured for ${modelDef.providerName}`);
+			throw new Error(`No API key configured for ${modelDef.provider}`);
 		}
 
 		// 3. Create provider

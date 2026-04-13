@@ -1,0 +1,240 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Director-Code Contributors. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/* ============================================================================
+   Director Code Settings Editor Styles
+   ============================================================================ */
+
+/* --- General Layout --- */
+
+.director-code-settings-editor {
+	padding: 20px 24px;
+	overflow-y: auto;
+	height: 100%;
+}
+
+.dc-section-header {
+	font-size: 16px;
+	font-weight: 600;
+	margin-bottom: 4px;
+	color: var(--vscode-foreground);
+}
+
+.dc-section-subtitle {
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 16px;
+	line-height: 1.4;
+}
+
+/* --- Provider Settings Form --- */
+
+.director-code-provider-settings-widget {
+	margin-bottom: 32px;
+}
+
+.dc-settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-width: 500px;
+}
+
+.dc-form-row {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.dc-form-label {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--vscode-foreground);
+}
+
+.dc-form-select,
+.dc-form-input {
+	padding: 6px 8px;
+	font-size: 13px;
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+	border-radius: 4px;
+	background-color: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	outline: none;
+}
+
+.dc-form-select:focus,
+.dc-form-input:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+/* --- API Keys Widget --- */
+
+.director-code-api-keys-widget {
+	margin-bottom: 32px;
+}
+
+.dc-api-keys-container {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 500px;
+}
+
+.dc-provider-row {
+	border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
+	border-radius: 6px;
+	padding: 12px 16px;
+	background-color: var(--vscode-editor-background);
+}
+
+.dc-provider-label-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.dc-provider-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--vscode-foreground);
+}
+
+.dc-status-badge {
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-weight: 500;
+}
+
+.dc-status-set {
+	background-color: var(--vscode-testing-iconPassed, #388a34);
+	color: #fff;
+}
+
+.dc-status-not-set {
+	background-color: var(--vscode-input-border, #5a5a5a);
+	color: var(--vscode-foreground);
+}
+
+/* --- Input Row --- */
+
+.dc-input-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.dc-api-key-input {
+	flex: 1;
+	padding: 5px 8px;
+	font-size: 13px;
+	font-family: var(--vscode-editor-font-family, monospace);
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+	border-radius: 4px;
+	background-color: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	outline: none;
+}
+
+.dc-api-key-input:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+/* --- Buttons --- */
+
+.dc-btn {
+	padding: 4px 12px;
+	font-size: 12px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.dc-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.dc-btn-primary {
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border-color: var(--vscode-button-border, transparent);
+}
+
+.dc-btn-primary:hover:not(:disabled) {
+	background-color: var(--vscode-button-hoverBackground);
+}
+
+.dc-btn-secondary {
+	background-color: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	border-color: var(--vscode-button-border, transparent);
+}
+
+.dc-btn-secondary:hover:not(:disabled) {
+	background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.dc-btn-danger {
+	background-color: transparent;
+	color: var(--vscode-errorForeground, #f44747);
+	border-color: var(--vscode-errorForeground, #f44747);
+}
+
+.dc-btn-danger:hover:not(:disabled) {
+	background-color: var(--vscode-errorForeground, #f44747);
+	color: #fff;
+}
+
+/* --- Action Row --- */
+
+.dc-action-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+/* --- Test Result --- */
+
+.dc-test-result {
+	font-size: 12px;
+	margin-left: 4px;
+}
+
+.dc-test-success {
+	color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.dc-test-error {
+	color: var(--vscode-errorForeground, #f44747);
+}
+
+/* --- Editor Title --- */
+
+.dc-editor-title {
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--vscode-foreground);
+	margin-bottom: 4px;
+}
+
+.dc-editor-title-desc {
+	font-size: 13px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 20px;
+	line-height: 1.5;
+}
+
+/* --- Separator --- */
+
+.dc-separator {
+	height: 1px;
+	background-color: var(--vscode-widget-border, var(--vscode-input-border));
+	margin: 8px 0 20px 0;
+	max-width: 500px;
+}
