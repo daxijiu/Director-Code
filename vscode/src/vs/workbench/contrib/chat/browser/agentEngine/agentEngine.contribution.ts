@@ -11,6 +11,7 @@
  */
 
 import { Disposable } from '../../../../../base/common/lifecycle.js';
+import { toDisposable } from '../../../../../base/common/lifecycle.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../../platform/configuration/common/configurationRegistry.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
@@ -187,6 +188,20 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		this._register(agentService.registerDynamicAgent(agentData, agentImpl));
 
 		// Register the Language Model Provider
+		// Step 1: Register vendor descriptor (required before registerLanguageModelProvider)
+		// The _vendors Map must contain our vendor or registerLanguageModelProvider throws.
+		languageModelsService.deltaLanguageModelChatProviderDescriptors(
+			[{ vendor: VENDOR, displayName: 'Director Code' }],
+			[],
+		);
+		this._register(toDisposable(() => {
+			languageModelsService.deltaLanguageModelChatProviderDescriptors(
+				[],
+				[{ vendor: VENDOR, displayName: 'Director Code' }],
+			);
+		}));
+
+		// Step 2: Register provider (now safe — vendor is known)
 		const modelProvider = instantiationService.createInstance(DirectorCodeModelProvider);
 		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
 	}

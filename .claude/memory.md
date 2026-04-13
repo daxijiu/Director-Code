@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1b Week 4 完成，进入 Week 5（模型选择器 + 端到端集成测试）
+- **状态**: Phase 1b Week 5 完成，进入 Week 6-7（配置 UI 精化 + 端到端实测）
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -29,8 +29,8 @@ Phase 1: Agent 核心 + Provider 替换 (8-10 周)
   1a. Week 2: Provider 层 ✅ 完成 (1,100 行, 73 测试)
   1a. Week 3: 浏览器集成层 ✅ 完成 (870 行, 17 测试)
   1b. Week 4: Settings UI + API Key 管理 ✅ 完成 (1,030 行, 49 测试)
-  1b. Week 5: 模型选择器 + 端到端集成测试 ← 下一步
-  1c. Week 6-7: 配置 UI + 模型选择器
+  1b. Week 5: 模型选择器集成 + 集成测试 ✅ 完成 (Bug fix + 65 新测试)
+  1c. Week 6-7: 配置 UI 精化 + 端到端实测 ← 下一步
   1d. Week 8-10: 集成测试 + Phase 1 发布
 
 Phase 2: ACP 协议扩展 (6-8 周)
@@ -60,7 +60,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 2: Provider 层 | ~1,100 行 | ~1,200 行 | 73 |
 | Week 3: 浏览器集成 | ~870 行 | ~270 行 | 17 |
 | Week 4: Settings UI | ~1,030 行 | ~470 行 | 49 |
-| **合计** | **~4,330 行** | **~2,610 行** | **139 (全通过)** |
+| Week 5: 集成测试 + Bug fix | ~15 行 | ~850 行 | 65 |
+| **合计** | **~4,345 行** | **~3,460 行** | **204 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -95,7 +96,7 @@ browser/agentEngine/                         # 浏览器集成 (Week 3 + Week 4)
 └── media/
     └── directorCodeSettings.css             # ~230 行 — 设置页面样式 (Week 4 新增)
 
-test/common/agentEngine/                     # 测试文件 (139 个测试)
+test/common/agentEngine/                     # 测试文件 (204 个测试)
 ├── retry.test.ts                            # Week 1 旧测试
 ├── tokens.test.ts                           # Week 1 旧测试
 ├── compact.test.ts                          # Week 1 旧测试
@@ -105,9 +106,13 @@ test/common/agentEngine/                     # 测试文件 (139 个测试)
 ├── providerFactory.test.ts                  # 6 测试 — 工厂路由/穷尽检查
 ├── progressBridge.test.ts                   # 11 测试 — 事件→进度转换
 ├── messageNormalization.test.ts             # 6 测试 — 消息双向转换
-├── apiKeyService.test.ts                    # 24 测试 — CRUD/事件/连接测试 (Week 4 新增)
-├── apiKeysWidget.test.ts                    # 11 测试 — Service 集成逻辑 (Week 4 新增)
-└── providerSettingsWidget.test.ts           # 17 测试 — Model Catalog 逻辑 (Week 4 新增)
+├── apiKeyService.test.ts                    # 24 测试 — CRUD/事件/连接测试 (Week 4)
+├── apiKeysWidget.test.ts                    # 11 测试 — Service 集成逻辑 (Week 4)
+├── providerSettingsWidget.test.ts           # 17 测试 — Model Catalog 逻辑 (Week 4)
+├── agentRegistration.test.ts                # 12 测试 — 注册流集成测试 (Week 5 新增)
+├── errorHandling.test.ts                    # 17 测试 — 错误处理集成测试 (Week 5 新增)
+├── configFlow.test.ts                       # 17 测试 — 配置流集成测试 (Week 5 新增)
+└── directorCodeModelProvider.test.ts        # 19 测试 — ModelProvider 逻辑测试 (Week 5 新增)
 ```
 
 ### Week 4 新增功能
@@ -131,6 +136,19 @@ test/common/agentEngine/                     # 测试文件 (139 个测试)
 4. **Model Catalog** — 统一到 `common/agentEngine/modelCatalog.ts`
    - 消除了 directorCodeModelProvider 和 providerSettingsWidget 的重复定义
    - 提供 `getModelsForProvider/getDefaultModel/findModelById` 工具函数
+
+### Week 5 新增功能
+
+1. **Vendor 注册修复** — `deltaLanguageModelChatProviderDescriptors` 在 `registerLanguageModelProvider` 之前调用
+   - 修复了 `UNKNOWN vendor` 异常
+   - 添加了 dispose 时反注册 vendor 的清理逻辑
+   - 模型现在正确出现在 Chat 面板的 "Other Models" 区域
+
+2. **集成测试** — 4 个新测试文件，65 个新测试
+   - `agentRegistration.test.ts` — API Key → Provider → Model 完整流
+   - `errorHandling.test.ts` — 错误分类、连接失败、HTTP 错误传播
+   - `configFlow.test.ts` — Provider 切换、Base URL、多 Provider 独立性
+   - `directorCodeModelProvider.test.ts` — 模型元数据、Token 估算、模型族
 
 ### 配置项（已注册）
 
@@ -159,7 +177,7 @@ cd vscode && npm run gulp -- transpile-client-esbuild
 # 运行指定测试文件
 node test/unit/node/index.js --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts"
 
-# 运行全部 AgentEngine 测试（139 个，~3s）
+# 运行全部 AgentEngine 测试（204 个，~4s）
 node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts" \
@@ -169,17 +187,28 @@ node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts" \
-  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts"
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts"
 ```
 
-## 下一步计划：Phase 1b Week 5
+## 下一步计划：Phase 1c Week 6-7
 
-### Week 5: 模型选择器 + 配置持久化 + 端到端集成测试
+### Week 6-7: 配置 UI 精化 + 端到端实测
 
-1. **模型选择器集成** — 确认 DirectorCodeModelProvider 注册后，模型正确出现在 Chat 面板的模型选择器
-2. **配置持久化** — chatLanguageModels.json 或 settings.json 的模型可见性配置
-3. **端到端集成测试** — 实际调用 API 验证完整流程（需要真实 API Key）
-4. **错误处理增强** — API 调用失败时的用户友好提示
+1. **端到端实测** — 使用真实 API Key 验证完整流程
+   - 构建并运行 Director-Code，打开 Chat 面板
+   - 设置 API Key（F1 → Director Code: Open Settings）
+   - 发送消息验证 Agent 响应
+   - 验证模型选择器中 Director Code 模型可见
+2. **UI 交互优化** — 根据实测发现的 UX 问题改进
+   - Settings Editor 布局调整
+   - 错误提示文案优化
+   - 加载状态/动画
+3. **模型选择器增强** — 确认模型在 Chat 面板正确显示和切换
+4. **错误恢复** — API 调用中断后的自动恢复机制
 
 ## 编码规范提醒
 
