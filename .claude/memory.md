@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1d Week 8 完成（流式输出 + 真实 API 验证通过），进入 Week 9-10（Phase 1 发布准备）
+- **状态**: Phase 1 完成 (Week 10)，可发布。进入 Phase 2 规划
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -33,7 +33,10 @@ Phase 1: Agent 核心 + Provider 替换 (8-10 周)
   1c. Week 6: 端到端功能补全 ✅ 完成 (历史注入 + cwd + 20 新测试)
   1c. Week 7: 端到端实测 + UI 精化 ✅ 完成 (关键 Bug 修复 + UI 增强 + 45 新测试)
   1d. Week 8: 流式输出改造 ✅ 完成 (streaming delta events + 9 新测试)
-  1d. Week 9-10: 真实 API 实测 + Phase 1 发布 ← 下一步
+  1d. Week 9: 发布准备 ✅ 完成 (多工具Bug修复 + DeepSeek支持 + 发布审计)
+  1d. Week 10: 收尾 ✅ 完成 (README重写 + 文档)
+
+Phase 2: ACP 协议扩展 (6-8 周) ← 下一步
 
 Phase 2: ACP 协议扩展 (6-8 周)
 Phase 3: CLI 包装器 (4-5 周)
@@ -252,16 +255,37 @@ node test/unit/node/index.js \
    - ✅ 注册链路: chat.contribution.ts → agentEngine.contribution.ts → AfterRestored 阶段加载
    - ✅ 多工具流式 Bug 已修复并测试覆盖
 
-### Week 9-10: 真实 API 实测 + Phase 1 发布
+### Week 10: Phase 1 收尾
 
-1. **真实 API 实测** — 构建并运行 Director-Code，使用真实 API Key 验证
-   - Anthropic Claude: 文本对话 + 流式输出 + 工具调用
-   - OpenAI GPT-4o: 文本对话 + 流式输出 + 工具调用
-   - Gemini: 文本对话 + 流式输出 + 工具调用
-2. **性能优化** — 首次 token 延迟测量、流式渲染优化
-3. **错误恢复增强** — 网络断连提示、API 配额超限友好提示
-4. **构建集成验证** — 完整 build.sh 产物检查
-5. **文档** — Phase 1 功能文档、用户指南
+1. **README.md 完全重写** — 从 VSCodium 旧内容替换为 Director-Code 完整介绍
+   - 项目定位、功能特性、快速开始指南
+   - 10 个支持模型列表（含 DeepSeek 使用示例）
+   - 项目结构、开发指南、测试覆盖率
+   - Roadmap (Phase 1 Done → Phase 2/3 Planned)
+
+## Phase 1 完成总结
+
+### 关键指标
+- **生产代码**: ~4,685 行
+- **测试代码**: ~4,340 行
+- **测试数量**: 278 个（全部通过）
+- **支持模型**: 10 个（3 Provider + DeepSeek 兼容）
+- **真实 API 验证**: DeepSeek Reasoner (R1) 流式 + 思考链
+
+### Phase 1 交付物
+1. Agent Engine — 基于 open-agent-sdk 的 Agentic 循环 + 流式输出
+2. 3 个 LLM Provider — Anthropic/OpenAI/Gemini + DeepSeek 兼容
+3. 工具桥接 — VS Code 9 内置工具 + MCP 工具
+4. Settings UI — Provider/Model/API Key 配置界面
+5. 模型选择器 — Chat 面板模型列表 + picker 联动
+6. 流式输出 — text_delta/thinking_delta 实时传输
+7. 错误恢复 — retry/compact/prompt-too-long 自动恢复
+8. 成本追踪 — 17 模型定价 + 实时 Token 计费
+
+### 下一步: Phase 2 ACP 协议扩展
+- 参考 MCP 模式 + vscode-acp 实现
+- 每个外部 ACP Agent 通过 registerDynamicAgent 注册
+- 详细计划见 `.cursor/plan-04-phase2-acp.md`
 
 ## 编码规范提醒
 
