@@ -141,6 +141,65 @@ find /e/Projects -name "*.ts" -type f                       # 双引号
 
 ---
 
+## 标准开发流程（必须严格遵守）
+
+每次完成用户任务时，必须按以下流程执行，不可跳过任何步骤：
+
+### 流程总览
+
+```
+编写代码 → 编写测试 → 运行测试 → 修复问题 → 更新记忆文件 → 提交并推送到远端
+```
+
+### Step 1: 编写模块代码
+
+- 逐模块开发，每个模块（文件）独立完成
+- 编写完成后立即进入 Step 2，不允许"批量写完所有模块后再统一测试"
+
+### Step 2: 编写单元测试
+
+- **每个模块必须有对应的测试文件**
+- 测试文件位置：`vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/` 目录下
+- 测试文件命名：与源文件对应，如 `anthropicProvider.test.ts` 对应 `anthropicProvider.ts`
+- 测试框架：Mocha TDD（`suite`/`test`），Node.js `assert` 模块
+- 每个测试文件开头调用 `ensureNoDisposablesAreLeakedInTestSuite()`
+
+### Step 3: 运行测试
+
+- 编译命令：`cd vscode && npm run gulp -- transpile-client-esbuild`
+- 运行测试：`node test/unit/node/index.js --run "src/vs/.../xxx.test.ts"`
+- 必须确认全部测试通过（0 failures）
+
+### Step 4: 修复问题（如有）
+
+- 如果测试失败，必须立即修复代码或测试
+- 修复后重新编译并运行测试，直到全部通过
+- 不允许跳过失败的测试继续下一步
+
+### Step 5: 更新记忆与进度文件
+
+- 将本次完成的工作进度更新到 `.claude/memory.md`
+- 包括：新增/修改的文件清单、测试结果、当前阶段进度、下一步计划
+- 确保记忆文件始终反映项目最新状态，供后续会话参考
+
+### Step 6: 提交并推送到远端 Git 仓库
+
+- 所有测试通过后，将变更提交到 git 并推送到远端仓库
+- 提交信息应清晰描述本次变更内容
+- 推送命令：`git push origin <branch>`
+- 如果用户没有明确指定分支，推送到当前分支
+
+---
+
+### Bash 命令铁律（重复强调）
+
+- **绝对禁止使用单引号** `'` ——Git Bash 会解析出错
+- **只用双引号** `"` 包裹参数
+- **绝对禁止混合引号**
+- 优先用 Glob/Grep/Read 工具，减少 Bash 命令
+
+---
+
 ## 注意事项
 
 - 修改 chat 基础设施时注意：534+ 文件有复杂依赖关系

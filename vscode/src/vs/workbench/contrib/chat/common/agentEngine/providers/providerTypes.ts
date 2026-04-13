@@ -19,7 +19,7 @@
 // API Type
 // --------------------------------------------------------------------------
 
-export type ApiType = 'anthropic-messages' | 'openai-completions';
+export type ApiType = 'anthropic-messages' | 'openai-completions' | 'gemini-generative';
 
 // --------------------------------------------------------------------------
 // Normalized Request
@@ -32,6 +32,15 @@ export interface CreateMessageParams {
 	readonly messages: readonly NormalizedMessageParam[];
 	readonly tools?: readonly NormalizedTool[];
 	readonly thinking?: { readonly type: string; readonly budget_tokens?: number };
+	readonly abortSignal?: AbortSignal;
+}
+
+/**
+ * Common options for constructing an LLM provider.
+ */
+export interface ProviderOptions {
+	readonly apiKey: string;
+	readonly baseURL?: string;
 }
 
 /**
