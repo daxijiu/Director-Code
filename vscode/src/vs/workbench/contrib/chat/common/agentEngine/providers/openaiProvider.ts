@@ -81,6 +81,7 @@ interface OpenAIStreamChunk {
 		delta: {
 			role?: string;
 			content?: string | null;
+			reasoning_content?: string | null;
 			tool_calls?: Array<{
 				index: number;
 				id?: string;
@@ -266,6 +267,11 @@ export class OpenAIProvider implements LLMProvider {
 
 		const delta = choice.delta;
 
+		// Reasoning/thinking content (DeepSeek R1, o1/o3 reasoning)
+		if (delta.reasoning_content) {
+			yield { type: 'thinking', thinking: delta.reasoning_content };
+		}
+
 		// Text content
 		if (delta.content) {
 			yield { type: 'text', text: delta.content };
@@ -422,6 +428,11 @@ export class OpenAIProvider implements LLMProvider {
 		}
 
 		const content: NormalizedResponseBlock[] = [];
+
+		// Add reasoning/thinking content (DeepSeek R1, o1/o3)
+		if ((choice.message as any).reasoning_content) {
+			content.push({ type: 'thinking', thinking: (choice.message as any).reasoning_content });
+		}
 
 		// Add text content
 		if (choice.message.content) {

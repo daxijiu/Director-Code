@@ -47,6 +47,9 @@ export const MODEL_CATALOG: readonly IModelDefinition[] = [
 	// Gemini
 	{ id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', family: 'gemini-2', apiType: 'gemini-generative', provider: 'gemini', maxInputTokens: 1_000_000, maxOutputTokens: 8_192 },
 	{ id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', family: 'gemini-2', apiType: 'gemini-generative', provider: 'gemini', maxInputTokens: 1_000_000, maxOutputTokens: 8_192 },
+	// DeepSeek (OpenAI-compatible)
+	{ id: 'deepseek-chat', name: 'DeepSeek Chat (V3)', family: 'deepseek', apiType: 'openai-completions', provider: 'openai', maxInputTokens: 128_000, maxOutputTokens: 8_192 },
+	{ id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', family: 'deepseek', apiType: 'openai-completions', provider: 'openai', maxInputTokens: 128_000, maxOutputTokens: 8_192 },
 ];
 
 /**

@@ -22,8 +22,8 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
 	suite("MODEL_CATALOG", () => {
 
-		test("has 8 models total", () => {
-			assert.strictEqual(MODEL_CATALOG.length, 8);
+		test("has 10 models total", () => {
+			assert.strictEqual(MODEL_CATALOG.length, 10);
 		});
 
 		test("every model has id, name, and provider", () => {
@@ -45,9 +45,9 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 			assert.strictEqual(models.length, 3);
 		});
 
-		test("has 3 OpenAI models", () => {
+		test("has 5 OpenAI models (including DeepSeek)", () => {
 			const models = MODEL_CATALOG.filter(m => m.provider === "openai");
-			assert.strictEqual(models.length, 3);
+			assert.strictEqual(models.length, 5);
 		});
 
 		test("has 2 Gemini models", () => {
@@ -70,7 +70,7 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
 		test("returns only OpenAI models for openai", () => {
 			const models = getModelsForProvider("openai");
-			assert.strictEqual(models.length, 3);
+			assert.strictEqual(models.length, 5);
 			assert.ok(models.every(m => m.provider === "openai"));
 		});
 

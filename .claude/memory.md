@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1d Week 8 完成，进入 Week 9-10（真实 API 实测 + Phase 1 发布）
+- **状态**: Phase 1d Week 8 完成（流式输出 + 真实 API 验证通过），进入 Week 9-10（Phase 1 发布准备）
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -166,13 +166,14 @@ test/common/agentEngine/                     # 测试文件 (204 个测试)
 | `directorCode.ai.maxTurns` | `25` | 每次请求最大 agentic 轮数 |
 | `directorCode.ai.maxTokens` | `8192` | 每次 LLM 调用最大输出 token |
 
-### 模型目录（内置 8 个）
+### 模型目录（内置 10 个）
 
 | 模型 | Provider | ApiType |
 |------|----------|---------|
 | claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5 | Anthropic | anthropic-messages |
 | gpt-4o, gpt-4o-mini, o3 | OpenAI | openai-completions |
 | gemini-2.5-pro, gemini-2.5-flash | Gemini | gemini-generative |
+| deepseek-chat, deepseek-reasoner | OpenAI (DeepSeek) | openai-completions |
 
 ## 构建与测试命令
 
@@ -231,6 +232,12 @@ node test/unit/node/index.js \
 2. **ProgressBridge 扩展** — 处理 text_delta → markdownContent, thinking_delta → thinking
 3. **9 个新测试** — 覆盖流式 delta 事件转换、混合流式序列模拟
 4. **临时分析文件清理** — 删除 23 个根目录临时分析文档
+
+5. **DeepSeek 实测验证通过** — 真实 API 端到端
+   - Model Catalog 新增 deepseek-chat, deepseek-reasoner
+   - OpenAI Provider 支持 `reasoning_content`（R1 思考链）
+   - 非流式: 6.5s / 流式: 首 token 1.1s → **UX 大幅提升**
+   - thinking + text 内容块正确分离
 
 ### Week 9-10: 真实 API 实测 + Phase 1 发布
 
