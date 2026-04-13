@@ -74,18 +74,27 @@ function buildSystemPrompt(config: AgentEngineConfig): string {
 	const parts: string[] = [];
 
 	parts.push(
-		'You are an AI assistant with access to tools. Use the tools provided to help the user accomplish their tasks.',
-		'You should use tools when they would help you complete the task more accurately or efficiently.',
+		'You are an expert AI coding assistant with access to tools. Your goal is to help the user accomplish their coding tasks efficiently and correctly.',
+		'',
+		'## Guidelines',
+		'- Use tools proactively when they would help you understand the codebase or accomplish the task.',
+		'- Read files before modifying them to understand the existing code.',
+		'- Explain your reasoning briefly before taking actions.',
+		'- If a tool call fails, analyze the error and try a different approach.',
+		'- When writing code, follow the existing code style and conventions in the project.',
+		'- Be concise in your responses — focus on what matters.',
 	);
 
-	// List available tools with descriptions
-	parts.push('\n# Available Tools\n');
-	for (const tool of config.tools) {
-		parts.push(`- **${tool.name}**: ${tool.description}`);
-	}
-
 	// Working directory
-	parts.push(`\n# Working Directory\n${config.cwd}`);
+	parts.push(`\n## Working Directory\n${config.cwd}`);
+
+	// List available tools
+	if (config.tools.length > 0) {
+		parts.push('\n## Available Tools\n');
+		for (const tool of config.tools) {
+			parts.push(`- **${tool.name}**: ${tool.description}`);
+		}
+	}
 
 	if (config.appendSystemPrompt) {
 		parts.push('\n' + config.appendSystemPrompt);
@@ -293,6 +302,16 @@ export class AgentEngine {
 			// Reset max_output recovery counter on successful tool use
 			maxOutputRecoveryAttempts = 0;
 
+			// Yield tool_use events so the UI shows "Using tool: X" before execution
+			for (const block of toolUseBlocks) {
+				yield {
+					type: 'tool_use',
+					id: block.id,
+					name: block.name,
+					input: block.input,
+				} as AgentEvent;
+			}
+
 			// Execute tools (concurrent read-only, serial mutations)
 			const toolResults = await this.executeTools(toolUseBlocks);
 
@@ -318,7 +337,8 @@ export class AgentEngine {
 				})),
 			});
 
-			if (response.stopReason === 'end_turn') { break; }
+			// After tool execution, always continue the loop so the LLM
+			// can see the tool results and decide what to do next.
 		}
 
 		// Yield final result

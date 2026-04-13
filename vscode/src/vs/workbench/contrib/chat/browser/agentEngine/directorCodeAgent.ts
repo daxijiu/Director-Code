@@ -19,11 +19,13 @@ import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
 import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
+import { findModelById } from '../../common/agentEngine/modelCatalog.js';
 import type {
 	IChatAgentImplementation,
 	IChatAgentRequest,
 	IChatAgentResult,
 	IChatAgentHistoryEntry,
+	IChatFollowup,
 } from '../../common/participants/chatAgents.js';
 import type { IChatProgress } from '../../common/chatService/chatService.js';
 import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
@@ -64,11 +66,22 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 
 		try {
 			// 1. Read configuration
-			const providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
-			const modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
+			let providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
+			let modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
 			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
+
+			// 1b. Override model if user selected one from the Chat UI model picker
+			if (request.userSelectedModelId) {
+				// userSelectedModelId format: "director-code/claude-sonnet-4-6"
+				const shortId = request.userSelectedModelId.replace('director-code/', '');
+				const modelDef = findModelById(shortId);
+				if (modelDef) {
+					modelId = modelDef.id;
+					providerName = modelDef.provider;
+				}
+			}
 
 			// 2. Retrieve API key via ApiKeyService
 			const apiKey = await this.apiKeyService.getApiKey(providerName as ProviderName);
@@ -197,5 +210,34 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				timings: { totalElapsed: Date.now() - startTime },
 			};
 		}
+	}
+
+	async provideFollowups(
+		_request: IChatAgentRequest,
+		result: IChatAgentResult,
+		_history: IChatAgentHistoryEntry[],
+		_token: CancellationToken,
+	): Promise<IChatFollowup[]> {
+		// If there was an error related to missing API key, suggest opening settings
+		if (result.errorDetails?.message?.includes('No API key')) {
+			return [{
+				kind: 'reply',
+				message: 'Open Director Code settings to configure API keys',
+				agentId: 'director-code',
+				title: 'Open Settings',
+			}];
+		}
+
+		// If the agent completed with max turns, suggest continuing
+		if (result.metadata?.subtype === 'error_max_turns') {
+			return [{
+				kind: 'reply',
+				message: 'Please continue where you left off.',
+				agentId: 'director-code',
+				title: 'Continue',
+			}];
+		}
+
+		return [];
 	}
 }

@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1c Week 6 完成，进入 Week 7（端到端实测 + UI 精化）
+- **状态**: Phase 1c Week 7 完成，进入 Week 8（集成测试 + Phase 1 发布准备）
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -31,8 +31,8 @@ Phase 1: Agent 核心 + Provider 替换 (8-10 周)
   1b. Week 4: Settings UI + API Key 管理 ✅ 完成 (1,030 行, 49 测试)
   1b. Week 5: 模型选择器集成 + 集成测试 ✅ 完成 (Bug fix + 65 新测试)
   1c. Week 6: 端到端功能补全 ✅ 完成 (历史注入 + cwd + 20 新测试)
-  1c. Week 7: 端到端实测 + UI 精化 ← 下一步
-  1d. Week 8-10: 集成测试 + Phase 1 发布
+  1c. Week 7: 端到端实测 + UI 精化 ✅ 完成 (关键 Bug 修复 + UI 增强 + 45 新测试)
+  1d. Week 8-10: 集成测试 + Phase 1 发布 ← 下一步
 
 Phase 2: ACP 协议扩展 (6-8 周)
 Phase 3: CLI 包装器 (4-5 周)
@@ -63,7 +63,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 4: Settings UI | ~1,030 行 | ~470 行 | 49 |
 | Week 5: 集成测试 + Bug fix | ~15 行 | ~850 行 | 65 |
 | Week 6: 端到端补全 | ~50 行 | ~250 行 | 20 |
-| **合计** | **~4,395 行** | **~3,710 行** | **223 (全通过)** |
+| Week 7: E2E 实测 + UI | ~120 行 | ~470 行 | 45 |
+| **合计** | **~4,515 行** | **~4,180 行** | **268 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -114,7 +115,8 @@ test/common/agentEngine/                     # 测试文件 (204 个测试)
 ├── agentRegistration.test.ts                # 12 测试 — 注册流集成测试 (Week 5 新增)
 ├── errorHandling.test.ts                    # 17 测试 — 错误处理集成测试 (Week 5 新增)
 ├── configFlow.test.ts                       # 17 测试 — 配置流集成测试 (Week 5 新增)
-└── directorCodeModelProvider.test.ts        # 19 测试 — ModelProvider 逻辑测试 (Week 5 新增)
+├── directorCodeModelProvider.test.ts        # 19 测试 — ModelProvider 逻辑测试 (Week 5 新增)
+└── endToEnd.test.ts                         # 45 测试 — E2E 集成测试 (Week 7 新增)
 ```
 
 ### Week 4 新增功能
@@ -179,7 +181,7 @@ cd vscode && npm run gulp -- transpile-client-esbuild
 # 运行指定测试文件
 node test/unit/node/index.js --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts"
 
-# 运行全部 AgentEngine 测试（204 个，~4s）
+# 运行全部 AgentEngine 测试（268 个，~5s）
 node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts" \
@@ -194,7 +196,8 @@ node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts" \
-  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts"
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts"
 ```
 
 ### Week 6 新增功能
@@ -212,21 +215,33 @@ node test/unit/node/index.js \
 4. **AgentEngine 核心逻辑测试** — 20 个新测试
    - 初始消息格式、工具定义、Token 估算、Auto-Compact、重试逻辑
 
-## 下一步计划：Phase 1c Week 7
+## 下一步计划：Phase 1d Week 8-10
 
-### Week 6-7: 配置 UI 精化 + 端到端实测
+### Week 7 完成总结
 
-1. **端到端实测** — 使用真实 API Key 验证完整流程
-   - 构建并运行 Director-Code，打开 Chat 面板
-   - 设置 API Key（F1 → Director Code: Open Settings）
-   - 发送消息验证 Agent 响应
-   - 验证模型选择器中 Director Code 模型可见
-2. **UI 交互优化** — 根据实测发现的 UX 问题改进
-   - Settings Editor 布局调整
-   - 错误提示文案优化
-   - 加载状态/动画
-3. **模型选择器增强** — 确认模型在 Chat 面板正确显示和切换
-4. **错误恢复** — API 调用中断后的自动恢复机制
+1. **关键 Bug 修复**
+   - **tool_use 事件发射** — AgentEngine 现在在执行工具前 yield tool_use 事件，UI 可显示 "Using tool: X"
+   - **end_turn 逻辑修复** — 工具执行后不再检查 end_turn 提前退出，始终继续循环让 LLM 看到工具结果
+   - **Model Picker 支持** — DirectorCodeAgent 现在响应 userSelectedModelId，从 Chat UI 模型选择器切换模型
+
+2. **系统提示词改进** — 从通用助手升级为专业编码助手，含 Guidelines 节
+3. **UI 增强**
+   - 新增 Status Bar — 在 Settings Editor 顶部显示当前 Provider/Model/API Key 状态
+   - provideFollowups — API Key 缺失时建议打开设置、max_turns 超限时建议继续
+   - ProgressBridge 类型安全改进 — 消除 `as any` 类型断言
+
+4. **端到端集成测试** — 45 个新测试覆盖完整事件管道
+
+### Week 8-10: Phase 1 发布准备
+
+1. **真实 API 实测** — 构建并运行 Director-Code，使用真实 API Key 验证
+   - Anthropic Claude: 文本对话 + 工具调用
+   - OpenAI GPT-4o: 文本对话 + 工具调用
+   - Gemini: 文本对话 + 工具调用
+2. **性能优化** — 首次响应时间、流式输出延迟
+3. **错误恢复增强** — API 中断后自动恢复、网络断连提示
+4. **文档 + Release Notes** — Phase 1 功能文档、用户指南
+5. **构建集成** — 确保 `build.sh` 产物包含所有新文件
 
 ## 编码规范提醒
 

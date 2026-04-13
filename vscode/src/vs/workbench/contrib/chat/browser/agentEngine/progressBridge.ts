@@ -11,7 +11,7 @@
  */
 
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import type { AgentEvent } from '../../common/agentEngine/agentEngineTypes.js';
+import type { AgentEvent, AgentToolUseEvent, AgentToolResultEvent, AgentSystemEvent } from '../../common/agentEngine/agentEngineTypes.js';
 import type { IChatProgress, IChatMarkdownContent, IChatProgressMessage, IChatThinkingPart } from '../../common/chatService/chatService.js';
 
 /**
@@ -89,11 +89,11 @@ function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChat
 // Tool Use Event → Progress Message
 // ============================================================================
 
-function convertToolUseEvent(event: AgentEvent & { type: 'tool_use' }): IChatProgress[] {
-	// Show a progress message indicating tool invocation
+function convertToolUseEvent(event: AgentToolUseEvent): IChatProgress[] {
+	const toolName = event.name || 'unknown';
 	const msg: IChatProgressMessage = {
 		kind: 'progressMessage',
-		content: new MarkdownString(`Using tool: **${(event as any).tool_name || 'unknown'}**`),
+		content: new MarkdownString(`Using tool: **${toolName}**`),
 	};
 	return [msg];
 }
@@ -102,11 +102,10 @@ function convertToolUseEvent(event: AgentEvent & { type: 'tool_use' }): IChatPro
 // Tool Result Event → Progress Message
 // ============================================================================
 
-function convertToolResultEvent(event: AgentEvent & { type: 'tool_result' }): IChatProgress[] {
-	const resultEvent = event as any;
-	const toolName = resultEvent.tool_name || 'tool';
-	const isError = resultEvent.is_error;
-	const content = resultEvent.content || '';
+function convertToolResultEvent(event: AgentToolResultEvent): IChatProgress[] {
+	const toolName = event.tool_name || 'tool';
+	const isError = event.is_error;
+	const content = event.content || '';
 
 	// Truncate long results for the progress message
 	const truncated = content.length > 200
@@ -126,26 +125,25 @@ function convertToolResultEvent(event: AgentEvent & { type: 'tool_result' }): IC
 // System Event → Progress Message
 // ============================================================================
 
-function convertSystemEvent(event: AgentEvent & { type: 'system' }): IChatProgress[] {
-	const sysEvent = event as any;
+function convertSystemEvent(event: AgentSystemEvent): IChatProgress[] {
 	let message: string;
 
-	switch (sysEvent.subtype) {
+	switch (event.subtype) {
 		case 'init':
-			message = `Agent initialized (model: ${sysEvent.model || 'unknown'})`;
+			message = `Agent initialized (model: ${event.model || 'unknown'})`;
 			break;
 		case 'compact_boundary':
 			message = 'Conversation compacted to save context space';
 			break;
 		default:
-			message = sysEvent.message || 'Agent status update';
+			message = event.message || 'Agent status update';
 			break;
 	}
 
 	const msg: IChatProgressMessage = {
 		kind: 'progressMessage',
 		content: new MarkdownString(message),
-		shimmer: sysEvent.subtype === 'init',
+		shimmer: event.subtype === 'init',
 	};
 	return [msg];
 }

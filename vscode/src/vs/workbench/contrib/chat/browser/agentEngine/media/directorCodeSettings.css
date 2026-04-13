@@ -13,6 +13,7 @@
 	padding: 20px 24px;
 	overflow-y: auto;
 	height: 100%;
+	box-sizing: border-box;
 }
 
 .dc-section-header {
@@ -27,6 +28,44 @@
 	color: var(--vscode-descriptionForeground);
 	margin-bottom: 16px;
 	line-height: 1.4;
+}
+
+/* --- Quick Status Bar --- */
+
+.dc-status-bar {
+	display: flex;
+	gap: 16px;
+	padding: 10px 14px;
+	border-radius: 6px;
+	border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
+	background-color: var(--vscode-editor-background);
+	margin-bottom: 20px;
+	max-width: 500px;
+	font-size: 12px;
+	flex-wrap: wrap;
+}
+
+.dc-status-bar-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.dc-status-bar-label {
+	color: var(--vscode-descriptionForeground);
+}
+
+.dc-status-bar-value {
+	font-weight: 600;
+	color: var(--vscode-foreground);
+}
+
+.dc-status-bar-value.dc-ready {
+	color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.dc-status-bar-value.dc-not-ready {
+	color: var(--vscode-errorForeground, #f44747);
 }
 
 /* --- Provider Settings Form --- */
