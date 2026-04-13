@@ -719,4 +719,58 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			assert.strictEqual(allProgress[4].kind, 'markdownContent');
 		});
 	});
+
+	// ====================================================================
+	// Multi-Tool Streaming (Bug Fix Verification)
+	// ====================================================================
+
+	suite('Multi-Tool Streaming', () => {
+		test('simulated streaming with 2 tools produces all tool events', () => {
+			// Simulates: text + tool_1 + tool_2 → all tools should appear
+			const events: AgentEvent[] = [
+				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['read_file', 'grep'] },
+				{ type: 'text_delta', text: 'Let me search.' } as any,
+				// Tool 1
+				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'a.ts' } },
+				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'file A' },
+				// Tool 2
+				{ type: 'tool_use', id: 'c2', name: 'grep', input: { pattern: 'foo' } },
+				{ type: 'tool_result', tool_use_id: 'c2', tool_name: 'grep', content: 'match found' },
+				// Final text
+				{ type: 'text_delta', text: 'Found results.' } as any,
+				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0, numTurns: 2 },
+			];
+
+			const allProgress = events.flatMap(e => agentEventToProgress(e));
+
+			// init + text_delta + tool_use + tool_result + tool_use + tool_result + text_delta = 7
+			assert.strictEqual(allProgress.length, 7);
+
+			// Verify both tools appear
+			const toolUseProgress = allProgress.filter(p =>
+				p.kind === 'progressMessage' && (p as any).content.value.includes('Using tool')
+			);
+			assert.strictEqual(toolUseProgress.length, 2, 'should have 2 tool use progress messages');
+
+			const toolResultProgress = allProgress.filter(p =>
+				p.kind === 'progressMessage' && (p as any).content.value.includes('result')
+			);
+			assert.strictEqual(toolResultProgress.length, 2, 'should have 2 tool result progress messages');
+		});
+
+		test('tool_call_delta from OpenAI format with multiple indexed tools', () => {
+			// Verify that the progress bridge handles multiple tool calls correctly
+			// when tool_use events come from AgentEngine (after stream consumption)
+			const toolUse1: AgentEvent = { type: 'tool_use', id: 'call_1', name: 'read_file', input: { path: 'a.ts' } };
+			const toolUse2: AgentEvent = { type: 'tool_use', id: 'call_2', name: 'write_file', input: { path: 'b.ts', content: 'x' } };
+
+			const p1 = agentEventToProgress(toolUse1);
+			const p2 = agentEventToProgress(toolUse2);
+
+			assert.strictEqual(p1.length, 1);
+			assert.strictEqual(p2.length, 1);
+			assert.ok((p1[0] as any).content.value.includes('read_file'));
+			assert.ok((p2[0] as any).content.value.includes('write_file'));
+		});
+	});
 });

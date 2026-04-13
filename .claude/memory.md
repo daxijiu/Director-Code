@@ -66,7 +66,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 6: 端到端补全 | ~50 行 | ~250 行 | 20 |
 | Week 7: E2E 实测 + UI | ~120 行 | ~470 行 | 45 |
 | Week 8: 流式输出 | ~140 行 | ~100 行 | 9 |
-| **合计** | **~4,655 行** | **~4,280 行** | **276 (全通过)** |
+| Week 9: 发布准备 | ~30 行 | ~60 行 | 2 |
+| **合计** | **~4,685 行** | **~4,340 行** | **278 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -238,6 +239,18 @@ node test/unit/node/index.js \
    - OpenAI Provider 支持 `reasoning_content`（R1 思考链）
    - 非流式: 6.5s / 流式: 首 token 1.1s → **UX 大幅提升**
    - thinking + text 内容块正确分离
+
+### Week 9: Phase 1 发布准备
+
+1. **🔴 关键 Bug 修复**: 多工具流式响应丢失
+   - 当 LLM 在一次回复中调用多个工具时，只有最后一个工具被保留
+   - 重构为 finalize-before-start 模式：每个新 tool_use_start 先保存前一个工具
+   - 新增 `finalizeToolBlock()` helper 方法
+
+2. **发布审计通过**:
+   - ✅ 构建系统: agentEngine 文件自动包含在 VS Code 构建中
+   - ✅ 注册链路: chat.contribution.ts → agentEngine.contribution.ts → AfterRestored 阶段加载
+   - ✅ 多工具流式 Bug 已修复并测试覆盖
 
 ### Week 9-10: 真实 API 实测 + Phase 1 发布
 

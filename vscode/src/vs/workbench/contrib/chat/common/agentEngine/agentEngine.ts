@@ -237,9 +237,7 @@ export class AgentEngine {
 					streamingUsed = true;
 					const contentBlocks: NormalizedContentBlock[] = [];
 					let currentTextBlock: { type: 'text'; text: string } | undefined;
-					let currentToolId: string | undefined;
-					let currentToolName: string | undefined;
-					let currentToolInput = '';
+					let currentTool: { id: string; name: string; input: string } | undefined;
 					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 					let streamStopReason = 'end_turn';
 
@@ -260,23 +258,28 @@ export class AgentEngine {
 								break;
 
 							case 'tool_use_start':
+								// Finalize previous tool before starting a new one
+								if (currentTool) {
+									contentBlocks.push(this.finalizeToolBlock(currentTool));
+								}
 								if (currentTextBlock) {
 									contentBlocks.push(currentTextBlock);
 									currentTextBlock = undefined;
 								}
-								currentToolId = event.id;
-								currentToolName = event.name;
-								currentToolInput = '';
+								currentTool = { id: event.id, name: event.name, input: '' };
 								break;
 
 							case 'tool_input_delta':
-								currentToolInput += event.json;
+								if (currentTool) { currentTool.input += event.json; }
 								break;
 
 							case 'tool_call_delta':
-								if (event.id && !currentToolId) { currentToolId = event.id; }
-								if (event.name && !currentToolName) { currentToolName = event.name; }
-								if (event.arguments) { currentToolInput += event.arguments; }
+								if (!currentTool) {
+									currentTool = { id: event.id || '', name: event.name || '', input: '' };
+								}
+								if (event.id && !currentTool.id) { currentTool.id = event.id; }
+								if (event.name && !currentTool.name) { currentTool.name = event.name; }
+								if (event.arguments) { currentTool.input += event.arguments; }
 								break;
 
 							case 'message_complete':
@@ -288,16 +291,8 @@ export class AgentEngine {
 
 					// Finalize remaining blocks
 					if (currentTextBlock) { contentBlocks.push(currentTextBlock); }
-					if (currentToolId && currentToolName) {
-						let parsedInput: any = {};
-						try { if (currentToolInput) { parsedInput = JSON.parse(currentToolInput); } }
-						catch { parsedInput = { raw: currentToolInput }; }
-						contentBlocks.push({
-							type: 'tool_use',
-							id: currentToolId,
-							name: currentToolName,
-							input: parsedInput,
-						});
+					if (currentTool) {
+						contentBlocks.push(this.finalizeToolBlock(currentTool));
 					}
 
 					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
@@ -465,6 +460,22 @@ export class AgentEngine {
 			usage: this.totalUsage,
 			cost: this.totalCost,
 			numTurns: this.turnCount,
+		};
+	}
+
+	// ========================================================================
+	// Streaming Helpers
+	// ========================================================================
+
+	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedContentBlock {
+		let parsedInput: any = {};
+		try { if (tool.input) { parsedInput = JSON.parse(tool.input); } }
+		catch { parsedInput = { raw: tool.input }; }
+		return {
+			type: 'tool_use',
+			id: tool.id,
+			name: tool.name,
+			input: parsedInput,
 		};
 	}
 
