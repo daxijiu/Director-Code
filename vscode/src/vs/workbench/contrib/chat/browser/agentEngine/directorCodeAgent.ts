@@ -14,6 +14,7 @@
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
+import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
 import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
@@ -50,6 +51,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 		@IConfigurationService private readonly configService: IConfigurationService,
 		@IApiKeyService private readonly apiKeyService: IApiKeyService,
 		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
+		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 	) { }
 
 	async invoke(
@@ -104,9 +106,15 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				abortController.abort();
 			});
 
-			// 7. Create Agent Engine
+			// 7. Resolve workspace folder for cwd
+			const workspace = this.workspaceService.getWorkspace();
+			const cwd = workspace.folders.length > 0
+				? workspace.folders[0].uri.fsPath
+				: '.';
+
+			// 8. Create Agent Engine with conversation history
 			const config: AgentEngineConfig = {
-				cwd: '.', // TODO: get workspace folder
+				cwd,
 				model: modelId,
 				provider,
 				tools: toolDefinitions,
@@ -114,16 +122,13 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				maxTokens,
 				abortSignal: abortController.signal,
 			};
-			const engine = new AgentEngine(config, toolBridge);
+			const engine = new AgentEngine(config, toolBridge, previousMessages);
 
-			// 8. Pre-populate conversation history
-			// The engine manages its own message array, so we need to set
-			// the previous messages before running the loop.
-			// For now, we include history context in the user message.
+			// 9. Run the agentic loop
 			const userMessage = requestToUserMessage(request);
 
 			try {
-				// 9. Run the agentic loop
+				// 10. Run the agentic loop
 				let firstProgressSent = false;
 				let firstProgressTime: number | undefined;
 

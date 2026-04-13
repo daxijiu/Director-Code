@@ -51,8 +51,21 @@ export function agentEventToProgress(event: AgentEvent): IChatProgress[] {
 
 function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChatProgress[] {
 	const parts: IChatProgress[] = [];
+	const content = event.message.content;
 
-	for (const block of event.message.content) {
+	// Handle string content (defensive — providers should return blocks)
+	if (typeof content === 'string') {
+		if (content) {
+			const markdownContent: IChatMarkdownContent = {
+				kind: 'markdownContent',
+				content: new MarkdownString(content),
+			};
+			parts.push(markdownContent);
+		}
+		return parts;
+	}
+
+	for (const block of content) {
 		if (block.type === 'text' && block.text) {
 			const markdownContent: IChatMarkdownContent = {
 				kind: 'markdownContent',

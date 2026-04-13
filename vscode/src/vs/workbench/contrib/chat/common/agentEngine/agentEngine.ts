@@ -124,10 +124,16 @@ export class AgentEngine {
 	constructor(
 		private readonly config: AgentEngineConfig,
 		private readonly toolExecutor?: IToolExecutor,
+		initialMessages?: readonly NormalizedMessageParam[],
 	) {
 		this.provider = config.provider;
 		this.compactState = createAutoCompactState();
 		this.sessionId = generateUuid();
+
+		// Pre-populate conversation history (e.g., from previous chat turns)
+		if (initialMessages && initialMessages.length > 0) {
+			this.messages = initialMessages.map(m => ({ role: m.role, content: m.content } as MutableMessageParam));
+		}
 	}
 
 	/**

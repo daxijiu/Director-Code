@@ -2,7 +2,7 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1b Week 5 完成，进入 Week 6-7（配置 UI 精化 + 端到端实测）
+- **状态**: Phase 1c Week 6 完成，进入 Week 7（端到端实测 + UI 精化）
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
@@ -30,7 +30,8 @@ Phase 1: Agent 核心 + Provider 替换 (8-10 周)
   1a. Week 3: 浏览器集成层 ✅ 完成 (870 行, 17 测试)
   1b. Week 4: Settings UI + API Key 管理 ✅ 完成 (1,030 行, 49 测试)
   1b. Week 5: 模型选择器集成 + 集成测试 ✅ 完成 (Bug fix + 65 新测试)
-  1c. Week 6-7: 配置 UI 精化 + 端到端实测 ← 下一步
+  1c. Week 6: 端到端功能补全 ✅ 完成 (历史注入 + cwd + 20 新测试)
+  1c. Week 7: 端到端实测 + UI 精化 ← 下一步
   1d. Week 8-10: 集成测试 + Phase 1 发布
 
 Phase 2: ACP 协议扩展 (6-8 周)
@@ -61,7 +62,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 3: 浏览器集成 | ~870 行 | ~270 行 | 17 |
 | Week 4: Settings UI | ~1,030 行 | ~470 行 | 49 |
 | Week 5: 集成测试 + Bug fix | ~15 行 | ~850 行 | 65 |
-| **合计** | **~4,345 行** | **~3,460 行** | **204 (全通过)** |
+| Week 6: 端到端补全 | ~50 行 | ~250 行 | 20 |
+| **合计** | **~4,395 行** | **~3,710 行** | **223 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -191,10 +193,26 @@ node test/unit/node/index.js \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts" \
   --run "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts" \
-  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts"
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts" \
+  --run "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts"
 ```
 
-## 下一步计划：Phase 1c Week 6-7
+### Week 6 新增功能
+
+1. **对话历史注入** — AgentEngine 构造函数新增 `initialMessages` 参数
+   - `previousMessages` 现在正确传递给 engine
+   - 多轮对话可以保持上下文
+
+2. **工作目录修复** — `cwd` 从 `IWorkspaceContextService` 获取真实路径
+   - 不再硬编码 `'.'`
+   - 文件操作工具现在使用正确的工作区根路径
+
+3. **ProgressBridge 防御性改进** — 处理 `content` 为 string 类型的情况
+
+4. **AgentEngine 核心逻辑测试** — 20 个新测试
+   - 初始消息格式、工具定义、Token 估算、Auto-Compact、重试逻辑
+
+## 下一步计划：Phase 1c Week 7
 
 ### Week 6-7: 配置 UI 精化 + 端到端实测
 
