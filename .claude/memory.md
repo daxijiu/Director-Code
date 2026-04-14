@@ -2,10 +2,12 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1 完成 (Week 10)，可发布。进入 Phase 2 规划
-- **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM
+- **状态**: Phase 1 + 1.5 完成，当前进行 **OAuth + Provider 增强**
+- **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM + OAuth 登录
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
+- **测试**: 358 个全部通过
+- **Git**: master 分支，已推送到 `github.com/daxijiu/Director-Code`
 
 ## 权威文档位置
 
@@ -24,19 +26,14 @@
 ## 实施路线
 
 ```
-Phase 1: Agent 核心 + Provider 替换 (8-10 周)
-  1a. Week 1: Agent 引擎核心 ✅ 完成 (2,004 行)
-  1a. Week 2: Provider 层 ✅ 完成 (1,100 行, 73 测试)
-  1a. Week 3: 浏览器集成层 ✅ 完成 (870 行, 17 测试)
-  1b. Week 4: Settings UI + API Key 管理 ✅ 完成 (1,030 行, 49 测试)
-  1b. Week 5: 模型选择器集成 + 集成测试 ✅ 完成 (Bug fix + 65 新测试)
-  1c. Week 6: 端到端功能补全 ✅ 完成 (历史注入 + cwd + 20 新测试)
-  1c. Week 7: 端到端实测 + UI 精化 ✅ 完成 (关键 Bug 修复 + UI 增强 + 45 新测试)
-  1d. Week 8: 流式输出改造 ✅ 完成 (streaming delta events + 9 新测试)
-  1d. Week 9: 发布准备 ✅ 完成 (多工具Bug修复 + DeepSeek支持 + 发布审计)
-  1d. Week 10: 收尾 ✅ 完成 (README重写 + 文档)
+Phase 1: Agent 核心 + Provider 替换 ✅ 完成 (Week 1-10, 358 测试)
+Phase 1.5: 细节优化 ✅ 完成 (品牌修复 + Test Connection + 5 Provider + Settings UI 入口)
 
-Phase 2: ACP 协议扩展 (6-8 周) ← 下一步
+Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
+  阶段 1: Provider 基类抽象重构 (AbstractDirectorCodeProvider)
+  阶段 2: Per-Model 独立配置 (API Key / Base URL / 能力标记)
+  阶段 3: 模型列表三层 Fallback (Provider API → CDN → 静态)
+  阶段 4: OAuth 2.0 实现 (Anthropic + OpenAI 浏览器授权流)
 
 Phase 2: ACP 协议扩展 (6-8 周)
 Phase 3: CLI 包装器 (4-5 周)
@@ -410,7 +407,19 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 
 **测试**: 358 个全部通过（从 278 增加到 358，+80 个）
 
-### 下一步: Phase 2 ACP 协议扩展
+### 当前阶段: OAuth + Provider 增强
+
+**参考项目分析已完成**，关键参考来源：
+- **vscode-copilot-chat**: BYOK 体系 (8 vendor、Provider 基类 `AbstractLanguageModelChatProvider`、per-model SecretStorage `copilot-byok-${provider}-${modelId}-api-key`、CDN 模型列表 `fetchKnownModelList`)
+- **free-code**: OAuth 2.0 完整流程 (`oauth.ts` 含 Anthropic + OpenAI 配置、`jwtUtils.ts` Token 刷新调度器、`auth.ts` 7 种认证源)
+
+**四阶段实施计划：**
+1. **Provider 基类抽象** — 新建 `AbstractDirectorCodeProvider`，3 个 Provider 改为继承，扩展 `ProviderConfig` 含 capabilities
+2. **Per-Model 配置** — `IApiKeyService` 新增 per-model 方法，`IModelConfig` 类型，Agent 读取 per-model 配置，Settings UI 适配
+3. **模型列表三层 Fallback** — `ModelResolver` 服务: Provider API (GET /v1/models) → CDN JSON → 静态 `MODEL_CATALOG`
+4. **OAuth 2.0** — `IOAuthService` 接口，浏览器授权流 (PKCE)，Anthropic + OpenAI 配置，Token 刷新调度，Settings UI 登录按钮
+
+### 后续: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现
 - 每个外部 ACP Agent 通过 registerDynamicAgent 注册
 - 详细计划见 `.cursor/plan-04-phase2-acp.md`

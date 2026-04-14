@@ -1,8 +1,12 @@
 # CLAUDE.md - 项目指引
 
+> **重要**: 每次对话开始时，必须先读取 `.claude/memory.md` 获取项目最新状态和进度。
+
 ## 项目概述
 
-这是一个开源 VS Code 构建（fork），品牌名为 NiceCode/Director-Code。已可成功编译。当前核心目标是**优化迭代其内置的 Copilot AI Agent 部分**。
+这是一个开源 VS Code 构建（fork），品牌名为 NiceCode/Director-Code。已可成功编译并发布安装包。
+
+**当前状态**: Phase 1 已完成（Agent 核心 + Provider + Settings UI），Phase 1.5 细节优化已完成（品牌修复 + Test Connection + Provider 扩展到 5 个 + Settings UI 入口），正在进行 **OAuth 2.0 + Provider 体系全面增强**。
 
 源码主体在 `vscode/` 子目录下。
 
@@ -39,17 +43,18 @@ npm run watch-client # 仅客户端
 │   ├── src/vs/workbench/contrib/mcp/       # MCP 协议集成
 │   └── src/vs/platform/secrets/            # SecretStorage (API Key 存储)
 ├── sub-projects/                           # 参考项目
-│   ├── sub-projects/                       # Claudable (CLI Agent 调用参考)
-│   ├── free-code/                          # Claude Code 重构版 (Agent 循环参考)
-│   ├── open-agent-sdk-typescript/          # Agent SDK (Provider+Engine 核心参考)
-│   ├── vscode-acp/                         # ACP 协议 VS Code 扩展参考
-│   └── vscode-copilot-chat/               # Copilot Chat 完整源码 (BYOK/ToolCallingLoop 参考)
-└── .cursor/                                # 实施计划文档 (唯一权威来源)
+│   ├── Claudable/                          # CLI Agent 桌面包装 (Phase 3 spawn+readline 参考)
+│   ├── free-code/                          # Claude Code 重构版 (OAuth 2.0 + 认证体系参考)
+│   ├── open-agent-sdk-typescript/          # Agent SDK (已移植: Provider+Engine 核心)
+│   ├── vscode-acp/                         # ACP 协议 VS Code 扩展 (Phase 2 参考)
+│   └── vscode-copilot-chat/               # Copilot Chat 源码 (BYOK Provider + Model 管理参考)
+├── .cursor/                                # 实施计划文档 (唯一权威来源)
+└── .claude/memory.md                       # 项目状态与进度记忆 (每次会话必读)
 ```
 
-## 实施计划 (唯一权威文档)
+## 实施计划
 
-所有计划文档位于 `.cursor/` 目录，其他位置的旧文档已清理：
+### 计划文档位置
 
 | 文档 | 内容 |
 |------|------|
@@ -59,16 +64,23 @@ npm run watch-client # 仅客户端
 | `.cursor/plan-04-phase2-acp.md` | **Phase 2 ACP**: 协议层设计、参考 MCP+vscode-acp |
 | `.cursor/plan-05-phase3-cli.md` | **Phase 3 CLI**: 适配器框架、输出解析、外部编辑集成 |
 | `.cursor/copilot-chat-extension-analysis.md` | **Copilot Chat 源码分析**: ToolCallingLoop、BYOK、Provider 层 |
+| `.cursor/plans/phase_1_细节优化*.plan.md` | **Phase 1.5 细节优化计划**: 品牌修复、Test Connection、Provider 扩展 (已完成) |
 
-### 实施路线 (已定稿)
+### 实施路线
 
 ```
-Phase 1: Agent 核心 + Provider 替换 (8-10 周)
-  Agent 引擎: 基于 open-agent-sdk QueryEngine (~400 行)
-  Provider:   移植 open-agent-sdk AnthropicProvider/OpenAIProvider + 流式改造
-  工具:       桥接 VS Code 现有 ILanguageModelToolsService
-  注册:       通过 registerDynamicAgent 注册为 Chat Participant
-  设置:       扩展现有 chatManagement + ISecretStorageService
+Phase 1: Agent 核心 + Provider 替换 ✅ 完成 (Week 1-10)
+  Agent 引擎、3+2 Provider、Settings UI、流式输出、358 个测试
+
+Phase 1.5: 细节优化 ✅ 完成
+  品牌残留清理、Test Connection 修复、Provider 扩展到 5 个
+  Settings UI 入口增强、上下文长度配置、OAuth 预留
+
+Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
+  OAuth 2.0 (Anthropic + OpenAI 浏览器授权流)
+  模型列表三层 Fallback (Provider API → CDN → 静态)
+  Per-model 独立配置 (API Key / Base URL / 能力标记)
+  Provider 基类抽象重构
 
 Phase 2: ACP 协议扩展 (6-8 周)
   参考 MCP 模式 + vscode-acp 实现
@@ -78,6 +90,16 @@ Phase 3: CLI 包装器 (4-5 周)
   参考 Claudable 的 spawn+readline 模式
   Claude Code / Codex / Gemini CLI 适配器
 ```
+
+### Sub-Projects 参考价值总结
+
+| 项目 | 适用阶段 | 参考内容 |
+|------|----------|----------|
+| **vscode-copilot-chat** | 当前 | BYOK Provider 体系 (8 vendor)、SecretStorage per-model 键名、CDN 动态模型列表、CustomOAI per-model 配置 |
+| **free-code** | 当前 | 完整 Anthropic OAuth 2.0 + OpenAI OAuth、Token 刷新 (JWT)、多认证源、订阅类型 |
+| **open-agent-sdk** | 已完成 | Provider 接口 + Engine 核心已移植到 Director-Code |
+| **vscode-acp** | Phase 2 | ACP 协议连接、auth 握手、session 管理 |
+| **Claudable** | Phase 3 | spawn+readline CLI 适配 (Codex/Cursor)、多 CLI 统一调度、全局+项目设置分层 |
 
 ## 核心接口
 
