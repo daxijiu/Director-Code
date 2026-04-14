@@ -315,6 +315,11 @@ node test/unit/node/index.js \
 
 **构建流程（可复现）**:
 ```bash
+# 0. 环境准备（只需做一次）
+# GITHUB_TOKEN 已通过 setx 永久保存到 Windows 用户环境变量
+# 新终端自动生效，5000 次/小时 GitHub API 限额
+# （token 值不记录在代码仓库中，通过 setx GITHUB_TOKEN "ghp_xxx" 设置）
+
 # 1. 品牌 + patches（需设置环境变量）
 export APP_NAME="Director-Code" ASSETS_REPOSITORY="daxijiu/Director-Code" BINARY_NAME="director-code" GH_REPO_PATH="daxijiu/Director-Code" ORG_NAME="Director-Code" VSCODE_QUALITY="stable" RELEASE_VERSION="1.112.0" OS_NAME="windows" CI_BUILD="no" DISABLE_UPDATE="no"
 bash prepare_vscode.sh
@@ -327,13 +332,44 @@ npm run gulp -- compile-build-without-mangling
 npm run gulp -- compile-extension-media
 npm run gulp -- compile-extensions-build
 npm run gulp -- minify-vscode
+
+# 4. 打包（需设置 ELECTRON_CACHE_OVERRIDE，见下方说明）
+export ELECTRON_CACHE_OVERRIDE="/e/Projects/Director-Code/.electron-cache"
 npm run gulp -- "vscode-win32-x64-min-ci"
+
+# 5. 生成安装包
+npm run gulp -- "vscode-win32-x64-inno-updater"
+npm run gulp -- "vscode-win32-x64-user-setup"    # 用户级安装包
+npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 ```
 
 **注意**: 
 - `prepare_vscode.sh` 会执行 `npm ci`（重装依赖），耗时较长
 - GitHub API 有 rate limit (60/hour)，builtInExtensions 下载可能失败，需设置 GITHUB_TOKEN
 - VisualElementsManifest.xml 源模板已修复为 Director-Code
+
+### ⚠️ Node.js 网络问题（公司内网必读）
+
+**根因**: 公司网络（腾讯内网）安全软件拦截 Node.js 的 OpenSSL TLS 握手，但允许 Windows 原生 TLS（curl/PowerShell/浏览器/git schannel）。表现为 Node.js 访问 GitHub 时报 `Client network socket disconnected before secure TLS connection was established`。
+
+**影响**: 
+- `npm install` / `npm ci` 可能失败
+- `vscode-win32-x64-min-ci` 打包步骤下载 Electron 失败
+- `compile-extensions-build` 下载 builtInExtensions 失败
+
+**解决方案 — Electron 本地缓存**:
+1. 用 PowerShell 预下载 Electron（走 Windows 原生 TLS）:
+   ```powershell
+   Invoke-WebRequest -Uri "https://github.com/electron/electron/releases/download/v39.8.0/electron-v39.8.0-win32-x64.zip" -OutFile "E:\Projects\Director-Code\.electron-cache\electron-v39.8.0-win32-x64.zip" -UseBasicParsing
+   ```
+2. 已 patch `node_modules/@vscode/gulp-electron/src/download.js`，添加 `ELECTRON_CACHE_OVERRIDE` 环境变量支持
+3. 构建时设置: `export ELECTRON_CACHE_OVERRIDE="/e/Projects/Director-Code/.electron-cache"`
+4. Patch 逻辑: download() 函数开头检查 `ELECTRON_CACHE_OVERRIDE` 目录下是否有匹配的 zip 文件，有则直接返回本地路径
+
+**解决方案 — builtInExtensions 下载失败**:
+- 临时清空 `product.json` 的 `builtInExtensions` 数组为 `[]`
+- 构建完成后恢复原值
+- 这 3 个 debug 扩展（js-debug 等）非核心功能，缺失不影响 Agent
 
 ### 下一步: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现
