@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(git lfs:*)",
+      "Bash(git config:*)",
+      "Bash(wc -l /e/Projects/Director-Code/vscode/src/vs/workbench/contrib/chat/test/common/*.test.ts)",
+      "Bash(find /e/Projects/Director-Code/vscode/src/vs/workbench/contrib/chat/test/browser/agentSessions -name \"*.test.ts\" -exec wc -l {} +)",
+      "Bash(node test/unit/node/index.js --grep \"AgentEngine\")",
+      "Bash(ls -d /e/Projects/Director-Code/vscode/out*)",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); const s = pkg.scripts; Object.keys\\(s\\).filter\\(k => k.includes\\('compile'\\) || k.includes\\('watch'\\) || k.includes\\('test-node'\\)\\).forEach\\(k => console.log\\(k + ': ' + s[k]\\)\\)\")",
+      "Bash(node build/next/index.ts transpile)",
+      "Bash(npx mocha:*)",
+      "Bash(node test/unit/node/index.js --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts\")",
+      "Bash(npm run:*)",
+      "Bash(node test/unit/node/index.js --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts\")"
     ]
   }
 }

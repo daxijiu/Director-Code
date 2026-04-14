@@ -124,12 +124,6 @@ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
 			definitions['ProxyNameLong'] = embedded.nameLong;
 		}
 
-		if (quality === 'stable' || quality === 'insider') {
-			definitions['AppxPackage'] = `${quality === 'stable' ? 'code' : 'code_insider'}_${arch}.appx`;
-			definitions['AppxPackageDll'] = `${quality === 'stable' ? 'code' : 'code_insider'}_explorer_command_${arch}.dll`;
-			definitions['AppxPackageName'] = `${product.win32AppUserModelId}`;
-		}
-
 		packageInnoSetup(issPath, { definitions }, cb as (err?: Error | null) => void);
 	};
 }

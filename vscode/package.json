@@ -3,7 +3,7 @@
   "version": "1.112.0",
   "distro": "d1869def0636b437410e88c1472b254ba0b53a9d",
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "Director-Code"
   },
   "license": "MIT",
   "main": "./out/main.js",
@@ -89,14 +89,13 @@
     "@vscode/deviceid": "^0.1.1",
     "@vscode/iconv-lite-umd": "0.7.1",
     "@vscode/native-watchdog": "^1.4.6",
-    "@vscode/policy-watcher": "^1.3.7",
+    "@vscodium/policy-watcher": "^1.3.2-252465",
     "@vscode/proxy-agent": "^0.39.1",
     "@vscode/ripgrep": "^1.17.1",
     "@vscode/spdlog": "^0.15.7",
     "@vscode/sqlite3": "5.1.12-vscode",
     "@vscode/sudo-prompt": "9.3.2",
     "@vscode/tree-sitter-wasm": "^0.3.0",
-    "@vscode/vsce": "^3.7.1",
     "@vscode/vscode-languagedetection": "1.0.23",
     "@vscode/windows-mutex": "^0.5.0",
     "@vscode/windows-process-tree": "^0.6.0",
@@ -118,7 +117,7 @@
     "kerberos": "2.1.1",
     "minimist": "^1.2.8",
     "native-is-elevated": "0.9.0",
-    "native-keymap": "^3.3.9",
+    "@vscodium/native-keymap": "3.3.7-258424",
     "node-pty": "^1.2.0-beta.10",
     "open": "^10.1.2",
     "playwright-core": "1.59.0-alpha-2026-02-20",

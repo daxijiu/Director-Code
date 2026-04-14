@@ -282,18 +282,41 @@ node test/unit/node/index.js \
 7. 错误恢复 — retry/compact/prompt-too-long 自动恢复
 8. 成本追踪 — 17 模型定价 + 实时 Token 计费
 
-### 全量编译验证 (2026-04-13)
+### 全量编译验证
 
-完整 production build 通过:
-1. `compile-build-without-mangling` — 0 errors (严格 TS 编译)
-2. `compile-extension-media` — 0 errors
-3. `compile-extensions-build` — 0 errors (需 @vscode/vsce)
-4. `minify-vscode` — 完成
-5. `vscode-win32-x64-min-ci` — 完成
+**最新品牌构建 (2026-04-14)**:
+1. `prepare_vscode.sh` — 品牌 + patches 全部应用（Director-Code 品牌 + telemetry 去除 + disable-copilot + open-vsx gallery）
+2. `compile-build-without-mangling` — 0 errors (严格 TS 编译)
+3. `compile-extension-media` — 0 errors
+4. `compile-extensions-build` — 0 errors
+5. `minify-vscode` — 完成
+6. `vscode-win32-x64-min-ci` — 完成
 
-**构建产物**: `VSCode-win32-x64/` — 887MB, 含 `Code - OSS.exe`
-**注意**: 品牌名显示 "Code - OSS"，因为 `prepare_vscode.sh` 需在编译前运行
-**完整品牌构建**: 先 `./prepare_vscode.sh` 再编译即可
+**构建产物**: `VSCode-win32-x64/Director-Code.exe` — 800MB
+**品牌**: 完整 Director-Code 品牌（nameShort/nameLong/applicationName/win32DirName 全部正确）
+**AgentEngine**: 已包含在 workbench.desktop.main.js minified bundle 中
+
+**构建流程（可复现）**:
+```bash
+# 1. 品牌 + patches（需设置环境变量）
+export APP_NAME="Director-Code" ASSETS_REPOSITORY="daxijiu/Director-Code" BINARY_NAME="director-code" GH_REPO_PATH="daxijiu/Director-Code" ORG_NAME="Director-Code" VSCODE_QUALITY="stable" RELEASE_VERSION="1.112.0" OS_NAME="windows" CI_BUILD="no" DISABLE_UPDATE="no"
+bash prepare_vscode.sh
+
+# 2. 在 vscode/ 子目录中恢复 AgentEngine 文件（如果是 stash/branch）
+cd vscode
+
+# 3. 编译
+npm run gulp -- compile-build-without-mangling
+npm run gulp -- compile-extension-media
+npm run gulp -- compile-extensions-build
+npm run gulp -- minify-vscode
+npm run gulp -- "vscode-win32-x64-min-ci"
+```
+
+**注意**: 
+- `prepare_vscode.sh` 会执行 `npm ci`（重装依赖），耗时较长
+- GitHub API 有 rate limit (60/hour)，builtInExtensions 下载可能失败，需设置 GITHUB_TOKEN
+- VisualElementsManifest.xml 源模板已修复为 Director-Code
 
 ### 下一步: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现
