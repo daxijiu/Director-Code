@@ -21,13 +21,10 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
 import {
 	MODEL_CATALOG,
 	getModelsForProvider,
-	getDefaultModel,
 	findModelById,
-	type IModelDefinition,
 } from '../../../common/agentEngine/modelCatalog.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import { estimateTokens } from '../../../common/agentEngine/tokens.js';
-import { SUPPORTED_PROVIDERS, providerToApiType } from '../../../common/agentEngine/apiKeyService.js';
 
 suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 

@@ -11,7 +11,7 @@
  * configuration, and streaming event types.
  */
 
-import type { LLMProvider, NormalizedContentBlock, NormalizedMessageParam, TokenUsage } from './providers/providerTypes.js';
+import type { LLMProvider, NormalizedContentBlock, TokenUsage } from './providers/providerTypes.js';
 
 // --------------------------------------------------------------------------
 // Content Block Types

@@ -81,7 +81,8 @@ export interface CreateMessageResponse {
 
 export type NormalizedResponseBlock =
 	| { readonly type: 'text'; readonly text: string }
-	| { readonly type: 'tool_use'; readonly id: string; readonly name: string; readonly input: any };
+	| { readonly type: 'tool_use'; readonly id: string; readonly name: string; readonly input: any }
+	| { readonly type: 'thinking'; readonly thinking: string };
 
 // --------------------------------------------------------------------------
 // Token Usage

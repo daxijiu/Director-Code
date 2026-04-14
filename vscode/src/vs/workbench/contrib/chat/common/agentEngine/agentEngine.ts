@@ -21,7 +21,7 @@
  * delegates tool execution to ToolBridge, generates UUIDs via VS Code API.
  */
 
-import { generateUuid } from '../../../../../../base/common/uuid.js';
+import { generateUuid } from '../../../../../base/common/uuid.js';
 import type {
 	AgentEngineConfig,
 	AgentEvent,
@@ -36,7 +36,7 @@ import type {
 	LLMProvider,
 	NormalizedMessageParam,
 	NormalizedTool,
-	NormalizedContentBlock,
+	NormalizedResponseBlock,
 	TokenUsage,
 	CreateMessageParams,
 } from './providers/providerTypes.js';
@@ -235,7 +235,7 @@ export class AgentEngine {
 				if (this.provider.createMessageStream) {
 					// Streaming path: yield text/thinking deltas inline
 					streamingUsed = true;
-					const contentBlocks: NormalizedContentBlock[] = [];
+					const contentBlocks: NormalizedResponseBlock[] = [];
 					let currentTextBlock: { type: 'text'; text: string } | undefined;
 					let currentTool: { id: string; name: string; input: string } | undefined;
 					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
@@ -467,7 +467,7 @@ export class AgentEngine {
 	// Streaming Helpers
 	// ========================================================================
 
-	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedContentBlock {
+	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedResponseBlock {
 		let parsedInput: any = {};
 		try { if (tool.input) { parsedInput = JSON.parse(tool.input); } }
 		catch { parsedInput = { raw: tool.input }; }

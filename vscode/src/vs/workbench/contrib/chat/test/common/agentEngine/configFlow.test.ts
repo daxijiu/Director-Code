@@ -23,7 +23,6 @@ import {
 	PROVIDER_DISPLAY_NAMES,
 	PROVIDER_DEFAULT_URLS,
 	providerToApiType,
-	type ProviderName,
 } from '../../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import {

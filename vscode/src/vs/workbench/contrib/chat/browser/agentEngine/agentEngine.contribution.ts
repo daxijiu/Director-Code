@@ -171,7 +171,7 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 				helpTextPrefix: 'Director Code Agent — use your own LLM API keys for AI coding assistance.',
 			},
 			slashCommands: [],
-			locations: [ChatAgentLocation.Panel, ChatAgentLocation.Editor, ChatAgentLocation.Terminal],
+			locations: [ChatAgentLocation.Chat, ChatAgentLocation.EditorInline, ChatAgentLocation.Terminal],
 			modes: [ChatModeKind.Agent],
 			disambiguation: [{
 				category: 'coding',
@@ -191,13 +191,13 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		// Step 1: Register vendor descriptor (required before registerLanguageModelProvider)
 		// The _vendors Map must contain our vendor or registerLanguageModelProvider throws.
 		languageModelsService.deltaLanguageModelChatProviderDescriptors(
-			[{ vendor: VENDOR, displayName: 'Director Code' }],
+			[{ vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: undefined, when: undefined }],
 			[],
 		);
 		this._register(toDisposable(() => {
 			languageModelsService.deltaLanguageModelChatProviderDescriptors(
 				[],
-				[{ vendor: VENDOR, displayName: 'Director Code' }],
+				[{ vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: undefined, when: undefined }],
 			);
 		}));
 

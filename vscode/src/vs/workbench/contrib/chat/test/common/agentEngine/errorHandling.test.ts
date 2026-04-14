@@ -20,7 +20,6 @@ import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
 import {
 	ApiKeyService,
 	SUPPORTED_PROVIDERS,
-	type ProviderName,
 } from '../../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import type { ApiType } from '../../../common/agentEngine/providers/providerTypes.js';

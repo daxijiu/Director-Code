@@ -282,6 +282,19 @@ node test/unit/node/index.js \
 7. 错误恢复 — retry/compact/prompt-too-long 自动恢复
 8. 成本追踪 — 17 模型定价 + 实时 Token 计费
 
+### 全量编译验证 (2026-04-13)
+
+完整 production build 通过:
+1. `compile-build-without-mangling` — 0 errors (严格 TS 编译)
+2. `compile-extension-media` — 0 errors
+3. `compile-extensions-build` — 0 errors (需 @vscode/vsce)
+4. `minify-vscode` — 完成
+5. `vscode-win32-x64-min-ci` — 完成
+
+**构建产物**: `VSCode-win32-x64/` — 887MB, 含 `Code - OSS.exe`
+**注意**: 品牌名显示 "Code - OSS"，因为 `prepare_vscode.sh` 需在编译前运行
+**完整品牌构建**: 先 `./prepare_vscode.sh` 再编译即可
+
 ### 下一步: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现
 - 每个外部 ACP Agent 通过 registerDynamicAgent 注册

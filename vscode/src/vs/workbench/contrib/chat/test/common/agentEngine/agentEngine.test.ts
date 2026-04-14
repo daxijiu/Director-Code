@@ -20,12 +20,10 @@
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import type {
-	AgentEngineConfig,
 	AgentToolDefinition,
 } from '../../../common/agentEngine/agentEngineTypes.js';
 import type {
 	NormalizedMessageParam,
-	CreateMessageResponse,
 } from '../../../common/agentEngine/providers/providerTypes.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import { estimateTokens, estimateCost, getContextWindowSize } from '../../../common/agentEngine/tokens.js';

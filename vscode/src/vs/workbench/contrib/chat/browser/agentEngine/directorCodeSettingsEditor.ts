@@ -21,10 +21,9 @@ import { ITelemetryService } from '../../../../../platform/telemetry/common/tele
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { IEditorOptions } from '../../../../../platform/editor/common/editor.js';
 import { EditorPane } from '../../../../browser/parts/editor/editorPane.js';
-import { IEditorOpenContext, EditorInput } from '../../../../common/editor.js';
+import { IEditorOpenContext, IEditorSerializer, IUntypedEditorInput } from '../../../../common/editor.js';
+import { EditorInput } from '../../../../common/editor/editorInput.js';
 import { IEditorGroup } from '../../../../services/editor/common/editorGroupsService.js';
-import { IEditorSerializer } from '../../../../common/editor.js';
-import { IUntypedEditorInput } from '../../../../../platform/editor/common/editor.js';
 import { localize } from '../../../../../nls.js';
 import { Codicon } from '../../../../../base/common/codicons.js';
 import { ThemeIcon } from '../../../../../base/common/themables.js';
@@ -84,11 +83,11 @@ export class DirectorCodeSettingsEditorInputSerializer implements IEditorSeriali
 		return true;
 	}
 
-	serialize(_input: DirectorCodeSettingsEditorInput): string {
+	serialize(_input: DirectorCodeSettingsEditorInput): string | undefined {
 		return '';
 	}
 
-	deserialize(instantiationService: IInstantiationService): DirectorCodeSettingsEditorInput {
+	deserialize(instantiationService: IInstantiationService, _serializedEditor: string): DirectorCodeSettingsEditorInput | undefined {
 		return instantiationService.createInstance(DirectorCodeSettingsEditorInput);
 	}
 }
@@ -155,7 +154,7 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 	}
 
 	override async setInput(
-		input: DirectorCodeSettingsEditorInput,
+		input: EditorInput,
 		options: IEditorOptions | undefined,
 		context: IEditorOpenContext,
 		token: CancellationToken,

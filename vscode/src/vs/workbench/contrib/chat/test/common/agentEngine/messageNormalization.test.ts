@@ -21,7 +21,7 @@ suite("AgentEngine - MessageNormalization", () => {
 			agentId: "director-code",
 			message,
 			variables: { variables: [] } as any,
-			location: ChatAgentLocation.Panel,
+			location: ChatAgentLocation.Chat,
 		} as IChatAgentRequest;
 	}
 

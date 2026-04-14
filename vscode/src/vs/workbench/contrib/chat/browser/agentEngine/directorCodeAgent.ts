@@ -25,9 +25,8 @@ import type {
 	IChatAgentRequest,
 	IChatAgentResult,
 	IChatAgentHistoryEntry,
-	IChatFollowup,
 } from '../../common/participants/chatAgents.js';
-import type { IChatProgress } from '../../common/chatService/chatService.js';
+import type { IChatFollowup, IChatProgress } from '../../common/chatService/chatService.js';
 import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
 import { agentEventToProgress } from './progressBridge.js';
 import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';

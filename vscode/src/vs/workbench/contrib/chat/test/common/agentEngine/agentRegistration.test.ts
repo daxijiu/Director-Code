@@ -21,7 +21,6 @@ import {
 	ApiKeyService,
 	SUPPORTED_PROVIDERS,
 	providerToApiType,
-	type ProviderName,
 } from '../../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import { MODEL_CATALOG, getModelsForProvider, getDefaultModel, findModelById } from '../../../common/agentEngine/modelCatalog.js';

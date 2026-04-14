@@ -86,7 +86,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 				maxInputTokens: m.maxInputTokens,
 				maxOutputTokens: m.maxOutputTokens,
 				isDefaultForLocation: {
-					[ChatAgentLocation.Panel]: false,
+					[ChatAgentLocation.Chat]: false,
 				},
 				isUserSelectable: true,
 				capabilities: {
@@ -94,6 +94,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 					toolCalling: true,
 					agentMode: true,
 				},
+				modelPickerCategory: undefined,
 			} satisfies ILanguageModelChatMetadata,
 		}));
 	}
@@ -194,12 +195,15 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 	private convertMessages(messages: IChatMessage[]): NormalizedMessageParam[] {
 		return messages.map(msg => ({
 			role: msg.role === 1 ? 'assistant' : 'user', // ChatMessageRole enum: 1 = Assistant
-			content: msg.content?.value || '',
+			content: this.chatMessageToText(msg),
 		}));
 	}
 
 	private chatMessageToText(message: IChatMessage): string {
-		return message.content?.value || '';
+		return message.content
+			.filter((part): part is { type: 'text'; value: string } => part.type === 'text')
+			.map(part => part.value)
+			.join('') || '';
 	}
 
 	private createAbortSignal(token: CancellationToken): AbortSignal {

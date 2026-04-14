@@ -27,13 +27,9 @@ import type {
 	AgentAssistantEvent,
 	AgentSystemEvent,
 	AgentResultEvent,
-	AgentToolDefinition,
-	AgentEngineConfig,
 } from '../../../common/agentEngine/agentEngineTypes.js';
 import type {
 	NormalizedMessageParam,
-	NormalizedContentBlock,
-	CreateMessageResponse,
 	TokenUsage,
 } from '../../../common/agentEngine/providers/providerTypes.js';
 import { agentEventToProgress } from '../../../browser/agentEngine/progressBridge.js';
