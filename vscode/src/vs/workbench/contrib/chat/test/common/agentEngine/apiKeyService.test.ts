@@ -10,11 +10,14 @@ import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
 import {
 	ApiKeyService,
 	SECRET_KEY_PREFIX,
+	MODEL_KEY_PREFIX,
+	MODEL_CONFIG_PREFIX,
 	SUPPORTED_PROVIDERS,
 	PROVIDER_DISPLAY_NAMES,
 	PROVIDER_DEFAULT_URLS,
 	providerToApiType,
 	type ProviderName,
+	type IModelConfig,
 } from '../../../common/agentEngine/apiKeyService.js';
 import type { ISecretStorageService, ISecretStorageProvider } from '../../../../../../platform/secrets/common/secrets.js';
 
@@ -282,6 +285,232 @@ suite("AgentEngine - ApiKeyService", () => {
 				assert.strictEqual(result.success, false);
 				assert.ok(result.error, "expected error for " + provider);
 			}
+		});
+	});
+
+	// ====================================================================
+	// Per-Model API Key Management
+	// ====================================================================
+
+	suite("Per-Model API Key", () => {
+
+		test("getModelApiKey falls back to provider-level key", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			const key = await apiKeyService.getModelApiKey("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(key, "provider-key");
+		});
+
+		test("getModelApiKey returns per-model key when set", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
+			const key = await apiKeyService.getModelApiKey("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(key, "model-key");
+		});
+
+		test("getModelApiKey returns undefined when no key at any level", async () => {
+			const key = await apiKeyService.getModelApiKey("openai", "gpt-4o");
+			assert.strictEqual(key, undefined);
+		});
+
+		test("setModelApiKey stores with correct key format", async () => {
+			await apiKeyService.setModelApiKey("openai", "gpt-4o", "model-specific-key");
+			const raw = await mockSecretService.get("director-code.modelKey.openai.gpt-4o");
+			assert.strictEqual(raw, "model-specific-key");
+		});
+
+		test("deleteModelApiKey reverts to provider-level key", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
+			assert.strictEqual(await apiKeyService.getModelApiKey("anthropic", "claude-sonnet-4-6"), "model-key");
+
+			await apiKeyService.deleteModelApiKey("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(await apiKeyService.getModelApiKey("anthropic", "claude-sonnet-4-6"), "provider-key");
+		});
+
+		test("hasModelApiKey returns true only for per-model key", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			assert.strictEqual(await apiKeyService.hasModelApiKey("anthropic", "claude-sonnet-4-6"), false);
+
+			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
+			assert.strictEqual(await apiKeyService.hasModelApiKey("anthropic", "claude-sonnet-4-6"), true);
+		});
+
+		test("per-model keys are independent across models", async () => {
+			await apiKeyService.setModelApiKey("openai", "gpt-4o", "key-4o");
+			await apiKeyService.setModelApiKey("openai", "o3", "key-o3");
+
+			assert.strictEqual(await apiKeyService.getModelApiKey("openai", "gpt-4o"), "key-4o");
+			assert.strictEqual(await apiKeyService.getModelApiKey("openai", "o3"), "key-o3");
+		});
+
+		test("per-model keys are independent across providers", async () => {
+			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "ant-key");
+			await apiKeyService.setModelApiKey("openai", "claude-sonnet-4-6", "oai-key");
+
+			assert.strictEqual(await apiKeyService.getModelApiKey("anthropic", "claude-sonnet-4-6"), "ant-key");
+			assert.strictEqual(await apiKeyService.getModelApiKey("openai", "claude-sonnet-4-6"), "oai-key");
+		});
+
+		test("change events fire for per-model key changes", async () => {
+			const events: string[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(e => events.push(e)));
+
+			await apiKeyService.setModelApiKey("openai", "gpt-4o", "key");
+			assert.ok(events.length > 0);
+		});
+	});
+
+	// ====================================================================
+	// Per-Model Configuration
+	// ====================================================================
+
+	suite("Per-Model Configuration", () => {
+
+		test("getModelConfig returns undefined when not set", async () => {
+			const config = await apiKeyService.getModelConfig("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(config, undefined);
+		});
+
+		test("setModelConfig and getModelConfig round-trip", async () => {
+			const config: IModelConfig = {
+				baseURL: "https://custom.proxy.com",
+				capabilities: { vision: true, toolCalling: true },
+			};
+			await apiKeyService.setModelConfig("openai", "gpt-4o", config);
+			const retrieved = await apiKeyService.getModelConfig("openai", "gpt-4o");
+			assert.deepStrictEqual(retrieved, config);
+		});
+
+		test("deleteModelConfig removes the config", async () => {
+			await apiKeyService.setModelConfig("anthropic", "claude-sonnet-4-6", { baseURL: "https://test.com" });
+			assert.ok(await apiKeyService.getModelConfig("anthropic", "claude-sonnet-4-6"));
+
+			await apiKeyService.deleteModelConfig("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(await apiKeyService.getModelConfig("anthropic", "claude-sonnet-4-6"), undefined);
+		});
+
+		test("model configs are independent across models", async () => {
+			await apiKeyService.setModelConfig("openai", "gpt-4o", { baseURL: "https://a.com" });
+			await apiKeyService.setModelConfig("openai", "o3", { baseURL: "https://b.com" });
+
+			const a = await apiKeyService.getModelConfig("openai", "gpt-4o");
+			const b = await apiKeyService.getModelConfig("openai", "o3");
+			assert.strictEqual(a?.baseURL, "https://a.com");
+			assert.strictEqual(b?.baseURL, "https://b.com");
+		});
+
+		test("config stored as JSON in secret service", async () => {
+			const config: IModelConfig = { baseURL: "https://test.com" };
+			await apiKeyService.setModelConfig("gemini", "gemini-2.5-pro", config);
+
+			const raw = await mockSecretService.get("director-code.modelConfig.gemini.gemini-2.5-pro");
+			assert.ok(raw);
+			assert.deepStrictEqual(JSON.parse(raw!), config);
+		});
+
+		test("handles malformed JSON gracefully", async () => {
+			await mockSecretService.set("director-code.modelConfig.openai.gpt-4o", "not-json");
+			const config = await apiKeyService.getModelConfig("openai", "gpt-4o");
+			assert.strictEqual(config, undefined);
+		});
+
+		test("capabilities can be stored per-model", async () => {
+			await apiKeyService.setModelConfig("anthropic", "claude-sonnet-4-6", {
+				capabilities: { vision: false, thinking: true, toolCalling: true, streaming: true },
+			});
+			const config = await apiKeyService.getModelConfig("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(config?.capabilities?.vision, false);
+			assert.strictEqual(config?.capabilities?.thinking, true);
+		});
+	});
+
+	// ====================================================================
+	// Resolved Provider Options (three-level fallback)
+	// ====================================================================
+
+	suite("resolveProviderOptions", () => {
+
+		test("returns undefined when no API key at any level", async () => {
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(result, undefined);
+		});
+
+		test("uses provider-level API key when no per-model key", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.ok(result);
+			assert.strictEqual(result!.apiKey, "provider-key");
+		});
+
+		test("uses per-model API key when set", async () => {
+			await apiKeyService.setApiKey("anthropic", "provider-key");
+			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.ok(result);
+			assert.strictEqual(result!.apiKey, "model-key");
+		});
+
+		test("uses per-model baseURL over global", async () => {
+			await apiKeyService.setApiKey("openai", "key");
+			await apiKeyService.setModelConfig("openai", "gpt-4o", { baseURL: "https://model-proxy.com" });
+			const result = await apiKeyService.resolveProviderOptions("openai", "gpt-4o", "https://global.com");
+			assert.strictEqual(result!.baseURL, "https://model-proxy.com");
+		});
+
+		test("uses global baseURL when no per-model config", async () => {
+			await apiKeyService.setApiKey("openai", "key");
+			const result = await apiKeyService.resolveProviderOptions("openai", "gpt-4o", "https://global.com");
+			assert.strictEqual(result!.baseURL, "https://global.com");
+		});
+
+		test("baseURL is undefined when nothing set", async () => {
+			await apiKeyService.setApiKey("anthropic", "key");
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(result!.baseURL, undefined);
+		});
+
+		test("includes per-model capabilities", async () => {
+			await apiKeyService.setApiKey("anthropic", "key");
+			await apiKeyService.setModelConfig("anthropic", "claude-sonnet-4-6", {
+				capabilities: { vision: false },
+			});
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(result!.capabilities?.vision, false);
+		});
+
+		test("capabilities undefined when no per-model config", async () => {
+			await apiKeyService.setApiKey("anthropic", "key");
+			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
+			assert.strictEqual(result!.capabilities, undefined);
+		});
+
+		test("full resolution with all levels populated", async () => {
+			await apiKeyService.setApiKey("openai", "provider-key");
+			await apiKeyService.setModelApiKey("openai", "gpt-4o", "model-key");
+			await apiKeyService.setModelConfig("openai", "gpt-4o", {
+				baseURL: "https://proxy.com/v1",
+				capabilities: { vision: true, thinking: false },
+			});
+
+			const result = await apiKeyService.resolveProviderOptions("openai", "gpt-4o", "https://global.com");
+			assert.strictEqual(result!.apiKey, "model-key");
+			assert.strictEqual(result!.baseURL, "https://proxy.com/v1");
+			assert.strictEqual(result!.capabilities?.vision, true);
+			assert.strictEqual(result!.capabilities?.thinking, false);
+		});
+	});
+
+	// ====================================================================
+	// Constants (new)
+	// ====================================================================
+
+	suite("New Constants", () => {
+		test("MODEL_KEY_PREFIX is correct", () => {
+			assert.strictEqual(MODEL_KEY_PREFIX, "director-code.modelKey");
+		});
+
+		test("MODEL_CONFIG_PREFIX is correct", () => {
+			assert.strictEqual(MODEL_CONFIG_PREFIX, "director-code.modelConfig");
 		});
 	});
 });

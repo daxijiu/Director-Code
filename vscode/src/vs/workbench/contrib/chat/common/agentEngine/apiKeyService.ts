@@ -15,7 +15,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
 import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
-import type { ApiType } from './providers/providerTypes.js';
+import type { ApiType, ProviderCapabilities } from './providers/providerTypes.js';
 
 // ============================================================================
 // Constants
@@ -23,9 +23,12 @@ import type { ApiType } from './providers/providerTypes.js';
 
 /**
  * Key prefix for storing API keys in ISecretStorageService.
- * Full key format: `director-code.apiKey.<provider>`
+ * Provider-level: `director-code.apiKey.<provider>`
+ * Model-level:    `director-code.modelKey.<provider>.<modelId>`
  */
 export const SECRET_KEY_PREFIX = 'director-code.apiKey';
+export const MODEL_KEY_PREFIX = 'director-code.modelKey';
+export const MODEL_CONFIG_PREFIX = 'director-code.modelConfig';
 
 /**
  * Built-in provider names (always available).
@@ -113,6 +116,29 @@ export interface IConnectionTestResult {
 }
 
 // ============================================================================
+// Per-Model Configuration
+// ============================================================================
+
+/**
+ * Per-model configuration that can override provider-level defaults.
+ * Stored as JSON in ISecretStorageService.
+ */
+export interface IModelConfig {
+	readonly baseURL?: string;
+	readonly capabilities?: ProviderCapabilities;
+}
+
+/**
+ * Fully resolved provider options for creating an LLM provider instance.
+ * Result of the three-level fallback resolution.
+ */
+export interface IResolvedProviderOptions {
+	readonly apiKey: string;
+	readonly baseURL?: string;
+	readonly capabilities?: ProviderCapabilities;
+}
+
+// ============================================================================
 // IApiKeyService Interface
 // ============================================================================
 
@@ -154,6 +180,65 @@ export interface IApiKeyService {
 	 * @param model Model ID to use for the test request (defaults to a cheap built-in model)
 	 */
 	testConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult>;
+
+	// ========================================================================
+	// Per-Model API Key Management
+	// ========================================================================
+
+	/**
+	 * Get API key for a specific model.
+	 * Falls back to provider-level key if no per-model key is set.
+	 */
+	getModelApiKey(provider: ProviderName, modelId: string): Promise<string | undefined>;
+
+	/**
+	 * Set a per-model API key (overrides the provider-level key for this model).
+	 */
+	setModelApiKey(provider: ProviderName, modelId: string, key: string): Promise<void>;
+
+	/**
+	 * Delete the per-model API key (reverts to provider-level key).
+	 */
+	deleteModelApiKey(provider: ProviderName, modelId: string): Promise<void>;
+
+	/**
+	 * Check if a per-model API key is set (not the fallback).
+	 */
+	hasModelApiKey(provider: ProviderName, modelId: string): Promise<boolean>;
+
+	// ========================================================================
+	// Per-Model Configuration
+	// ========================================================================
+
+	/**
+	 * Get per-model configuration (baseURL, capabilities).
+	 */
+	getModelConfig(provider: ProviderName, modelId: string): Promise<IModelConfig | undefined>;
+
+	/**
+	 * Set per-model configuration.
+	 */
+	setModelConfig(provider: ProviderName, modelId: string, config: IModelConfig): Promise<void>;
+
+	/**
+	 * Delete per-model configuration.
+	 */
+	deleteModelConfig(provider: ProviderName, modelId: string): Promise<void>;
+
+	// ========================================================================
+	// Resolved Options (three-level fallback)
+	// ========================================================================
+
+	/**
+	 * Resolve full provider options for a given provider + model.
+	 * Applies three-level fallback:
+	 *   API Key: per-model → per-provider → undefined
+	 *   Base URL: per-model config → globalBaseURL param → provider default
+	 *   Capabilities: per-model config → model catalog → provider defaults
+	 *
+	 * @param globalBaseURL The base URL from global settings (directorCode.ai.baseURL)
+	 */
+	resolveProviderOptions(provider: ProviderName, modelId: string, globalBaseURL?: string): Promise<IResolvedProviderOptions | undefined>;
 }
 
 // ============================================================================
@@ -171,17 +256,26 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	) {
 		super();
 
-		// Forward relevant secret change events
 		this._register(this.secretService.onDidChangeSecret((key) => {
-			if (key.startsWith(SECRET_KEY_PREFIX + '.')) {
-				const provider = key.slice(SECRET_KEY_PREFIX.length + 1);
-				this._onDidChangeApiKey.fire(provider);
+			if (key.startsWith(SECRET_KEY_PREFIX + '.') || key.startsWith(MODEL_KEY_PREFIX + '.')) {
+				const suffix = key.startsWith(MODEL_KEY_PREFIX)
+					? key.slice(MODEL_KEY_PREFIX.length + 1)
+					: key.slice(SECRET_KEY_PREFIX.length + 1);
+				this._onDidChangeApiKey.fire(suffix);
 			}
 		}));
 	}
 
 	private _secretKey(provider: ProviderName): string {
 		return `${SECRET_KEY_PREFIX}.${provider}`;
+	}
+
+	private _modelSecretKey(provider: ProviderName, modelId: string): string {
+		return `${MODEL_KEY_PREFIX}.${provider}.${modelId}`;
+	}
+
+	private _modelConfigKey(provider: ProviderName, modelId: string): string {
+		return `${MODEL_CONFIG_PREFIX}.${provider}.${modelId}`;
 	}
 
 	async getApiKey(provider: ProviderName): Promise<string | undefined> {
@@ -290,7 +384,6 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	}
 
 	private async _testGemini(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
-		// Matches GeminiProvider: baseURL defaults to 'https://generativelanguage.googleapis.com', path = /v1beta/models/{model}:generateContent
 		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
 		const testModel = model || 'gemini-2.5-flash';
 		const response = await fetch(`${base}/v1beta/models/${testModel}:generateContent?key=${apiKey}`, {
@@ -309,5 +402,72 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
 		}
 		return { success: true, model: testModel };
+	}
+
+	// ========================================================================
+	// Per-Model API Key Management
+	// ========================================================================
+
+	async getModelApiKey(provider: ProviderName, modelId: string): Promise<string | undefined> {
+		const modelKey = await this.secretService.get(this._modelSecretKey(provider, modelId));
+		if (modelKey && modelKey.length > 0) {
+			return modelKey;
+		}
+		return this.getApiKey(provider);
+	}
+
+	async setModelApiKey(provider: ProviderName, modelId: string, key: string): Promise<void> {
+		await this.secretService.set(this._modelSecretKey(provider, modelId), key);
+	}
+
+	async deleteModelApiKey(provider: ProviderName, modelId: string): Promise<void> {
+		await this.secretService.delete(this._modelSecretKey(provider, modelId));
+	}
+
+	async hasModelApiKey(provider: ProviderName, modelId: string): Promise<boolean> {
+		const key = await this.secretService.get(this._modelSecretKey(provider, modelId));
+		return key !== undefined && key.length > 0;
+	}
+
+	// ========================================================================
+	// Per-Model Configuration
+	// ========================================================================
+
+	async getModelConfig(provider: ProviderName, modelId: string): Promise<IModelConfig | undefined> {
+		const json = await this.secretService.get(this._modelConfigKey(provider, modelId));
+		if (!json) {
+			return undefined;
+		}
+		try {
+			return JSON.parse(json) as IModelConfig;
+		} catch {
+			return undefined;
+		}
+	}
+
+	async setModelConfig(provider: ProviderName, modelId: string, config: IModelConfig): Promise<void> {
+		await this.secretService.set(this._modelConfigKey(provider, modelId), JSON.stringify(config));
+	}
+
+	async deleteModelConfig(provider: ProviderName, modelId: string): Promise<void> {
+		await this.secretService.delete(this._modelConfigKey(provider, modelId));
+	}
+
+	// ========================================================================
+	// Resolved Options (three-level fallback)
+	// ========================================================================
+
+	async resolveProviderOptions(provider: ProviderName, modelId: string, globalBaseURL?: string): Promise<IResolvedProviderOptions | undefined> {
+		const apiKey = await this.getModelApiKey(provider, modelId);
+		if (!apiKey) {
+			return undefined;
+		}
+
+		const modelConfig = await this.getModelConfig(provider, modelId);
+
+		const baseURL = modelConfig?.baseURL || globalBaseURL || undefined;
+		const capabilities = modelConfig?.capabilities || undefined;
+
+		return { apiKey, baseURL, capabilities };
 	}
 }

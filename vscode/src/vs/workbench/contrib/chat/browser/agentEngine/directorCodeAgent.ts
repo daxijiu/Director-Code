@@ -84,9 +84,13 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				}
 			}
 
-			// 2. Retrieve API key via ApiKeyService
-			const apiKey = await this.apiKeyService.getApiKey(providerName as ProviderName);
-			if (!apiKey) {
+			// 2. Resolve API key + per-model config via three-level fallback
+			const resolved = await this.apiKeyService.resolveProviderOptions(
+				providerName as ProviderName,
+				modelId,
+				baseURL,
+			);
+			if (!resolved) {
 				return {
 					errorDetails: {
 						message: `No API key configured for provider "${providerName}". Please set your API key in Director Code settings (Ctrl+Shift+P → "Director Code: Open Settings").`,
@@ -95,11 +99,12 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				};
 			}
 
-			// 3. Create LLM provider
+			// 3. Create LLM provider with resolved options
 			const apiType = providerToApiType(providerName as ProviderName);
 			const provider = createProvider(apiType, {
-				apiKey,
-				baseURL,
+				apiKey: resolved.apiKey,
+				baseURL: resolved.baseURL,
+				capabilities: resolved.capabilities,
 			});
 
 			// 4. Set up tool bridge

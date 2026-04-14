@@ -69,7 +69,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 9: 发布准备 | ~30 行 | ~60 行 | 2 |
 | Week 10+: 细节优化 | ~120 行 | ~100 行 | 80 (新增) |
 | Phase 1.5+ 阶段1: Provider 基类重构 | ~160 行 | ~230 行 | 27 (新增) |
-| **合计** | **~4,965 行** | **~4,670 行** | **385 (全通过)** |
+| Phase 1.5+ 阶段2: Per-Model 配置 | ~120 行 | ~220 行 | 28 (新增) |
+| **合计** | **~5,085 行** | **~4,890 行** | **413 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -418,7 +419,7 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 
 **四阶段实施计划与进度：**
 1. **Provider 基类抽象** ✅ 完成 — `AbstractDirectorCodeProvider` 基类，3 个 Provider 改为继承，`ProviderCapabilities` + `ProviderConfig` 类型，公共 HTTP 错误处理 + SSE 基础设施，27 个新测试
-2. **Per-Model 配置** — `IApiKeyService` 新增 per-model 方法，`IModelConfig` 类型，Agent 读取 per-model 配置，Settings UI 适配
+2. **Per-Model 配置** ✅ 完成 — `IModelConfig` 类型 + `IResolvedProviderOptions`，per-model API Key/baseURL/capabilities，三级 fallback (`resolveProviderOptions`)，Agent 已切换到 per-model 解析，28 个新测试
 3. **模型列表三层 Fallback** — `ModelResolver` 服务: Provider API (GET /v1/models) → CDN JSON → 静态 `MODEL_CATALOG`
 4. **OAuth 2.0** — `IOAuthService` 接口，浏览器授权流 (PKCE)，Anthropic + OpenAI 配置，Token 刷新调度，Settings UI 登录按钮
 
