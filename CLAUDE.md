@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-这是一个开源 VS Code 构建（fork），品牌名为 NiceCode/Director-Code。已可成功编译并发布安装包。
+这是一个开源 VS Code 构建（fork），品牌名为 Director-Code。已可成功编译并发布安装包。
 
 **当前状态**: Phase 1 已完成（Agent 核心 + Provider + Settings UI），Phase 1.5 细节优化已完成（品牌修复 + Test Connection + Provider 扩展到 5 个 + Settings UI 入口），正在进行 **OAuth 2.0 + Provider 体系全面增强**。
 
