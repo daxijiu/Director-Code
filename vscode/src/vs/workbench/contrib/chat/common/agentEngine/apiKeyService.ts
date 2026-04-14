@@ -28,27 +28,37 @@ import type { ApiType } from './providers/providerTypes.js';
 export const SECRET_KEY_PREFIX = 'director-code.apiKey';
 
 /**
- * Supported provider names.
+ * Built-in provider names (always available).
  */
-export const SUPPORTED_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const;
+export const BUILTIN_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const;
+
+/**
+ * Extended provider names including compatibility modes.
+ */
+export const SUPPORTED_PROVIDERS = ['anthropic', 'openai', 'gemini', 'openai-compatible', 'anthropic-compatible'] as const;
 export type ProviderName = typeof SUPPORTED_PROVIDERS[number];
 
 /**
  * Provider display names for UI.
  */
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderName, string> = {
-	anthropic: 'Anthropic (Claude)',
-	openai: 'OpenAI (GPT-4, o3)',
-	gemini: 'Google (Gemini)',
+	'anthropic': 'Anthropic (Claude)',
+	'openai': 'OpenAI (GPT-4, o3)',
+	'gemini': 'Google (Gemini)',
+	'openai-compatible': 'OpenAI Compatible (DeepSeek, Groq, Together AI, ...)',
+	'anthropic-compatible': 'Anthropic Compatible',
 };
 
 /**
  * Default API base URLs per provider.
+ * Compatible providers have empty defaults — user must set a base URL.
  */
 export const PROVIDER_DEFAULT_URLS: Record<ProviderName, string> = {
-	anthropic: 'https://api.anthropic.com',
-	openai: 'https://api.openai.com',
-	gemini: 'https://generativelanguage.googleapis.com',
+	'anthropic': 'https://api.anthropic.com',
+	'openai': 'https://api.openai.com',
+	'gemini': 'https://generativelanguage.googleapis.com',
+	'openai-compatible': '',
+	'anthropic-compatible': '',
 };
 
 /**
@@ -57,9 +67,38 @@ export const PROVIDER_DEFAULT_URLS: Record<ProviderName, string> = {
 export function providerToApiType(provider: ProviderName): ApiType {
 	switch (provider) {
 		case 'anthropic': return 'anthropic-messages';
+		case 'anthropic-compatible': return 'anthropic-messages';
 		case 'openai': return 'openai-completions';
+		case 'openai-compatible': return 'openai-completions';
 		case 'gemini': return 'gemini-generative';
 	}
+}
+
+/**
+ * Whether this provider requires a user-provided base URL.
+ */
+export function providerRequiresBaseURL(provider: ProviderName): boolean {
+	return provider === 'openai-compatible' || provider === 'anthropic-compatible';
+}
+
+// ============================================================================
+// Authentication Types (Phase 1: api-key only, others reserved for future)
+// ============================================================================
+
+export type AuthMethod = 'api-key' | 'oauth' | 'none';
+
+export interface IProviderAuth {
+	readonly method: AuthMethod;
+	readonly apiKey?: string;
+	readonly accessToken?: string;
+}
+
+/**
+ * Get the auth method for a provider.
+ * Currently all providers use api-key. OAuth support is planned.
+ */
+export function getProviderAuthMethod(_provider: ProviderName): AuthMethod {
+	return 'api-key';
 }
 
 // ============================================================================
@@ -111,8 +150,10 @@ export interface IApiKeyService {
 	/**
 	 * Test the connection for a provider using the given API key.
 	 * Makes a minimal API request to verify the key is valid.
+	 * @param baseURL Custom API base URL (must match provider's expectations)
+	 * @param model Model ID to use for the test request (defaults to a cheap built-in model)
 	 */
-	testConnection(provider: ProviderName, apiKey: string, baseURL?: string): Promise<IConnectionTestResult>;
+	testConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult>;
 }
 
 // ============================================================================
@@ -162,10 +203,10 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		return key !== undefined && key.length > 0;
 	}
 
-	async testConnection(provider: ProviderName, apiKey: string, baseURL?: string): Promise<IConnectionTestResult> {
+	async testConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		const startTime = Date.now();
 		try {
-			const result = await this._doTestConnection(provider, apiKey, baseURL);
+			const result = await this._doTestConnection(provider, apiKey, baseURL, model);
 			return {
 				...result,
 				latencyMs: Date.now() - startTime,
@@ -182,22 +223,28 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	/**
 	 * Perform the actual connection test for each provider.
 	 * Uses a minimal API request (max_tokens: 1) to verify the key.
+	 *
+	 * URL construction mirrors the real Provider classes to avoid
+	 * mismatches when a custom baseURL is in use (e.g. DeepSeek).
 	 */
-	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string): Promise<IConnectionTestResult> {
+	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		switch (provider) {
 			case 'anthropic':
-				return this._testAnthropic(apiKey, baseURL);
+			case 'anthropic-compatible':
+				return this._testAnthropic(apiKey, baseURL, model);
 			case 'openai':
-				return this._testOpenAI(apiKey, baseURL);
+			case 'openai-compatible':
+				return this._testOpenAI(apiKey, baseURL, model);
 			case 'gemini':
-				return this._testGemini(apiKey, baseURL);
+				return this._testGemini(apiKey, baseURL, model);
 		}
 	}
 
-	private async _testAnthropic(apiKey: string, baseURL?: string): Promise<IConnectionTestResult> {
-		const url = `${baseURL || PROVIDER_DEFAULT_URLS.anthropic}/v1/messages`;
-		const model = 'claude-haiku-4-5';
-		const response = await fetch(url, {
+	private async _testAnthropic(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+		// Matches AnthropicProvider: baseURL defaults to 'https://api.anthropic.com', path = /v1/messages
+		const base = (baseURL || 'https://api.anthropic.com').replace(/\/$/, '');
+		const testModel = model || 'claude-haiku-4-5';
+		const response = await fetch(`${base}/v1/messages`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -205,7 +252,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				'anthropic-version': '2023-06-01',
 			},
 			body: JSON.stringify({
-				model,
+				model: testModel,
 				max_tokens: 1,
 				messages: [{ role: 'user', content: 'hi' }],
 			}),
@@ -215,20 +262,21 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			const body = await response.text();
 			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
 		}
-		return { success: true, model };
+		return { success: true, model: testModel };
 	}
 
-	private async _testOpenAI(apiKey: string, baseURL?: string): Promise<IConnectionTestResult> {
-		const url = `${baseURL || PROVIDER_DEFAULT_URLS.openai}/v1/chat/completions`;
-		const model = 'gpt-4o-mini';
-		const response = await fetch(url, {
+	private async _testOpenAI(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+		// Matches OpenAIProvider: baseURL defaults to 'https://api.openai.com/v1', path = /chat/completions
+		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
+		const testModel = model || 'gpt-4o-mini';
+		const response = await fetch(`${base}/chat/completions`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${apiKey}`,
 			},
 			body: JSON.stringify({
-				model,
+				model: testModel,
 				max_tokens: 1,
 				messages: [{ role: 'user', content: 'hi' }],
 			}),
@@ -238,14 +286,14 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			const body = await response.text();
 			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
 		}
-		return { success: true, model };
+		return { success: true, model: testModel };
 	}
 
-	private async _testGemini(apiKey: string, baseURL?: string): Promise<IConnectionTestResult> {
-		const model = 'gemini-2.5-flash';
-		const base = baseURL || PROVIDER_DEFAULT_URLS.gemini;
-		const url = `${base}/v1beta/models/${model}:generateContent?key=${apiKey}`;
-		const response = await fetch(url, {
+	private async _testGemini(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+		// Matches GeminiProvider: baseURL defaults to 'https://generativelanguage.googleapis.com', path = /v1beta/models/{model}:generateContent
+		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
+		const testModel = model || 'gemini-2.5-flash';
+		const response = await fetch(`${base}/v1beta/models/${testModel}:generateContent?key=${apiKey}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -260,6 +308,6 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			const body = await response.text();
 			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
 		}
-		return { success: true, model };
+		return { success: true, model: testModel };
 	}
 }

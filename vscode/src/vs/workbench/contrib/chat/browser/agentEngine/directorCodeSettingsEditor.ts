@@ -151,6 +151,22 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 			this.instantiationService.createInstance(ApiKeysWidget)
 		);
 		this.bodyContainer.appendChild(this.apiKeysWidget.element);
+
+		// Separator
+		DOM.append(this.bodyContainer, $('.dc-separator'));
+
+		// OAuth / Subscription placeholder
+		const oauthSection = DOM.append(this.bodyContainer, $('.dc-oauth-placeholder'));
+		const oauthHeader = DOM.append(oauthSection, $('.dc-section-header'));
+		oauthHeader.textContent = localize('directorCode.oauth.title', 'Subscription & Login');
+		const oauthDesc = DOM.append(oauthSection, $('.dc-section-subtitle'));
+		oauthDesc.textContent = localize('directorCode.oauth.desc',
+			'OAuth login and subscription-based access to LLM providers will be available in a future update. Currently, only API key authentication is supported.');
+		const oauthBtn = DOM.append(oauthSection, $<HTMLButtonElement>('button.dc-btn.dc-btn-secondary'));
+		oauthBtn.textContent = localize('directorCode.oauth.comingSoon', 'Coming Soon');
+		oauthBtn.disabled = true;
+		oauthBtn.style.maxWidth = '180px';
+		oauthBtn.style.marginTop = '8px';
 	}
 
 	override async setInput(

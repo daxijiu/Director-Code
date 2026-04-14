@@ -54,9 +54,8 @@ class MockApiKeyService implements IApiKeyService {
 		return key !== undefined && key.length > 0;
 	}
 
-	async testConnection(provider: ProviderName, _apiKey: string, _baseURL?: string): Promise<IConnectionTestResult> {
-		// Mock always succeeds
-		return { success: true, model: "mock-model", latencyMs: 42 };
+	async testConnection(provider: ProviderName, _apiKey: string, _baseURL?: string, _model?: string): Promise<IConnectionTestResult> {
+		return { success: true, model: _model || "mock-model", latencyMs: 42 };
 	}
 
 	dispose(): void {
@@ -92,8 +91,9 @@ suite("AgentEngine - ApiKeysWidget (Logic)", () => {
 			}
 		});
 
-		test("all providers have default URLs", () => {
-			for (const p of SUPPORTED_PROVIDERS) {
+		test("built-in providers have default URLs", () => {
+			const builtIn = ['anthropic', 'openai', 'gemini'] as const;
+			for (const p of builtIn) {
 				assert.ok(PROVIDER_DEFAULT_URLS[p].startsWith("https://"), "bad URL for " + p);
 			}
 		});

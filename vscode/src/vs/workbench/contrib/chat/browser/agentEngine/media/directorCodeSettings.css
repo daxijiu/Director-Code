@@ -109,6 +109,13 @@
 	border-color: var(--vscode-focusBorder);
 }
 
+.dc-form-hint {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.4;
+	margin-top: 2px;
+}
+
 /* --- API Keys Widget --- */
 
 .director-code-api-keys-widget {

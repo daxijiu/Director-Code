@@ -30,7 +30,7 @@ import type { NormalizedMessageParam } from '../../common/agentEngine/providers/
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import { estimateTokens } from '../../common/agentEngine/tokens.js';
 import { ChatAgentLocation } from '../../common/constants.js';
-import { IApiKeyService, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { MODEL_CATALOG, findModelById } from '../../common/agentEngine/modelCatalog.js';
 
 // ============================================================================
@@ -70,11 +70,12 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		_token: CancellationToken,
 	): Promise<ILanguageModelChatMetadataAndIdentifier[]> {
 		const providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
+		const configuredModel = this.configService.getValue<string>(CONFIG_MODEL) || '';
 
-		// Filter models by the configured provider
-		const models = MODEL_CATALOG.filter(m => m.provider === providerName);
+		// Filter catalog models by the configured provider
+		const catalogModels = MODEL_CATALOG.filter(m => m.provider === providerName);
 
-		return models.map(m => ({
+		const results: ILanguageModelChatMetadataAndIdentifier[] = catalogModels.map(m => ({
 			identifier: `${VENDOR}/${m.id}`,
 			metadata: {
 				extension: EXTENSION_ID,
@@ -97,6 +98,35 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 				modelPickerCategory: undefined,
 			} satisfies ILanguageModelChatMetadata,
 		}));
+
+		// If the user typed a custom model ID not in the catalog, include it
+		if (configuredModel && !catalogModels.some(m => m.id === configuredModel)) {
+			results.push({
+				identifier: `${VENDOR}/${configuredModel}`,
+				metadata: {
+					extension: EXTENSION_ID,
+					name: configuredModel,
+					id: `${VENDOR}/${configuredModel}`,
+					vendor: VENDOR,
+					version: '1.0',
+					family: 'custom',
+					maxInputTokens: 128_000,
+					maxOutputTokens: 8_192,
+					isDefaultForLocation: {
+						[ChatAgentLocation.Chat]: false,
+					},
+					isUserSelectable: true,
+					capabilities: {
+						vision: true,
+						toolCalling: true,
+						agentMode: true,
+					},
+					modelPickerCategory: undefined,
+				} satisfies ILanguageModelChatMetadata,
+			});
+		}
+
+		return results;
 	}
 
 	async sendChatRequest(
@@ -106,22 +136,23 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		_options: { [name: string]: unknown },
 		token: CancellationToken,
 	): Promise<ILanguageModelChatResponse> {
-		// 1. Find model definition
+		// 1. Resolve model — catalog hit or custom model from config
 		const shortId = modelId.replace(`${VENDOR}/`, '');
 		const modelDef = findModelById(shortId);
-		if (!modelDef) {
-			throw new Error(`Unknown model: ${modelId}`);
-		}
+		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+		const effectiveProvider = modelDef?.provider ?? providerName;
+		const apiType = modelDef?.apiType ?? providerToApiType(providerName);
+		const maxOutputTokens = modelDef?.maxOutputTokens ?? 8_192;
 
 		// 2. Get API key
-		const apiKey = await this.apiKeyService.getApiKey(modelDef.provider as ProviderName);
+		const apiKey = await this.apiKeyService.getApiKey(effectiveProvider as ProviderName);
 		if (!apiKey) {
-			throw new Error(`No API key configured for ${modelDef.provider}`);
+			throw new Error(`No API key configured for ${effectiveProvider}`);
 		}
 
 		// 3. Create provider
 		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-		const provider = createProvider(modelDef.apiType, { apiKey, baseURL });
+		const provider = createProvider(apiType, { apiKey, baseURL });
 
 		// 4. Convert VS Code messages → normalized format
 		const normalizedMessages = this.convertMessages(messages);
@@ -136,7 +167,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 				if (provider.createMessageStream) {
 					for await (const event of provider.createMessageStream({
 						model: shortId,
-						maxTokens: modelDef.maxOutputTokens,
+						maxTokens: maxOutputTokens,
 						system: '',
 						messages: normalizedMessages,
 						abortSignal: this.createAbortSignal(token),
@@ -150,10 +181,9 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 						}
 					}
 				} else {
-					// Non-streaming fallback
 					const response = await provider.createMessage({
 						model: shortId,
-						maxTokens: modelDef.maxOutputTokens,
+						maxTokens: maxOutputTokens,
 						system: '',
 						messages: normalizedMessages,
 					});

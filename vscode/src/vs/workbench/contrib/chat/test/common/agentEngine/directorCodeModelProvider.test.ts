@@ -70,7 +70,7 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 			const providers = ["anthropic", "openai", "gemini"] as const;
 			const modelCounts = providers.map(p => getModelsForProvider(p).length);
 
-			assert.deepStrictEqual(modelCounts, [3, 5, 2]);
+			assert.deepStrictEqual(modelCounts, [3, 4, 2]);
 		});
 	});
 

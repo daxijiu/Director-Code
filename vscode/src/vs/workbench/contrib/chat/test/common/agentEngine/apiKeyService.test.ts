@@ -14,6 +14,7 @@ import {
 	PROVIDER_DISPLAY_NAMES,
 	PROVIDER_DEFAULT_URLS,
 	providerToApiType,
+	type ProviderName,
 } from '../../../common/agentEngine/apiKeyService.js';
 import type { ISecretStorageService, ISecretStorageProvider } from '../../../../../../platform/secrets/common/secrets.js';
 
@@ -81,11 +82,13 @@ suite("AgentEngine - ApiKeyService", () => {
 			assert.strictEqual(SECRET_KEY_PREFIX, "director-code.apiKey");
 		});
 
-		test("SUPPORTED_PROVIDERS has 3 providers", () => {
-			assert.strictEqual(SUPPORTED_PROVIDERS.length, 3);
+		test("SUPPORTED_PROVIDERS has 5 providers", () => {
+			assert.strictEqual(SUPPORTED_PROVIDERS.length, 5);
 			assert.ok(SUPPORTED_PROVIDERS.includes("anthropic"));
 			assert.ok(SUPPORTED_PROVIDERS.includes("openai"));
 			assert.ok(SUPPORTED_PROVIDERS.includes("gemini"));
+			assert.ok(SUPPORTED_PROVIDERS.includes("openai-compatible"));
+			assert.ok(SUPPORTED_PROVIDERS.includes("anthropic-compatible"));
 		});
 
 		test("PROVIDER_DISPLAY_NAMES has entries for all providers", () => {
@@ -95,17 +98,25 @@ suite("AgentEngine - ApiKeyService", () => {
 			}
 		});
 
-		test("PROVIDER_DEFAULT_URLS has entries for all providers", () => {
-			for (const provider of SUPPORTED_PROVIDERS) {
+		test("PROVIDER_DEFAULT_URLS has entries for built-in providers", () => {
+			const builtIn: ProviderName[] = ['anthropic', 'openai', 'gemini'];
+			for (const provider of builtIn) {
 				assert.ok(PROVIDER_DEFAULT_URLS[provider], "missing default URL for " + provider);
 				assert.ok(PROVIDER_DEFAULT_URLS[provider].startsWith("https://"));
 			}
+		});
+
+		test("compatible providers have empty default URLs", () => {
+			assert.strictEqual(PROVIDER_DEFAULT_URLS['openai-compatible'], "");
+			assert.strictEqual(PROVIDER_DEFAULT_URLS['anthropic-compatible'], "");
 		});
 
 		test("providerToApiType maps correctly", () => {
 			assert.strictEqual(providerToApiType("anthropic"), "anthropic-messages");
 			assert.strictEqual(providerToApiType("openai"), "openai-completions");
 			assert.strictEqual(providerToApiType("gemini"), "gemini-generative");
+			assert.strictEqual(providerToApiType("openai-compatible"), "openai-completions");
+			assert.strictEqual(providerToApiType("anthropic-compatible"), "anthropic-messages");
 		});
 	});
 
@@ -254,10 +265,23 @@ suite("AgentEngine - ApiKeyService", () => {
 		});
 
 		test("testConnection with custom baseURL", async () => {
-			// Should fail but use the custom URL
 			const result = await apiKeyService.testConnection("anthropic", "key", "https://localhost:1");
 			assert.strictEqual(result.success, false);
 			assert.ok(result.error);
+		});
+
+		test("testConnection with custom model parameter", async () => {
+			const result = await apiKeyService.testConnection("openai", "key", "https://localhost:1", "deepseek-chat");
+			assert.strictEqual(result.success, false);
+			assert.ok(result.error);
+		});
+
+		test("testConnection with baseURL and model for all providers", async () => {
+			for (const provider of SUPPORTED_PROVIDERS) {
+				const result = await apiKeyService.testConnection(provider, "key", "https://localhost:1", "test-model");
+				assert.strictEqual(result.success, false);
+				assert.ok(result.error, "expected error for " + provider);
+			}
 		});
 	});
 });

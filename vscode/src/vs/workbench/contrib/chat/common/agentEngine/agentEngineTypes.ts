@@ -112,6 +112,8 @@ export interface AgentEngineConfig {
 	readonly maxTurns: number;
 	readonly maxBudgetUsd?: number;
 	readonly maxTokens: number;
+	/** Override context window size for auto-compact. 0 = use model default. */
+	readonly maxInputTokens?: number;
 	readonly thinking?: { readonly type: string; readonly budget_tokens?: number };
 	readonly canUseTool?: CanUseToolFn;
 	readonly abortSignal?: AbortSignal;

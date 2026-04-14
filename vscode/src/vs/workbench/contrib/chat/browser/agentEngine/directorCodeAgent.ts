@@ -41,6 +41,7 @@ const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
+const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
 
 // ============================================================================
 // DirectorCodeAgent
@@ -70,6 +71,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
+			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
 
 			// 1b. Override model if user selected one from the Chat UI model picker
 			if (request.userSelectedModelId) {
@@ -132,6 +134,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				tools: toolDefinitions,
 				maxTurns,
 				maxTokens,
+				maxInputTokens: maxInputTokens > 0 ? maxInputTokens : undefined,
 				abortSignal: abortController.signal,
 			};
 			const engine = new AgentEngine(config, toolBridge, previousMessages);

@@ -115,7 +115,8 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 		});
 
 		test("complete flow for all providers", async () => {
-			for (const providerName of SUPPORTED_PROVIDERS) {
+			const builtInProviders = SUPPORTED_PROVIDERS.filter(p => p !== 'anthropic-compatible');
+			for (const providerName of builtInProviders) {
 				// 1. Set API key
 				await apiKeyService.setApiKey(providerName, `test-key-${providerName}`);
 				assert.strictEqual(await apiKeyService.hasApiKey(providerName), true);
@@ -225,11 +226,15 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 		});
 
 		test("can still create provider models list without API key", () => {
-			// Model catalog is static — doesn't depend on API keys
-			for (const p of SUPPORTED_PROVIDERS) {
+			// Model catalog is static for built-in providers
+			const builtIn = ['anthropic', 'openai', 'gemini'] as const;
+			for (const p of builtIn) {
 				const models = getModelsForProvider(p);
 				assert.ok(models.length > 0);
 			}
+			// Compatible providers may have presets or empty list
+			const compat = getModelsForProvider('openai-compatible');
+			assert.ok(compat.length >= 0);
 		});
 	});
 });

@@ -17,7 +17,7 @@
 
 import type { LLMProvider, NormalizedMessageParam } from './providers/providerTypes.js';
 import type { AutoCompactState } from './agentEngineTypes.js';
-import { estimateMessagesTokens, getAutoCompactThreshold } from './tokens.js';
+import { estimateMessagesTokens, getAutoCompactThreshold, AUTOCOMPACT_BUFFER_TOKENS } from './tokens.js';
 
 // --------------------------------------------------------------------------
 // Auto-Compact State
@@ -39,11 +39,14 @@ export function shouldAutoCompact(
 	messages: any[],
 	model: string,
 	state: AutoCompactState,
+	maxInputTokensOverride?: number,
 ): boolean {
 	if (state.consecutiveFailures >= 3) { return false; }
 
 	const estimatedTokens = estimateMessagesTokens(messages);
-	const threshold = getAutoCompactThreshold(model);
+	const threshold = maxInputTokensOverride
+		? maxInputTokensOverride - AUTOCOMPACT_BUFFER_TOKENS
+		: getAutoCompactThreshold(model);
 
 	return estimatedTokens >= threshold;
 }

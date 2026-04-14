@@ -108,7 +108,8 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 		});
 
 		test("provider switch creates correct LLM provider instance", () => {
-			for (const providerName of SUPPORTED_PROVIDERS) {
+			const providersWithDefaults = SUPPORTED_PROVIDERS.filter(p => getDefaultModel(p) !== '');
+			for (const providerName of providersWithDefaults) {
 				const defaultModel = findModelById(getDefaultModel(providerName));
 				assert.ok(defaultModel);
 				const provider = createProvider(defaultModel!.apiType, { apiKey: "test" });
@@ -142,10 +143,11 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 			}
 		});
 
-		test("all providers have default URLs defined", () => {
-			for (const provider of SUPPORTED_PROVIDERS) {
-				assert.ok(PROVIDER_DEFAULT_URLS[provider]);
-				assert.ok(PROVIDER_DEFAULT_URLS[provider].startsWith("https://"));
+		test("built-in providers have default URLs defined", () => {
+			const builtIn: readonly string[] = ['anthropic', 'openai', 'gemini'];
+			for (const provider of builtIn) {
+				assert.ok(PROVIDER_DEFAULT_URLS[provider as keyof typeof PROVIDER_DEFAULT_URLS]);
+				assert.ok(PROVIDER_DEFAULT_URLS[provider as keyof typeof PROVIDER_DEFAULT_URLS].startsWith("https://"));
 			}
 		});
 	});
@@ -165,10 +167,9 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 		});
 
 		test("can set keys for all providers simultaneously", async () => {
-			await apiKeyService.setApiKey("anthropic", "ant-key");
-			await apiKeyService.setApiKey("openai", "oai-key");
-			await apiKeyService.setApiKey("gemini", "gem-key");
-
+			for (const p of SUPPORTED_PROVIDERS) {
+				await apiKeyService.setApiKey(p, `key-${p}`);
+			}
 			for (const p of SUPPORTED_PROVIDERS) {
 				assert.strictEqual(await apiKeyService.hasApiKey(p), true);
 			}

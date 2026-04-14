@@ -185,7 +185,7 @@ export class AgentEngine {
 			}
 
 			// Auto-compact if context is too large
-			if (shouldAutoCompact(this.messages as any[], this.config.model, this.compactState)) {
+			if (shouldAutoCompact(this.messages as any[], this.config.model, this.compactState, this.config.maxInputTokens)) {
 				if (this.config.hookRegistry) {
 					await this.config.hookRegistry.execute('PreCompact', { toolName: 'compact' });
 				}

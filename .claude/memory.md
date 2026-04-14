@@ -70,7 +70,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 7: E2E 实测 + UI | ~120 行 | ~470 行 | 45 |
 | Week 8: 流式输出 | ~140 行 | ~100 行 | 9 |
 | Week 9: 发布准备 | ~30 行 | ~60 行 | 2 |
-| **合计** | **~4,685 行** | **~4,340 行** | **278 (全通过)** |
+| Week 10+: 细节优化 | ~120 行 | ~100 行 | 80 (新增) |
+| **合计** | **~4,805 行** | **~4,440 行** | **358 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -164,20 +165,22 @@ test/common/agentEngine/                     # 测试文件 (204 个测试)
 
 | 配置键 | 默认值 | 说明 |
 |--------|--------|------|
-| `directorCode.ai.provider` | `anthropic` | LLM 提供商 (anthropic/openai/gemini) |
-| `directorCode.ai.model` | `claude-sonnet-4-6` | 模型 ID |
-| `directorCode.ai.baseURL` | `""` | 自定义 API 地址（兼容 DeepSeek 等） |
+| `directorCode.ai.provider` | `anthropic` | LLM 提供商 (5 种: anthropic/openai/gemini/openai-compatible/anthropic-compatible) |
+| `directorCode.ai.model` | `claude-sonnet-4-6` | 模型 ID（支持自定义输入） |
+| `directorCode.ai.baseURL` | `""` | 自定义 API 地址（compatible provider 必填） |
 | `directorCode.ai.maxTurns` | `25` | 每次请求最大 agentic 轮数 |
 | `directorCode.ai.maxTokens` | `8192` | 每次 LLM 调用最大输出 token |
+| `directorCode.ai.maxInputTokens` | `0` | 上下文窗口大小（0=使用模型默认） |
 
-### 模型目录（内置 10 个）
+### 模型目录（内置 14 个，5 Provider）
 
 | 模型 | Provider | ApiType |
 |------|----------|---------|
 | claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5 | Anthropic | anthropic-messages |
-| gpt-4o, gpt-4o-mini, o3 | OpenAI | openai-completions |
+| gpt-4o, gpt-4o-mini, o3, o3-mini | OpenAI | openai-completions |
 | gemini-2.5-pro, gemini-2.5-flash | Gemini | gemini-generative |
-| deepseek-chat, deepseek-reasoner | OpenAI (DeepSeek) | openai-completions |
+| deepseek-chat, deepseek-reasoner, qwen-plus, moonshot-v1-auto | OpenAI Compatible | openai-completions |
+| (用户自定义模型 ID) | Anthropic Compatible | anthropic-messages |
 
 ## 构建与测试命令
 
@@ -370,6 +373,42 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 - 临时清空 `product.json` 的 `builtInExtensions` 数组为 `[]`
 - 构建完成后恢复原值
 - 这 3 个 debug 扩展（js-debug 等）非核心功能，缺失不影响 Agent
+
+### Phase 1 细节优化 (2026-04-14)
+
+1. **Test Connection 修复** — 修复了使用自定义 baseURL 时 Test Connection 失败的 Bug
+   - `apiKeysWidget` 现在从配置读取 `baseURL` 和 `model` 传给 `testConnection`
+   - `_testOpenAI` URL 拼接对齐 `OpenAIProvider`（避免 `/v1` 重复）
+   - `testConnection` 接口扩展支持 `model` 参数
+
+2. **品牌残留清理** — 修复更新报错和 VSCodium 残留
+   - 移除 `product.json` 中指向 VSCodium 的 `updateUrl`（禁用自动更新）
+   - `VisualElementsManifest.xml` ShortDisplayName → Director-Code
+   - `prepare_vscode.sh` 不再注入 VSCodium updateUrl
+   - Linux `.desktop` / `.appdata.xml` 文案更新为 Director-Code
+
+3. **Settings UI 入口增强**
+   - Chat 面板齿轮菜单新增 "Director Code AI Settings" 入口
+   - 设置面板新增 "Director Code AI" 顶级分类（与"聊天"同级）
+   - 包含 Provider/Advanced 两个子分类
+
+4. **Provider 体系重构** — 从 3 Provider 扩展到 5 Provider
+   - 新增 `openai-compatible`（DeepSeek, Groq, Together AI, Moonshot, Qwen...）
+   - 新增 `anthropic-compatible`（兼容 Anthropic API 的第三方服务）
+   - 模型目录更新：14 个内置模型（含 o3-mini, qwen-plus, moonshot）
+   - 支持用户自定义模型 ID 输入（compatible provider 显示文本输入框）
+   - `directorCodeModelProvider` 支持自定义模型的 Chat 面板展示
+
+5. **上下文长度配置** — 新增 `directorCode.ai.maxInputTokens`
+   - 0 = 使用模型默认上下文窗口
+   - 非零值覆盖 auto-compact 触发阈值
+
+6. **OAuth/订阅预留** — 接口设计 + UI 占位
+   - `AuthMethod` 类型：`'api-key' | 'oauth' | 'none'`
+   - Settings Editor 底部 "Subscription & Login" 占位区域
+   - 完整 OAuth 流程留到后续实现
+
+**测试**: 358 个全部通过（从 278 增加到 358，+80 个）
 
 ### 下一步: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现

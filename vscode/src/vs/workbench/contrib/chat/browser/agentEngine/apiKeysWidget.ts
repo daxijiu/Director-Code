@@ -15,6 +15,7 @@ import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { Emitter } from '../../../../../base/common/event.js';
 import * as DOM from '../../../../../base/browser/dom.js';
 import { localize } from '../../../../../nls.js';
+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IApiKeyService, SUPPORTED_PROVIDERS, PROVIDER_DISPLAY_NAMES, type ProviderName, type IConnectionTestResult } from '../../common/agentEngine/apiKeyService.js';
 
 const $ = DOM.$;
@@ -34,6 +35,7 @@ export class ApiKeysWidget extends Disposable {
 
 	constructor(
 		@IApiKeyService private readonly apiKeyService: IApiKeyService,
+		@IConfigurationService private readonly configService: IConfigurationService,
 	) {
 		super();
 
@@ -200,7 +202,9 @@ export class ApiKeysWidget extends Disposable {
 				return;
 			}
 
-			const result = await this.apiKeyService.testConnection(provider, apiKey);
+			const baseURL = this.configService.getValue<string>('directorCode.ai.baseURL') || undefined;
+			const model = this.configService.getValue<string>('directorCode.ai.model') || undefined;
+			const result = await this.apiKeyService.testConnection(provider, apiKey, baseURL, model);
 			this.showTestResult(elements, result);
 		} finally {
 			elements.testBtn.disabled = false;

@@ -29,8 +29,12 @@ import { SyncDescriptor } from '../../../../../platform/instantiation/common/des
 import { IEditorPaneRegistry, EditorPaneDescriptor } from '../../../../browser/editor.js';
 import { EditorExtensions, IEditorFactoryRegistry } from '../../../../common/editor.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
+import { Action2, MenuId, registerAction2 } from '../../../../../platform/actions/common/actions.js';
+import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
 import { localize, localize2 } from '../../../../../nls.js';
+import { CHAT_CONFIG_MENU_ID } from '../actions/chatActions.js';
+import { ChatViewId } from '../chat.js';
+import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
 import {
 	DirectorCodeSettingsEditor,
 	DirectorCodeSettingsEditorInput,
@@ -57,14 +61,16 @@ configurationRegistry.registerConfiguration({
 	properties: {
 		'directorCode.ai.provider': {
 			type: 'string',
-			enum: ['anthropic', 'openai', 'gemini'],
+			enum: ['anthropic', 'openai', 'gemini', 'openai-compatible', 'anthropic-compatible'],
 			enumDescriptions: [
 				'Anthropic (Claude)',
 				'OpenAI (GPT-4, o3)',
 				'Google (Gemini)',
+				'OpenAI-compatible API (DeepSeek, Groq, Together AI, Moonshot, Qwen, etc.)',
+				'Anthropic-compatible API',
 			],
 			default: 'anthropic',
-			description: 'The LLM provider to use for Director Code Agent.',
+			description: 'The LLM provider to use for Director Code Agent. Use "openai-compatible" or "anthropic-compatible" for third-party services.',
 		},
 		'directorCode.ai.model': {
 			type: 'string',
@@ -89,6 +95,13 @@ configurationRegistry.registerConfiguration({
 			minimum: 256,
 			maximum: 100000,
 			description: 'Maximum output tokens per LLM call.',
+		},
+		'directorCode.ai.maxInputTokens': {
+			type: 'number',
+			default: 0,
+			minimum: 0,
+			maximum: 2000000,
+			description: 'Maximum input context length (tokens). Set to 0 to use the model\'s default context window. Affects when auto-compact triggers.',
 		},
 	},
 });
@@ -121,9 +134,23 @@ registerAction2(class extends Action2 {
 	constructor() {
 		super({
 			id: OPEN_SETTINGS_COMMAND_ID,
-			title: localize2('directorCode.openSettings', "Director Code: Open Settings"),
+			title: localize2('directorCode.openSettings', "Director Code AI Settings"),
+			shortTitle: localize('directorCode.openSettings.short', "Director Code AI Settings"),
 			category: localize2('directorCode', "Director Code"),
 			f1: true,
+			menu: [
+				{
+					id: CHAT_CONFIG_MENU_ID,
+					when: ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.equals('view', ChatViewId)),
+					order: 10,
+					group: '3_configure',
+				},
+				{
+					id: MenuId.ChatWelcomeContext,
+					group: '2_settings',
+					order: 2,
+				},
+			],
 		});
 	}
 	async run(accessor: ServicesAccessor) {

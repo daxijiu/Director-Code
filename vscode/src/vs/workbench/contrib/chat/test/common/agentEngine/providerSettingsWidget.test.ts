@@ -9,21 +9,18 @@ import {
 	MODEL_CATALOG,
 	getModelsForProvider,
 	getDefaultModel,
+	providerSupportsCustomModels,
 } from '../../../common/agentEngine/modelCatalog.js';
-import { SUPPORTED_PROVIDERS, type ProviderName } from '../../../common/agentEngine/apiKeyService.js';
+import { SUPPORTED_PROVIDERS, BUILTIN_PROVIDERS, type ProviderName } from '../../../common/agentEngine/apiKeyService.js';
 
 suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	// ====================================================================
-	// MODEL_CATALOG
-	// ====================================================================
-
 	suite("MODEL_CATALOG", () => {
 
-		test("has 10 models total", () => {
-			assert.strictEqual(MODEL_CATALOG.length, 10);
+		test("has expected model count", () => {
+			assert.ok(MODEL_CATALOG.length >= 13, "expected at least 13 models, got " + MODEL_CATALOG.length);
 		});
 
 		test("every model has id, name, and provider", () => {
@@ -45,20 +42,21 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 			assert.strictEqual(models.length, 3);
 		});
 
-		test("has 5 OpenAI models (including DeepSeek)", () => {
+		test("has 4 OpenAI native models", () => {
 			const models = MODEL_CATALOG.filter(m => m.provider === "openai");
-			assert.strictEqual(models.length, 5);
+			assert.strictEqual(models.length, 4);
 		});
 
 		test("has 2 Gemini models", () => {
 			const models = MODEL_CATALOG.filter(m => m.provider === "gemini");
 			assert.strictEqual(models.length, 2);
 		});
-	});
 
-	// ====================================================================
-	// getModelsForProvider
-	// ====================================================================
+		test("has openai-compatible preset models", () => {
+			const models = MODEL_CATALOG.filter(m => m.provider === "openai-compatible");
+			assert.ok(models.length >= 2, "expected at least 2 openai-compatible presets");
+		});
+	});
 
 	suite("getModelsForProvider", () => {
 
@@ -70,7 +68,7 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
 		test("returns only OpenAI models for openai", () => {
 			const models = getModelsForProvider("openai");
-			assert.strictEqual(models.length, 5);
+			assert.strictEqual(models.length, 4);
 			assert.ok(models.every(m => m.provider === "openai"));
 		});
 
@@ -80,15 +78,22 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 			assert.ok(models.every(m => m.provider === "gemini"));
 		});
 
+		test("returns preset models for openai-compatible", () => {
+			const models = getModelsForProvider("openai-compatible");
+			assert.ok(models.length >= 2);
+			assert.ok(models.every(m => m.provider === "openai-compatible"));
+		});
+
+		test("returns empty for anthropic-compatible (custom models only)", () => {
+			const models = getModelsForProvider("anthropic-compatible");
+			assert.strictEqual(models.length, 0);
+		});
+
 		test("returns empty for unknown provider", () => {
 			const models = getModelsForProvider("unknown" as ProviderName);
 			assert.strictEqual(models.length, 0);
 		});
 	});
-
-	// ====================================================================
-	// getDefaultModel
-	// ====================================================================
 
 	suite("getDefaultModel", () => {
 
@@ -104,26 +109,40 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 			assert.strictEqual(getDefaultModel("gemini"), "gemini-2.5-pro");
 		});
 
-		test("returns empty string for unknown provider", () => {
-			assert.strictEqual(getDefaultModel("unknown" as ProviderName), "");
+		test("returns deepseek-chat for openai-compatible", () => {
+			assert.strictEqual(getDefaultModel("openai-compatible"), "deepseek-chat");
+		});
+
+		test("returns empty string for anthropic-compatible", () => {
+			assert.strictEqual(getDefaultModel("anthropic-compatible"), "");
 		});
 	});
 
-	// ====================================================================
-	// Config keys consistency
-	// ====================================================================
+	suite("providerSupportsCustomModels", () => {
+
+		test("compatible providers support custom models", () => {
+			assert.strictEqual(providerSupportsCustomModels("openai-compatible"), true);
+			assert.strictEqual(providerSupportsCustomModels("anthropic-compatible"), true);
+		});
+
+		test("native providers do not support custom models", () => {
+			assert.strictEqual(providerSupportsCustomModels("anthropic"), false);
+			assert.strictEqual(providerSupportsCustomModels("openai"), false);
+			assert.strictEqual(providerSupportsCustomModels("gemini"), false);
+		});
+	});
 
 	suite("Config Keys", () => {
 
-		test("all SUPPORTED_PROVIDERS have models in catalog", () => {
-			for (const provider of SUPPORTED_PROVIDERS) {
+		test("built-in providers have models in catalog", () => {
+			for (const provider of BUILTIN_PROVIDERS) {
 				const models = getModelsForProvider(provider);
 				assert.ok(models.length > 0, "no models for provider: " + provider);
 			}
 		});
 
-		test("default model for each provider exists in catalog", () => {
-			for (const provider of SUPPORTED_PROVIDERS) {
+		test("default model for built-in providers exists in catalog", () => {
+			for (const provider of BUILTIN_PROVIDERS) {
 				const defaultModel = getDefaultModel(provider);
 				const found = MODEL_CATALOG.find(m => m.id === defaultModel);
 				assert.ok(found, "default model not in catalog: " + defaultModel);

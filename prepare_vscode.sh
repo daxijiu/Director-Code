@@ -51,13 +51,9 @@ setpath "product" "tipsAndTricksUrl" "https://go.microsoft.com/fwlink/?linkid=85
 setpath "product" "twitterUrl" "https://go.microsoft.com/fwlink/?LinkID=533687"
 
 if [[ "${DISABLE_UPDATE}" != "yes" ]]; then
-  setpath "product" "updateUrl" "https://raw.githubusercontent.com/VSCodium/versions/refs/heads/master"
-
-  if [[ "${VSCODE_QUALITY}" == "insider" ]]; then
-    setpath "product" "downloadUrl" "https://github.com/daxijiu/Director-Code/releases"
-  else
-    setpath "product" "downloadUrl" "https://github.com/daxijiu/Director-Code/releases"
-  fi
+  # No self-hosted update server yet — omit updateUrl to disable auto-update checks.
+  # When a Director-Code update server is available, set updateUrl here.
+  setpath "product" "downloadUrl" "https://github.com/daxijiu/Director-Code/releases"
 
   # if [[ "${OS_NAME}" == "windows" ]]; then
   #   setpath_json "product" "win32VersionedUpdate" "true"
@@ -250,7 +246,7 @@ replace 's|([0-9]) Microsoft|\1 Director-Code|' build/lib/electron.ts
 if [[ "${OS_NAME}" == "linux" ]]; then
   # microsoft adds their apt repo to sources
   # unless the app name is code-oss
-  # as we are renaming the application to vscodium
+  # as we are renaming the application to director-code
   # we need to edit a line in the post install template
   if [[ "${VSCODE_QUALITY}" == "insider" ]]; then
     sed -i "s/code-oss/director-code-insiders/" resources/linux/debian/postinst.template

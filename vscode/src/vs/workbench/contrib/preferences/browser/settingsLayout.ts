@@ -177,6 +177,23 @@ export const tocData: ITOCEntry<string> = {
 			]
 		},
 		{
+			id: 'directorCode',
+			label: localize('directorCodeAI', "Director Code AI"),
+			settings: ['directorCode.*'],
+			children: [
+				{
+					id: 'directorCode/provider',
+					label: localize('dcProvider', "Provider"),
+					settings: ['directorCode.ai.provider', 'directorCode.ai.model', 'directorCode.ai.baseURL']
+				},
+				{
+					id: 'directorCode/advanced',
+					label: localize('dcAdvanced', "Advanced"),
+					settings: ['directorCode.ai.maxTurns', 'directorCode.ai.maxTokens', 'directorCode.ai.maxInputTokens']
+				}
+			]
+		},
+		{
 			id: 'chat',
 			label: localize('chat', "Chat"),
 			children: [
