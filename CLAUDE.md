@@ -79,7 +79,7 @@ Phase 1.5: 细节优化 ✅ 完成
 Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
   ✅ Provider 基类抽象重构 (AbstractDirectorCodeProvider + ProviderCapabilities)
   ✅ Per-model 独立配置 (IModelConfig + resolveProviderOptions 三级 fallback)
-  模型列表三层 Fallback (Provider API → CDN → 静态)
+  ✅ 模型列表三层 Fallback (ModelResolverService: API → CDN → 静态)
   OAuth 2.0 (Anthropic + OpenAI 浏览器授权流)
 
 Phase 2: ACP 协议扩展 (6-8 周)
