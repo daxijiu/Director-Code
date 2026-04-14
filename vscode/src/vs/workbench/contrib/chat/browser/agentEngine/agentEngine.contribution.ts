@@ -167,6 +167,7 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 			publisherDisplayName: 'Director Code',
 			isDynamic: true,
 			isCore: true,
+			isDefault: true,
 			metadata: {
 				helpTextPrefix: 'Director Code Agent — use your own LLM API keys for AI coding assistance.',
 			},

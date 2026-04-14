@@ -263,6 +263,23 @@ node test/unit/node/index.js \
    - 项目结构、开发指南、测试覆盖率
    - Roadmap (Phase 1 Done → Phase 2/3 Planned)
 
+### 发布后修复 (2026-04-14)
+
+1. **Chat Panel 不显示** — 三处联动修复
+   - `chat.contribution.ts`: `chat.disableAIFeatures` 默认值恢复为 `false`
+   - `agentEngine.contribution.ts`: Director-Code Agent 设为 `isDefault: true`
+   - `chatAgents.ts`: `registerDynamicAgent()` 添加 `_updateContextKeys()` 调用
+   - 根因: disable-copilot.patch 的 AND 条件 + 缺少 context key 更新
+
+2. **默认中文语言** — `src/main.ts` argv.json 模板添加 `"locale": "zh-cn"`
+   - 首次启动自动生成含 locale 设置的 argv.json
+   - 语言包通过 VS Code 内置机制从 Open VSX 自动下载
+
+3. **安装包生成** — 构建命令: `npm run gulp -- "vscode-win32-x64-user-setup"`
+   - 使用 Inno Setup 生成 setup.exe
+   - 输出: `.build/win32-x64/user-setup/DirectorCodeSetup-1.112.0.exe`
+   - 注意: 需要 GitHub 网络通畅（Electron 下载）
+
 ## Phase 1 完成总结
 
 ### 关键指标
