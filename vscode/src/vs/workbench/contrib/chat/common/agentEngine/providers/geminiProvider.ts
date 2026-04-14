@@ -23,17 +23,18 @@
  */
 
 import type {
-	LLMProvider,
 	CreateMessageParams,
 	CreateMessageResponse,
 	StreamEvent,
-	ProviderOptions,
 	NormalizedMessageParam,
 	NormalizedContentBlock,
 	NormalizedTool,
 	NormalizedResponseBlock,
 	TokenUsage,
+	ProviderConfig,
+	ApiType,
 } from './providerTypes.js';
+import { AbstractDirectorCodeProvider } from './abstractProvider.js';
 
 // ============================================================================
 // Gemini-specific types
@@ -82,10 +83,6 @@ interface GeminiResponse {
 // Tool ID generation
 // ============================================================================
 
-/**
- * Gemini does not assign IDs to function calls.
- * We generate unique IDs per provider instance using a counter.
- */
 let geminiCallCounter = 0;
 
 function generateGeminiToolId(name: string): string {
@@ -96,15 +93,12 @@ function generateGeminiToolId(name: string): string {
 // GeminiProvider
 // ============================================================================
 
-export class GeminiProvider implements LLMProvider {
+export class GeminiProvider extends AbstractDirectorCodeProvider {
 	readonly apiType = 'gemini-generative' as const;
-	private readonly apiKey: string;
-	private readonly baseURL: string;
 
-	constructor(opts: ProviderOptions) {
-		this.apiKey = opts.apiKey;
-		this.baseURL = (opts.baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
-	}
+	protected getApiType(): ApiType { return 'gemini-generative'; }
+	protected getDefaultBaseURL(): string { return 'https://generativelanguage.googleapis.com'; }
+	protected getProviderName(): string { return 'Gemini'; }
 
 	// ========================================================================
 	// Non-streaming
@@ -114,25 +108,15 @@ export class GeminiProvider implements LLMProvider {
 		const body = this.buildRequestBody(params);
 		const url = `${this.baseURL}/v1beta/models/${params.model}:generateContent?key=${this.apiKey}`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithErrorHandling(url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
 		});
 
-		if (!response.ok) {
-			const errBody = await response.text().catch(() => '');
-			const err: any = new Error(
-				`Gemini API error: ${response.status} ${response.statusText}: ${errBody}`,
-			);
-			err.status = response.status;
-			throw err;
-		}
-
 		const data = (await response.json()) as GeminiResponse;
 
-		// Check for API-level errors in response body
 		if (data.error) {
 			const err: any = new Error(
 				`Gemini API error: ${data.error.code} ${data.error.status}: ${data.error.message}`,
@@ -152,84 +136,47 @@ export class GeminiProvider implements LLMProvider {
 		const body = this.buildRequestBody(params);
 		const url = `${this.baseURL}/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithErrorHandling(url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
 		});
 
-		if (!response.ok) {
-			const errBody = await response.text().catch(() => '');
-			const err: any = new Error(
-				`Gemini API error: ${response.status} ${response.statusText}: ${errBody}`,
-			);
-			err.status = response.status;
-			throw err;
-		}
-
 		yield* this.parseGeminiSSEStream(response.body!);
 	}
 
 	// ========================================================================
-	// SSE Stream Parser
+	// SSE Stream Parser (uses base readSSELines)
 	// ========================================================================
 
 	private async *parseGeminiSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamEvent> {
-		const reader = body.getReader();
-		const decoder = new TextDecoder();
-		let buffer = '';
 		let usage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 		let finishReason = 'end_turn';
 
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) { break; }
+		for await (const data of this.readSSELines(body)) {
+			const chunk = this.parseSSEData<GeminiResponse>(data);
+			if (!chunk) { continue; }
 
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop()!; // Keep incomplete line in buffer
-
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (!trimmed.startsWith('data: ')) { continue; }
-
-					const data = trimmed.slice(6).trim();
-					if (!data) { continue; }
-
-					let chunk: GeminiResponse;
-					try {
-						chunk = JSON.parse(data);
-					} catch {
-						continue; // Skip malformed chunks
-					}
-
-					// Process candidates
-					if (chunk.candidates) {
-						for (const candidate of chunk.candidates) {
-							if (candidate.content?.parts) {
-								for (const part of candidate.content.parts) {
-									yield* this.processStreamPart(part);
-								}
-							}
-							if (candidate.finishReason) {
-								finishReason = this.mapFinishReason(candidate.finishReason);
-							}
+			if (chunk.candidates) {
+				for (const candidate of chunk.candidates) {
+					if (candidate.content?.parts) {
+						for (const part of candidate.content.parts) {
+							yield* this.processStreamPart(part);
 						}
 					}
-
-					// Usage from chunk (typically in the final chunk)
-					if (chunk.usageMetadata) {
-						usage = {
-							input_tokens: chunk.usageMetadata.promptTokenCount || 0,
-							output_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
-						};
+					if (candidate.finishReason) {
+						finishReason = this.mapFinishReason(candidate.finishReason);
 					}
 				}
 			}
-		} finally {
-			reader.releaseLock();
+
+			if (chunk.usageMetadata) {
+				usage = {
+					input_tokens: chunk.usageMetadata.promptTokenCount || 0,
+					output_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
+				};
+			}
 		}
 
 		yield { type: 'message_complete', usage, stopReason: finishReason };
@@ -246,10 +193,8 @@ export class GeminiProvider implements LLMProvider {
 			const fc = part.functionCall;
 			const id = generateGeminiToolId(fc.name);
 			yield { type: 'tool_use_start', id, name: fc.name };
-			// Gemini sends complete function calls (not incremental)
 			yield { type: 'tool_input_delta', json: JSON.stringify(fc.args || {}) };
 		}
-		// functionResponse parts are not expected in model output
 	}
 
 	// ========================================================================
@@ -266,17 +211,14 @@ export class GeminiProvider implements LLMProvider {
 			},
 		};
 
-		// System instruction (separate field in Gemini)
 		if (params.system) {
 			body.systemInstruction = { parts: [{ text: params.system }] };
 		}
 
-		// Tools
 		if (params.tools && params.tools.length > 0) {
 			body.tools = this.convertTools(params.tools);
 		}
 
-		// Extended thinking (Gemini 2.5 models)
 		if (params.thinking?.type === 'enabled' && params.thinking.budget_tokens) {
 			body.generationConfig.thinkingConfig = {
 				thinkingBudget: params.thinking.budget_tokens,
@@ -292,8 +234,6 @@ export class GeminiProvider implements LLMProvider {
 
 	private convertMessages(messages: readonly NormalizedMessageParam[]): GeminiContent[] {
 		const result: GeminiContent[] = [];
-
-		// Track tool_use_id → name mapping for functionResponse
 		const toolNameMap = new Map<string, string>();
 
 		for (const msg of messages) {
@@ -305,7 +245,7 @@ export class GeminiProvider implements LLMProvider {
 			for (const block of blocks) {
 				switch (block.type) {
 					case 'text':
-						if (block.text) { // Skip empty text blocks
+						if (block.text) {
 							parts.push({ text: block.text });
 						}
 						break;
@@ -401,10 +341,8 @@ export class GeminiProvider implements LLMProvider {
 					input: fc.args || {},
 				});
 			}
-			// thinking parts and functionResponse are not included in response blocks
 		}
 
-		// If no content, add empty text
 		if (content.length === 0) {
 			content.push({ type: 'text', text: '' });
 		}

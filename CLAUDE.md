@@ -77,10 +77,10 @@ Phase 1.5: 细节优化 ✅ 完成
   Settings UI 入口增强、上下文长度配置、OAuth 预留
 
 Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
-  OAuth 2.0 (Anthropic + OpenAI 浏览器授权流)
-  模型列表三层 Fallback (Provider API → CDN → 静态)
+  ✅ Provider 基类抽象重构 (AbstractDirectorCodeProvider + ProviderCapabilities)
   Per-model 独立配置 (API Key / Base URL / 能力标记)
-  Provider 基类抽象重构
+  模型列表三层 Fallback (Provider API → CDN → 静态)
+  OAuth 2.0 (Anthropic + OpenAI 浏览器授权流)
 
 Phase 2: ACP 协议扩展 (6-8 周)
   参考 MCP 模式 + vscode-acp 实现

@@ -68,7 +68,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Week 8: 流式输出 | ~140 行 | ~100 行 | 9 |
 | Week 9: 发布准备 | ~30 行 | ~60 行 | 2 |
 | Week 10+: 细节优化 | ~120 行 | ~100 行 | 80 (新增) |
-| **合计** | **~4,805 行** | **~4,440 行** | **358 (全通过)** |
+| Phase 1.5+ 阶段1: Provider 基类重构 | ~160 行 | ~230 行 | 27 (新增) |
+| **合计** | **~4,965 行** | **~4,670 行** | **385 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -83,12 +84,13 @@ common/agentEngine/                          # Engine 核心 (Week 1)
 ├── compact.ts                               # 198 行 — 上下文压缩
 ├── apiKeyService.ts                         # ~200 行 — API Key 管理服务 (Week 4 新增)
 ├── modelCatalog.ts                          # ~80 行 — 统一模型目录 (Week 4 新增)
-└── providers/                               # Provider 层 (Week 2)
-    ├── providerTypes.ts                     # 123 行 — 接口 + 类型
-    ├── anthropicProvider.ts                 # ~260 行 — Anthropic (native fetch + SSE)
-    ├── openaiProvider.ts                    # ~340 行 — OpenAI (native fetch + SSE)
-    ├── geminiProvider.ts                    # ~350 行 — Gemini (native fetch + SSE)
-    └── providerFactory.ts                   # ~55 行 — 工厂 + re-export
+└── providers/                               # Provider 层 (Week 2 + Phase 1.5+ 重构)
+    ├── providerTypes.ts                     # ~140 行 — 接口 + 类型 + ProviderCapabilities
+    ├── abstractProvider.ts                  # ~160 行 — 基类 (HTTP/SSE/capabilities) [Phase 1.5+ 新增]
+    ├── anthropicProvider.ts                 # ~250 行 — Anthropic (extends AbstractDirectorCodeProvider)
+    ├── openaiProvider.ts                    # ~330 行 — OpenAI (extends AbstractDirectorCodeProvider)
+    ├── geminiProvider.ts                    # ~340 行 — Gemini (extends AbstractDirectorCodeProvider)
+    └── providerFactory.ts                   # ~65 行 — 工厂 + re-export
 
 browser/agentEngine/                         # 浏览器集成 (Week 3 + Week 4)
 ├── agentEngine.contribution.ts              # ~175 行 — 注册入口 (Week 4 大幅扩展)
@@ -120,7 +122,8 @@ test/common/agentEngine/                     # 测试文件 (204 个测试)
 ├── errorHandling.test.ts                    # 17 测试 — 错误处理集成测试 (Week 5 新增)
 ├── configFlow.test.ts                       # 17 测试 — 配置流集成测试 (Week 5 新增)
 ├── directorCodeModelProvider.test.ts        # 19 测试 — ModelProvider 逻辑测试 (Week 5 新增)
-└── endToEnd.test.ts                         # 45 测试 — E2E 集成测试 (Week 7 新增)
+├── endToEnd.test.ts                         # 45 测试 — E2E 集成测试 (Week 7 新增)
+└── abstractProvider.test.ts                 # 27 测试 — 基类/继承/SSE/capabilities [Phase 1.5+ 新增]
 ```
 
 ### Week 4 新增功能
@@ -413,8 +416,8 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 - **vscode-copilot-chat**: BYOK 体系 (8 vendor、Provider 基类 `AbstractLanguageModelChatProvider`、per-model SecretStorage `copilot-byok-${provider}-${modelId}-api-key`、CDN 模型列表 `fetchKnownModelList`)
 - **free-code**: OAuth 2.0 完整流程 (`oauth.ts` 含 Anthropic + OpenAI 配置、`jwtUtils.ts` Token 刷新调度器、`auth.ts` 7 种认证源)
 
-**四阶段实施计划：**
-1. **Provider 基类抽象** — 新建 `AbstractDirectorCodeProvider`，3 个 Provider 改为继承，扩展 `ProviderConfig` 含 capabilities
+**四阶段实施计划与进度：**
+1. **Provider 基类抽象** ✅ 完成 — `AbstractDirectorCodeProvider` 基类，3 个 Provider 改为继承，`ProviderCapabilities` + `ProviderConfig` 类型，公共 HTTP 错误处理 + SSE 基础设施，27 个新测试
 2. **Per-Model 配置** — `IApiKeyService` 新增 per-model 方法，`IModelConfig` 类型，Agent 读取 per-model 配置，Settings UI 适配
 3. **模型列表三层 Fallback** — `ModelResolver` 服务: Provider API (GET /v1/models) → CDN JSON → 静态 `MODEL_CATALOG`
 4. **OAuth 2.0** — `IOAuthService` 接口，浏览器授权流 (PKCE)，Anthropic + OpenAI 配置，Token 刷新调度，Settings UI 登录按钮

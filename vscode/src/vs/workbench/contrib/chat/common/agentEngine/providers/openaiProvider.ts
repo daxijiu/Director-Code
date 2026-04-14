@@ -16,16 +16,17 @@
  */
 
 import type {
-	LLMProvider,
 	CreateMessageParams,
 	CreateMessageResponse,
 	StreamEvent,
-	ProviderOptions,
 	NormalizedMessageParam,
 	NormalizedTool,
 	NormalizedResponseBlock,
 	TokenUsage,
+	ProviderConfig,
+	ApiType,
 } from './providerTypes.js';
+import { AbstractDirectorCodeProvider } from './abstractProvider.js';
 
 // ============================================================================
 // OpenAI-specific types (minimal, no SDK dependency)
@@ -105,15 +106,12 @@ interface OpenAIStreamChunk {
 // OpenAIProvider
 // ============================================================================
 
-export class OpenAIProvider implements LLMProvider {
+export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	readonly apiType = 'openai-completions' as const;
-	private readonly apiKey: string;
-	private readonly baseURL: string;
 
-	constructor(opts: ProviderOptions) {
-		this.apiKey = opts.apiKey;
-		this.baseURL = (opts.baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
-	}
+	protected getApiType(): ApiType { return 'openai-completions'; }
+	protected getDefaultBaseURL(): string { return 'https://api.openai.com/v1'; }
+	protected getProviderName(): string { return 'OpenAI'; }
 
 	// ========================================================================
 	// Non-streaming
@@ -133,7 +131,7 @@ export class OpenAIProvider implements LLMProvider {
 			body.tools = tools;
 		}
 
-		const response = await fetch(`${this.baseURL}/chat/completions`, {
+		const response = await this.fetchWithErrorHandling(`${this.baseURL}/chat/completions`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -142,15 +140,6 @@ export class OpenAIProvider implements LLMProvider {
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
 		});
-
-		if (!response.ok) {
-			const errBody = await response.text().catch(() => '');
-			const err: any = new Error(
-				`OpenAI API error: ${response.status} ${response.statusText}: ${errBody}`,
-			);
-			err.status = response.status;
-			throw err;
-		}
 
 		const data = (await response.json()) as OpenAIChatResponse;
 		return this.convertResponse(data);
@@ -176,7 +165,7 @@ export class OpenAIProvider implements LLMProvider {
 			body.tools = tools;
 		}
 
-		const response = await fetch(`${this.baseURL}/chat/completions`, {
+		const response = await this.fetchWithErrorHandling(`${this.baseURL}/chat/completions`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -186,78 +175,41 @@ export class OpenAIProvider implements LLMProvider {
 			signal: params.abortSignal,
 		});
 
-		if (!response.ok) {
-			const errBody = await response.text().catch(() => '');
-			const err: any = new Error(
-				`OpenAI API error: ${response.status} ${response.statusText}: ${errBody}`,
-			);
-			err.status = response.status;
-			throw err;
-		}
-
-		yield* this.parseSSEStream(response.body!);
+		yield* this.parseOpenAISSEStream(response.body!);
 	}
 
 	// ========================================================================
-	// SSE Stream Parser
+	// SSE Stream Parser (uses base readSSELines)
 	// ========================================================================
 
-	private async *parseSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamEvent> {
-		const reader = body.getReader();
-		const decoder = new TextDecoder();
-		let buffer = '';
+	private async *parseOpenAISSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamEvent> {
 		let finishReason = 'end_turn';
 		let usage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) { break; }
-
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop()!; // Keep incomplete line in buffer
-
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (!trimmed.startsWith('data: ')) { continue; }
-
-					const data = trimmed.slice(6).trim();
-					if (data === '[DONE]') {
-						yield { type: 'message_complete', usage, stopReason: finishReason };
-						return;
-					}
-
-					let chunk: OpenAIStreamChunk;
-					try {
-						chunk = JSON.parse(data);
-					} catch {
-						continue; // Skip malformed chunks
-					}
-
-					// Process content and tool call deltas
-					yield* this.processStreamChunk(chunk);
-
-					// Capture finish_reason
-					const choice = chunk.choices?.[0];
-					if (choice?.finish_reason) {
-						finishReason = this.mapFinishReason(choice.finish_reason);
-					}
-
-					// Capture usage from final chunk (stream_options: include_usage)
-					if (chunk.usage) {
-						usage = {
-							input_tokens: chunk.usage.prompt_tokens,
-							output_tokens: chunk.usage.completion_tokens,
-						};
-					}
-				}
+		for await (const data of this.readSSELines(body)) {
+			if (data === '[DONE]') {
+				yield { type: 'message_complete', usage, stopReason: finishReason };
+				return;
 			}
-		} finally {
-			reader.releaseLock();
+
+			const chunk = this.parseSSEData<OpenAIStreamChunk>(data);
+			if (!chunk) { continue; }
+
+			yield* this.processStreamChunk(chunk);
+
+			const choice = chunk.choices?.[0];
+			if (choice?.finish_reason) {
+				finishReason = this.mapFinishReason(choice.finish_reason);
+			}
+
+			if (chunk.usage) {
+				usage = {
+					input_tokens: chunk.usage.prompt_tokens,
+					output_tokens: chunk.usage.completion_tokens,
+				};
+			}
 		}
 
-		// If stream ended without [DONE], still emit completion
 		yield { type: 'message_complete', usage, stopReason: finishReason };
 	}
 
@@ -267,17 +219,14 @@ export class OpenAIProvider implements LLMProvider {
 
 		const delta = choice.delta;
 
-		// Reasoning/thinking content (DeepSeek R1, o1/o3 reasoning)
 		if (delta.reasoning_content) {
 			yield { type: 'thinking', thinking: delta.reasoning_content };
 		}
 
-		// Text content
 		if (delta.content) {
 			yield { type: 'text', text: delta.content };
 		}
 
-		// Tool calls (streamed incrementally by index)
 		if (delta.tool_calls) {
 			for (const tc of delta.tool_calls) {
 				yield {
@@ -301,7 +250,6 @@ export class OpenAIProvider implements LLMProvider {
 	): OpenAIChatMessage[] {
 		const result: OpenAIChatMessage[] = [];
 
-		// System prompt as first message
 		if (system) {
 			result.push({ role: 'system', content: system });
 		}
@@ -326,7 +274,6 @@ export class OpenAIProvider implements LLMProvider {
 			return;
 		}
 
-		// Content blocks may contain text and/or tool_result blocks
 		const textParts: string[] = [];
 		const toolResults: Array<{ tool_use_id: string; content: string }> = [];
 
@@ -341,7 +288,6 @@ export class OpenAIProvider implements LLMProvider {
 			}
 		}
 
-		// Tool results become separate tool messages (must come before text)
 		for (const tr of toolResults) {
 			result.push({
 				role: 'tool',
@@ -350,7 +296,6 @@ export class OpenAIProvider implements LLMProvider {
 			});
 		}
 
-		// Text parts become a user message
 		if (textParts.length > 0) {
 			result.push({ role: 'user', content: textParts.join('\n') });
 		}
@@ -365,7 +310,6 @@ export class OpenAIProvider implements LLMProvider {
 			return;
 		}
 
-		// Extract text and tool_use blocks
 		const textParts: string[] = [];
 		const toolCalls: OpenAIToolCall[] = [];
 
@@ -429,17 +373,14 @@ export class OpenAIProvider implements LLMProvider {
 
 		const content: NormalizedResponseBlock[] = [];
 
-		// Add reasoning/thinking content (DeepSeek R1, o1/o3)
 		if ((choice.message as any).reasoning_content) {
 			content.push({ type: 'thinking', thinking: (choice.message as any).reasoning_content });
 		}
 
-		// Add text content
 		if (choice.message.content) {
 			content.push({ type: 'text', text: choice.message.content });
 		}
 
-		// Add tool calls
 		if (choice.message.tool_calls) {
 			for (const tc of choice.message.tool_calls) {
 				let input: any;
@@ -458,7 +399,6 @@ export class OpenAIProvider implements LLMProvider {
 			}
 		}
 
-		// If no content at all, add empty text
 		if (content.length === 0) {
 			content.push({ type: 'text', text: '' });
 		}

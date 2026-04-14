@@ -44,6 +44,25 @@ export interface ProviderOptions {
 }
 
 /**
+ * Capabilities that a provider/model combination supports.
+ * Used by the agent engine to decide which features to enable.
+ */
+export interface ProviderCapabilities {
+	readonly vision?: boolean;
+	readonly toolCalling?: boolean;
+	readonly streaming?: boolean;
+	readonly thinking?: boolean;
+	readonly agentMode?: boolean;
+}
+
+/**
+ * Extended provider configuration including capabilities override.
+ */
+export interface ProviderConfig extends ProviderOptions {
+	readonly capabilities?: ProviderCapabilities;
+}
+
+/**
  * Normalized message format (Anthropic-like).
  * This is the internal representation used throughout the Agent Engine.
  */

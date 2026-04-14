@@ -19,7 +19,7 @@ import { GeminiProvider } from './geminiProvider.js';
  * Create an LLM provider for the given API type.
  *
  * @param apiType - The type of API to use
- * @param opts - Provider options (API key, base URL)
+ * @param opts - Provider options (API key, base URL, optional capabilities)
  * @returns A configured LLMProvider instance
  *
  * @example
@@ -48,10 +48,13 @@ export function createProvider(apiType: ApiType, opts: ProviderOptions): LLMProv
 export { AnthropicProvider } from './anthropicProvider.js';
 export { OpenAIProvider } from './openaiProvider.js';
 export { GeminiProvider } from './geminiProvider.js';
+export { AbstractDirectorCodeProvider, getDefaultCapabilities } from './abstractProvider.js';
 export type {
 	ApiType,
 	LLMProvider,
 	ProviderOptions,
+	ProviderCapabilities,
+	ProviderConfig,
 	CreateMessageParams,
 	CreateMessageResponse,
 	StreamEvent,
