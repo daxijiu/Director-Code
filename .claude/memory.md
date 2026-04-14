@@ -2,11 +2,11 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1 + 1.5 完成，当前进行 **OAuth + Provider 增强**
+- **状态**: Phase 1 + 1.5 + 1.5+ 全部完成，下一步 **Phase 2 ACP 协议扩展**
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM + OAuth 登录
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
-- **测试**: 358 个全部通过
+- **测试**: 479 个全部通过
 - **Git**: master 分支，已推送到 `github.com/daxijiu/Director-Code`
 
 ## 权威文档位置
@@ -29,11 +29,11 @@
 Phase 1: Agent 核心 + Provider 替换 ✅ 完成 (Week 1-10, 358 测试)
 Phase 1.5: 细节优化 ✅ 完成 (品牌修复 + Test Connection + 5 Provider + Settings UI 入口)
 
-Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
-  阶段 1: Provider 基类抽象重构 (AbstractDirectorCodeProvider)
-  阶段 2: Per-Model 独立配置 (API Key / Base URL / 能力标记)
-  阶段 3: 模型列表三层 Fallback (Provider API → CDN → 静态)
-  阶段 4: OAuth 2.0 实现 (Anthropic + OpenAI 浏览器授权流)
+Phase 1.5+: OAuth + Provider 增强 ✅ 完成
+  ✅ 阶段 1: Provider 基类抽象重构 (AbstractDirectorCodeProvider + ProviderCapabilities)
+  ✅ 阶段 2: Per-Model 独立配置 (IModelConfig + resolveProviderOptions 三级 fallback)
+  ✅ 阶段 3: 模型列表三层 Fallback (ModelResolverService: API → CDN → 静态)
+  ✅ 阶段 4: OAuth 2.0 (OAuthService: PKCE + Token 存储/刷新 + Anthropic/OpenAI 配置)
 
 Phase 2: ACP 协议扩展 (6-8 周)
 Phase 3: CLI 包装器 (4-5 周)
@@ -71,7 +71,8 @@ Phase 3: CLI 包装器 (4-5 周)
 | Phase 1.5+ 阶段1: Provider 基类重构 | ~160 行 | ~230 行 | 27 (新增) |
 | Phase 1.5+ 阶段2: Per-Model 配置 | ~120 行 | ~220 行 | 28 (新增) |
 | Phase 1.5+ 阶段3: ModelResolver 三层 Fallback | ~280 行 | ~290 行 | 31 (新增) |
-| **合计** | **~5,365 行** | **~5,180 行** | **441 (全通过)** |
+| Phase 1.5+ 阶段4: OAuth 2.0 服务 | ~310 行 | ~340 行 | 39 (新增) |
+| **合计** | **~5,675 行** | **~5,520 行** | **479 (全通过)** |
 
 ### 已实现的文件清单
 
@@ -87,6 +88,7 @@ common/agentEngine/                          # Engine 核心 (Week 1)
 ├── apiKeyService.ts                         # ~320 行 — API Key 管理服务 + Per-Model 配置 (Week 4 + Phase 1.5+)
 ├── modelCatalog.ts                          # ~80 行 — 统一模型目录 (Week 4 新增)
 ├── modelResolver.ts                         # ~280 行 — 三层 Fallback 模型解析器 [Phase 1.5+ 新增]
+├── oauthService.ts                          # ~310 行 — OAuth 2.0 PKCE + Token 刷新 [Phase 1.5+ 新增]
 └── providers/                               # Provider 层 (Week 2 + Phase 1.5+ 重构)
     ├── providerTypes.ts                     # ~140 行 — 接口 + 类型 + ProviderCapabilities
     ├── abstractProvider.ts                  # ~160 行 — 基类 (HTTP/SSE/capabilities) [Phase 1.5+ 新增]
@@ -127,7 +129,8 @@ test/common/agentEngine/                     # 测试文件 (204 个测试)
 ├── directorCodeModelProvider.test.ts        # 19 测试 — ModelProvider 逻辑测试 (Week 5 新增)
 ├── endToEnd.test.ts                         # 45 测试 — E2E 集成测试 (Week 7 新增)
 ├── abstractProvider.test.ts                 # 27 测试 — 基类/继承/SSE/capabilities [Phase 1.5+ 新增]
-└── modelResolver.test.ts                    # 31 测试 — 三层 Fallback/缓存/事件 [Phase 1.5+ 新增]
+├── modelResolver.test.ts                    # 31 测试 — 三层 Fallback/缓存/事件 [Phase 1.5+ 新增]
+└── oauthService.test.ts                     # 39 测试 — PKCE/授权流/Token/刷新/登出 [Phase 1.5+ 新增]
 ```
 
 ### Week 4 新增功能
@@ -424,7 +427,7 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 1. **Provider 基类抽象** ✅ 完成 — `AbstractDirectorCodeProvider` 基类，3 个 Provider 改为继承，`ProviderCapabilities` + `ProviderConfig` 类型，公共 HTTP 错误处理 + SSE 基础设施，27 个新测试
 2. **Per-Model 配置** ✅ 完成 — `IModelConfig` 类型 + `IResolvedProviderOptions`，per-model API Key/baseURL/capabilities，三级 fallback (`resolveProviderOptions`)，Agent 已切换到 per-model 解析，28 个新测试
 3. **模型列表三层 Fallback** ✅ 完成 — `ModelResolverService`: Provider API (OpenAI/Gemini GET models) → CDN JSON → 静态 `MODEL_CATALOG`，内存缓存 + TTL，31 个新测试
-4. **OAuth 2.0** — `IOAuthService` 接口，浏览器授权流 (PKCE)，Anthropic + OpenAI 配置，Token 刷新调度，Settings UI 登录按钮
+4. **OAuth 2.0** ✅ 完成 — `OAuthService`: PKCE 授权流 (S256)，Anthropic + OpenAI 配置，Token 存储/刷新/登出，state 验证 + 15min 过期，39 个新测试
 
 ### 后续: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现

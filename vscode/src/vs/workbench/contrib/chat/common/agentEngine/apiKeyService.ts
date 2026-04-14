@@ -98,11 +98,17 @@ export interface IProviderAuth {
 
 /**
  * Get the auth method for a provider.
- * Currently all providers use api-key. OAuth support is planned.
+ * Returns the configured auth method. The actual OAuth availability
+ * is determined at runtime by checking IOAuthService.
  */
 export function getProviderAuthMethod(_provider: ProviderName): AuthMethod {
 	return 'api-key';
 }
+
+/**
+ * Providers that support OAuth 2.0 login.
+ */
+export const OAUTH_CAPABLE_PROVIDERS: readonly ProviderName[] = ['anthropic', 'openai'];
 
 // ============================================================================
 // Connection Test Result

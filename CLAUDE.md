@@ -6,7 +6,7 @@
 
 这是一个开源 VS Code 构建（fork），品牌名为 Director-Code。已可成功编译并发布安装包。
 
-**当前状态**: Phase 1 已完成（Agent 核心 + Provider + Settings UI），Phase 1.5 细节优化已完成（品牌修复 + Test Connection + Provider 扩展到 5 个 + Settings UI 入口），正在进行 **OAuth 2.0 + Provider 体系全面增强**。
+**当前状态**: Phase 1 + 1.5 + 1.5+ 全部完成。Agent 核心 + 5 Provider + Settings UI + OAuth 2.0 + Per-model 配置 + 模型列表 Fallback。479 测试全通过。下一步：**Phase 2 ACP 协议扩展**。
 
 源码主体在 `vscode/` 子目录下。
 
@@ -76,11 +76,11 @@ Phase 1.5: 细节优化 ✅ 完成
   品牌残留清理、Test Connection 修复、Provider 扩展到 5 个
   Settings UI 入口增强、上下文长度配置、OAuth 预留
 
-Phase 1.5+: OAuth + Provider 增强 ← 当前阶段
+Phase 1.5+: OAuth + Provider 增强 ✅ 完成
   ✅ Provider 基类抽象重构 (AbstractDirectorCodeProvider + ProviderCapabilities)
   ✅ Per-model 独立配置 (IModelConfig + resolveProviderOptions 三级 fallback)
   ✅ 模型列表三层 Fallback (ModelResolverService: API → CDN → 静态)
-  OAuth 2.0 (Anthropic + OpenAI 浏览器授权流)
+  ✅ OAuth 2.0 (OAuthService: PKCE + Token 刷新 + Anthropic/OpenAI)
 
 Phase 2: ACP 协议扩展 (6-8 周)
   参考 MCP 模式 + vscode-acp 实现
