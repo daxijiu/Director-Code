@@ -23,7 +23,6 @@ import type {
 	NormalizedTool,
 	NormalizedResponseBlock,
 	TokenUsage,
-	ProviderConfig,
 	ApiType,
 } from './providerTypes.js';
 import { AbstractDirectorCodeProvider } from './abstractProvider.js';

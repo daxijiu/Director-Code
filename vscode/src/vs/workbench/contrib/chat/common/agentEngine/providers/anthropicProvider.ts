@@ -28,7 +28,6 @@ import type {
 	StreamEvent,
 	TokenUsage,
 	NormalizedResponseBlock,
-	ProviderConfig,
 	ApiType,
 } from './providerTypes.js';
 import { AbstractDirectorCodeProvider } from './abstractProvider.js';
@@ -266,6 +265,3 @@ export class AnthropicProvider extends AbstractDirectorCodeProvider {
 		};
 	}
 }
-
-// Re-export ProviderConfig for backwards compatibility
-export type { ProviderConfig } from './providerTypes.js';

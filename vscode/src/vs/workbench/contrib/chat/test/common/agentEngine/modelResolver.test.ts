@@ -6,8 +6,8 @@
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
-import { ModelResolverService, type IResolvedModel } from '../../../common/agentEngine/modelResolver.js';
-import { MODEL_CATALOG, getModelsForProvider } from '../../../common/agentEngine/modelCatalog.js';
+import { ModelResolverService } from '../../../common/agentEngine/modelResolver.js';
+import { getModelsForProvider } from '../../../common/agentEngine/modelCatalog.js';
 
 suite("AgentEngine - ModelResolverService", () => {
 
@@ -183,9 +183,7 @@ suite("AgentEngine - ModelResolverService", () => {
 		});
 
 		test("skips API layer for Anthropic (no models endpoint)", async () => {
-			let fetchCalled = false;
 			mockFetch(() => {
-				fetchCalled = true;
 				return new Response("", { status: 404 });
 			});
 

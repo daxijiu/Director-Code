@@ -10,7 +10,7 @@
  * Single entry point for provider construction.
  */
 
-import type { ApiType, LLMProvider, ProviderOptions } from './providerTypes.js';
+import type { ApiType, LLMProvider, ProviderConfig } from './providerTypes.js';
 import { AnthropicProvider } from './anthropicProvider.js';
 import { OpenAIProvider } from './openaiProvider.js';
 import { GeminiProvider } from './geminiProvider.js';
@@ -28,7 +28,7 @@ import { GeminiProvider } from './geminiProvider.js';
  * const response = await provider.createMessage({ ... });
  * ```
  */
-export function createProvider(apiType: ApiType, opts: ProviderOptions): LLMProvider {
+export function createProvider(apiType: ApiType, opts: ProviderConfig): LLMProvider {
 	switch (apiType) {
 		case 'anthropic-messages':
 			return new AnthropicProvider(opts);

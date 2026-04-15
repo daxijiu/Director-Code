@@ -54,8 +54,32 @@ class MockApiKeyService implements IApiKeyService {
 		return key !== undefined && key.length > 0;
 	}
 
-	async testConnection(provider: ProviderName, _apiKey: string, _baseURL?: string, _model?: string): Promise<IConnectionTestResult> {
+	async testConnection(_provider: ProviderName, _apiKey: string, _baseURL?: string, _model?: string): Promise<IConnectionTestResult> {
 		return { success: true, model: _model || "mock-model", latencyMs: 42 };
+	}
+
+	async getModelApiKey(_provider: ProviderName, _modelId: string): Promise<string | undefined> {
+		return undefined;
+	}
+
+	async setModelApiKey(_provider: ProviderName, _modelId: string, _key: string): Promise<void> { }
+
+	async deleteModelApiKey(_provider: ProviderName, _modelId: string): Promise<void> { }
+
+	async hasModelApiKey(_provider: ProviderName, _modelId: string): Promise<boolean> {
+		return false;
+	}
+
+	async getModelConfig(_provider: ProviderName, _modelId: string): Promise<any> {
+		return undefined;
+	}
+
+	async setModelConfig(_provider: ProviderName, _modelId: string, _config: any): Promise<void> { }
+
+	async deleteModelConfig(_provider: ProviderName, _modelId: string): Promise<void> { }
+
+	async resolveProviderOptions(_provider: ProviderName, _modelId: string, _globalBaseURL?: string): Promise<any> {
+		return undefined;
 	}
 
 	dispose(): void {
