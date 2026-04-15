@@ -44,6 +44,10 @@ export function getAgentToolDefinitions(
 	const tools: AgentToolDefinition[] = [];
 
 	for (const toolData of toolsService.getTools(model)) {
+		if (!toolData.modelDescription && !toolData.displayName) {
+			continue;
+		}
+
 		const definition: AgentToolDefinition = {
 			name: toolData.toolReferenceName || toolData.id,
 			description: toolData.modelDescription || toolData.displayName,

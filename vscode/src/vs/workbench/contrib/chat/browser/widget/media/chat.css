@@ -379,10 +379,6 @@
 	/* For the scroll down button */
 }
 
-.interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row:last-child {
-	padding-bottom: 8px;
-}
-
 .hc-black .interactive-request,
 .hc-light .interactive-request {
 	border-left: 3px solid var(--vscode-chat-requestBorder);
