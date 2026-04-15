@@ -123,7 +123,7 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			assert.ok(value.length < 300, 'total message should be shorter than raw content');
 		});
 
-		test('assistant with thinking + text produces both parts', () => {
+		test('assistant with thinking + text produces only thinking (text via streaming)', () => {
 			const event: AgentAssistantEvent = {
 				type: 'assistant',
 				message: {
@@ -136,15 +136,12 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			};
 
 			const progress = agentEventToProgress(event);
-			assert.strictEqual(progress.length, 2);
+			assert.strictEqual(progress.length, 1);
 			assert.strictEqual(progress[0].kind, 'thinking');
 			assert.strictEqual((progress[0] as any).value, 'Let me analyze this code...');
-			assert.strictEqual(progress[1].kind, 'markdownContent');
-			assert.ok((progress[1] as any).content.value.includes('analysis'));
 		});
 
-		test('assistant with tool_use blocks does not produce progress for them', () => {
-			// tool_use blocks in assistant content are handled by separate tool_use events
+		test('assistant with tool_use blocks produces no progress (text via streaming)', () => {
 			const event: AgentAssistantEvent = {
 				type: 'assistant',
 				message: {
@@ -157,9 +154,7 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			};
 
 			const progress = agentEventToProgress(event);
-			// Should only have 1 markdownContent (text), not 2
-			assert.strictEqual(progress.length, 1);
-			assert.strictEqual(progress[0].kind, 'markdownContent');
+			assert.strictEqual(progress.length, 0);
 		});
 
 		test('system init event has shimmer animation', () => {
@@ -218,7 +213,7 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			assert.strictEqual(progress.length, 0);
 		});
 
-		test('string content in assistant event handled defensively', () => {
+		test('string content in assistant event skipped (text rendered via streaming)', () => {
 			const event: AgentEvent = {
 				type: 'assistant',
 				message: {
@@ -228,9 +223,7 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			};
 
 			const progress = agentEventToProgress(event);
-			assert.strictEqual(progress.length, 1);
-			assert.strictEqual(progress[0].kind, 'markdownContent');
-			assert.ok((progress[0] as any).content.value.includes('Plain text'));
+			assert.strictEqual(progress.length, 0);
 		});
 
 		test('empty assistant content produces no progress', () => {
@@ -570,9 +563,10 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 
 	suite('Full Event Sequence Simulation', () => {
 		test('simulated single-turn text produces correct progress sequence', () => {
-			// Simulate what the engine would produce for a simple question
+			// In real flow: text_delta events render the text, then assistant event is for history only
 			const events: AgentEvent[] = [
 				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['read_file'] },
+				{ type: 'text_delta', text: 'Hello! How can I help?' } as AgentEvent,
 				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Hello! How can I help?' }] } },
 				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0.001, numTurns: 1 },
 			];
@@ -580,7 +574,8 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			const allProgress = events.flatMap(e => agentEventToProgress(e));
 
 			// system(init) → progressMessage with shimmer
-			// assistant → markdownContent
+			// text_delta → markdownContent (the actual text rendering)
+			// assistant → nothing (text already rendered via streaming)
 			// result → nothing
 			assert.strictEqual(allProgress.length, 2);
 			assert.strictEqual(allProgress[0].kind, 'progressMessage');
@@ -591,9 +586,11 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 		test('simulated tool-use turn produces correct progress sequence', () => {
 			const events: AgentEvent[] = [
 				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['read_file', 'write_file'] },
+				{ type: 'text_delta', text: 'Let me read the file.' } as AgentEvent,
 				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Let me read the file.' }] } },
 				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'src/app.ts' } },
 				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'const app = express();' },
+				{ type: 'text_delta', text: 'The file creates an Express app.' } as AgentEvent,
 				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'The file creates an Express app.' }] } },
 				{ type: 'result', subtype: 'success', usage: { input_tokens: 2000, output_tokens: 500 }, cost: 0.01, numTurns: 2 },
 			];
@@ -601,32 +598,34 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 			const allProgress = events.flatMap(e => agentEventToProgress(e));
 
 			// init → progressMessage(shimmer)
-			// assistant1 → markdownContent
+			// text_delta1 → markdownContent
+			// assistant1 → nothing (text already streamed)
 			// tool_use → progressMessage("Using tool: read_file")
 			// tool_result → progressMessage("Tool read_file result: ...")
-			// assistant2 → markdownContent
-			// result → (nothing)
+			// text_delta2 → markdownContent
+			// assistant2 → nothing (text already streamed)
+			// result → nothing
 			assert.strictEqual(allProgress.length, 5);
 
 			assert.strictEqual(allProgress[0].kind, 'progressMessage'); // init
-			assert.strictEqual(allProgress[1].kind, 'markdownContent'); // first response
+			assert.strictEqual(allProgress[1].kind, 'markdownContent'); // first response via streaming
 			assert.strictEqual(allProgress[2].kind, 'progressMessage'); // tool use
 			assert.ok((allProgress[2] as any).content.value.includes('read_file'));
 			assert.strictEqual(allProgress[3].kind, 'progressMessage'); // tool result
-			assert.strictEqual(allProgress[4].kind, 'markdownContent'); // final response
+			assert.strictEqual(allProgress[4].kind, 'markdownContent'); // final response via streaming
 		});
 
 		test('simulated compact event appears in progress', () => {
 			const events: AgentEvent[] = [
 				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: [] },
 				{ type: 'system', subtype: 'compact_boundary', message: 'Conversation compacted' },
+				{ type: 'text_delta', text: 'Continuing...' } as AgentEvent,
 				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Continuing...' }] } },
 				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0, numTurns: 1 },
 			];
 
 			const allProgress = events.flatMap(e => agentEventToProgress(e));
 			assert.strictEqual(allProgress.length, 3);
-			// Second item should be compact notification
 			assert.ok((allProgress[1] as any).content.value.includes('compact'));
 		});
 	});

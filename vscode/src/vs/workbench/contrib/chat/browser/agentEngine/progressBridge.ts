@@ -24,6 +24,8 @@ import type { IChatProgress, IChatMarkdownContent, IChatProgressMessage, IChatTh
 export function agentEventToProgress(event: AgentEvent): IChatProgress[] {
 	switch (event.type) {
 		case 'assistant':
+			// Text content is already rendered via text_delta streaming events.
+			// Only convert non-text parts (thinking) to avoid duplicate display.
 			return convertAssistantEvent(event);
 
 		case 'text_delta':
@@ -42,8 +44,6 @@ export function agentEventToProgress(event: AgentEvent): IChatProgress[] {
 			return convertSystemEvent(event);
 
 		case 'result':
-			// Result events are handled by the invoke() return value,
-			// not through progress. Return empty.
 			return [];
 
 		default:
@@ -81,37 +81,30 @@ function convertThinkingDeltaEvent(event: AgentThinkingDeltaEvent): IChatProgres
 // Assistant Event → Markdown Content + Thinking (non-streaming fallback)
 // ============================================================================
 
+/**
+ * Convert assistant event to progress.
+ *
+ * Text content is SKIPPED here because it was already rendered incrementally
+ * via text_delta streaming events. Only thinking blocks (which are not
+ * streamed via thinking_delta in non-streaming fallback) are converted.
+ * This prevents the duplicate text display bug.
+ */
 function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChatProgress[] {
 	const parts: IChatProgress[] = [];
 	const content = event.message.content;
 
-	// Handle string content (defensive — providers should return blocks)
 	if (typeof content === 'string') {
-		if (content) {
-			const markdownContent: IChatMarkdownContent = {
-				kind: 'markdownContent',
-				content: new MarkdownString(content),
-			};
-			parts.push(markdownContent);
-		}
 		return parts;
 	}
 
 	for (const block of content) {
-		if (block.type === 'text' && block.text) {
-			const markdownContent: IChatMarkdownContent = {
-				kind: 'markdownContent',
-				content: new MarkdownString(block.text),
-			};
-			parts.push(markdownContent);
-		} else if (block.type === 'thinking' && block.thinking) {
+		if (block.type === 'thinking' && block.thinking) {
 			const thinkingPart: IChatThinkingPart = {
 				kind: 'thinking',
 				value: block.thinking,
 			};
 			parts.push(thinkingPart);
 		}
-		// tool_use blocks are handled separately via tool_use events
 	}
 
 	return parts;

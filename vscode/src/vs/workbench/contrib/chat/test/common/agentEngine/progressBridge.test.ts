@@ -17,7 +17,7 @@ suite("AgentEngine - ProgressBridge", () => {
 	// ---------------------------------------------------------------
 	suite("assistant events", () => {
 
-		test("converts text content to markdownContent", () => {
+		test("skips text content (already rendered via text_delta streaming)", () => {
 			const event: AgentEvent = {
 				type: 'assistant',
 				message: {
@@ -27,9 +27,7 @@ suite("AgentEngine - ProgressBridge", () => {
 			};
 
 			const progress = agentEventToProgress(event);
-			assert.strictEqual(progress.length, 1);
-			assert.strictEqual(progress[0].kind, 'markdownContent');
-			assert.strictEqual((progress[0] as any).content.value, 'Hello world');
+			assert.strictEqual(progress.length, 0);
 		});
 
 		test("converts thinking content to thinking part", () => {
@@ -47,7 +45,7 @@ suite("AgentEngine - ProgressBridge", () => {
 			assert.strictEqual((progress[0] as any).value, 'Let me reason...');
 		});
 
-		test("handles mixed text and thinking blocks", () => {
+		test("handles mixed text and thinking blocks (only thinking rendered)", () => {
 			const event: AgentEvent = {
 				type: 'assistant',
 				message: {
@@ -60,9 +58,8 @@ suite("AgentEngine - ProgressBridge", () => {
 			};
 
 			const progress = agentEventToProgress(event);
-			assert.strictEqual(progress.length, 2);
+			assert.strictEqual(progress.length, 1);
 			assert.strictEqual(progress[0].kind, 'thinking');
-			assert.strictEqual(progress[1].kind, 'markdownContent');
 		});
 
 		test("skips empty text blocks", () => {
