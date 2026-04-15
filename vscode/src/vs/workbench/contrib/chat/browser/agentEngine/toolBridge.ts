@@ -13,6 +13,7 @@
 
 import { generateUuid } from '../../../../../base/common/uuid.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
+import { isCancellationError } from '../../../../../base/common/errors.js';
 import { URI } from '../../../../../base/common/uri.js';
 import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
 import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
@@ -23,6 +24,8 @@ import type {
 	CountTokensCallback,
 } from '../../common/tools/languageModelToolsService.js';
 import type { ILanguageModelChatMetadata } from '../../common/languageModels.js';
+
+const TOOL_TIMEOUT_MS = 120_000; // 2 minutes max per tool invocation
 
 // ============================================================================
 // Tool Discovery: VS Code tools → AgentToolDefinition[]
@@ -69,7 +72,6 @@ function isToolReadOnly(toolData: IToolData): boolean {
 	if (toolData.tags?.includes('readonly')) {
 		return true;
 	}
-	// Tools without mutation tags are treated as mutations by default (safer)
 	return false;
 }
 
@@ -84,6 +86,9 @@ function isToolReadOnly(toolData: IToolData): boolean {
  * The Agent Engine calls `invokeTool(name, input)` and gets a string result.
  * This bridge translates that into VS Code's full tool invocation pipeline
  * (lookup, prepare, confirm, execute).
+ *
+ * Includes timeout protection (120s) to prevent infinite hangs when
+ * the tool confirmation UI doesn't render or the tool blocks indefinitely.
  */
 export class VSCodeToolBridge implements IToolExecutor {
 	private readonly toolNameToId = new Map<string, string>();
@@ -96,7 +101,6 @@ export class VSCodeToolBridge implements IToolExecutor {
 		private readonly token: CancellationToken,
 		model?: ILanguageModelChatMetadata,
 	) {
-		// Build lookup maps from available tools
 		for (const toolData of toolsService.getTools(model)) {
 			const name = toolData.toolReferenceName || toolData.id;
 			this.toolNameToId.set(name, toolData.id);
@@ -123,18 +127,63 @@ export class VSCodeToolBridge implements IToolExecutor {
 		};
 
 		const countTokens: CountTokensCallback = async (_input: string) => {
-			// Simple estimation: ~4 chars per token
 			return Math.ceil(_input.length / 4);
 		};
 
-		const result = await this.toolsService.invokeTool(invocation, countTokens, this.token);
-
-		// Convert IToolResult → string for the Agent Engine
-		return this.resultToString(result);
+		try {
+			const result = await this.invokeWithTimeout(invocation, countTokens, name);
+			return this.resultToString(result);
+		} catch (err: any) {
+			if (isCancellationError(err)) {
+				return `[Tool '${name}' was cancelled] The tool confirmation was denied or the request was cancelled. If this was unexpected, try enabling auto-approve in the Chat panel's mode picker (select "Agent" mode with auto-approve).`;
+			}
+			throw err;
+		}
 	}
 
 	isReadOnlyTool(name: string): boolean {
 		return this.readOnlyTools.has(name);
+	}
+
+	// ========================================================================
+	// Timeout wrapper
+	// ========================================================================
+
+	private invokeWithTimeout(
+		invocation: IToolInvocation,
+		countTokens: CountTokensCallback,
+		toolName: string,
+	): Promise<{ content: Array<any>; toolResultError?: string | boolean }> {
+		return new Promise((resolve, reject) => {
+			let settled = false;
+
+			const timer = setTimeout(() => {
+				if (!settled) {
+					settled = true;
+					reject(new Error(
+						`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s. ` +
+						`This usually means the tool is waiting for user confirmation that didn't render. ` +
+						`Try enabling auto-approve in the Chat panel's mode picker.`
+					));
+				}
+			}, TOOL_TIMEOUT_MS);
+
+			this.toolsService.invokeTool(invocation, countTokens, this.token)
+				.then(result => {
+					if (!settled) {
+						settled = true;
+						clearTimeout(timer);
+						resolve(result as any);
+					}
+				})
+				.catch(err => {
+					if (!settled) {
+						settled = true;
+						clearTimeout(timer);
+						reject(err);
+					}
+				});
+		});
 	}
 
 	// ========================================================================
@@ -154,7 +203,6 @@ export class VSCodeToolBridge implements IToolExecutor {
 			if (part.kind === 'text' && part.value) {
 				parts.push(part.value);
 			} else if (part.kind === 'data' && part.value) {
-				// Serialize data parts as JSON
 				try {
 					parts.push(JSON.stringify(part.value));
 				} catch {

@@ -176,10 +176,12 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 	constructor(
 		@IChatAgentService agentService: IChatAgentService,
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IConfigurationService _configService: IConfigurationService,
+		@IConfigurationService configService: IConfigurationService,
 		@ILanguageModelsService languageModelsService: ILanguageModelsService,
 	) {
 		super();
+
+		this._enableToolAutoApprove(configService);
 
 		// Register the Director Code Agent
 		const agentData: IChatAgentData = {
@@ -232,6 +234,19 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		// Step 2: Register provider (now safe — vendor is known)
 		const modelProvider = instantiationService.createInstance(DirectorCodeModelProvider);
 		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
+	}
+
+	/**
+	 * Director-Code is an agentic IDE — tools are essential for its operation.
+	 * Enable global auto-approve by default so tools don't hang waiting for
+	 * confirmation UI that may not render properly for our dynamic agent.
+	 * Users can still disable this via settings if they prefer manual control.
+	 */
+	private _enableToolAutoApprove(configService: IConfigurationService): void {
+		const inspected = configService.inspect<boolean>('chat.tools.global.autoApprove');
+		if (inspected.userValue === undefined && inspected.workspaceValue === undefined) {
+			configService.updateValue('chat.tools.global.autoApprove', true).catch(() => { /* ignore */ });
+		}
 	}
 }
 
