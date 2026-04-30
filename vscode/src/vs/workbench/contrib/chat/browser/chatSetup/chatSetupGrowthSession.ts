@@ -20,6 +20,8 @@ import { IAgentSession } from '../agentSessions/agentSessionsModel.js';
 import { ISessionOpenerParticipant, ISessionOpenOptions, sessionOpenerRegistry } from '../agentSessions/agentSessionsOpener.js';
 import { IChatWidgetService } from '../chat.js';
 import { CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../actions/chatActions.js';
+import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 /**
  * Core-side growth session controller that shows a single "attention needed"
@@ -143,6 +145,10 @@ export class GrowthSessionOpenerParticipant implements ISessionOpenerParticipant
  * Returns a disposable that cleans up all registrations.
  */
 export function registerGrowthSession(chatSessionsService: IChatSessionsService, growthController: GrowthSessionController): IDisposable {
+	// [Director-Code] skip: built-in agent
+	if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+		return Disposable.None;
+	}
 	const disposables = new DisposableStore();
 
 	// Register as session item controller so it appears in the sessions view
