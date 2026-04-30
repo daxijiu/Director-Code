@@ -439,7 +439,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			await apiKeyService.setApiKey("anthropic", "provider-key");
 			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
 			assert.ok(result);
-			assert.strictEqual(result!.apiKey, "provider-key");
+			assert.strictEqual(result!.auth.value, "provider-key");
 		});
 
 		test("uses per-model API key when set", async () => {
@@ -447,7 +447,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
 			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
 			assert.ok(result);
-			assert.strictEqual(result!.apiKey, "model-key");
+			assert.strictEqual(result!.auth.value, "model-key");
 		});
 
 		test("uses per-model baseURL over global", async () => {
@@ -493,7 +493,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			});
 
 			const result = await apiKeyService.resolveProviderOptions("openai", "gpt-4o", "https://global.com");
-			assert.strictEqual(result!.apiKey, "model-key");
+			assert.strictEqual(result!.auth.value, "model-key");
 			assert.strictEqual(result!.baseURL, "https://proxy.com/v1");
 			assert.strictEqual(result!.capabilities?.vision, true);
 			assert.strictEqual(result!.capabilities?.thinking, false);

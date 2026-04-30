@@ -92,7 +92,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 	// ---------------------------------------------------------------
 	suite("constructor", () => {
 		test("sets apiType to openai-completions", () => {
-			const provider = new OpenAIProvider({ apiKey: "test-key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "test-key" } });
 			assert.strictEqual(provider.apiType, "openai-completions");
 		});
 	});
@@ -117,7 +117,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				});
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "sk-test" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "sk-test" } });
 			await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(capturedUrl, "https://api.openai.com/v1/chat/completions");
@@ -135,7 +135,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 			});
 
 			const provider = new OpenAIProvider({
-				apiKey: "key",
+				auth: { kind: 'api-key', value: "key" },
 				baseURL: "https://api.deepseek.com/v1/",
 			});
 			await provider.createMessage(makeDefaultParams());
@@ -151,7 +151,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({ system: "Be concise." }));
 
 			assert.strictEqual(capturedBody.messages[0].role, "system");
@@ -166,7 +166,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [
 					{
@@ -199,7 +199,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [
 					{
@@ -224,7 +224,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 		test("maps finish_reason correctly", async () => {
 			// stop → end_turn
 			mockFetch(() => new Response(JSON.stringify(makeOpenAIResponse({ finish_reason: "stop" })), { status: 200 }));
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 
 			let result = await provider.createMessage(makeDefaultParams());
 			assert.strictEqual(result.stopReason, "end_turn");
@@ -248,7 +248,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
 			})), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.usage.input_tokens, 100);
@@ -266,7 +266,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				}],
 			})), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			const toolUse = result.content.find(c => c.type === "tool_use") as any;
@@ -277,7 +277,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 		test("handles empty choices array", async () => {
 			mockFetch(() => new Response(JSON.stringify({ id: "test", choices: [], usage: { prompt_tokens: 0, completion_tokens: 0 } }), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -288,7 +288,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await provider.createMessage(makeDefaultParams());
 				assert.fail("Should have thrown");
@@ -306,7 +306,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				tools: [{
 					name: "search",
@@ -336,7 +336,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const textEvents = events.filter(e => e.type === "text") as any[];
@@ -356,7 +356,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const toolDeltas = events.filter(e => e.type === "tool_call_delta") as any[];
@@ -375,7 +375,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const complete = events.find(e => e.type === "message_complete") as any;
@@ -392,7 +392,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const complete = events.find(e => e.type === "message_complete") as any;
@@ -408,7 +408,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			assert.ok(events.some(e => e.type === "message_complete"));
@@ -417,7 +417,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				const gen = provider.createMessageStream!(makeDefaultParams());
 				await gen.next();
@@ -436,7 +436,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(createSSEStream(sseLines), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			assert.strictEqual(capturedBody.stream, true);
@@ -457,7 +457,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [
 					{ role: "user", content: "Hello" },
@@ -480,7 +480,7 @@ suite("AgentEngine - OpenAIProvider", () => {
 				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
 			});
 
-			const provider = new OpenAIProvider({ apiKey: "key" });
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [{
 					role: "user",

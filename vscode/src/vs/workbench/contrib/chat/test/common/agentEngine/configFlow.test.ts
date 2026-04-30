@@ -112,7 +112,7 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 			for (const providerName of providersWithDefaults) {
 				const defaultModel = findModelById(getDefaultModel(providerName));
 				assert.ok(defaultModel);
-				const provider = createProvider(defaultModel!.apiType, { apiKey: "test" });
+				const provider = createProvider(defaultModel!.apiType, { auth: { kind: 'api-key', value: "test" } });
 				assert.strictEqual(provider.apiType, providerToApiType(providerName));
 			}
 		});
@@ -128,7 +128,7 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 			for (const providerName of SUPPORTED_PROVIDERS) {
 				const apiType = providerToApiType(providerName);
 				const provider = createProvider(apiType, {
-					apiKey: "test",
+					auth: { kind: 'api-key', value: "test" },
 					baseURL: "https://proxy.example.com",
 				});
 				assert.strictEqual(provider.apiType, apiType);
@@ -138,7 +138,7 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 		test("providers work without base URL (default)", () => {
 			for (const providerName of SUPPORTED_PROVIDERS) {
 				const apiType = providerToApiType(providerName);
-				const provider = createProvider(apiType, { apiKey: "test" });
+				const provider = createProvider(apiType, { auth: { kind: 'api-key', value: "test" } });
 				assert.strictEqual(provider.apiType, apiType);
 			}
 		});

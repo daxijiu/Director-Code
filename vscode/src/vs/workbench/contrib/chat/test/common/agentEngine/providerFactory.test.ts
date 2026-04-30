@@ -14,7 +14,7 @@ suite("AgentEngine - ProviderFactory", () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	const opts = { apiKey: "test-key" };
+	const opts = { auth: { kind: 'api-key', value: "test-key" } };
 
 	test("creates AnthropicProvider for anthropic-messages", () => {
 		const provider = createProvider("anthropic-messages", opts);
@@ -43,7 +43,7 @@ suite("AgentEngine - ProviderFactory", () => {
 
 	test("passes baseURL to providers", () => {
 		const provider = createProvider("anthropic-messages", {
-			apiKey: "key",
+			auth: { kind: 'api-key', value: "key" },
 			baseURL: "https://custom.proxy.com",
 		});
 		assert.ok(provider instanceof AnthropicProvider);

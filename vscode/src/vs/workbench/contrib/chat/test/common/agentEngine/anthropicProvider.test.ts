@@ -87,7 +87,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 	// ---------------------------------------------------------------
 	suite("constructor", () => {
 		test("sets apiType to anthropic-messages", () => {
-			const provider = new AnthropicProvider({ apiKey: "test-key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "test-key" } });
 			assert.strictEqual(provider.apiType, "anthropic-messages");
 		});
 	});
@@ -112,7 +112,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				});
 			});
 
-			const provider = new AnthropicProvider({ apiKey: "sk-ant-test" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "sk-ant-test" } });
 			await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(capturedUrl, "https://api.anthropic.com/v1/messages");
@@ -132,7 +132,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 			});
 
 			const provider = new AnthropicProvider({
-				apiKey: "key",
+				auth: { kind: 'api-key', value: "key" },
 				baseURL: "https://custom.proxy.com/",
 			});
 			await provider.createMessage(makeDefaultParams());
@@ -145,7 +145,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				content: [{ type: "text", text: "Hello world" }],
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -162,7 +162,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				stop_reason: "tool_use",
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 2);
@@ -185,7 +185,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				},
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.usage.input_tokens, 100);
@@ -202,7 +202,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				],
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -214,7 +214,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				content: [],
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -230,7 +230,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				return new Response(JSON.stringify(makeAnthropicResponse()), { status: 200 });
 			});
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				thinking: { type: "enabled", budget_tokens: 5000 },
 			}));
@@ -249,7 +249,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				return new Response(JSON.stringify(makeAnthropicResponse()), { status: 200 });
 			});
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				tools: [{
 					name: "search",
@@ -265,7 +265,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await provider.createMessage(makeDefaultParams());
 				assert.fail("Should have thrown");
@@ -280,7 +280,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				stop_reason: null as any,
 			})), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.stopReason, "end_turn");
@@ -305,7 +305,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const textEvents = events.filter(e => e.type === "text");
@@ -327,7 +327,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const toolStart = events.find(e => e.type === "tool_use_start") as any;
@@ -352,7 +352,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const thinkingEvents = events.filter(e => e.type === "thinking") as any[];
@@ -376,7 +376,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const complete = events.find(e => e.type === "message_complete") as any;
@@ -391,7 +391,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				const gen = provider.createMessageStream!(makeDefaultParams());
 				await gen.next();
@@ -415,7 +415,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 				return new Response(createSSEStream(sseLines), { status: 200 });
 			});
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			assert.strictEqual(capturedBody.stream, true);
@@ -431,7 +431,7 @@ suite("AgentEngine - AnthropicProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new AnthropicProvider({ apiKey: "key" });
+			const provider = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			// Should still get the valid text event and message_complete

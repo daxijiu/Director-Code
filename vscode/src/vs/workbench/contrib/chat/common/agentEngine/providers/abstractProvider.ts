@@ -24,6 +24,7 @@ import type {
 	StreamEvent,
 	ProviderConfig,
 	ProviderCapabilities,
+	ProviderAuth,
 } from './providerTypes.js';
 
 // ============================================================================
@@ -73,13 +74,18 @@ export abstract class AbstractDirectorCodeProvider implements LLMProvider {
 	abstract readonly apiType: ApiType;
 
 	readonly capabilities: ProviderCapabilities;
-	protected readonly apiKey: string;
+	protected readonly auth: ProviderAuth;
 	protected readonly baseURL: string;
 
 	constructor(opts: ProviderConfig) {
-		this.apiKey = opts.apiKey;
+		this.auth = opts.auth;
 		this.baseURL = (opts.baseURL || this.getDefaultBaseURL()).replace(/\/$/, '');
 		this.capabilities = opts.capabilities ?? getDefaultCapabilities(this.getApiType());
+	}
+
+	/** Extract the credential string for HTTP headers, regardless of auth kind. */
+	protected getAuthValue(): string {
+		return this.auth.kind === 'api-key' ? this.auth.value : this.auth.accessToken;
 	}
 
 	/**

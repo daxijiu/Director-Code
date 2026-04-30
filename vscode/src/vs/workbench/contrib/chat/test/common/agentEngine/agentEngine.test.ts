@@ -251,7 +251,7 @@ suite("AgentEngine - Core Logic", () => {
 	suite("Provider for Engine Config", () => {
 
 		test("created provider has required methods for engine", () => {
-			const provider = createProvider("anthropic-messages", { apiKey: "test" });
+			const provider = createProvider("anthropic-messages", { auth: { kind: 'api-key', value: "test" } });
 
 			assert.strictEqual(typeof provider.createMessage, "function");
 			assert.strictEqual(typeof provider.createMessageStream, "function");
@@ -262,7 +262,7 @@ suite("AgentEngine - Core Logic", () => {
 			const types = ["anthropic-messages", "openai-completions", "gemini-generative"] as const;
 
 			for (const apiType of types) {
-				const provider = createProvider(apiType, { apiKey: "test" });
+				const provider = createProvider(apiType, { auth: { kind: 'api-key', value: "test" } });
 				assert.strictEqual(typeof provider.createMessage, "function");
 			}
 		});

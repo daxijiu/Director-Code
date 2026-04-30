@@ -102,7 +102,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			// 3. Create LLM provider with resolved options
 			const apiType = providerToApiType(providerName as ProviderName);
 			const provider = createProvider(apiType, {
-				apiKey: resolved.apiKey,
+				auth: resolved.auth, // [Director-Code] B1-1: explicit auth structure
 				baseURL: resolved.baseURL,
 				capabilities: resolved.capabilities,
 			});

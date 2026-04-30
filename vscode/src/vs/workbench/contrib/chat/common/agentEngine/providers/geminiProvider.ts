@@ -105,7 +105,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 
 	async createMessage(params: CreateMessageParams): Promise<CreateMessageResponse> {
 		const body = this.buildRequestBody(params);
-		const url = `${this.baseURL}/v1beta/models/${params.model}:generateContent?key=${this.apiKey}`;
+		const url = `${this.baseURL}/v1beta/models/${params.model}:generateContent?key=${this.getAuthValue()}`; // [Director-Code] B1-1
 
 		const response = await this.fetchWithErrorHandling(url, {
 			method: 'POST',
@@ -133,7 +133,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 
 	async *createMessageStream(params: CreateMessageParams): AsyncGenerator<StreamEvent> {
 		const body = this.buildRequestBody(params);
-		const url = `${this.baseURL}/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+		const url = `${this.baseURL}/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.getAuthValue()}`; // [Director-Code] B1-1
 
 		const response = await this.fetchWithErrorHandling(url, {
 			method: 'POST',

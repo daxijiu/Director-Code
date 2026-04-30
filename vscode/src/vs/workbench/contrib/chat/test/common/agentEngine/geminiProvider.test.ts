@@ -88,7 +88,7 @@ suite("AgentEngine - GeminiProvider", () => {
 	// ---------------------------------------------------------------
 	suite("constructor", () => {
 		test("sets apiType to gemini-generative", () => {
-			const provider = new GeminiProvider({ apiKey: "test-key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "test-key" } });
 			assert.strictEqual(provider.apiType, "gemini-generative");
 		});
 	});
@@ -111,7 +111,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				});
 			});
 
-			const provider = new GeminiProvider({ apiKey: "gemini-key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "gemini-key" } });
 			await provider.createMessage(makeDefaultParams());
 
 			assert.ok(capturedUrl.includes("/v1beta/models/gemini-2.5-pro:generateContent"));
@@ -129,7 +129,7 @@ suite("AgentEngine - GeminiProvider", () => {
 			});
 
 			const provider = new GeminiProvider({
-				apiKey: "key",
+				auth: { kind: 'api-key', value: "key" },
 				baseURL: "https://custom.endpoint.com/",
 			});
 			await provider.createMessage(makeDefaultParams());
@@ -145,7 +145,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({ system: "Be precise." }));
 
 			assert.ok(capturedBody.systemInstruction);
@@ -160,7 +160,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [
 					{ role: "user", content: "Hello" },
@@ -182,7 +182,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [{
 					role: "assistant",
@@ -208,7 +208,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [
 					{
@@ -239,7 +239,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				parts: [{ text: "Hello world" }],
 			})), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -253,7 +253,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				finishReason: "FUNCTION_CALL",
 			})), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			const toolUse = result.content.find(c => c.type === "tool_use") as any;
@@ -267,7 +267,7 @@ suite("AgentEngine - GeminiProvider", () => {
 		test("maps finishReason correctly", async () => {
 			// STOP → end_turn
 			mockFetch(() => new Response(JSON.stringify(makeGeminiResponse({ finishReason: "STOP" })), { status: 200 }));
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 
 			let result = await provider.createMessage(makeDefaultParams());
 			assert.strictEqual(result.stopReason, "end_turn");
@@ -288,7 +288,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 50, totalTokenCount: 150 },
 			})), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.usage.input_tokens, 100);
@@ -298,7 +298,7 @@ suite("AgentEngine - GeminiProvider", () => {
 		test("handles empty candidates", async () => {
 			mockFetch(() => new Response(JSON.stringify({ candidates: [] }), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = await provider.createMessage(makeDefaultParams());
 
 			assert.strictEqual(result.content.length, 1);
@@ -309,7 +309,7 @@ suite("AgentEngine - GeminiProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Forbidden", { status: 403, statusText: "Forbidden" }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await provider.createMessage(makeDefaultParams());
 				assert.fail("Should have thrown");
@@ -324,7 +324,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				error: { code: 400, status: "INVALID_ARGUMENT", message: "Bad model name" },
 			}), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await provider.createMessage(makeDefaultParams());
 				assert.fail("Should have thrown");
@@ -342,7 +342,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				tools: [{
 					name: "search",
@@ -363,7 +363,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				thinking: { type: "enabled", budget_tokens: 5000 },
 			}));
@@ -391,7 +391,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(createSSEStream(sseLines), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			assert.ok(capturedUrl.includes(":streamGenerateContent"));
@@ -406,7 +406,7 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const textEvents = events.filter(e => e.type === "text") as any[];
@@ -427,7 +427,7 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const thinkingEvents = events.filter(e => e.type === "thinking") as any[];
@@ -449,7 +449,7 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const toolStart = events.find(e => e.type === "tool_use_start") as any;
@@ -472,7 +472,7 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const complete = events.find(e => e.type === "message_complete") as any;
@@ -485,7 +485,7 @@ suite("AgentEngine - GeminiProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			mockFetch(() => new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				const gen = provider.createMessageStream!(makeDefaultParams());
 				await gen.next();
@@ -503,7 +503,7 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			const events = await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
 
 			const textEvents = events.filter(e => e.type === "text");
@@ -525,7 +525,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [{
 					role: "assistant",
@@ -550,7 +550,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [{
 					role: "user",
@@ -574,7 +574,7 @@ suite("AgentEngine - GeminiProvider", () => {
 				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
 			});
 
-			const provider = new GeminiProvider({ apiKey: "key" });
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			await provider.createMessage(makeDefaultParams({
 				messages: [{ role: "user", content: "Simple string" }],
 			}));

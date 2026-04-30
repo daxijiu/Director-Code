@@ -150,9 +150,9 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 			throw new Error(`No API key configured for ${effectiveProvider}`);
 		}
 
-		// 3. Create provider
+		// 3. Create provider with explicit auth structure
 		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-		const provider = createProvider(apiType, { apiKey, baseURL });
+		const provider = createProvider(apiType, { auth: { kind: 'api-key', value: apiKey }, baseURL }); // [Director-Code] B1-1
 
 		// 4. Convert VS Code messages → normalized format
 		const normalizedMessages = this.convertMessages(messages);

@@ -71,20 +71,20 @@ suite("AgentEngine - Integration: Error Handling", () => {
 
 		test("throws on unknown API type", () => {
 			assert.throws(
-				() => createProvider("unknown-api" as ApiType, { apiKey: "test" }),
+				() => createProvider("unknown-api" as ApiType, { auth: { kind: 'api-key', value: "test" } }),
 				(err: any) => err.message.includes("Unknown API type"),
 			);
 		});
 
 		test("creates provider even with empty API key", () => {
 			// Provider factory doesn't validate key content — that's the API's job
-			const provider = createProvider("anthropic-messages", { apiKey: "" });
+			const provider = createProvider("anthropic-messages", { auth: { kind: 'api-key', value: "" } });
 			assert.strictEqual(provider.apiType, "anthropic-messages");
 		});
 
 		test("creates provider with very long API key", () => {
 			const longKey = "x".repeat(10000);
-			const provider = createProvider("openai-completions", { apiKey: longKey });
+			const provider = createProvider("openai-completions", { auth: { kind: 'api-key', value: longKey } });
 			assert.strictEqual(provider.apiType, "openai-completions");
 		});
 	});
@@ -203,7 +203,7 @@ suite("AgentEngine - Integration: Error Handling", () => {
 	suite("Provider HTTP Error Propagation", () => {
 
 		test("Anthropic provider throws on HTTP error with status", async () => {
-			const provider = createProvider("anthropic-messages", { apiKey: "invalid" });
+			const provider = createProvider("anthropic-messages", { auth: { kind: 'api-key', value: "invalid" } });
 			try {
 				await provider.createMessage({
 					model: "claude-sonnet-4-6",
@@ -220,7 +220,7 @@ suite("AgentEngine - Integration: Error Handling", () => {
 		});
 
 		test("OpenAI provider throws on HTTP error", async () => {
-			const provider = createProvider("openai-completions", { apiKey: "invalid" });
+			const provider = createProvider("openai-completions", { auth: { kind: 'api-key', value: "invalid" } });
 			try {
 				await provider.createMessage({
 					model: "gpt-4o-mini",
@@ -235,7 +235,7 @@ suite("AgentEngine - Integration: Error Handling", () => {
 		});
 
 		test("Gemini provider throws on HTTP error", async () => {
-			const provider = createProvider("gemini-generative", { apiKey: "invalid" });
+			const provider = createProvider("gemini-generative", { auth: { kind: 'api-key', value: "invalid" } });
 			try {
 				await provider.createMessage({
 					model: "gemini-2.5-flash",

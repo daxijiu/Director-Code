@@ -42,7 +42,7 @@ class TestProvider extends AbstractDirectorCodeProvider {
 		return this.parseSSEData<T>(data);
 	}
 
-	get exposedApiKey(): string { return this.apiKey; }
+	get exposedApiKey(): string { return this.getAuthValue(); }
 	get exposedBaseURL(): string { return this.baseURL; }
 }
 
@@ -77,29 +77,29 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 	// ---------------------------------------------------------------
 	suite("constructor", () => {
 		test("uses default baseURL when none provided", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.strictEqual(p.exposedBaseURL, "https://test.api.com");
 		});
 
 		test("uses custom baseURL with trailing slash stripped", () => {
-			const p = new TestProvider({ apiKey: "key", baseURL: "https://custom.com/" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" }, baseURL: "https://custom.com/" });
 			assert.strictEqual(p.exposedBaseURL, "https://custom.com");
 		});
 
 		test("stores apiKey from options", () => {
-			const p = new TestProvider({ apiKey: "sk-test-123" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "sk-test-123" } });
 			assert.strictEqual(p.exposedApiKey, "sk-test-123");
 		});
 
 		test("uses default capabilities when none provided", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.strictEqual(p.capabilities.toolCalling, true);
 			assert.strictEqual(p.capabilities.streaming, true);
 		});
 
 		test("uses custom capabilities when provided", () => {
 			const custom: ProviderCapabilities = { vision: false, toolCalling: false, streaming: true };
-			const p = new TestProvider({ apiKey: "key", capabilities: custom });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" }, capabilities: custom });
 			assert.strictEqual(p.capabilities.vision, false);
 			assert.strictEqual(p.capabilities.toolCalling, false);
 			assert.strictEqual(p.capabilities.streaming, true);
@@ -111,27 +111,27 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 	// ---------------------------------------------------------------
 	suite("inheritance", () => {
 		test("AnthropicProvider extends AbstractDirectorCodeProvider", () => {
-			const p = new AnthropicProvider({ apiKey: "key" });
+			const p = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.ok(p instanceof AbstractDirectorCodeProvider);
 			assert.strictEqual(p.apiType, "anthropic-messages");
 		});
 
 		test("OpenAIProvider extends AbstractDirectorCodeProvider", () => {
-			const p = new OpenAIProvider({ apiKey: "key" });
+			const p = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.ok(p instanceof AbstractDirectorCodeProvider);
 			assert.strictEqual(p.apiType, "openai-completions");
 		});
 
 		test("GeminiProvider extends AbstractDirectorCodeProvider", () => {
-			const p = new GeminiProvider({ apiKey: "key" });
+			const p = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.ok(p instanceof AbstractDirectorCodeProvider);
 			assert.strictEqual(p.apiType, "gemini-generative");
 		});
 
 		test("all providers expose capabilities", () => {
-			const anthropic = new AnthropicProvider({ apiKey: "key" });
-			const openai = new OpenAIProvider({ apiKey: "key" });
-			const gemini = new GeminiProvider({ apiKey: "key" });
+			const anthropic = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
+			const openai = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			const gemini = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 
 			assert.ok(anthropic.capabilities);
 			assert.ok(openai.capabilities);
@@ -144,7 +144,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 
 		test("capabilities can be overridden per instance", () => {
 			const p = new AnthropicProvider({
-				apiKey: "key",
+				auth: { kind: 'api-key', value: "key" },
 				capabilities: { vision: false, toolCalling: true, streaming: true },
 			});
 			assert.strictEqual(p.capabilities.vision, false);
@@ -185,7 +185,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 		test("returns response on success", async () => {
 			globalThis.fetch = (() => Promise.resolve(new Response("ok", { status: 200 }))) as any;
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const resp = await p.exposeFetchWithErrorHandling("https://api.test.com/v1", {});
 			assert.strictEqual(resp.status, 200);
 		});
@@ -193,7 +193,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 		test("throws error with .status on HTTP error", async () => {
 			globalThis.fetch = (() => Promise.resolve(new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }))) as any;
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await p.exposeFetchWithErrorHandling("https://api.test.com/v1", {});
 				assert.fail("Should have thrown");
@@ -208,7 +208,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 		test("includes provider name in error message", async () => {
 			globalThis.fetch = (() => Promise.resolve(new Response("err", { status: 500, statusText: "Server Error" }))) as any;
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await p.exposeFetchWithErrorHandling("https://api.test.com/v1", {});
 				assert.fail("Should have thrown");
@@ -221,7 +221,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 			const response = new Response(null, { status: 503, statusText: "Service Unavailable" });
 			globalThis.fetch = (() => Promise.resolve(response)) as any;
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			try {
 				await p.exposeFetchWithErrorHandling("https://api.test.com/v1", {});
 				assert.fail("Should have thrown");
@@ -241,7 +241,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 				"data: world",
 			]);
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const lines: string[] = [];
 			for await (const line of p.exposeReadSSELines(stream)) {
 				lines.push(line);
@@ -258,7 +258,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 				"id: 123",
 			]);
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const lines: string[] = [];
 			for await (const line of p.exposeReadSSELines(stream)) {
 				lines.push(line);
@@ -273,7 +273,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 				"data: valid",
 			]);
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const lines: string[] = [];
 			for await (const line of p.exposeReadSSELines(stream)) {
 				lines.push(line);
@@ -292,7 +292,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 				},
 			});
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const lines: string[] = [];
 			for await (const line of p.exposeReadSSELines(stream)) {
 				lines.push(line);
@@ -306,7 +306,7 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 				start(controller) { controller.close(); },
 			});
 
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const lines: string[] = [];
 			for await (const line of p.exposeReadSSELines(stream)) {
 				lines.push(line);
@@ -321,25 +321,25 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 	// ---------------------------------------------------------------
 	suite("parseSSEData", () => {
 		test("parses valid JSON", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = p.exposeParseSSEData<{ type: string }>("{ \"type\": \"test\" }");
 			assert.deepStrictEqual(result, { type: "test" });
 		});
 
 		test("returns undefined for invalid JSON", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = p.exposeParseSSEData("not-json");
 			assert.strictEqual(result, undefined);
 		});
 
 		test("returns undefined for empty string", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = p.exposeParseSSEData("");
 			assert.strictEqual(result, undefined);
 		});
 
 		test("parses nested objects", () => {
-			const p = new TestProvider({ apiKey: "key" });
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
 			const result = p.exposeParseSSEData<any>("{ \"a\": { \"b\": [1, 2] } }");
 			assert.deepStrictEqual(result, { a: { b: [1, 2] } });
 		});

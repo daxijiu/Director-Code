@@ -318,7 +318,7 @@ suite('End-to-End Integration Tests (Week 7)', () => {
 
 		for (const { type, name } of apiTypes) {
 			test(`${name} provider has createMessage and createMessageStream`, () => {
-				const provider = createProvider(type, { apiKey: 'test-key' });
+				const provider = createProvider(type, { auth: { kind: 'api-key', value: 'test-key' } });
 				assert.ok(typeof provider.createMessage === 'function');
 				assert.ok(typeof provider.createMessageStream === 'function');
 			});

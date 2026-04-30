@@ -35,11 +35,23 @@ export interface CreateMessageParams {
 	readonly abortSignal?: AbortSignal;
 }
 
+// [Director-Code] B1-0: auth variant and flow kind literals (single shared source of truth)
+export type AuthVariantName = 'default' | 'openai-codex';
+export type FlowKind = 'api-key' | 'pkce_manual' | 'device_code' | 'external';
+
+/**
+ * Explicit authentication credential for LLM providers.
+ * Replaces the former bare `apiKey: string` to distinguish API key from OAuth token.
+ */
+export type ProviderAuth =
+	| { readonly kind: 'api-key'; readonly value: string }
+	| { readonly kind: 'bearer'; readonly accessToken: string; readonly refreshToken?: string; readonly clientId?: string };
+
 /**
  * Common options for constructing an LLM provider.
  */
 export interface ProviderOptions {
-	readonly apiKey: string;
+	readonly auth: ProviderAuth;
 	readonly baseURL?: string;
 }
 

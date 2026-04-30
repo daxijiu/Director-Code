@@ -209,7 +209,7 @@ export class AnthropicProvider extends AbstractDirectorCodeProvider {
 	private buildHeaders(): Record<string, string> {
 		return {
 			'Content-Type': 'application/json',
-			'x-api-key': this.apiKey,
+			'x-api-key': this.getAuthValue(), // [Director-Code] B1-1: explicit auth
 			'anthropic-version': '2023-06-01',
 		};
 	}

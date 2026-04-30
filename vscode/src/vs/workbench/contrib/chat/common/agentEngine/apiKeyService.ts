@@ -139,7 +139,7 @@ export interface IModelConfig {
  * Result of the three-level fallback resolution.
  */
 export interface IResolvedProviderOptions {
-	readonly apiKey: string;
+	readonly auth: import('./providers/providerTypes.js').ProviderAuth;
 	readonly baseURL?: string;
 	readonly capabilities?: ProviderCapabilities;
 }
@@ -474,6 +474,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		const baseURL = modelConfig?.baseURL || globalBaseURL || undefined;
 		const capabilities = modelConfig?.capabilities || undefined;
 
-		return { apiKey, baseURL, capabilities };
+		// [Director-Code] B1-1: wrap API key in explicit auth structure
+		return { auth: { kind: 'api-key', value: apiKey }, baseURL, capabilities };
 	}
 }

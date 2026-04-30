@@ -134,7 +134,7 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${this.apiKey}`,
+				'Authorization': `Bearer ${this.getAuthValue()}`, // [Director-Code] B1-1
 			},
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
@@ -168,7 +168,7 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${this.apiKey}`,
+				'Authorization': `Bearer ${this.getAuthValue()}`, // [Director-Code] B1-1
 			},
 			body: JSON.stringify(body),
 			signal: params.abortSignal,

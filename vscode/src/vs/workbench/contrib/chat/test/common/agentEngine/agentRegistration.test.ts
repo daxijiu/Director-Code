@@ -92,7 +92,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 			assert.ok(key);
 
 			const apiType = providerToApiType("anthropic");
-			const provider = createProvider(apiType, { apiKey: key! });
+			const provider = createProvider(apiType, { auth: { kind: 'api-key', value: key! } });
 			assert.strictEqual(provider.apiType, "anthropic-messages");
 		});
 
@@ -101,7 +101,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 			const key = await apiKeyService.getApiKey("openai");
 			assert.ok(key);
 
-			const provider = createProvider(providerToApiType("openai"), { apiKey: key! });
+			const provider = createProvider(providerToApiType("openai"), { auth: { kind: 'api-key', value: key! } });
 			assert.strictEqual(provider.apiType, "openai-completions");
 		});
 
@@ -110,7 +110,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 			const key = await apiKeyService.getApiKey("gemini");
 			assert.ok(key);
 
-			const provider = createProvider(providerToApiType("gemini"), { apiKey: key! });
+			const provider = createProvider(providerToApiType("gemini"), { auth: { kind: 'api-key', value: key! } });
 			assert.strictEqual(provider.apiType, "gemini-generative");
 		});
 
@@ -133,7 +133,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 
 				// 4. Create provider
 				const key = await apiKeyService.getApiKey(providerName);
-				const provider = createProvider(defaultModel!.apiType, { apiKey: key! });
+				const provider = createProvider(defaultModel!.apiType, { auth: { kind: 'api-key', value: key! } });
 				assert.strictEqual(provider.apiType, defaultModel!.apiType);
 			}
 		});
@@ -179,7 +179,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 		test("every model in catalog has valid apiType for factory", () => {
 			for (const model of MODEL_CATALOG) {
 				// Should not throw
-				const provider = createProvider(model.apiType, { apiKey: "test" });
+				const provider = createProvider(model.apiType, { auth: { kind: 'api-key', value: "test" } });
 				assert.strictEqual(provider.apiType, model.apiType);
 			}
 		});
@@ -199,7 +199,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 		test("all models can create providers with custom baseURL", () => {
 			for (const model of MODEL_CATALOG) {
 				const provider = createProvider(model.apiType, {
-					apiKey: "test",
+					auth: { kind: 'api-key', value: "test" },
 					baseURL: "https://custom.proxy.example.com",
 				});
 				assert.strictEqual(provider.apiType, model.apiType);

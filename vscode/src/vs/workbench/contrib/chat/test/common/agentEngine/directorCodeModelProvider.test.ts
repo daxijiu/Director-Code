@@ -135,7 +135,7 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 
 		test("each model can create its provider", () => {
 			for (const model of MODEL_CATALOG) {
-				const provider = createProvider(model.apiType, { apiKey: "test" });
+				const provider = createProvider(model.apiType, { auth: { kind: 'api-key', value: "test" } });
 				assert.strictEqual(provider.apiType, model.apiType);
 				assert.ok(typeof provider.createMessage === "function");
 				assert.ok(typeof provider.createMessageStream === "function");
