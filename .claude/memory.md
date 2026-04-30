@@ -18,8 +18,10 @@
 - **A3** ✅ `agentEngine.ts` — pendingTools Map 多工具聚合、JSON 重试、max_tokens 续写改进、compact 成功判定、slot 保序、thinking 过滤
 - **A2** ✅ `agentEngine.ts` + `retry.ts` + `toolBridge.ts` + `directorCodeAgent.ts` — abortSignal 传递、try-finally + lastCompleteTurnEnd、cancellable sleep、CancellationToken 监听、cancelled 终态
 
-### 下一步: Batch B（P1 认证链、模型链、历史上下文链与产品元数据）
-- 按 B 内部执行顺序: B4-core → B1+B2 → 原 A5 → B3
+### Batch B 进度（P1 认证链、模型链、历史上下文链与产品元数据）
+- **B4-1** ✅ 根 `product.json` 整块新增 `defaultChatAgent`（30+ 字段）+ 4 个顶层字段 + `prepare_vscode.sh` stable 补 `dataFolderName` + L47/L49 三源对称兜底
+- **B4-2 ~ B4-7** ⏳ 待实施：setup 命令族别名、builtin tool 判定、状态类 UI、欢迎页/disclaimer、Agent Sessions/Model Picker 边缘触点、全仓 grep 扫尾
+- **B1/B2/原A5/B3** ⏳ 待实施（依赖 B4-core 完成后推进）
 
 ## 权威文档位置
 
