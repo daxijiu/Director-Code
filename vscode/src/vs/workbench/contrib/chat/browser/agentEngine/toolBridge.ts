@@ -13,7 +13,8 @@
 
 import { generateUuid } from '../../../../../base/common/uuid.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { isCancellationError } from '../../../../../base/common/errors.js';
+import { CancellationError, isCancellationError } from '../../../../../base/common/errors.js';
+import { IDisposable } from '../../../../../base/common/lifecycle.js';
 import { URI } from '../../../../../base/common/uri.js';
 import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
 import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
@@ -153,41 +154,29 @@ export class VSCodeToolBridge implements IToolExecutor {
 	// Timeout wrapper
 	// ========================================================================
 
-	private invokeWithTimeout(
+	// [Director-Code] A2: timeout + CancellationToken cancel — either triggers reject
+	private async invokeWithTimeout(
 		invocation: IToolInvocation,
 		countTokens: CountTokensCallback,
 		toolName: string,
 	): Promise<{ content: Array<any>; toolResultError?: string | boolean }> {
-		return new Promise((resolve, reject) => {
-			let settled = false;
-
-			const timer = setTimeout(() => {
-				if (!settled) {
-					settled = true;
-					reject(new Error(
-						`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s. ` +
-						`This usually means the tool is waiting for user confirmation that didn't render. ` +
-						`Try enabling auto-approve in the Chat panel's mode picker.`
-					));
-				}
-			}, TOOL_TIMEOUT_MS);
-
-			this.toolsService.invokeTool(invocation, countTokens, this.token)
-				.then(result => {
-					if (!settled) {
-						settled = true;
-						clearTimeout(timer);
-						resolve(result as any);
-					}
-				})
-				.catch(err => {
-					if (!settled) {
-						settled = true;
-						clearTimeout(timer);
-						reject(err);
-					}
-				});
-		});
+		let timeoutHandle: any;
+		let cancelListener: IDisposable | undefined;
+		try {
+			return await new Promise<{ content: Array<any>; toolResultError?: string | boolean }>((resolve, reject) => {
+				timeoutHandle = setTimeout(() => reject(new Error(
+					`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s. ` +
+					`This usually means the tool is waiting for user confirmation that didn't render. ` +
+					`Try enabling auto-approve in the Chat panel's mode picker.`
+				)), TOOL_TIMEOUT_MS);
+				cancelListener = this.token.onCancellationRequested(() => reject(new CancellationError()));
+				this.toolsService.invokeTool(invocation, countTokens, this.token)
+					.then(resolve as any, reject);
+			});
+		} finally {
+			if (timeoutHandle !== undefined) { clearTimeout(timeoutHandle); }
+			cancelListener?.dispose();
+		}
 	}
 
 	// ========================================================================

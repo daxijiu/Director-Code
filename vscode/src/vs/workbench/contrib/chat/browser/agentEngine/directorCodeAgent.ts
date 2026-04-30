@@ -204,8 +204,9 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				cancelListener.dispose();
 			}
 
-			// If we exited the loop without a result event (e.g., cancellation)
+			// [Director-Code] A2: explicit cancelled metadata — no errorDetails (avoids red error UI)
 			return {
+				metadata: { subtype: 'cancelled' },
 				timings: { totalElapsed: Date.now() - startTime },
 			};
 

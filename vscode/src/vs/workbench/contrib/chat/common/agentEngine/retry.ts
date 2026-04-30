@@ -12,6 +12,23 @@
  * Ported from open-agent-sdk-typescript/src/utils/retry.ts
  */
 
+// [Director-Code] A2: sleep that can be cancelled by AbortSignal
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) {
+		return Promise.reject(new Error('Aborted'));
+	}
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(resolve, ms);
+		if (signal) {
+			const onAbort = () => {
+				clearTimeout(timer);
+				reject(new Error('Aborted'));
+			};
+			signal.addEventListener('abort', onAbort, { once: true });
+		}
+	});
+}
+
 // --------------------------------------------------------------------------
 // Configuration
 // --------------------------------------------------------------------------
@@ -107,9 +124,9 @@ export async function withRetry<T>(
 				throw err;
 			}
 
-			// Wait before retry
+			// [Director-Code] A2: cancellable sleep during retry backoff
 			const delay = getRetryDelay(attempt, config);
-			await new Promise((resolve) => setTimeout(resolve, delay));
+			await abortableSleep(delay, abortSignal);
 		}
 	}
 

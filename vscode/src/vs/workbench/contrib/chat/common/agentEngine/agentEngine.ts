@@ -187,6 +187,10 @@ export class AgentEngine {
 		let maxOutputRecoveryAttempts = 0;
 		const MAX_OUTPUT_RECOVERY = 3;
 
+		// [Director-Code] A2: track last complete checkpoint for cancellation cleanup
+		let lastCompleteTurnEnd = this.messages.length;
+
+		try {
 		while (turnsRemaining > 0) {
 			if (this.config.abortSignal?.aborted) { break; }
 
@@ -240,6 +244,7 @@ export class AgentEngine {
 					this.config.thinking?.type === 'enabled' && this.config.thinking.budget_tokens
 						? { type: 'enabled', budget_tokens: this.config.thinking.budget_tokens }
 						: undefined,
+				abortSignal: this.config.abortSignal, // [Director-Code] A2: pass signal to provider fetch
 			};
 
 			let streamingUsed = false;
@@ -503,16 +508,29 @@ export class AgentEngine {
 				})),
 			});
 
+			// [Director-Code] A2: advance checkpoint after complete tool round-trip
+			if (!this.config.abortSignal?.aborted) {
+				lastCompleteTurnEnd = this.messages.length;
+			}
+
 			// After tool execution, always continue the loop so the LLM
 			// can see the tool results and decide what to do next.
 		}
+		} finally {
+			// [Director-Code] A2: on cancellation, truncate incomplete history to last checkpoint
+			if (this.config.abortSignal?.aborted && this.messages.length > lastCompleteTurnEnd) {
+				this.messages.length = lastCompleteTurnEnd;
+			}
+		}
 
 		// Yield final result
-		const endSubtype = budgetExceeded
-			? 'error_max_budget_usd'
-			: turnsRemaining <= 0
-				? 'error_max_turns'
-				: 'success';
+		const endSubtype = this.config.abortSignal?.aborted
+			? 'cancelled'
+			: budgetExceeded
+				? 'error_max_budget_usd'
+				: turnsRemaining <= 0
+					? 'error_max_turns'
+					: 'success';
 
 		yield {
 			type: 'result',
