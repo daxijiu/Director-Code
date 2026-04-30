@@ -27,7 +27,9 @@
 - **B4-6** ✅ agentSessions provider 描述替换 + agentTitleBarStatusWidget 状态 guard
 - **B4-7** ✅ 全仓 grep 扫尾验证通过（残留均为 guard 保护的上游 rebase 友好型代码）
 - **B4-core 完成** ✅ B4-0 ~ B4-7 全部就绪；下一步进入 B1+B2 并行
-- **B1/B2/原A5/B3** ⏳ 待实施
+- **B1-0** ✅ 命名冻结：`AuthVariantName`/`FlowKind`/`ProviderAuth` 类型定义集中在 `providerTypes.ts`
+- **B1-1** ✅ auth 契约升级：`ProviderOptions.apiKey` → `ProviderAuth` 显式结构；abstractProvider + 三家 Provider + apiKeyService + directorCodeAgent + directorCodeModelProvider + 12 个测试文件（116 处替换）全部对齐
+- **B1-2 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
 
 ## 权威文档位置
 
