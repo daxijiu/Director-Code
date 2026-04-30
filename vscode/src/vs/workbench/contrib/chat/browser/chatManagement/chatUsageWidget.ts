@@ -11,6 +11,8 @@ import { localize } from '../../../../../nls.js';
 import { IChatEntitlementService, IQuotaSnapshot } from '../../../../services/chat/common/chatEntitlementService.js';
 import { language } from '../../../../../base/common/platform.js';
 import { safeIntl } from '../../../../../base/common/date.js';
+import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 const $ = DOM.$;
 
@@ -46,6 +48,13 @@ export class ChatUsageWidget extends Disposable {
 
 	private render(): void {
 		DOM.clearNode(this.usageSection);
+
+		// [Director-Code] skip: built-in agent — no Copilot usage quota rendering
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			const height = this.element.offsetHeight || 400;
+			this._onDidChangeContentHeight.fire(height);
+			return;
+		}
 
 		const { chat: chatQuota, completions: completionsQuota, premiumChat: premiumChatQuota, resetDate, resetDateHasTime } = this.chatEntitlementService.quotas;
 

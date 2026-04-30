@@ -22,6 +22,7 @@ import { disposableWindowInterval } from '../../../../../base/browser/dom.js';
 import { isNewUser } from './chatStatus.js';
 import product from '../../../../../platform/product/common/product.js';
 import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribution {
 
@@ -105,6 +106,37 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 	}
 
 	private getEntryProps(): IStatusbarEntry {
+		// [Director-Code] skip: built-in agent — neutral status bar in built-in mode
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			let text = '$(sparkle)';
+			let ariaLabel = localize('dcAIStatus', "AI Status");
+			if (this.runningSessionsCount > 0) {
+				text = '$(loading~spin)';
+				ariaLabel = this.runningSessionsCount > 1
+					? localize('dcSessionsInProgress', "{0} agent sessions in progress", this.runningSessionsCount)
+					: localize('dcSessionInProgress', "1 agent session in progress");
+			}
+			return {
+				name: localize('dcStatusName', "AI Status"),
+				text,
+				ariaLabel,
+				command: ShowTooltipCommand,
+				showInAllWindows: true,
+				kind: undefined,
+				tooltip: {
+					element: (token: CancellationToken) => {
+						const store = new DisposableStore();
+						store.add(token.onCancellationRequested(() => store.dispose()));
+						const elem = ChatStatusDashboard.instantiateInContents(this.instantiationService, store);
+						store.add(disposableWindowInterval(mainWindow, () => {
+							if (!elem.isConnected) { store.dispose(); }
+						}, 2000));
+						return elem;
+					}
+				}
+			};
+		}
+
 		let text = '$(copilot)';
 		let ariaLabel = localize('chatStatusAria', "Copilot status");
 		let kind: StatusbarEntryKind | undefined;

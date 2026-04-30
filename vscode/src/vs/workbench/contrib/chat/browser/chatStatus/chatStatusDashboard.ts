@@ -48,6 +48,7 @@ import { Color } from '../../../../../base/common/color.js';
 import { IViewsService } from '../../../../services/views/common/viewsService.js';
 import { ChatViewId } from '../chat.js';
 import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 const defaultChat = product.defaultChatAgent;
 
@@ -186,7 +187,8 @@ export class ChatStatusDashboard extends DomWidget {
 				this.element.appendChild($('div.description', undefined, localize('limitQuota', "Allowance resets {0}.", resetDateHasTime ? this.dateTimeFormatter.value.format(new Date(resetDate)) : this.dateFormatter.value.format(new Date(resetDate)))));
 			}
 
-			if (this.chatEntitlementService.entitlement === ChatEntitlement.Free && (Number(chatQuota?.percentRemaining) <= 25 || Number(completionsQuota?.percentRemaining) <= 25)) {
+			// [Director-Code] skip: built-in agent — no Copilot upgrade button
+		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && this.chatEntitlementService.entitlement === ChatEntitlement.Free && (Number(chatQuota?.percentRemaining) <= 25 || Number(completionsQuota?.percentRemaining) <= 25)) {
 				const upgradeProButton = this._store.add(new Button(this.element, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate, secondary: this.canUseChat() /* use secondary color when chat can still be used */ }));
 				upgradeProButton.label = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
 				this._store.add(upgradeProButton.onDidClick(() => this.runCommandAndClose('workbench.action.chat.upgradePlan')));
@@ -212,7 +214,8 @@ export class ChatStatusDashboard extends DomWidget {
 		}
 
 		// Anonymous Indicator
-		else if (this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.installed) {
+		// [Director-Code] skip: built-in agent — no Copilot-branded anonymous indicator
+		else if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.installed) {
 			addSeparator(localize('anonymousTitle', "Copilot Usage"));
 
 			this.createQuotaIndicator(this.element, this._store, localize('quotaLimited', "Limited"), localize('completionsLabel', "Inline Suggestions"), false);
@@ -348,7 +351,8 @@ export class ChatStatusDashboard extends DomWidget {
 		}
 
 		// New to Chat / Signed out
-		{
+		// [Director-Code] skip: built-in agent — no Copilot-branded setup/sign-in section
+		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
 			const newUser = isNewUser(this.chatEntitlementService);
 			const anonymousUser = this.chatEntitlementService.anonymous;
 			const disabled = this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted;
@@ -500,7 +504,8 @@ export class ChatStatusDashboard extends DomWidget {
 			)
 		));
 
-		if (supportsOverage && (this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus)) {
+		// [Director-Code] skip: built-in agent — no Copilot overage management
+		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && supportsOverage && (this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus)) {
 			const manageOverageButton = disposables.add(new Button(quotaIndicator, { ...defaultButtonStyles, secondary: true, hoverDelegate: nativeHoverDelegate }));
 			manageOverageButton.label = localize('enableAdditionalUsage', "Manage paid premium requests");
 			disposables.add(manageOverageButton.onDidClick(() => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageOverageUrl)))));

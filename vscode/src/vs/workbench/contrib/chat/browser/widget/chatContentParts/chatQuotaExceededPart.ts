@@ -21,6 +21,8 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
 import { IChatErrorDetailsPart, IChatRendererContent, IChatResponseViewModel } from '../../../common/model/chatViewModel.js';
 import { IChatWidgetService } from '../../chat.js';
 import { IChatContentPart } from './chatContentParts.js';
+import product from '../../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
 
 const $ = dom.$;
 
@@ -62,15 +64,18 @@ export class ChatQuotaExceededPart extends Disposable implements IChatContentPar
 		const markdownContent = this._register(renderer.render(new MarkdownString(errorDetails.message)));
 		dom.append(messageContainer, markdownContent.element);
 
+		// [Director-Code] skip: built-in agent — no Copilot upgrade/manage CTA
 		let primaryButtonLabel: string | undefined;
-		switch (chatEntitlementService.entitlement) {
-			case ChatEntitlement.Pro:
-			case ChatEntitlement.ProPlus:
-				primaryButtonLabel = localize('enableAdditionalUsage', "Manage Paid Premium Requests");
-				break;
-			case ChatEntitlement.Free:
-				primaryButtonLabel = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
-				break;
+		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			switch (chatEntitlementService.entitlement) {
+				case ChatEntitlement.Pro:
+				case ChatEntitlement.ProPlus:
+					primaryButtonLabel = localize('enableAdditionalUsage', "Manage Paid Premium Requests");
+					break;
+				case ChatEntitlement.Free:
+					primaryButtonLabel = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
+					break;
+			}
 		}
 
 		let hasAddedWaitWarning = false;

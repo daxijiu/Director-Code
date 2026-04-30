@@ -33,6 +33,8 @@ import { DisposableStore, MutableDisposable } from '../../../../../base/common/l
 import { IContextKey, IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
 import { CONTEXT_MODELS_EDITOR } from '../../common/constants.js';
 import { FONT } from '../../../../../base/common/font.js';
+import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 const $ = DOM.$;
 
@@ -266,9 +268,11 @@ export class ChatManagementEditor extends EditorPane {
 		const headerTitleContainer = DOM.append(this.headerContainer, $('.header-title-container'));
 		const headerTitleWrapper = DOM.append(headerTitleContainer, $('.header-title-wrapper'));
 
-		// Copilot label
+		// [Director-Code] skip: built-in agent — neutral title
 		const tile = DOM.append(headerTitleWrapper, $('.ai-management-editor-title'));
-		tile.textContent = localize('plan.copilot', 'Copilot');
+		tile.textContent = isDirectorCodeBuiltInMode(product.defaultChatAgent)
+			? localize('plan.directorCodeAI', 'Director Code AI')
+			: localize('plan.copilot', 'Copilot');
 
 		// Plan badge
 		this.planBadge = DOM.append(headerTitleWrapper, $('.plan-badge'));
@@ -333,6 +337,13 @@ export class ChatManagementEditor extends EditorPane {
 	}
 
 	private updateHeaderData(): void {
+		// [Director-Code] skip: built-in agent — no Copilot plan/upgrade UI
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			this.planBadge.style.display = 'none';
+			this.actionButton.element.style.display = 'none';
+			return;
+		}
+
 		const newUser = isNewUser(this.chatEntitlementService);
 		const anonymousUser = this.chatEntitlementService.anonymous;
 		const disabled = this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted;

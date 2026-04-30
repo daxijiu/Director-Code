@@ -18,6 +18,8 @@ import { ChatContextKeys } from '../../../common/actions/chatContextKeys.js';
 import { CHAT_SETUP_ACTION_ID } from '../../actions/chatActions.js';
 import { ChatInputPartWidgetsRegistry, IChatInputPartWidget } from './chatInputPartWidgets.js';
 import './media/chatStatusWidget.css';
+import product from '../../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
 
 const $ = dom.$;
 
@@ -48,6 +50,11 @@ export class ChatStatusWidget extends Disposable implements IChatInputPartWidget
 	}
 
 	private initializeIfEnabled(): void {
+		// [Director-Code] skip: built-in agent — no Copilot quota CTA widget
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return;
+		}
+
 		const entitlement = this.chatEntitlementService.entitlement;
 		const isAnonymous = this.chatEntitlementService.anonymous;
 

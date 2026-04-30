@@ -10,6 +10,7 @@ import { registerIcon } from '../../../../../platform/theme/common/iconRegistry.
 import { IUntypedEditorInput } from '../../../../common/editor.js';
 import { EditorInput } from '../../../../common/editor/editorInput.js';
 
+// [Director-Code] TODO: Codicon.copilot is Copilot branding — replace icon when Director-Code brand icon is available
 const ChatManagementEditorIcon = registerIcon('ai-management-editor-label-icon', Codicon.copilot, nls.localize('aiManagementEditorLabelIcon', 'Icon of the AI Management editor label.'));
 const ModelsManagementEditorIcon = registerIcon('models-management-editor-label-icon', Codicon.settings, nls.localize('modelsManagementEditorLabelIcon', 'Icon of the Models Management editor label.'));
 
@@ -34,6 +35,7 @@ export class ChatManagementEditorInput extends EditorInput {
 		return ChatManagementEditorInput.ID;
 	}
 
+	// [Director-Code] TODO: "Manage Copilot" is Copilot branding — getName() is called at class level, hard to guard dynamically; update when ready
 	override getName(): string {
 		return nls.localize('aiManagementEditorInputName', "Manage Copilot");
 	}
