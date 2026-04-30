@@ -4485,4 +4485,117 @@ suite('LanguageModelToolsService', () => {
 			assert.deepStrictEqual(receivedParameters, { command: 'safe-command' });
 		});
 	});
+
+	// [Director-Code] A1: request binding — resolveRequest prefers chatRequestId over .at(-1)
+	suite('request binding via chatRequestId', () => {
+		test('invokeTool resolves correct request when chatRequestId is provided and target is not the last request', async () => {
+			const setup = createTestToolsService(store);
+
+			const targetRequestId = 'req-target';
+			const lastRequestId = 'req-last';
+			const fakeModel = {
+				sessionId: 'session-multi',
+				sessionResource: LocalChatSessionUri.forSession('session-multi'),
+				getRequests: () => [
+					{ id: targetRequestId, modelId: 'test-model', modeInfo: undefined },
+					{ id: lastRequestId, modelId: 'test-model', modeInfo: undefined, response: undefined },
+				],
+			} as unknown as ChatModel;
+			setup.chatService.addSession(fakeModel);
+
+			let appendedToRequestId: string | undefined;
+			setup.chatService.appendProgress = (request: any) => {
+				appendedToRequestId = request.id;
+			};
+
+			let invokedParams: any;
+			const tool = registerToolForTest(setup.service, store, 'test-a1-tool', {
+				invoke: async (_invocation, _countTokens, _token) => {
+					invokedParams = true;
+					return { content: [{ type: 'text', value: 'ok' }] };
+				},
+			});
+
+			const dto: IToolInvocation = {
+				callId: 'call-a1',
+				toolId: 'test-a1-tool',
+				tokenBudget: 100,
+				parameters: {},
+				context: { sessionResource: LocalChatSessionUri.forSession('session-multi') },
+				chatRequestId: targetRequestId,
+			};
+
+			await setup.service.invokeTool(dto, async () => 0, CancellationToken.None);
+
+			assert.ok(invokedParams, 'tool should have been invoked');
+		});
+
+		test('invokeTool falls back to last request when chatRequestId is undefined', async () => {
+			const setup = createTestToolsService(store);
+
+			const fakeModel = {
+				sessionId: 'session-fallback',
+				sessionResource: LocalChatSessionUri.forSession('session-fallback'),
+				getRequests: () => [
+					{ id: 'req-first', modelId: 'test-model', modeInfo: undefined },
+					{ id: 'req-last', modelId: 'test-model', modeInfo: undefined, response: undefined },
+				],
+			} as unknown as ChatModel;
+			setup.chatService.addSession(fakeModel);
+
+			let invokedOk = false;
+			registerToolForTest(setup.service, store, 'test-a1-fallback', {
+				invoke: async () => {
+					invokedOk = true;
+					return { content: [{ type: 'text', value: 'ok' }] };
+				},
+			});
+
+			const dto: IToolInvocation = {
+				callId: 'call-a1-fb',
+				toolId: 'test-a1-fallback',
+				tokenBudget: 100,
+				parameters: {},
+				context: { sessionResource: LocalChatSessionUri.forSession('session-fallback') },
+				// chatRequestId is undefined — should fall back to last request
+			};
+
+			await setup.service.invokeTool(dto, async () => 0, CancellationToken.None);
+			assert.ok(invokedOk, 'tool should have been invoked via fallback to last request');
+		});
+
+		test('invokeTool cancels when the target request (by chatRequestId) is already cancelled', async () => {
+			const setup = createTestToolsService(store);
+
+			const targetRequestId = 'req-cancelled';
+			const fakeModel = {
+				sessionId: 'session-cancel',
+				sessionResource: LocalChatSessionUri.forSession('session-cancel'),
+				getRequests: () => [
+					{ id: targetRequestId, modelId: 'test-model', modeInfo: undefined, response: { isCanceled: true, isComplete: false } },
+					{ id: 'req-healthy', modelId: 'test-model', modeInfo: undefined, response: undefined },
+				],
+			} as unknown as ChatModel;
+			setup.chatService.addSession(fakeModel);
+
+			registerToolForTest(setup.service, store, 'test-a1-cancel', {
+				invoke: async () => ({ content: [{ type: 'text', value: 'should not reach' }] }),
+			});
+
+			const dto: IToolInvocation = {
+				callId: 'call-a1-cancel',
+				toolId: 'test-a1-cancel',
+				tokenBudget: 100,
+				parameters: {},
+				context: { sessionResource: LocalChatSessionUri.forSession('session-cancel') },
+				chatRequestId: targetRequestId,
+			};
+
+			await assert.rejects(
+				() => setup.service.invokeTool(dto, async () => 0, CancellationToken.None),
+				(err: any) => isCancellationError(err),
+				'should throw CancellationError for cancelled target request'
+			);
+		});
+	});
 });

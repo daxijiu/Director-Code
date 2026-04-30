@@ -119,6 +119,20 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
 	/** Deduplicates _checkGlobalAutoApprove calls within this window */
 	private _pendingGlobalAutoApproveCheck: Promise<boolean> | undefined;
 
+	// [Director-Code] Unified request resolution: prefer chatRequestId lookup, fallback to last request
+	private _resolveRequest(model: IChatModel | undefined, chatRequestId: string | undefined): IChatRequestModel | undefined {
+		if (!model) {
+			return undefined;
+		}
+		const request = (chatRequestId
+			? model.getRequests().find(r => r.id === chatRequestId)
+			: undefined) ?? model.getRequests().at(-1);
+		if (chatRequestId && request && request.id !== chatRequestId) {
+			this._logService.trace(`[LanguageModelToolsService] chatRequestId '${chatRequestId}' not found, fell back to last request '${request.id}'`);
+		}
+		return request;
+	}
+
 	private readonly _isAgentModeEnabled: IObservable<boolean>;
 
 	constructor(
@@ -455,7 +469,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
 		let request: IChatRequestModel | undefined;
 		if (dto.context?.sessionResource) {
 			model = this._chatService.getSession(dto.context.sessionResource);
-			request = model?.getRequests().at(-1);
+			request = this._resolveRequest(model, dto.chatRequestId); // [Director-Code] A1: use chatRequestId
 			if (request?.response?.isCanceled || request?.response?.isComplete) {
 				this._logService.debug(`[LanguageModelToolsService#invokeTool] Ignoring tool ${dto.toolId} for cancelled/complete request ${request.id}`);
 				throw new CancellationError();
@@ -1123,7 +1137,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
 		// switching to Autopilot mid-session takes effect immediately.
 		if (chatSessionResource && !this._isAutoApprovePolicyRestricted()) {
 			const model = this._chatService.getSession(chatSessionResource);
-			const request = model?.getRequests().at(-1);
+			const request = this._resolveRequest(model, chatRequestId); // [Director-Code] A1: use chatRequestId
 			if (isAutoApproveLevel(request?.modeInfo?.permissionLevel) || this._isSessionLiveAutoApproveLevel(chatSessionResource)) {
 				// CLI sessions must always show their multi-option confirmation dialogs
 				// (e.g. uncommitted-changes prompt) even under Bypass Approvals
@@ -1170,7 +1184,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
 		// Check both the request-stamped level AND the live picker level.
 		if (chatSessionResource && !this._isAutoApprovePolicyRestricted()) {
 			const model = this._chatService.getSession(chatSessionResource);
-			const request = model?.getRequests().at(-1);
+			const request = this._resolveRequest(model, chatRequestId); // [Director-Code] A1: use chatRequestId
 			if (isAutoApproveLevel(request?.modeInfo?.permissionLevel) || this._isSessionLiveAutoApproveLevel(chatSessionResource)) {
 				if (!(toolIdsThatCannotBeAutoApproved.has(toolId) && getChatSessionType(chatSessionResource) !== localChatSessionType)) {
 					return { type: ToolConfirmKind.ConfirmationNotNeeded, reason: 'auto-approve-all' };
