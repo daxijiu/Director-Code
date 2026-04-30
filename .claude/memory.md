@@ -20,7 +20,9 @@
 
 ### Batch B 进度（P1 认证链、模型链、历史上下文链与产品元数据）
 - **B4-1** ✅ 根 `product.json` 整块新增 `defaultChatAgent`（30+ 字段）+ 4 个顶层字段 + `prepare_vscode.sh` stable 补 `dataFolderName` + L47/L49 三源对称兜底
-- **B4-2 ~ B4-7** ⏳ 待实施：setup 命令族别名、builtin tool 判定、状态类 UI、欢迎页/disclaimer、Agent Sessions/Model Picker 边缘触点、全仓 grep 扫尾
+- **B4-2** ✅ `builtInModeUtil.ts` 新建 + `chatSetupContributions.ts` setup 命令族 guard + growth session skip + checkExtensionInstallation guard
+- **B4-3** ✅ `mainThreadLanguageModelTools.ts` isBuiltinTool 与 contribution 侧 proposal fallback 对齐
+- **B4-4 ~ B4-7** ⏳ 待实施：chatStatus*/chatManagement* 状态类 UI guard、chatGettingStarted/chatWidget/chatQuick 欢迎页/disclaimer、agentSessions/chatModelPicker 边缘触点、全仓 grep 扫尾
 - **B1/B2/原A5/B3** ⏳ 待实施（依赖 B4-core 完成后推进）
 
 ## 权威文档位置
