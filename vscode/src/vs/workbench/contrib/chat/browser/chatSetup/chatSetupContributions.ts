@@ -47,6 +47,8 @@ import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../../common
 import { CHAT_CATEGORY, CHAT_SETUP_ACTION_ID, CHAT_SETUP_SUPPORT_ANONYMOUS_ACTION_ID } from '../actions/chatActions.js';
 import { ChatViewContainerId, IChatWidgetService } from '../chat.js';
 import { chatViewsWelcomeRegistry } from '../viewsWelcome/chatViewsWelcome.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+import { INotificationService } from '../../../../../platform/notification/common/notification.js';
 import { ChatSetupAnonymous } from './chatSetup.js';
 import { ChatSetupController } from './chatSetupController.js';
 import { GrowthSessionController, registerGrowthSession } from './chatSetupGrowthSession.js';
@@ -178,6 +180,10 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 	}
 
 	private registerGrowthSession(chatEntitlementService: ChatEntitlementService): void {
+		// [Director-Code] skip: built-in agent — growth session shows Copilot-branded content
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return;
+		}
 		const growthSessionDisposables = markAsSingleton(new MutableDisposable());
 
 		const updateGrowthSession = () => {
@@ -234,6 +240,18 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 			}
 
 			override async run(accessor: ServicesAccessor, mode?: ChatModeKind | string, options?: { forceSignInDialog?: boolean; additionalScopes?: readonly string[]; forceAnonymous?: ChatSetupAnonymous; inputValue?: string; dialogIcon?: ThemeIcon; dialogTitle?: string; dialogHideSkip?: boolean }): Promise<boolean> {
+				// [Director-Code] skip: built-in agent — redirect to Settings instead of Copilot setup
+				if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+					const commandService = accessor.get(ICommandService);
+					const notificationService = accessor.get(INotificationService);
+					try {
+						await commandService.executeCommand('director-code.openSettings');
+					} catch (err: any) {
+						notificationService.error(`Failed to open Director Code settings: ${err?.message ?? err}. Please try Ctrl+Shift+P → "Director Code: Open Settings".`);
+					}
+					return true; // always truthy to prevent Copilot sign-in fallback
+				}
+
 				const widgetService = accessor.get(IChatWidgetService);
 				const instantiationService = accessor.get(IInstantiationService);
 				const dialogService = accessor.get(IDialogService);
@@ -562,6 +580,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 	}
 
 	private async checkExtensionInstallation(context: ChatEntitlementContext): Promise<void> {
+		// [Director-Code] skip: built-in agent — no extension to install, mark as installed
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			context.update({ installed: true, disabled: false, untrusted: false });
+			return;
+		}
 
 		// When developing extensions, await registration and then check
 		if (this.environmentService.isExtensionDevelopment) {
@@ -709,6 +732,10 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
 	}
 
 	private async maybeEnableOrDisableExtension(state: EnablementState.EnabledGlobally | EnablementState.EnabledWorkspace | EnablementState.DisabledGlobally | EnablementState.DisabledWorkspace): Promise<void> {
+		// [Director-Code] skip: built-in agent
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return;
+		}
 		const defaultChatExtension = this.extensionsWorkbenchService.local.find(value => ExtensionIdentifier.equals(value.identifier.id, defaultChat.chatExtensionId));
 		if (!defaultChatExtension) {
 			return;
