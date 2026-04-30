@@ -627,5 +627,49 @@
     "gruntfuggly.todo-tree": {
       "default": false
     }
+  },
+  "reportIssueUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+  "requestFeatureUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+  "releaseNotesUrl": "https://github.com/daxijiu/Director-Code/releases",
+  "privacyStatementUrl": "",
+  "defaultChatAgent": {
+    "extensionId": "director-code.agent",
+    "chatExtensionId": "",
+    "chatExtensionOutputId": "",
+    "chatExtensionOutputExtensionStateCommand": "",
+    "provider": {
+      "default": { "id": "director-code", "name": "Director Code" },
+      "enterprise": { "id": "", "name": "" },
+      "google": { "id": "", "name": "" },
+      "apple": { "id": "", "name": "" }
+    },
+    "providerExtensionId": "",
+    "providerUriSetting": "",
+    "providerScopes": [],
+    "documentationUrl": "https://github.com/daxijiu/Director-Code#readme",
+    "skusDocumentationUrl": "https://github.com/daxijiu/Director-Code",
+    "publicCodeMatchesUrl": "",
+    "termsStatementUrl": "",
+    "privacyStatementUrl": "",
+    "manageSettingsUrl": "command:director-code.openSettings",
+    "managePlanUrl": "",
+    "manageOverageUrl": "",
+    "upgradePlanUrl": "",
+    "signUpUrl": "",
+    "entitlementUrl": "",
+    "entitlementSignupLimitedUrl": "",
+    "tokenEntitlementUrl": "",
+    "mcpRegistryDataUrl": "",
+    "chatQuotaExceededContext": "",
+    "completionsQuotaExceededContext": "",
+    "walkthroughCommand": "",
+    "completionsMenuCommand": "",
+    "completionsRefreshTokenCommand": "",
+    "chatRefreshTokenCommand": "",
+    "generateCommitMessageCommand": "",
+    "resolveMergeConflictsCommand": "",
+    "completionsAdvancedSetting": "",
+    "completionsEnablementSetting": "",
+    "nextEditSuggestionsSetting": ""
   }
 }

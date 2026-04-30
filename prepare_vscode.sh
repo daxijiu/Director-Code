@@ -44,9 +44,9 @@ setpath "product" "keyboardShortcutsUrlMac" "https://go.microsoft.com/fwlink/?li
 setpath "product" "keyboardShortcutsUrlWin" "https://go.microsoft.com/fwlink/?linkid=832145"
 setpath "product" "licenseUrl" "https://github.com/daxijiu/Director-Code/blob/master/LICENSE"
 setpath_json "product" "linkProtectionTrustedDomains" '["https://open-vsx.org"]'
-setpath "product" "releaseNotesUrl" "https://go.microsoft.com/fwlink/?LinkID=533483#vscode"
+setpath "product" "releaseNotesUrl" "https://github.com/daxijiu/Director-Code/releases"
 setpath "product" "reportIssueUrl" "https://github.com/daxijiu/Director-Code/issues/new"
-setpath "product" "requestFeatureUrl" "https://go.microsoft.com/fwlink/?LinkID=533482"
+setpath "product" "requestFeatureUrl" "https://github.com/daxijiu/Director-Code/issues/new"
 setpath "product" "tipsAndTricksUrl" "https://go.microsoft.com/fwlink/?linkid=852118"
 setpath "product" "twitterUrl" "https://go.microsoft.com/fwlink/?LinkID=533687"
 
@@ -92,6 +92,7 @@ else
   setpath "product" "nameShort" "Director-Code"
   setpath "product" "nameLong" "Director-Code"
   setpath "product" "applicationName" "director-code"
+  setpath "product" "dataFolderName" ".director-code"
   setpath "product" "linuxIconName" "director-code"
   setpath "product" "quality" "stable"
   setpath "product" "urlProtocol" "director-code"
