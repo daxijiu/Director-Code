@@ -22,8 +22,12 @@
 - **B4-1** ✅ 根 `product.json` 整块新增 `defaultChatAgent`（30+ 字段）+ 4 个顶层字段 + `prepare_vscode.sh` stable 补 `dataFolderName` + L47/L49 三源对称兜底
 - **B4-2** ✅ `builtInModeUtil.ts` 新建 + `chatSetupContributions.ts` setup 命令族 guard + growth session skip + checkExtensionInstallation guard
 - **B4-3** ✅ `mainThreadLanguageModelTools.ts` isBuiltinTool 与 contribution 侧 proposal fallback 对齐
-- **B4-4 ~ B4-7** ⏳ 待实施：chatStatus*/chatManagement* 状态类 UI guard、chatGettingStarted/chatWidget/chatQuick 欢迎页/disclaimer、agentSessions/chatModelPicker 边缘触点、全仓 grep 扫尾
-- **B1/B2/原A5/B3** ⏳ 待实施（依赖 B4-core 完成后推进）
+- **B4-4** ✅ `chatStatusEntry.ts` / `chatStatusDashboard.ts` / `chatStatusWidget.ts` / `chatUsageWidget.ts` / `chatQuotaExceededPart.ts` / `chatManagementEditor.ts` / `chatManagementEditorInput.ts` — status/quota/management UI guards (neutral icon+label, skip upgrade/quota/sign-in sections)
+- **B4-5** ✅ chatGettingStarted + chatWidget + chatQuick + agentSessionsWelcome + chatSetupRunner 欢迎页/disclaimer guard
+- **B4-6** ✅ agentSessions provider 描述替换 + agentTitleBarStatusWidget 状态 guard
+- **B4-7** ✅ 全仓 grep 扫尾验证通过（残留均为 guard 保护的上游 rebase 友好型代码）
+- **B4-core 完成** ✅ B4-0 ~ B4-7 全部就绪；下一步进入 B1+B2 并行
+- **B1/B2/原A5/B3** ⏳ 待实施
 
 ## 权威文档位置
 
