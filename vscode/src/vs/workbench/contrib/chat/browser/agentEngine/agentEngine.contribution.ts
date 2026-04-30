@@ -40,12 +40,16 @@ import {
 	DirectorCodeSettingsEditorInputSerializer,
 } from './directorCodeSettingsEditor.js';
 import { IApiKeyService, ApiKeyService } from '../../common/agentEngine/apiKeyService.js';
+import { IOAuthService, OAuthService } from '../../common/agentEngine/oauthService.js';
+import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
 
 // ============================================================================
 // Service Registration
 // ============================================================================
 
 registerSingleton(IApiKeyService, ApiKeyService, InstantiationType.Delayed);
+registerSingleton(IOAuthService, OAuthService, InstantiationType.Delayed);
+registerSingleton(IModelResolverService, ModelResolverService, InstantiationType.Delayed);
 
 // ============================================================================
 // Configuration Registration
