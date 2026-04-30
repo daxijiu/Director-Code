@@ -12,7 +12,6 @@
 
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { toDisposable } from '../../../../../base/common/lifecycle.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../../platform/configuration/common/configurationRegistry.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
 import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
@@ -176,12 +175,12 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 	constructor(
 		@IChatAgentService agentService: IChatAgentService,
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IConfigurationService configService: IConfigurationService,
 		@ILanguageModelsService languageModelsService: ILanguageModelsService,
 	) {
 		super();
 
-		this._enableToolAutoApprove(configService);
+		// [Director-Code] A4b: removed _enableToolAutoApprove — tool approval now uses VS Code's
+		// built-in permissionLevel mechanism (Autopilot mode auto-approves, other modes prompt).
 
 		// Register the Director Code Agent
 		const agentData: IChatAgentData = {
@@ -236,18 +235,6 @@ class DirectorCodeAgentContribution extends Disposable implements IWorkbenchCont
 		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
 	}
 
-	/**
-	 * Director-Code is an agentic IDE — tools are essential for its operation.
-	 * Enable global auto-approve by default so tools don't hang waiting for
-	 * confirmation UI that may not render properly for our dynamic agent.
-	 * Users can still disable this via settings if they prefer manual control.
-	 */
-	private _enableToolAutoApprove(configService: IConfigurationService): void {
-		const inspected = configService.inspect<boolean>('chat.tools.global.autoApprove');
-		if (inspected.userValue === undefined && inspected.workspaceValue === undefined) {
-			configService.updateValue('chat.tools.global.autoApprove', true).catch(() => { /* ignore */ });
-		}
-	}
 }
 
 registerWorkbenchContribution2(

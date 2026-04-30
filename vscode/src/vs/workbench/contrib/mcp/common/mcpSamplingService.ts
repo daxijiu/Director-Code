@@ -235,9 +235,10 @@ export class McpSamplingService extends Disposable implements IMcpSamplingServic
 	private async _getMatchingModelInner(server: IMcpServer, isDuringToolCall: boolean, preferences: MCP.ModelPreferences | undefined): Promise<ModelMatch | string> {
 		const config = this.getConfig(server);
 		// 1. Ensure the server is allowed to sample in this context
-		if (isDuringToolCall && !config.allowedDuringChat && !this._sessionSets.allowedDuringChat.has(server.definition.id)) {
+		// [Director-Code] A4a: use .get()===true so "Not Now" (set to false) is not treated as "allowed"
+		if (isDuringToolCall && !config.allowedDuringChat && this._sessionSets.allowedDuringChat.get(server.definition.id) !== true) {
 			return config.allowedDuringChat === undefined ? ModelMatch.UnsureAllowedDuringChat : ModelMatch.NotAllowed;
-		} else if (!isDuringToolCall && !config.allowedOutsideChat && !this._sessionSets.allowedOutsideChat.has(server.definition.id)) {
+		} else if (!isDuringToolCall && !config.allowedOutsideChat && this._sessionSets.allowedOutsideChat.get(server.definition.id) !== true) {
 			return config.allowedOutsideChat === undefined ? ModelMatch.UnsureAllowedOutsideChat : ModelMatch.NotAllowed;
 		}
 
