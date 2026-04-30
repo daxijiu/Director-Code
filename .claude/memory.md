@@ -6,7 +6,7 @@
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM + OAuth 登录
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
-- **测试**: 479+ 个全部通过（A 批次新增测试后 486+ 个）
+- **测试**: 479+ 个全部通过（A 批次新增测试后 486+，B1-2 后 432 个 agentEngine 测试全通过）
 - **Git**: master 分支，已推送到 `github.com/daxijiu/Director-Code`
 
 ## Phase 1 收口修复进度（Batch A 完成 2026-04-30）
@@ -29,7 +29,8 @@
 - **B4-core 完成** ✅ B4-0 ~ B4-7 全部就绪；下一步进入 B1+B2 并行
 - **B1-0** ✅ 命名冻结：`AuthVariantName`/`FlowKind`/`ProviderAuth` 类型定义集中在 `providerTypes.ts`
 - **B1-1** ✅ auth 契约升级：`ProviderOptions.apiKey` → `ProviderAuth` 显式结构；abstractProvider + 三家 Provider + apiKeyService + directorCodeAgent + directorCodeModelProvider + 12 个测试文件（116 处替换）全部对齐
-- **B1-2 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
+- **B1-2** ✅ `oauthService.ts` 完全重写：统一 callback 模型 → provider-specific flow contracts（`pkce_manual` + `device_code`）；新接口 `startLogin/submitManualCode/pollLogin/getStatus/logout`；`handleCallback` 标记 `@deprecated` 并 throw；session 单飞锁 + TTL 清理 + `IOAuthStoredTokens`（含 `clientId`/`flowKind`）；63 个测试全通过
+- **B1-3 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
 
 ## 权威文档位置
 

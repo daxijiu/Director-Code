@@ -4,33 +4,40 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * OAuth 2.0 Service
+ * OAuth 2.0 Service — Provider-Specific Flow Contracts
  *
- * Implements the OAuth 2.0 Authorization Code flow with PKCE for
- * Anthropic and OpenAI. Handles:
- *   - PKCE code_verifier / code_challenge generation
- *   - Browser-based authorization redirect
- *   - Authorization code → token exchange
- *   - Token storage in ISecretStorageService
- *   - Automatic token refresh before expiry
- *   - Integration with IApiKeyService auth resolution
+ * Each provider uses its own OAuth flow:
+ *   - anthropic: PKCE + manual code paste (pkce_manual)
+ *   - openai:    device code flow (device_code)
+ *
+ * Flow surface:
+ *   startLogin(provider) → IOAuthLoginPayload
+ *   submitManualCode(provider, sessionId, code) → IOAuthTokens   [pkce_manual only]
+ *   pollLogin(provider, sessionId) → IOAuthPollResult             [device_code only]
+ *   getStatus(provider) → IOAuthStatus
+ *   logout(provider)
  *
  * Reference: sub-projects/free-code/ oauth.ts + jwtUtils.ts
+ *            Hermes web_server.py / anthropic_adapter.py / auth.py
  */
 
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
+import { type FlowKind } from './providers/providerTypes.js';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const OAUTH_TOKEN_PREFIX = 'director-code.oauth';
-const OAUTH_STATE_PREFIX = 'director-code.oauthState';
+const OAUTH_SESSION_PREFIX = 'director-code.oauthSession';
+const OAUTH_ACTIVE_SESSION_PREFIX = 'director-code.oauthActiveSession';
 
-const REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
+const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const PKCE_SESSION_TTL_MS = 15 * 60 * 1000;
+const DEFAULT_DEVICE_CODE_INTERVAL_S = 5;
 
 // ============================================================================
 // Types
@@ -38,13 +45,54 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
 
 export type OAuthProviderName = 'anthropic' | 'openai';
 
-export interface IOAuthConfig {
+/** OAuth-specific subset of FlowKind (excludes 'api-key'). */
+export type OAuthFlowKind = Exclude<FlowKind, 'api-key'>;
+
+export interface IOAuthProviderConfig {
 	readonly provider: OAuthProviderName;
+	readonly flowKind: OAuthFlowKind;
 	readonly clientId: string;
-	readonly authorizationEndpoint: string;
+	readonly authorizationEndpoint?: string;
 	readonly tokenEndpoint: string;
+	readonly deviceAuthorizationEndpoint?: string;
 	readonly scopes: string[];
-	readonly redirectUri: string;
+}
+
+export interface IOAuthLoginPayload {
+	readonly flow: OAuthFlowKind;
+	readonly sessionId: string;
+	readonly expiresIn: number;
+	readonly authUrl?: string;
+	readonly verificationUrl?: string;
+	readonly userCode?: string;
+}
+
+export interface IOAuthPollResult {
+	readonly status: 'pending' | 'approved' | 'expired' | 'error';
+	readonly tokens?: IOAuthTokens;
+	readonly error?: string;
+}
+
+export interface IOAuthStatus {
+	readonly loggedIn: boolean;
+	readonly source: 'oauth';
+	readonly sourceLabel: string;
+	readonly flow?: OAuthFlowKind;
+	readonly expiresAt?: number;
+	readonly hasRefreshToken?: boolean;
+}
+
+export interface IOAuthSession {
+	readonly provider: OAuthProviderName;
+	readonly flowKind: OAuthFlowKind;
+	readonly sessionId: string;
+	readonly clientId: string;
+	readonly createdAt: number;
+	readonly expiresAt: number;
+	readonly codeVerifier?: string;
+	readonly state?: string;
+	readonly deviceCode?: string;
+	readonly interval?: number;
 }
 
 export interface IOAuthTokens {
@@ -55,55 +103,42 @@ export interface IOAuthTokens {
 	readonly scope?: string;
 }
 
-export interface IOAuthState {
-	readonly provider: OAuthProviderName;
-	readonly codeVerifier: string;
-	readonly state: string;
-	readonly timestamp: number;
-}
-
-export interface IOAuthFlowResult {
-	readonly authorizationUrl: string;
-	readonly state: string;
+export interface IOAuthStoredTokens extends IOAuthTokens {
+	readonly clientId: string;
+	readonly flowKind: OAuthFlowKind;
 }
 
 // ============================================================================
-// Default OAuth Configurations
+// Provider Configurations (Hermes-style fixed public clientIds)
 // ============================================================================
 
-const OAUTH_CONFIGS: Record<OAuthProviderName, IOAuthConfig> = {
+const OAUTH_PROVIDER_CONFIGS: Record<OAuthProviderName, IOAuthProviderConfig> = {
 	anthropic: {
 		provider: 'anthropic',
-		clientId: '', // Must be configured by the user or via settings
+		flowKind: 'pkce_manual',
+		clientId: 'dc-anthropic-public-client',
 		authorizationEndpoint: 'https://console.anthropic.com/oauth/authorize',
 		tokenEndpoint: 'https://console.anthropic.com/oauth/token',
 		scopes: ['api:read', 'api:write'],
-		redirectUri: 'vscode://director-code/auth/callback',
 	},
 	openai: {
 		provider: 'openai',
-		clientId: '',
-		authorizationEndpoint: 'https://auth0.openai.com/authorize',
-		tokenEndpoint: 'https://auth0.openai.com/oauth/token',
+		flowKind: 'device_code',
+		clientId: 'dc-openai-public-client',
+		deviceAuthorizationEndpoint: 'https://auth.openai.com/device/code',
+		tokenEndpoint: 'https://auth.openai.com/oauth/token',
 		scopes: ['openid', 'profile'],
-		redirectUri: 'vscode://director-code/auth/callback',
 	},
 };
 
-/**
- * Get the default OAuth configuration for a provider.
- */
-export function getOAuthConfig(provider: OAuthProviderName): IOAuthConfig {
-	return OAUTH_CONFIGS[provider];
+export function getOAuthProviderConfig(provider: OAuthProviderName): IOAuthProviderConfig {
+	return OAUTH_PROVIDER_CONFIGS[provider];
 }
 
 // ============================================================================
 // PKCE Helpers
 // ============================================================================
 
-/**
- * Generate a cryptographically random code verifier (43-128 chars, RFC 7636).
- */
 export function generateCodeVerifier(length: number = 64): string {
 	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
 	const array = new Uint8Array(length);
@@ -111,10 +146,6 @@ export function generateCodeVerifier(length: number = 64): string {
 	return Array.from(array, byte => chars[byte % chars.length]).join('');
 }
 
-/**
- * Generate a code_challenge from a code_verifier using S256 (SHA-256).
- * Returns a base64url-encoded string.
- */
 export async function generateCodeChallenge(verifier: string): Promise<string> {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(verifier);
@@ -122,9 +153,6 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 	return base64UrlEncode(new Uint8Array(hash));
 }
 
-/**
- * Generate a random state parameter for CSRF protection.
- */
 export function generateState(): string {
 	const array = new Uint8Array(32);
 	crypto.getRandomValues(array);
@@ -142,6 +170,12 @@ function base64UrlEncode(buffer: Uint8Array): string {
 		.replace(/=+$/, '');
 }
 
+function generateSessionId(): string {
+	const array = new Uint8Array(16);
+	crypto.getRandomValues(array);
+	return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ============================================================================
 // IOAuthService Interface
 // ============================================================================
@@ -150,45 +184,16 @@ export const IOAuthService = createDecorator<IOAuthService>('directorCodeOAuthSe
 
 export interface IOAuthService {
 	readonly _serviceBrand: undefined;
-
 	readonly onDidChangeAuth: Event<OAuthProviderName>;
 
-	/**
-	 * Start the OAuth authorization flow for a provider.
-	 * Returns the authorization URL to open in the browser
-	 * and the state parameter for verification.
-	 *
-	 * @param clientId Override the default client ID
-	 */
-	startOAuthFlow(provider: OAuthProviderName, clientId?: string): Promise<IOAuthFlowResult>;
-
-	/**
-	 * Handle the OAuth callback after user authorizes.
-	 * Exchanges the authorization code for tokens.
-	 */
-	handleCallback(code: string, state: string): Promise<IOAuthTokens>;
-
-	/**
-	 * Get the current access token for a provider.
-	 * Automatically refreshes if expired.
-	 * Returns undefined if not authenticated.
-	 */
-	getAccessToken(provider: OAuthProviderName): Promise<string | undefined>;
-
-	/**
-	 * Check if the user is authenticated via OAuth for a provider.
-	 */
-	isAuthenticated(provider: OAuthProviderName): Promise<boolean>;
-
-	/**
-	 * Log out from a provider (clear tokens).
-	 */
+	startLogin(provider: OAuthProviderName): Promise<IOAuthLoginPayload>;
+	submitManualCode(provider: OAuthProviderName, sessionId: string, code: string): Promise<IOAuthTokens>;
+	pollLogin(provider: OAuthProviderName, sessionId: string): Promise<IOAuthPollResult>;
+	getStatus(provider: OAuthProviderName): Promise<IOAuthStatus>;
 	logout(provider: OAuthProviderName): Promise<void>;
 
-	/**
-	 * Get stored tokens for a provider (for inspection/debugging).
-	 */
-	getTokens(provider: OAuthProviderName): Promise<IOAuthTokens | undefined>;
+	/** @deprecated Reserved for URI-callback-based provider expansion. Do not call directly. */
+	handleCallback(code: string, state: string): Promise<IOAuthTokens>;
 }
 
 // ============================================================================
@@ -202,11 +207,13 @@ export class OAuthService extends Disposable implements IOAuthService {
 	readonly onDidChangeAuth: Event<OAuthProviderName> = this._onDidChangeAuth.event;
 
 	private readonly _refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	private readonly _loginLocks = new Map<OAuthProviderName, string>();
 
 	constructor(
 		@ISecretStorageService private readonly secretService: ISecretStorageService,
 	) {
 		super();
+		this._cleanupExpiredSessions();
 	}
 
 	override dispose(): void {
@@ -214,168 +221,182 @@ export class OAuthService extends Disposable implements IOAuthService {
 			clearTimeout(timer);
 		}
 		this._refreshTimers.clear();
+		this._loginLocks.clear();
 		super.dispose();
 	}
 
 	// ========================================================================
-	// OAuth Flow
+	// Login Flow
 	// ========================================================================
 
-	async startOAuthFlow(provider: OAuthProviderName, clientId?: string): Promise<IOAuthFlowResult> {
-		const config = getOAuthConfig(provider);
-		const effectiveClientId = clientId || config.clientId;
+	async startLogin(provider: OAuthProviderName): Promise<IOAuthLoginPayload> {
+		const existingSessionId = this._loginLocks.get(provider)
+			?? await this._getActiveSessionId(provider);
 
-		if (!effectiveClientId) {
-			throw new Error(`OAuth client ID not configured for ${provider}. Set it in Director Code settings.`);
+		if (existingSessionId) {
+			const session = await this._getSession(existingSessionId);
+			if (session && Date.now() < session.expiresAt) {
+				throw new Error(
+					`Login already in progress for ${provider}. ` +
+					`Session ${existingSessionId} active until ${new Date(session.expiresAt).toISOString()}.`
+				);
+			}
+			await this._deleteSession(existingSessionId);
+			await this.secretService.delete(this._activeSessionKey(provider));
+			this._loginLocks.delete(provider);
+		}
+
+		await this._cleanupExpiredSessions();
+
+		const config = OAUTH_PROVIDER_CONFIGS[provider];
+		const sessionId = generateSessionId();
+
+		if (config.flowKind === 'pkce_manual') {
+			return this._startPkceManualFlow(config, sessionId);
+		} else if (config.flowKind === 'device_code') {
+			return this._startDeviceCodeFlow(config, sessionId);
+		}
+
+		throw new Error(`Unsupported OAuth flow kind: ${config.flowKind}`);
+	}
+
+	private async _startPkceManualFlow(
+		config: IOAuthProviderConfig,
+		sessionId: string,
+	): Promise<IOAuthLoginPayload> {
+		if (!config.authorizationEndpoint) {
+			throw new Error(`Authorization endpoint not configured for ${config.provider}`);
 		}
 
 		const codeVerifier = generateCodeVerifier();
 		const codeChallenge = await generateCodeChallenge(codeVerifier);
 		const state = generateState();
 
-		// Store flow state for callback verification
-		const flowState: IOAuthState = {
-			provider,
+		const session: IOAuthSession = {
+			provider: config.provider,
+			flowKind: 'pkce_manual',
+			sessionId,
+			clientId: config.clientId,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + PKCE_SESSION_TTL_MS,
 			codeVerifier,
 			state,
-			timestamp: Date.now(),
 		};
-		await this.secretService.set(
-			`${OAUTH_STATE_PREFIX}.${state}`,
-			JSON.stringify(flowState),
-		);
+		await this._storeSession(session);
+		await this.secretService.set(this._activeSessionKey(config.provider), sessionId);
+		this._loginLocks.set(config.provider, sessionId);
 
-		// Build authorization URL
 		const params = new URLSearchParams({
 			response_type: 'code',
-			client_id: effectiveClientId,
-			redirect_uri: config.redirectUri,
+			client_id: config.clientId,
 			scope: config.scopes.join(' '),
 			state,
 			code_challenge: codeChallenge,
 			code_challenge_method: 'S256',
 		});
 
-		const authorizationUrl = `${config.authorizationEndpoint}?${params.toString()}`;
+		const authUrl = `${config.authorizationEndpoint}?${params.toString()}`;
 
-		return { authorizationUrl, state };
+		return {
+			flow: 'pkce_manual',
+			sessionId,
+			expiresIn: Math.floor(PKCE_SESSION_TTL_MS / 1000),
+			authUrl,
+		};
 	}
 
-	async handleCallback(code: string, state: string): Promise<IOAuthTokens> {
-		// Retrieve and verify flow state
-		const stateJson = await this.secretService.get(`${OAUTH_STATE_PREFIX}.${state}`);
-		if (!stateJson) {
-			throw new Error('Invalid or expired OAuth state. Please restart the login flow.');
+	private async _startDeviceCodeFlow(
+		config: IOAuthProviderConfig,
+		sessionId: string,
+	): Promise<IOAuthLoginPayload> {
+		if (!config.deviceAuthorizationEndpoint) {
+			throw new Error(`Device authorization endpoint not configured for ${config.provider}`);
 		}
 
-		let flowState: IOAuthState;
-		try {
-			flowState = JSON.parse(stateJson) as IOAuthState;
-		} catch {
-			throw new Error('Corrupted OAuth state data.');
+		const body = new URLSearchParams({
+			client_id: config.clientId,
+			scope: config.scopes.join(' '),
+		});
+
+		const response = await fetch(config.deviceAuthorizationEndpoint, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: body.toString(),
+		});
+
+		if (!response.ok) {
+			const errText = await response.text().catch(() => '');
+			throw new Error(`Device authorization failed: ${response.status} ${errText.slice(0, 200)}`);
 		}
 
-		// Clean up state
-		await this.secretService.delete(`${OAUTH_STATE_PREFIX}.${state}`);
+		const data = await response.json() as {
+			device_code: string;
+			user_code: string;
+			verification_uri: string;
+			verification_uri_complete?: string;
+			expires_in: number;
+			interval?: number;
+		};
 
-		// Check state age (15 min max)
-		if (Date.now() - flowState.timestamp > 15 * 60 * 1000) {
-			throw new Error('OAuth state expired. Please restart the login flow.');
-		}
+		const expiresInMs = data.expires_in * 1000;
+		const interval = data.interval ?? DEFAULT_DEVICE_CODE_INTERVAL_S;
 
-		// Exchange code for tokens
-		const config = getOAuthConfig(flowState.provider);
-		const tokens = await this._exchangeCodeForTokens(
-			config,
-			code,
-			flowState.codeVerifier,
-		);
+		const session: IOAuthSession = {
+			provider: config.provider,
+			flowKind: 'device_code',
+			sessionId,
+			clientId: config.clientId,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + expiresInMs,
+			deviceCode: data.device_code,
+			interval,
+		};
+		await this._storeSession(session);
+		await this.secretService.set(this._activeSessionKey(config.provider), sessionId);
+		this._loginLocks.set(config.provider, sessionId);
 
-		// Store tokens
-		await this._storeTokens(flowState.provider, tokens);
-
-		// Schedule refresh
-		this._scheduleRefresh(flowState.provider, tokens);
-
-		this._onDidChangeAuth.fire(flowState.provider);
-
-		return tokens;
-	}
-
-	// ========================================================================
-	// Token Access
-	// ========================================================================
-
-	async getAccessToken(provider: OAuthProviderName): Promise<string | undefined> {
-		const tokens = await this.getTokens(provider);
-		if (!tokens) {
-			return undefined;
-		}
-
-		// Check if token is expired
-		if (tokens.expiresAt && Date.now() >= tokens.expiresAt - REFRESH_BUFFER_MS) {
-			if (tokens.refreshToken) {
-				try {
-					const refreshed = await this._refreshAccessToken(provider, tokens.refreshToken);
-					return refreshed.accessToken;
-				} catch {
-					// Refresh failed — clear tokens
-					await this.logout(provider);
-					return undefined;
-				}
-			}
-			// No refresh token and expired
-			await this.logout(provider);
-			return undefined;
-		}
-
-		return tokens.accessToken;
-	}
-
-	async isAuthenticated(provider: OAuthProviderName): Promise<boolean> {
-		const token = await this.getAccessToken(provider);
-		return token !== undefined;
-	}
-
-	async logout(provider: OAuthProviderName): Promise<void> {
-		await this.secretService.delete(this._tokenKey(provider));
-
-		const timer = this._refreshTimers.get(provider);
-		if (timer) {
-			clearTimeout(timer);
-			this._refreshTimers.delete(provider);
-		}
-
-		this._onDidChangeAuth.fire(provider);
-	}
-
-	async getTokens(provider: OAuthProviderName): Promise<IOAuthTokens | undefined> {
-		const json = await this.secretService.get(this._tokenKey(provider));
-		if (!json) {
-			return undefined;
-		}
-		try {
-			return JSON.parse(json) as IOAuthTokens;
-		} catch {
-			return undefined;
-		}
+		return {
+			flow: 'device_code',
+			sessionId,
+			expiresIn: data.expires_in,
+			verificationUrl: data.verification_uri_complete ?? data.verification_uri,
+			userCode: data.user_code,
+		};
 	}
 
 	// ========================================================================
-	// Token Exchange
+	// Manual Code Submission (pkce_manual only)
 	// ========================================================================
 
-	private async _exchangeCodeForTokens(
-		config: IOAuthConfig,
+	async submitManualCode(
+		provider: OAuthProviderName,
+		sessionId: string,
 		code: string,
-		codeVerifier: string,
 	): Promise<IOAuthTokens> {
+		const session = await this._getSession(sessionId);
+		if (!session) {
+			throw new Error(`No active session found: ${sessionId}`);
+		}
+		if (session.provider !== provider) {
+			throw new Error(`Session ${sessionId} belongs to ${session.provider}, not ${provider}`);
+		}
+		if (session.flowKind !== 'pkce_manual') {
+			throw new Error(`submitManualCode only supports pkce_manual flow, got ${session.flowKind}`);
+		}
+		if (Date.now() >= session.expiresAt) {
+			await this._cleanupSession(session);
+			throw new Error('Session expired. Please restart the login flow.');
+		}
+		if (!session.codeVerifier) {
+			throw new Error('Session missing code verifier.');
+		}
+
+		const config = OAUTH_PROVIDER_CONFIGS[provider];
 		const body = new URLSearchParams({
 			grant_type: 'authorization_code',
 			code,
-			redirect_uri: config.redirectUri,
 			client_id: config.clientId,
-			code_verifier: codeVerifier,
+			code_verifier: session.codeVerifier,
 		});
 
 		const response = await fetch(config.tokenEndpoint, {
@@ -397,29 +418,207 @@ export class OAuthService extends Disposable implements IOAuthService {
 			scope?: string;
 		};
 
-		return {
+		const tokens: IOAuthTokens = {
 			accessToken: data.access_token,
 			refreshToken: data.refresh_token,
 			expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
 			tokenType: data.token_type,
 			scope: data.scope,
 		};
+
+		await this._storeTokens(provider, tokens, config.clientId, config.flowKind);
+		await this._cleanupSession(session);
+		this._scheduleRefresh(provider, tokens);
+		this._onDidChangeAuth.fire(provider);
+
+		return tokens;
 	}
 
 	// ========================================================================
-	// Token Refresh
+	// Device Code Polling (device_code only)
+	// ========================================================================
+
+	async pollLogin(
+		provider: OAuthProviderName,
+		sessionId: string,
+	): Promise<IOAuthPollResult> {
+		const session = await this._getSession(sessionId);
+		if (!session) {
+			return { status: 'error', error: `No active session found: ${sessionId}` };
+		}
+		if (session.provider !== provider) {
+			return { status: 'error', error: `Session ${sessionId} belongs to ${session.provider}, not ${provider}` };
+		}
+		if (session.flowKind !== 'device_code') {
+			return { status: 'error', error: `pollLogin only supports device_code flow, got ${session.flowKind}` };
+		}
+		if (Date.now() >= session.expiresAt) {
+			await this._cleanupSession(session);
+			return { status: 'expired' };
+		}
+		if (!session.deviceCode) {
+			return { status: 'error', error: 'Session missing device code.' };
+		}
+
+		const config = OAUTH_PROVIDER_CONFIGS[provider];
+		const body = new URLSearchParams({
+			grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+			device_code: session.deviceCode,
+			client_id: config.clientId,
+		});
+
+		let response: Response;
+		try {
+			response = await fetch(config.tokenEndpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: body.toString(),
+			});
+		} catch (err: any) {
+			return { status: 'error', error: `Network error: ${err.message}` };
+		}
+
+		if (response.ok) {
+			const data = await response.json() as {
+				access_token: string;
+				refresh_token?: string;
+				expires_in?: number;
+				token_type?: string;
+				scope?: string;
+			};
+
+			const tokens: IOAuthTokens = {
+				accessToken: data.access_token,
+				refreshToken: data.refresh_token,
+				expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+				tokenType: data.token_type,
+				scope: data.scope,
+			};
+
+			await this._storeTokens(provider, tokens, config.clientId, config.flowKind);
+			await this._cleanupSession(session);
+			this._scheduleRefresh(provider, tokens);
+			this._onDidChangeAuth.fire(provider);
+
+			return { status: 'approved', tokens };
+		}
+
+		let errorBody: any;
+		try {
+			errorBody = await response.json();
+		} catch {
+			return { status: 'error', error: `Token endpoint error: ${response.status}` };
+		}
+
+		const error = errorBody?.error;
+		if (error === 'authorization_pending') {
+			return { status: 'pending' };
+		}
+		if (error === 'slow_down') {
+			const updatedSession: IOAuthSession = {
+				...session,
+				interval: (session.interval ?? DEFAULT_DEVICE_CODE_INTERVAL_S) + 5,
+			};
+			await this._storeSession(updatedSession);
+			return { status: 'pending' };
+		}
+		if (error === 'expired_token') {
+			await this._cleanupSession(session);
+			return { status: 'expired' };
+		}
+
+		await this._cleanupSession(session);
+		return {
+			status: 'error',
+			error: errorBody?.error_description ?? error ?? `Token endpoint error: ${response.status}`,
+		};
+	}
+
+	// ========================================================================
+	// Status & Logout
+	// ========================================================================
+
+	async getStatus(provider: OAuthProviderName): Promise<IOAuthStatus> {
+		const stored = await this._getStoredTokens(provider);
+		if (!stored) {
+			return { loggedIn: false, source: 'oauth', sourceLabel: `${provider} OAuth` };
+		}
+
+		const isExpired = stored.expiresAt !== undefined && Date.now() >= stored.expiresAt;
+		const hasRefreshToken = stored.refreshToken !== undefined;
+
+		if (isExpired && !hasRefreshToken) {
+			return {
+				loggedIn: false,
+				source: 'oauth',
+				sourceLabel: `${provider} OAuth`,
+				flow: stored.flowKind,
+			};
+		}
+
+		return {
+			loggedIn: true,
+			source: 'oauth',
+			sourceLabel: `${provider} OAuth`,
+			flow: stored.flowKind,
+			expiresAt: stored.expiresAt,
+			hasRefreshToken,
+		};
+	}
+
+	async logout(provider: OAuthProviderName): Promise<void> {
+		await this.secretService.delete(this._tokenKey(provider));
+
+		const activeSessionId = this._loginLocks.get(provider)
+			?? await this._getActiveSessionId(provider);
+		if (activeSessionId) {
+			await this._deleteSession(activeSessionId);
+			await this.secretService.delete(this._activeSessionKey(provider));
+			this._loginLocks.delete(provider);
+		}
+
+		const timer = this._refreshTimers.get(provider);
+		if (timer) {
+			clearTimeout(timer);
+			this._refreshTimers.delete(provider);
+		}
+
+		this._onDidChangeAuth.fire(provider);
+	}
+
+	// ========================================================================
+	// Deprecated: handleCallback
+	// ========================================================================
+
+	/**
+	 * @deprecated Reserved for URI-callback-based provider expansion. Do not call directly.
+	 * Use startLogin() + submitManualCode() for PKCE manual flow,
+	 * or startLogin() + pollLogin() for device code flow.
+	 */
+	async handleCallback(_code: string, _state: string): Promise<IOAuthTokens> {
+		throw new Error(
+			'handleCallback is deprecated. Use startLogin() + submitManualCode() for PKCE manual flow, ' +
+			'or startLogin() + pollLogin() for device code flow.'
+		);
+	}
+
+	// ========================================================================
+	// Token Refresh (internal)
 	// ========================================================================
 
 	private async _refreshAccessToken(
 		provider: OAuthProviderName,
-		refreshToken: string,
-	): Promise<IOAuthTokens> {
-		const config = getOAuthConfig(provider);
+		stored: IOAuthStoredTokens,
+	): Promise<void> {
+		if (!stored.refreshToken) {
+			return;
+		}
 
+		const config = OAUTH_PROVIDER_CONFIGS[provider];
 		const body = new URLSearchParams({
 			grant_type: 'refresh_token',
-			refresh_token: refreshToken,
-			client_id: config.clientId,
+			refresh_token: stored.refreshToken,
+			client_id: stored.clientId || config.clientId,
 		});
 
 		const response = await fetch(config.tokenEndpoint, {
@@ -442,17 +641,15 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 		const tokens: IOAuthTokens = {
 			accessToken: data.access_token,
-			refreshToken: data.refresh_token || refreshToken,
+			refreshToken: data.refresh_token || stored.refreshToken,
 			expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
 			tokenType: data.token_type,
 			scope: data.scope,
 		};
 
-		await this._storeTokens(provider, tokens);
+		await this._storeTokens(provider, tokens, stored.clientId, stored.flowKind);
 		this._scheduleRefresh(provider, tokens);
 		this._onDidChangeAuth.fire(provider);
-
-		return tokens;
 	}
 
 	private _scheduleRefresh(provider: OAuthProviderName, tokens: IOAuthTokens): void {
@@ -468,11 +665,12 @@ export class OAuthService extends Disposable implements IOAuthService {
 		const delay = Math.max(0, tokens.expiresAt - Date.now() - REFRESH_BUFFER_MS);
 		const timer = setTimeout(async () => {
 			try {
-				if (tokens.refreshToken) {
-					await this._refreshAccessToken(provider, tokens.refreshToken);
+				const stored = await this._getStoredTokens(provider);
+				if (stored?.refreshToken) {
+					await this._refreshAccessToken(provider, stored);
 				}
 			} catch {
-				// Refresh failed silently — getAccessToken will handle on next call
+				// Refresh failed silently — getStatus will reflect on next call
 			}
 		}, delay);
 
@@ -480,14 +678,95 @@ export class OAuthService extends Disposable implements IOAuthService {
 	}
 
 	// ========================================================================
-	// Storage Helpers
+	// Session Storage
+	// ========================================================================
+
+	private _sessionKey(sessionId: string): string {
+		return `${OAUTH_SESSION_PREFIX}.${sessionId}`;
+	}
+
+	private _activeSessionKey(provider: OAuthProviderName): string {
+		return `${OAUTH_ACTIVE_SESSION_PREFIX}.${provider}`;
+	}
+
+	private async _getActiveSessionId(provider: OAuthProviderName): Promise<string | undefined> {
+		return this.secretService.get(this._activeSessionKey(provider));
+	}
+
+	private async _storeSession(session: IOAuthSession): Promise<void> {
+		await this.secretService.set(this._sessionKey(session.sessionId), JSON.stringify(session));
+	}
+
+	private async _getSession(sessionId: string): Promise<IOAuthSession | undefined> {
+		const json = await this.secretService.get(this._sessionKey(sessionId));
+		if (!json) {
+			return undefined;
+		}
+		try {
+			return JSON.parse(json) as IOAuthSession;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private async _deleteSession(sessionId: string): Promise<void> {
+		await this.secretService.delete(this._sessionKey(sessionId));
+	}
+
+	private async _cleanupSession(session: IOAuthSession): Promise<void> {
+		await this._deleteSession(session.sessionId);
+		await this.secretService.delete(this._activeSessionKey(session.provider));
+		if (this._loginLocks.get(session.provider) === session.sessionId) {
+			this._loginLocks.delete(session.provider);
+		}
+	}
+
+	private async _cleanupExpiredSessions(): Promise<void> {
+		const providers: OAuthProviderName[] = ['anthropic', 'openai'];
+		for (const provider of providers) {
+			const sessionId = this._loginLocks.get(provider)
+				?? await this._getActiveSessionId(provider);
+			if (!sessionId) {
+				continue;
+			}
+			const session = await this._getSession(sessionId);
+			if (!session || Date.now() >= session.expiresAt) {
+				await this._deleteSession(sessionId);
+				await this.secretService.delete(this._activeSessionKey(provider));
+				this._loginLocks.delete(provider);
+			} else {
+				this._loginLocks.set(provider, sessionId);
+			}
+		}
+	}
+
+	// ========================================================================
+	// Token Storage
 	// ========================================================================
 
 	private _tokenKey(provider: OAuthProviderName): string {
 		return `${OAUTH_TOKEN_PREFIX}.${provider}`;
 	}
 
-	private async _storeTokens(provider: OAuthProviderName, tokens: IOAuthTokens): Promise<void> {
-		await this.secretService.set(this._tokenKey(provider), JSON.stringify(tokens));
+	private async _storeTokens(
+		provider: OAuthProviderName,
+		tokens: IOAuthTokens,
+		clientId: string,
+		flowKind: OAuthFlowKind,
+	): Promise<void> {
+		const stored: IOAuthStoredTokens = { ...tokens, clientId, flowKind };
+		await this.secretService.set(this._tokenKey(provider), JSON.stringify(stored));
+	}
+
+	private async _getStoredTokens(provider: OAuthProviderName): Promise<IOAuthStoredTokens | undefined> {
+		const json = await this.secretService.get(this._tokenKey(provider));
+		if (!json) {
+			return undefined;
+		}
+		try {
+			return JSON.parse(json) as IOAuthStoredTokens;
+		} catch {
+			return undefined;
+		}
 	}
 }
