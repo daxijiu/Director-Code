@@ -60,6 +60,7 @@ import { IViewDescriptorService, ViewContainerLocation } from '../../../common/v
 import { toErrorMessage } from '../../../../base/common/errorMessage.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { FONT } from '../../../../base/common/font.js';
+import { isDirectorCodeBuiltInMode } from '../../chat/common/agentEngine/builtInModeUtil.js';
 
 const configurationKey = 'workbench.startupEditor';
 const MAX_SESSIONS = 6;
@@ -686,6 +687,11 @@ export class AgentSessionsWelcomePage extends EditorPane {
 	private static readonly PRIVACY_NOTICE_DISMISSED_KEY = 'agentSessionsWelcome.privacyNoticeDismissed';
 
 	private buildPrivacyNotice(container: HTMLElement): void {
+		// [Director-Code] skip: built-in agent — no Copilot TOS/privacy notice
+		if (isDirectorCodeBuiltInMode(this.productService.defaultChatAgent)) {
+			return;
+		}
+
 		// TOS/Privacy notice for users who are not signed in - reusing walkthrough card design
 		if (!this.chatEntitlementService.anonymous) {
 			return;

@@ -43,6 +43,7 @@ import { ServiceCollection } from '../../../../../platform/instantiation/common/
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { bindContextKey } from '../../../../../platform/observable/common/platformObservableUtils.js';
 import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
@@ -986,7 +987,10 @@ export class ChatWidget extends Disposable implements IChatWidget {
 			if (!numItems) {
 				const defaultAgent = this.chatAgentService.getDefaultAgent(this.location, this.input.currentModeKind);
 				let additionalMessage: string | IMarkdownString | undefined;
-				if (this.chatEntitlementService.anonymous && !this.chatEntitlementService.sentiment.installed) {
+				// [Director-Code] skip: built-in agent — hide Copilot TOS when terms/privacy URLs are empty
+				if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+					additionalMessage = defaultAgent?.metadata.additionalWelcomeMessage;
+				} else if (this.chatEntitlementService.anonymous && !this.chatEntitlementService.sentiment.installed) {
 					const providers = product.defaultChatAgent.provider;
 					additionalMessage = new MarkdownString(localize({ key: 'settings', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3}).", providers.default.name, providers.default.name, product.defaultChatAgent.termsStatementUrl, product.defaultChatAgent.privacyStatementUrl), { isTrusted: true });
 				} else {

@@ -23,6 +23,7 @@ import { IKeybindingService } from '../../../../../platform/keybinding/common/ke
 import { ILayoutService } from '../../../../../platform/layout/browser/layoutService.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 import { ITelemetryService, TelemetryLevel } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceTrustRequestService } from '../../../../../platform/workspace/common/workspaceTrust.js';
 import { IWorkbenchLayoutService } from '../../../../services/layout/browser/layoutService.js';
@@ -83,6 +84,11 @@ export class ChatSetup {
 	}
 
 	async run(options?: { disableChatViewReveal?: boolean; forceSignInDialog?: boolean; additionalScopes?: readonly string[]; forceAnonymous?: ChatSetupAnonymous; dialogIcon?: ThemeIcon; dialogTitle?: string; dialogHideSkip?: boolean }): Promise<IChatSetupResult> {
+		// [Director-Code] skip: built-in agent — bypass Copilot sign-in flow entirely
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return { success: undefined, dialogSkipped: true };
+		}
+
 		if (this.pendingRun) {
 			return this.pendingRun;
 		}
@@ -255,6 +261,10 @@ export class ChatSetup {
 	private createDialogFooter(disposables: DisposableStore, options?: { forceAnonymous?: ChatSetupAnonymous }): HTMLElement {
 		const element = $('.chat-setup-dialog-footer');
 
+		// [Director-Code] skip: built-in agent — no Copilot TOS footer
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return element;
+		}
 
 		let footer: string;
 		if (options?.forceAnonymous || this.telemetryService.telemetryLevel === TelemetryLevel.NONE) {

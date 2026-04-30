@@ -19,6 +19,7 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
 import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
 import { IMarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
 import product from '../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 import { IQuickInputService, IQuickWidget } from '../../../../../platform/quickinput/common/quickInput.js';
 import { editorBackground, inputBackground, quickInputBackground, quickInputForeground } from '../../../../../platform/theme/common/colorRegistry.js';
 import { EDITOR_DRAG_AND_DROP_BACKGROUND } from '../../../../common/theme.js';
@@ -263,6 +264,11 @@ class QuickChat extends Disposable {
 	}
 
 	private setupDisclaimer(parent: HTMLElement): void {
+		// [Director-Code] skip: built-in agent — no Copilot TOS disclaimer
+		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+			return;
+		}
+
 		const disclaimerElement = dom.append(parent, dom.$('.disclaimer.hidden'));
 		const disposables = this._store.add(new DisposableStore());
 

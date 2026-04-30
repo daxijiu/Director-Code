@@ -13,6 +13,7 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../../pla
 import { IDefaultChatAgent } from '../../../../../base/common/product.js';
 import { IChatWidgetService } from '../chat.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
 
 export class ChatGettingStartedContribution extends Disposable implements IWorkbenchContribution {
 	static readonly ID = 'workbench.contrib.chatGettingStarted';
@@ -33,6 +34,11 @@ export class ChatGettingStartedContribution extends Disposable implements IWorkb
 		const defaultChatAgent = this.productService.defaultChatAgent;
 		const hideWelcomeView = this.storageService.getBoolean(ChatGettingStartedContribution.hideWelcomeView, StorageScope.APPLICATION, false);
 		if (!defaultChatAgent || hideWelcomeView) {
+			return;
+		}
+
+		// [Director-Code] skip: built-in agent
+		if (isDirectorCodeBuiltInMode(defaultChatAgent)) {
 			return;
 		}
 
