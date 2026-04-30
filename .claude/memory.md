@@ -2,12 +2,24 @@
 
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1 + 1.5 + 1.5+ 全部完成，下一步 **Phase 2 ACP 协议扩展**
+- **状态**: Phase 1 + 1.5 + 1.5+ 的代码与测试基线已基本完成；当前主线任务仍是 **Phase 1 收口修复**（以 `docs/director-code-remediation-plan-v2.md` 为执行基线），重点包括 OAuth 接入闭环、产品元数据去 Copilot 化、标准 Chat 与 Agent 通路统一。**未达到 Phase 1 对外发布门槛前，不视为可直接进入 Phase 2 默认开启 / 对外发布阶段**
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM + OAuth 登录
 - **工作目录**: `/e/Projects/Director-Code/`
 - **源码目录**: `/e/Projects/Director-Code/vscode/`
-- **测试**: 479 个全部通过
+- **测试**: 479+ 个全部通过（A 批次新增测试后 486+ 个）
 - **Git**: master 分支，已推送到 `github.com/daxijiu/Director-Code`
+
+## Phase 1 收口修复进度（Batch A 完成 2026-04-30）
+
+### Batch A: P0 安全边界与状态一致性 ✅ 全部完成
+- **A1** ✅ `languageModelToolsService.ts` — `_resolveRequest()` helper 统一 request 绑定，替换 3 处 `.at(-1)`
+- **A4a** ✅ `mcpSamplingService.ts` — `.has()` 改 `.get()===true`，Not Now 不再误判为已允许
+- **A4b** ✅ `agentEngine.contribution.ts` — 删除 `_enableToolAutoApprove()`，回归 VS Code permissionLevel 机制
+- **A3** ✅ `agentEngine.ts` — pendingTools Map 多工具聚合、JSON 重试、max_tokens 续写改进、compact 成功判定、slot 保序、thinking 过滤
+- **A2** ✅ `agentEngine.ts` + `retry.ts` + `toolBridge.ts` + `directorCodeAgent.ts` — abortSignal 传递、try-finally + lastCompleteTurnEnd、cancellable sleep、CancellationToken 监听、cancelled 终态
+
+### 下一步: Batch B（P1 认证链、模型链、历史上下文链与产品元数据）
+- 按 B 内部执行顺序: B4-core → B1+B2 → 原 A5 → B3
 
 ## 权威文档位置
 
@@ -35,7 +47,7 @@ Phase 1.5+: OAuth + Provider 增强 ✅ 完成
   ✅ 阶段 3: 模型列表三层 Fallback (ModelResolverService: API → CDN → 静态)
   ✅ 阶段 4: OAuth 2.0 (OAuthService: PKCE + Token 存储/刷新 + Anthropic/OpenAI 配置)
 
-Phase 2: ACP 协议扩展 (6-8 周)
+Phase 2: ACP 协议扩展 (6-8 周，需在 Phase 1 收口门槛满足后默认开启 / 对外发布)
 Phase 3: CLI 包装器 (4-5 周)
 ```
 
@@ -51,6 +63,7 @@ Phase 3: CLI 包装器 (4-5 周)
 8. **Phase 1 为 Phase 2 ACP 预留扩展点**：统一的 registerDynamicAgent + IChatProgress 输出
 9. **Model Catalog 统一定义**在 `common/agentEngine/modelCatalog.ts`，消除重复
 10. **IApiKeyService 作为 singleton 注册**，Agent 和 ModelProvider 都通过它读取密钥
+11. **OAuth 路线已拍板为 Hermes-style provider-specific OAuth**：不做 BYO `clientId`；`anthropic` 用内置 public `clientId` + PKCE 手动粘 code，`openai` 用内置 public `clientId` + device code / 官方 public flow；Settings 按 provider 渲染登录 UI，不暴露通用 `clientId` 输入；OpenAI 的用户侧 OAuth 入口文案固定为 `OpenAI (ChatGPT/Codex OAuth)`
 
 ## 当前进度汇总
 
@@ -377,9 +390,20 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 4. Patch 逻辑: download() 函数开头检查 `ELECTRON_CACHE_OVERRIDE` 目录下是否有匹配的 zip 文件，有则直接返回本地路径
 
 **解决方案 — builtInExtensions 下载失败**:
-- 临时清空 `product.json` 的 `builtInExtensions` 数组为 `[]`
-- 构建完成后恢复原值
+- 直接跳过 `compile-extensions-build` 步骤（不运行即可，不影响 minify 和打包）
+- ⚠️ **绝对不要用 Python json.dump 重写 product.json**！会改变 JSON 格式导致 NLS 消息映射错乱
 - 这 3 个 debug 扩展（js-debug 等）非核心功能，缺失不影响 Agent
+
+### ⚠️ 构建后必做清理（避免 NLS 缓存污染）
+
+每次构建新版本后，**必须清理 NLS 缓存**，否则旧缓存的消息数量与新代码不匹配会导致白屏（`NLS MISSING` 错误）：
+
+```powershell
+# 构建完成后执行
+Remove-Item -Recurse -Force "$env:APPDATA\Director-Code\clp" -ErrorAction SilentlyContinue
+```
+
+**根因**: VS Code 会将中文 NLS 消息缓存到 `%APPDATA%\Director-Code\clp\` 目录。新构建如果新增了 NLS 字符串（如我们的 Phase 1.5+ 代码），缓存的旧版本消息条数不够，运行时索引越界导致白屏崩溃。清理后首次启动会重新生成缓存。
 
 ### Phase 1 细节优化 (2026-04-14)
 
@@ -428,6 +452,62 @@ npm run gulp -- "vscode-win32-x64-system-setup"  # 系统级安装包
 2. **Per-Model 配置** ✅ 完成 — `IModelConfig` 类型 + `IResolvedProviderOptions`，per-model API Key/baseURL/capabilities，三级 fallback (`resolveProviderOptions`)，Agent 已切换到 per-model 解析，28 个新测试
 3. **模型列表三层 Fallback** ✅ 完成 — `ModelResolverService`: Provider API (OpenAI/Gemini GET models) → CDN JSON → 静态 `MODEL_CATALOG`，内存缓存 + TTL，31 个新测试
 4. **OAuth 2.0** ✅ 完成 — `OAuthService`: PKCE 授权流 (S256)，Anthropic + OpenAI 配置，Token 存储/刷新/登出，state 验证 + 15min 过期，39 个新测试
+
+**收口决策更新（2026-04-17）**：
+- 不再继续推进 “BYO `clientId` + 统一 callback OAuth” 路线
+- 收口计划已改为 **Hermes-style provider-specific OAuth**：
+  - `anthropic`：PKCE + 手动粘 code
+  - `openai`：device code / 官方 public flow
+  - `gemini` / compatible providers：继续 API key only
+- `directorCodeSettingsEditor.ts` 后续要从 `Coming Soon` 占位改为 provider-specific 登录 UI，不新增面向终端用户的通用 `clientId` 输入
+- OpenAI 的用户侧 OAuth 入口文案固定为 `OpenAI (ChatGPT/Codex OAuth)`，避免与 `api.openai.com` 的 API-key 路径混淆
+- `docs/director-code-remediation-plan-v2.md` 的 B1/C2 已补齐 Hermes 参考实现路径（`web_server.py` / `OAuthLoginModal.tsx` / `anthropic_adapter.py` / `auth.py` / `auth_commands.py`）和 Director-Code 对照映射，后续执行无需依赖当前聊天上下文
+- 新增两条执行提醒：① OpenAI OAuth 参考实际上是 `openai-codex`/ChatGPT transport，不能把 device-code token 直接塞进现有 `api.openai.com` provider；② Settings 里的 API key `testConnection()` 与 OAuth 状态检查必须分开，UI 要同时订阅 `onDidChangeApiKey` 和 `onDidChangeAuth`
+- `docs/director-code-remediation-plan-v2.md` 的 `B1` 现已进一步拆成文件级执行 checklist（B1-0 ~ B1-9），后续实现可按 checklist 顺序推进，不必再从聊天记录反推实施顺序
+- `docs/director-code-remediation-plan-v2.md` 的 `B2` 现也已拆成文件级执行 checklist（B2-0 ~ B2-8），重点冻结 cache 维度（`provider + normalizedBaseURL + authIdentityKey + authVariant`）、resolver 签名扩展、OpenAI OAuth/codex 独立 bucket，以及标准 Chat / Agent 共用同一模型解析口径
+- `docs/director-code-remediation-plan-v2.md` 的 `原 A5` 现也已拆成文件级执行 checklist（A5-0 ~ A5-9），重点是把 `directorCodeModelProvider.ts` 从“直接读 `MODEL_CATALOG` + `getApiKey()`”迁到与 Agent 通路一致的 `resolveProviderOptions()` + `ModelResolver` + `authVariant` 口径
+- `docs/director-code-remediation-plan-v2.md` 的 `C2` 现也已拆成文件级执行 checklist（C2-0 ~ C2-9），重点是把 Settings/UI 从“API key-only 页面 + OAuth 占位”升级成同时消费 `IConfigurationService` / `IApiKeyService` / `IOAuthService` 的真实状态页，并把 API key 测试与 OAuth 状态检查彻底分开
+- `docs/director-code-remediation-plan-v2.md` 的 `C1` 现也已拆成 `C1a/C1b` 文件级执行 checklist，重点是：`abstractProvider.ts` 统一承接 SSE 尾包 flush / buffer 保护 / URL helper，`openaiProvider.ts` 收口 vision / `max_completion_tokens` / `stream_options.include_usage`，`geminiProvider.ts` 收口稳定 tool id 与 error chunk 处理，`apiKeyService.testConnection()` 与真实 provider URL 规则保持一致
+- `docs/director-code-remediation-plan-v2.md` 的 `B3` 现也已拆成文件级执行 checklist（B3-0 ~ B3-8），重点是：`directorCodeAgent.ts` 注入 `IChatService` 获取 `richResponses`，`messageNormalization.ts` 从纯文本回放升级成 `history + richResponses` 的结构化回放，`progressBridge.ts` 处理非流式正文补偿，`directorCodeModelProvider.ts` 保留 image / tool 相关的最小 rich 语义
+- `docs/director-code-remediation-plan-v2.md` 的 `C4` 现也已拆成文件级执行 checklist（C4-0 ~ C4-10），重点是：统一 `tokens.ts` / `compact.ts` / `modelCatalog.ts` / `modelResolver.ts` 的数据边界，给 compact 增加成功判定和专用模型选择链，处理 unknown metadata / binary tool_result / auxiliary model fallback，并移除用户可见辅助功能对 `copilot-fast` 的假设
+- `docs/director-code-remediation-plan-v2.md` 的 `C3` 现也已拆成文件级执行 checklist（C3-0 ~ C3-6），重点是：`directorCodeModelProvider.ts` 纳入 `Disposable`，`registerDynamicAgent()` 支持重复 ID 热重载安全重注册，`mcpAddContextContribution.ts` 的 capability 显隐链收口，以及 `mcpLanguageModelToolContribution.ts` 的 `resource_link` 图片读取失败语义从“空成功”改为显式错误/回退
+- `docs/director-code-remediation-plan-v2.md` 的 `C5` 现也已拆成文件级执行 checklist（C5-0 ~ C5-6），重点是：`prepare_vscode.sh` 建立统一 `cleanup + trap` 框架，失败路径恢复 `.npmrc` / 清理 `.bak`，并给 `build.sh` / 构建入口增加 `DIRECTOR_CODE_SKIP_EXTENSIONS_BUILD=1` 分支
+- `docs/director-code-remediation-plan-v2.md` 的 `B4` 现也已拆成文件级执行 checklist（B4-0 ~ B4-8），重点是：先统一根 `product.json` 与 `prepare_vscode.sh` 的产品元数据真相，再收口 setup 命令族、builtin tool/source 判定、状态类 UI、disclaimer/getting started、Agent Sessions/model picker 边缘触点，最后用全仓 grep + 手动 smoke 做品牌/去 Copilot 化闭环验证
+- `docs/director-code-remediation-plan-v2.md` 的 `A1~A4` 现也已补成文件级执行 checklist：`A1` 统一 request 绑定解析；`A2` 统一取消契约、toolBridge 取消、retry 可取消 sleep；`A3` 收口多工具流式聚合、JSON 重试、`max_tokens` 截断和保序；`A4` 收口 MCP Sampling 的 `Not Now` 语义并删除 `_enableToolAutoApprove`
+- `docs/director-code-remediation-plan-v2.md` 的 `D1~D4` 现也已拆成文件级执行 checklist：`D1` 统一 Gemini key 的 header/query 开关与兼容性验证；`D2` 收口密钥输入的 autofill 与 DOM 停留时间；`D3` 抽服务层通用 fetch helper；`D4` 审计 `DirectorCodeSettingsEditor.ts` 的生命周期与重入边界
+- 已做一轮最终交叉一致性审查：补平了 `B1` vs `C2` 的 OAuth widget/controller 归属、`B4` vs `C4` 的 model picker/CTA 归属、`OpenAI (GPT-4, o3)`（API key 区域） vs `OpenAI (ChatGPT/Codex OAuth)`（OAuth 区域）的文案边界，并把 `C3/C4/D3/D4` 回归项补进文末总测试清单
+- 交叉审查后的最终收口结论：① OpenAI OAuth 内部 transport/authVariant 命名固定为 `openai-codex`，不再保留 `openai-chatgpt` / `openai-oauth` 备选名；② `getProviderAuthMethod()` 纯 helper 直接删除，不再保留“二选一”口径；③ `directorCode.ai.compactModel` 必须同时落到配置注册和 Settings UI，不能只存在于 `compact.ts` 内部逻辑
+- 用户已追加拍板：fixed public `clientId` 来源选择 **C**，当前轮次直接复刻 Hermes 的 public `clientId` / flow 实现，不再把“项目自注册 app”作为前置
+- 用户已追加拍板：OpenAI OAuth fallback 选择 **B**，允许先完成其他明确项后再回收 `B1-5/B1-6`，但若最终 transport / smoke 不稳定，则继续阻塞 Phase 1 对外发布
+- `.cursor/plan-04-phase2-acp.md` 的 Gemini CLI 示例包名已修正为 `@google/gemini-cli@latest`
+- 最新复审又补齐了 `B1-core` vs `B1-ship` 的口径：Phase 1 对外发布门槛要求 **B1-ship**，即必须包含 OpenAI `B1-5~B1-9` 与 codex backend smoke，不能只完成 Anthropic + 注入链
+- 最新复审补齐了三条容易返工的边界：① `B2-1` 起依赖 `authIdentityKey` / `authVariant` 的实现必须晚于 `B1-2/B1-3` 最小输出；② `B1-7` 只产出 OAuth widget/controller 内核，`C2-4` 负责最终 editor 编排；③ `C4-8` 在 `chatModelPicker` 等文件上只能补逻辑/降级，不得回改 `B4` 已定的产品级 CTA/文案
+- `.cursor/plan-04-phase2-acp.md` 的 Phase 1 示例 agent id 已从 `director-code-agent` 对齐为代码真实值 `director-code`
+- 最新复审又补了 4 个收口点：① `B1` 的“实现顺序”与 `B1-0~B1-9` checklist 已对齐，并明确 checklist 为唯一执行顺序；② `authVariant` 残留旧词 `chatgpt-codex` 已统一到 `openai-codex`；③ 测试清单已显式标明 `D3/D4` 为非发布门禁；④ `plan-04-phase2-acp.md` 顶部已补充“默认开启 / 对外发布级实现仍需满足 remediation 的 `B4 + B1-ship`”
+
+### 工具调用卡住修复 (2026-04-15)
+
+**根因**: `createAndRunTask` 等需要确认的工具，VS Code 的 `invokeTool` 会等待 `awaitConfirmation`，但确认 UI 对动态注册的 Agent 不渲染，导致无限卡住。
+
+**修复**:
+1. **Auto-approve**: `agentEngine.contribution.ts` 初始化时自动设置 `chat.tools.global.autoApprove = true`（用户未显式配置时）
+2. **Timeout 兜底**: `toolBridge.ts` 添加 120 秒超时，防止工具永久挂起
+3. **CancellationError 处理**: 捕获 CancellationError 返回友好错误信息而非让 Agent 崩溃
+
+### 竞品 Review 报告更新 (2026-04-15)
+
+- 当前总报告: `docs/director-code-review by GPT5.4-2026-04-15.md`
+- 说明: 旧报告 `docs/director-code-review-report-2026-04-15.md` 已被其他 agent 改动，不再作为本轮整理后的权威版本
+- 新总报告已合并前序广审、第一轮分模块深审、第二轮分模块深审全部内容
+- 当前结论聚焦于三层脱节：`状态机层`、`协议层`、`配置层`
+
+### 全量 Review 完成 (2026-04-15)
+
+- 本轮从 Phase 1 启动开始，对 Director-Code 改造面与直接耦合代码完成了独立全量复审
+- 当前权威总报告: `docs/director-code-full-review-by-GPT5.4-2026-04-15.md`
+- 报告累计记录 `57` 个问题：`10` 个严重、`28` 个高、`19` 个中
+- 最高优先级风险集中在四条链路：MCP sampling / tool auto-approve 安全边界、`chatRequestId` / request 绑定错位、OAuth `clientId` / state 生命周期不一致、`product.defaultChatAgent` 与 `dataFolderName` 仍残留 Copilot / `.vscode-oss` 元数据
+- 下一阶段如果进入 Phase 2 ACP，建议先按报告中的高优先级顺序做收口修复，再继续扩展接入面
 
 ### 后续: Phase 2 ACP 协议扩展
 - 参考 MCP 模式 + vscode-acp 实现
