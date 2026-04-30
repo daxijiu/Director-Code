@@ -103,9 +103,11 @@ suite('AgentEngine - Compact', () => {
 		test('produces compacted messages with summary', async () => {
 			const provider = createMockProvider('Summary of conversation.');
 			const state = createAutoCompactState();
+			// [Director-Code] A3: original messages must be larger than compacted result for success
+			const longContent = 'x'.repeat(2000);
 			const messages = [
-				{ role: 'user', content: 'Hello' },
-				{ role: 'assistant', content: 'Hi there' },
+				{ role: 'user', content: longContent },
+				{ role: 'assistant', content: longContent },
 			];
 
 			const result = await compactConversation(provider, 'claude-sonnet-4-5', messages, state);

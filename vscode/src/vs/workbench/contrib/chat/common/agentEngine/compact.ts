@@ -89,12 +89,33 @@ export async function compactConversation(
 			.map((b) => b.text)
 			.join('\n');
 
-		// Replace messages with summary
+		// [Director-Code] A3: compact success requires non-trivial output AND actual token reduction
+		if (summary.length < 10) {
+			console.warn('[AgentEngine] compact returned near-empty summary, keeping original messages');
+			return {
+				compactedMessages: messages,
+				summary: '',
+				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
+			};
+		}
+
+		const originalTokens = estimateMessagesTokens(messages);
+		const compactedContent = `[Previous conversation summary]\n\n${summary}\n\n[End of summary - conversation continues below]`;
+		const compactedTokens = estimateMessagesTokens([
+			{ role: 'user', content: compactedContent },
+			{ role: 'assistant', content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.' },
+		]);
+		if (compactedTokens >= originalTokens * 0.9) {
+			console.warn(`[AgentEngine] compact did not reduce tokens sufficiently (${compactedTokens} >= ${Math.floor(originalTokens * 0.9)}), keeping original`);
+			return {
+				compactedMessages: messages,
+				summary: '',
+				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
+			};
+		}
+
 		const compactedMessages: NormalizedMessageParam[] = [
-			{
-				role: 'user',
-				content: `[Previous conversation summary]\n\n${summary}\n\n[End of summary - conversation continues below]`,
-			},
+			{ role: 'user', content: compactedContent },
 			{
 				role: 'assistant',
 				content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.',

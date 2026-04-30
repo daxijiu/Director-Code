@@ -61,6 +61,17 @@ function toProviderTool(tool: AgentToolDefinition): NormalizedTool {
 	};
 }
 
+// [Director-Code] A3: resolve tool index for multi-tool streaming aggregation
+function resolveToolIndex(event: { index?: number }, pendingTools: Map<number, unknown>): number {
+	if (typeof event.index === 'number') {
+		return event.index;
+	}
+	if (pendingTools.size <= 1) {
+		return pendingTools.size === 0 ? 0 : [...pendingTools.keys()][0];
+	}
+	throw new Error('Missing tool index in multi-tool response');
+}
+
 // ============================================================================
 // System Prompt Builder
 // ============================================================================
@@ -131,6 +142,7 @@ export class AgentEngine {
 	private compactState: AutoCompactState;
 	private readonly sessionId: string;
 	private apiTimeMs = 0;
+	private _jsonRetryCount: Map<string, number> | undefined; // [Director-Code] A3: per-tool JSON retry tracking
 
 	constructor(
 		private readonly config: AgentEngineConfig,
@@ -233,11 +245,11 @@ export class AgentEngine {
 			let streamingUsed = false;
 			try {
 				if (this.provider.createMessageStream) {
-					// Streaming path: yield text/thinking deltas inline
+					// [Director-Code] A3: streaming path with index-based multi-tool aggregation
 					streamingUsed = true;
 					const contentBlocks: NormalizedResponseBlock[] = [];
 					let currentTextBlock: { type: 'text'; text: string } | undefined;
-					let currentTool: { id: string; name: string; input: string } | undefined;
+					const pendingTools = new Map<number, { id: string; name: string; input: string }>();
 					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 					let streamStopReason = 'end_turn';
 
@@ -257,30 +269,32 @@ export class AgentEngine {
 								yield { type: 'thinking_delta', thinking: event.thinking } as AgentEvent;
 								break;
 
-							case 'tool_use_start':
-								// Finalize previous tool before starting a new one
-								if (currentTool) {
-									contentBlocks.push(this.finalizeToolBlock(currentTool));
-								}
+							case 'tool_use_start': {
 								if (currentTextBlock) {
 									contentBlocks.push(currentTextBlock);
 									currentTextBlock = undefined;
 								}
-								currentTool = { id: event.id, name: event.name, input: '' };
+								const idx = resolveToolIndex(event, pendingTools);
+								pendingTools.set(idx, { id: event.id, name: event.name, input: '' });
 								break;
+							}
 
-							case 'tool_input_delta':
-								if (currentTool) { currentTool.input += event.json; }
+							case 'tool_input_delta': {
+								const idx = resolveToolIndex(event, pendingTools);
+								const tool = pendingTools.get(idx);
+								if (tool) { tool.input += event.json; }
 								break;
+							}
 
-							case 'tool_call_delta':
-								if (!currentTool) {
-									currentTool = { id: event.id || '', name: event.name || '', input: '' };
-								}
-								if (event.id && !currentTool.id) { currentTool.id = event.id; }
-								if (event.name && !currentTool.name) { currentTool.name = event.name; }
-								if (event.arguments) { currentTool.input += event.arguments; }
+							case 'tool_call_delta': {
+								const idx = resolveToolIndex(event, pendingTools);
+								const tool = pendingTools.get(idx) ?? { id: '', name: '', input: '' };
+								if (event.id && !tool.id) { tool.id = event.id; }
+								if (event.name && !tool.name) { tool.name = event.name; }
+								if (event.arguments) { tool.input += event.arguments; }
+								pendingTools.set(idx, tool);
 								break;
+							}
 
 							case 'message_complete':
 								streamUsage = event.usage;
@@ -291,8 +305,8 @@ export class AgentEngine {
 
 					// Finalize remaining blocks
 					if (currentTextBlock) { contentBlocks.push(currentTextBlock); }
-					if (currentTool) {
-						contentBlocks.push(this.finalizeToolBlock(currentTool));
+					for (const [, tool] of pendingTools) {
+						contentBlocks.push(this.finalizeToolBlock(tool));
 					}
 
 					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
@@ -377,10 +391,7 @@ export class AgentEngine {
 			// Track usage
 			this.trackUsage(response.usage);
 
-			// Add assistant message to conversation
-			this.messages.push({ role: 'assistant', content: response.content as any });
-
-			// Yield assistant message
+			// Yield assistant message (full content including thinking for UI display)
 			yield {
 				type: 'assistant',
 				message: {
@@ -389,10 +400,17 @@ export class AgentEngine {
 				},
 			};
 
-			// Handle max_output_tokens recovery
+			// [Director-Code] A3: improved max_tokens handling — distinguish tool truncation from text continuation
 			if (response.stopReason === 'max_tokens' && maxOutputRecoveryAttempts < MAX_OUTPUT_RECOVERY) {
+				const hasIncompleteTool = response.content.some((b: any) => b.type === 'tool_use' && b._jsonParseError);
 				maxOutputRecoveryAttempts++;
-				this.messages.push({ role: 'user', content: 'Please continue from where you left off.' });
+				if (hasIncompleteTool) {
+					const cleanContent = response.content.filter((b: any) => !(b.type === 'tool_use' && b._jsonParseError));
+					this.messages.push({ role: 'assistant', content: cleanContent as any });
+					this.messages.push({ role: 'user', content: 'Your previous response was truncated in the middle of a tool call JSON. Please re-output the complete tool call(s).' });
+				} else {
+					this.messages.push({ role: 'user', content: 'Please continue from where you left off.' });
+				}
 				continue;
 			}
 
@@ -401,12 +419,48 @@ export class AgentEngine {
 				(block): block is ToolUseBlock => block.type === 'tool_use',
 			);
 
-			if (toolUseBlocks.length === 0) {
-				break; // No tool calls — agent is done
+			// [Director-Code] A3: JSON parse error → tool_result is_error for model retry
+			const MAX_JSON_RETRIES = 2;
+			const jsonErrorBlocks = toolUseBlocks.filter((b: any) => b._jsonParseError);
+			if (jsonErrorBlocks.length > 0) {
+				const retryKey = jsonErrorBlocks.map(b => b.name).sort().join(',');
+				this._jsonRetryCount = this._jsonRetryCount || new Map<string, number>();
+				const count = this._jsonRetryCount.get(retryKey) || 0;
+
+				if (count < MAX_JSON_RETRIES) {
+					this._jsonRetryCount.set(retryKey, count + 1);
+					const errorResults = jsonErrorBlocks.map((b: any) => ({
+						type: 'tool_result' as const,
+						tool_use_id: b.id,
+						content: `JSON parse error in tool call '${b.name}': ${b._jsonParseError}. Please retry with valid JSON.`,
+						is_error: true,
+					}));
+					this.messages.push({ role: 'assistant', content: response.content as any });
+					this.messages.push({ role: 'user', content: errorResults });
+					continue;
+				}
+				// Exhausted retries — skip these tools and continue
+				const skipResults = jsonErrorBlocks.map((b: any) => ({
+					type: 'tool_result' as const,
+					tool_use_id: b.id,
+					content: `Tool '${b.name}' failed after ${MAX_JSON_RETRIES + 1} attempts due to invalid JSON. Skip this tool and continue.`,
+					is_error: true,
+				}));
+				this.messages.push({ role: 'assistant', content: response.content as any });
+				this.messages.push({ role: 'user', content: skipResults });
+				continue;
 			}
 
-			// Reset max_output recovery counter on successful tool use
+			if (toolUseBlocks.length === 0) {
+				// No tool calls — add assistant message (filtered) and exit loop
+				const finalContent = response.content.filter((b: any) => b.type !== 'thinking');
+				this.messages.push({ role: 'assistant', content: finalContent as any });
+				break;
+			}
+
+			// Reset max_output recovery counter and JSON retry counter on successful tool use
 			maxOutputRecoveryAttempts = 0;
+			this._jsonRetryCount = undefined;
 
 			// Yield tool_use events so the UI shows "Using tool: X" before execution
 			for (const block of toolUseBlocks) {
@@ -418,7 +472,7 @@ export class AgentEngine {
 				} as AgentEvent;
 			}
 
-			// Execute tools (concurrent read-only, serial mutations)
+			// Execute tools (concurrent read-only, serial mutations) with order preservation
 			const toolResults = await this.executeTools(toolUseBlocks);
 
 			// Yield tool results
@@ -431,6 +485,12 @@ export class AgentEngine {
 					is_error: result.is_error,
 				};
 			}
+
+			// [Director-Code] A3: filter out thinking blocks before pushing to history
+			const contentForHistory = response.content.filter((b: any) => b.type !== 'thinking');
+
+			// Add assistant message (without thinking) to conversation
+			this.messages.push({ role: 'assistant', content: contentForHistory as any });
 
 			// Add tool results to conversation
 			this.messages.push({
@@ -467,16 +527,27 @@ export class AgentEngine {
 	// Streaming Helpers
 	// ========================================================================
 
+	// [Director-Code] A3: JSON parse error now tagged for downstream retry logic
 	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedResponseBlock {
 		let parsedInput: any = {};
-		try { if (tool.input) { parsedInput = JSON.parse(tool.input); } }
-		catch { parsedInput = { raw: tool.input }; }
-		return {
+		let parseError: string | undefined;
+		try {
+			if (tool.input) { parsedInput = JSON.parse(tool.input); }
+		} catch (err: any) {
+			parseError = err.message || 'Invalid JSON';
+			parsedInput = {};
+		}
+		const block: any = {
 			type: 'tool_use',
 			id: tool.id,
 			name: tool.name,
 			input: parsedInput,
 		};
+		if (parseError) {
+			block._jsonParseError = parseError;
+			block._rawInput = tool.input;
+		}
+		return block;
 	}
 
 	// ========================================================================
@@ -499,33 +570,35 @@ export class AgentEngine {
 
 		const MAX_CONCURRENCY = 10;
 
-		// Partition into read-only (concurrent) and mutation (serial)
-		const readOnly: ToolUseBlock[] = [];
-		const mutations: ToolUseBlock[] = [];
+		// [Director-Code] A3: slot-based order preservation — results written back to original positions
+		const results = new Array<ToolResult & { tool_name?: string }>(toolUseBlocks.length);
 
-		for (const block of toolUseBlocks) {
-			if (this.toolExecutor.isReadOnlyTool(block.name)) {
-				readOnly.push(block);
+		// Partition into read-only (concurrent) and mutation (serial), preserving original indices
+		const readOnlyIndices: number[] = [];
+		const mutationIndices: number[] = [];
+
+		for (let i = 0; i < toolUseBlocks.length; i++) {
+			if (this.toolExecutor.isReadOnlyTool(toolUseBlocks[i].name)) {
+				readOnlyIndices.push(i);
 			} else {
-				mutations.push(block);
+				mutationIndices.push(i);
 			}
 		}
 
-		const results: (ToolResult & { tool_name?: string })[] = [];
-
-		// Execute read-only tools concurrently (batched)
-		for (let i = 0; i < readOnly.length; i += MAX_CONCURRENCY) {
-			const batch = readOnly.slice(i, i + MAX_CONCURRENCY);
+		// Execute read-only tools concurrently (batched), write back to original slots
+		for (let i = 0; i < readOnlyIndices.length; i += MAX_CONCURRENCY) {
+			const batchIndices = readOnlyIndices.slice(i, i + MAX_CONCURRENCY);
 			const batchResults = await Promise.all(
-				batch.map((block) => this.executeSingleTool(block)),
+				batchIndices.map((idx) => this.executeSingleTool(toolUseBlocks[idx])),
 			);
-			results.push(...batchResults);
+			for (let j = 0; j < batchIndices.length; j++) {
+				results[batchIndices[j]] = batchResults[j];
+			}
 		}
 
-		// Execute mutation tools sequentially
-		for (const block of mutations) {
-			const result = await this.executeSingleTool(block);
-			results.push(result);
+		// Execute mutation tools sequentially, write back to original slots
+		for (const idx of mutationIndices) {
+			results[idx] = await this.executeSingleTool(toolUseBlocks[idx]);
 		}
 
 		return results;

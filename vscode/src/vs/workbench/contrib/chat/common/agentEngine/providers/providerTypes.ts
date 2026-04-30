@@ -120,8 +120,8 @@ export interface TokenUsage {
 
 export type StreamEvent =
 	| { readonly type: 'text'; readonly text: string }
-	| { readonly type: 'tool_use_start'; readonly id: string; readonly name: string }
-	| { readonly type: 'tool_input_delta'; readonly json: string }
+	| { readonly type: 'tool_use_start'; readonly id: string; readonly name: string; readonly index?: number }
+	| { readonly type: 'tool_input_delta'; readonly json: string; readonly index?: number }
 	| { readonly type: 'tool_call_delta'; readonly index: number; readonly id?: string; readonly name?: string; readonly arguments?: string }
 	| { readonly type: 'thinking'; readonly thinking: string }
 	| { readonly type: 'message_complete'; readonly usage: TokenUsage; readonly stopReason: string };
