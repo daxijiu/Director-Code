@@ -47,6 +47,8 @@ import { ChatConfiguration } from '../../../common/constants.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../../services/chat/common/chatEntitlementService.js';
 import { IChatWidgetService } from '../../chat.js';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
+import product from '../../../../../../platform/product/common/product.js';
+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
 
 // Telemetry types
 type AgentStatusClickAction =
@@ -755,7 +757,10 @@ export class AgentTitleBarStatusWidget extends BaseActionViewItem {
 		let primaryActionIcon = Codicon.chatSparkle;
 
 		if (chatSentiment.installed && !chatSentiment.disabled) {
-			if (signedOut && !anonymous) {
+			// [Director-Code] skip: built-in agent — neutral status instead of Copilot sign-in/quota
+			if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+				// In built-in mode, keep default toggle action — no sign-in or quota states
+			} else if (signedOut && !anonymous) {
 				primaryActionId = CHAT_SETUP_ACTION_ID;
 				primaryActionTitle = localize('signInToChatSetup', "Sign in to use AI features...");
 				primaryActionIcon = Codicon.chatSparkleError;
