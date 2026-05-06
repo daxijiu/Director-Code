@@ -7,6 +7,8 @@ VSCode-*/
 VSCodium*/
 assets/
 sourcemaps/
+.electron-cache/
+electron-v*.zip
 
 # --- macOS ---
 .DS_Store
