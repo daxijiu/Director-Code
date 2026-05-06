@@ -32,8 +32,8 @@
 - **B1-2** ✅ `oauthService.ts` 完全重写：统一 callback 模型 → provider-specific flow contracts（`pkce_manual` + `device_code`）；新接口 `startLogin/submitManualCode/pollLogin/getStatus/logout`；`handleCallback` 标记 `@deprecated` 并 throw；session 单飞锁 + TTL 清理 + `IOAuthStoredTokens`（含 `clientId`/`flowKind`）；63 个测试全通过
 - **B1-3** ✅ IOAuthService + IModelResolverService 注册到 `agentEngine.contribution.ts` DI 容器
 - **B1-4** ✅ Anthropic PKCE 真实端点 smoke 通过：`dev/smoke-anthropic-oauth.mjs` 完成浏览器授权 + token exchange，拿到 access/refresh token；Messages API 使用 OAuth bearer token 返回结构化 `429 rate_limit_error`（非 401），证明认证链与 Anthropic API 入口可用；自动化验证：transpile 0 errors，`oauthService.test.ts` + `anthropicProvider.test.ts` 共 84 tests passing
-- **B1-5** ⏳ OpenAI transport spike 已新增 `dev/smoke-openai-codex-oauth.mjs` 手动 harness（Hermes deviceauth + `api.openai.com/v1/chat/completions` 对照 + `chatgpt.com/backend-api/codex` models/responses 验证）；下一步需用户跑真实登录 smoke 来冻结 endpoint / `authVariant=openai-codex` 结论
-- **B1-6 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
+- **B1-5** ✅ OpenAI transport spike 结论冻结：`dev/smoke-openai-codex-oauth.mjs` 真实 deviceauth 登录 + token exchange 成功；`chatgpt.com/backend-api/codex/models` 返回 200 且可列出 Codex 模型；`chatgpt.com/backend-api/codex/responses` 返回 400（非 401/403，已到达 Codex 后端）；`api.openai.com/v1/chat/completions` 对照返回 429。后续 OpenAI OAuth 固定走独立 `authVariant=openai-codex` + `chatgpt.com/backend-api/codex` transport，不复用 `openai-completions`
+- **B1-6 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施；当前下一步为 B1-6：把 `oauthService.ts` 的 OpenAI 占位标准 device_code 改为 Hermes/Codex deviceauth 登录与状态链
 
 ## 权威文档位置
 
