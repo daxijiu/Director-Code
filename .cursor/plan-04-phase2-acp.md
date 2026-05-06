@@ -2,6 +2,7 @@
 
 > Phase 2 — AgentClientProtocol 支持
 > 前提: Phase 1 完成
+> 说明: 若进入默认开启 / 对外发布级实现，仍需同时满足 remediation 中的 `B4` 与 `B1-ship`（或有明确豁免清单）；否则只视为 ACP 预研 / 原型
 > 预估工期: 6-8 周
 
 ---
@@ -93,7 +94,7 @@ vscode/src/vs/workbench/contrib/acp/
 
 Phase 1 中为 Phase 2 预留的扩展点：
 
-1. **Agent 注册统一** — Phase 1 用 `registerDynamicAgent('director-code-agent', data, impl)`，Phase 2 用 `registerDynamicAgent('acp-agent-<name>', data, proxy)` — 对 ChatService 完全透明
+1. **Agent 注册统一** — Phase 1 用 `registerDynamicAgent('director-code', data, impl)`，Phase 2 用 `registerDynamicAgent('acp-agent-<name>', data, proxy)` — 对 ChatService 完全透明
 2. **工具共享** — ACP Agent 可通过 Host 端能力调用 VS Code 工具（`ILanguageModelToolsService`），与 Phase 1 的 Agent 共享同一套工具
 3. **设置页扩展** — Phase 2 在 `chatManagement` 中增加 ACP Agent 管理标签页
 4. **IChatProgress 统一** — ACP 的 sessionUpdate 通过 `AcpSessionBridge` 转为 IChatProgress，与 Phase 1 的 `ProgressBridge` 输出同类型事件
@@ -113,7 +114,7 @@ Phase 1 中为 Phase 2 预留的扩展点：
     },
     "gemini-cli": {
       "command": "npx",
-      "args": ["@anthropic-ai/gemini-cli@latest", "--acp"],
+      "args": ["@google/gemini-cli@latest", "--acp"],
       "displayName": "Gemini CLI"
     }
   },

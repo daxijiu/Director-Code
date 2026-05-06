@@ -6,7 +6,7 @@
 
 这是一个开源 VS Code 构建（fork），品牌名为 Director-Code。已可成功编译并发布安装包。
 
-**当前状态**: Phase 1 + 1.5 + 1.5+ 全部完成。Agent 核心 + 5 Provider + Settings UI + OAuth 2.0 + Per-model 配置 + 模型列表 Fallback。479 测试全通过。下一步：**Phase 2 ACP 协议扩展**。
+**当前状态**: Phase 1 + 1.5 + 1.5+ 的代码与测试基线已基本完成，但当前主线仍是 **Phase 1 收口修复**。Agent 核心 + 5 Provider + Settings UI + OAuth 2.0 + Per-model 配置 + 模型列表 Fallback 已有代码与测试基础；是否达到产品级完成，以 `docs/director-code-remediation-plan-v2.md` 的收口门槛为准。下一步：**先完成 Phase 1 收口，再进入 Phase 2 ACP 协议扩展**。
 
 源码主体在 `vscode/` 子目录下。
 
@@ -23,6 +23,9 @@ npm run watch-client # 仅客户端
 # 完整构建 (Windows)
 ./build.sh           # 构建脚本
 # 构建产物在 VSCode-win32-x64/
+
+# ⚠️ 构建后必须清理 NLS 缓存（否则可能白屏）
+# PowerShell: Remove-Item -Recurse -Force "$env:APPDATA\Director-Code\clp"
 ```
 
 ## 关键目录结构
