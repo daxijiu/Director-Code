@@ -110,7 +110,7 @@ async function postJson(url, body, headers = {}) {
 function postJsonViaPowerShell(url, body, headers = {}) {
 	const psScript = `
 $ErrorActionPreference = "Stop"
-$raw = [Console]::In.ReadToEnd()
+$raw = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($env:DIRECTOR_CODE_SMOKE_PAYLOAD))
 $payload = $raw | ConvertFrom-Json
 $headers = @{}
 if ($payload.headers) {
@@ -139,6 +139,7 @@ $params = @{
 if ($userAgent) {
   $params.UserAgent = $userAgent
 }
+$params.UseBasicParsing = $true
 try {
   $resp = Invoke-WebRequest @params
   $out = @{ ok = $true; status = [int]$resp.StatusCode; body = [string]$resp.Content }
@@ -175,7 +176,10 @@ $out | ConvertTo-Json -Compress -Depth 4
 		'-Command',
 		psScript,
 	], {
-		input: payload,
+		env: {
+			...process.env,
+			DIRECTOR_CODE_SMOKE_PAYLOAD: Buffer.from(payload, 'utf8').toString('base64'),
+		},
 		encoding: 'utf8',
 		maxBuffer: 1024 * 1024,
 	});
