@@ -171,7 +171,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const config = getOAuthProviderConfig("anthropic");
 			assert.strictEqual(config.provider, "anthropic");
 			assert.strictEqual(config.flowKind, "pkce_manual");
-			assert.ok(config.authorizationEndpoint!.includes("anthropic"));
+			assert.ok(config.authorizationEndpoint!.includes("claude.ai"));
 			assert.ok(config.tokenEndpoint.includes("anthropic"));
 			assert.ok(config.scopes.length > 0);
 			assert.ok(config.clientId.length > 0);
@@ -204,9 +204,11 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.strictEqual(payload.flow, "pkce_manual");
 			assert.ok(payload.sessionId.length > 0);
 			assert.strictEqual(payload.expiresIn, 900);
-			assert.ok(payload.authUrl!.includes("console.anthropic.com/oauth/authorize"));
+			assert.ok(payload.authUrl!.includes("claude.ai/oauth/authorize"));
+			assert.ok(payload.authUrl!.includes("code=true"));
 			assert.ok(payload.authUrl!.includes("code_challenge_method=S256"));
 			assert.ok(payload.authUrl!.includes("response_type=code"));
+			assert.ok(payload.authUrl!.includes("redirect_uri=https%3A%2F%2Fconsole.anthropic.com%2Foauth%2Fcode%2Fcallback"));
 			assert.strictEqual(payload.verificationUrl, undefined);
 			assert.strictEqual(payload.userCode, undefined);
 		});
@@ -346,9 +348,29 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const storedJson = await mockSecretService.get("director-code.oauth.anthropic");
 			assert.ok(storedJson);
 			const stored = JSON.parse(storedJson!) as IOAuthStoredTokens;
-			assert.strictEqual(stored.clientId, "dc-anthropic-public-client");
+			assert.strictEqual(stored.clientId, "9d1c250a-e61b-44d9-88ed-5944d1962f5e");
 			assert.strictEqual(stored.flowKind, "pkce_manual");
 			assert.strictEqual(stored.accessToken, "at-test-token");
+		});
+
+		test("exchanges manual code with Anthropic JSON body and callback state", async () => {
+			const sessionId = await setupPkceSession();
+			let capturedInit: RequestInit | undefined;
+			globalThis.fetch = ((_url, init) => {
+				capturedInit = init;
+				return Promise.resolve(jsonResponse(makeTokenResponse()));
+			}) as any;
+
+			await oauthService.submitManualCode("anthropic", sessionId, "auth-code-123#callback-state");
+
+			assert.strictEqual((capturedInit!.headers as Record<string, string>)["Content-Type"], "application/json");
+			const body = JSON.parse(capturedInit!.body as string);
+			assert.strictEqual(body.grant_type, "authorization_code");
+			assert.strictEqual(body.code, "auth-code-123");
+			assert.strictEqual(body.state, "callback-state");
+			assert.strictEqual(body.client_id, "9d1c250a-e61b-44d9-88ed-5944d1962f5e");
+			assert.strictEqual(body.redirect_uri, "https://console.anthropic.com/oauth/code/callback");
+			assert.ok(body.code_verifier);
 		});
 
 		test("fires onDidChangeAuth after successful exchange", async () => {
@@ -604,7 +626,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				accessToken: "valid-token",
 				refreshToken: "rt",
 				expiresAt: Date.now() + 3600000,
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
@@ -620,7 +642,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const stored: IOAuthStoredTokens = {
 				accessToken: "expired-token",
 				expiresAt: Date.now() - 1000,
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
@@ -649,7 +671,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 		test("returns loggedIn: true for token without expiresAt", async () => {
 			const stored: IOAuthStoredTokens = {
 				accessToken: "no-expiry",
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
@@ -662,7 +684,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const stored: IOAuthStoredTokens = {
 				accessToken: "token",
 				expiresAt: Date.now() + 3600000,
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
@@ -688,7 +710,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 		test("clears stored tokens", async () => {
 			const stored: IOAuthStoredTokens = {
 				accessToken: "token",
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
@@ -735,7 +757,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 		test("does not affect other providers", async () => {
 			const anthropicStored: IOAuthStoredTokens = {
 				accessToken: "a-token",
-				clientId: "dc-anthropic-public-client",
+				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
 			};
 			const openaiStored: IOAuthStoredTokens = {

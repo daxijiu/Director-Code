@@ -54,6 +54,7 @@ export interface IOAuthProviderConfig {
 	readonly clientId: string;
 	readonly authorizationEndpoint?: string;
 	readonly tokenEndpoint: string;
+	readonly redirectUri?: string;
 	readonly deviceAuthorizationEndpoint?: string;
 	readonly scopes: string[];
 }
@@ -116,10 +117,11 @@ const OAUTH_PROVIDER_CONFIGS: Record<OAuthProviderName, IOAuthProviderConfig> = 
 	anthropic: {
 		provider: 'anthropic',
 		flowKind: 'pkce_manual',
-		clientId: 'dc-anthropic-public-client',
-		authorizationEndpoint: 'https://console.anthropic.com/oauth/authorize',
-		tokenEndpoint: 'https://console.anthropic.com/oauth/token',
-		scopes: ['api:read', 'api:write'],
+		clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+		authorizationEndpoint: 'https://claude.ai/oauth/authorize',
+		tokenEndpoint: 'https://console.anthropic.com/v1/oauth/token',
+		redirectUri: 'https://console.anthropic.com/oauth/code/callback',
+		scopes: ['org:create_api_key', 'user:profile', 'user:inference'],
 	},
 	openai: {
 		provider: 'openai',
@@ -174,6 +176,21 @@ function generateSessionId(): string {
 	const array = new Uint8Array(16);
 	crypto.getRandomValues(array);
 	return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function parseManualCallbackCode(input: string): { code: string; state?: string } {
+	const [authorizationCode, callbackState] = input.trim().split('#', 2);
+	return {
+		code: authorizationCode.trim(),
+		state: callbackState?.trim() || undefined,
+	};
+}
+
+function buildOAuthTokenHeaders(): Record<string, string> {
+	return {
+		'Content-Type': 'application/json',
+		'User-Agent': 'claude-cli/2.1.74 (external, cli)',
+	};
 }
 
 // ============================================================================
@@ -270,7 +287,7 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 		const codeVerifier = generateCodeVerifier();
 		const codeChallenge = await generateCodeChallenge(codeVerifier);
-		const state = generateState();
+		const state = codeVerifier;
 
 		const session: IOAuthSession = {
 			provider: config.provider,
@@ -287,8 +304,10 @@ export class OAuthService extends Disposable implements IOAuthService {
 		this._loginLocks.set(config.provider, sessionId);
 
 		const params = new URLSearchParams({
+			code: 'true',
 			response_type: 'code',
 			client_id: config.clientId,
+			redirect_uri: config.redirectUri ?? '',
 			scope: config.scopes.join(' '),
 			state,
 			code_challenge: codeChallenge,
@@ -392,17 +411,23 @@ export class OAuthService extends Disposable implements IOAuthService {
 		}
 
 		const config = OAUTH_PROVIDER_CONFIGS[provider];
-		const body = new URLSearchParams({
+		const { code: authorizationCode, state: callbackState } = parseManualCallbackCode(code);
+		if (!authorizationCode) {
+			throw new Error('Authorization code is required.');
+		}
+		const body = {
 			grant_type: 'authorization_code',
-			code,
+			code: authorizationCode,
 			client_id: config.clientId,
+			redirect_uri: config.redirectUri,
 			code_verifier: session.codeVerifier,
-		});
+			state: callbackState ?? session.state,
+		};
 
 		const response = await fetch(config.tokenEndpoint, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: body.toString(),
+			headers: buildOAuthTokenHeaders(),
+			body: JSON.stringify(body),
 		});
 
 		if (!response.ok) {
@@ -615,16 +640,25 @@ export class OAuthService extends Disposable implements IOAuthService {
 		}
 
 		const config = OAUTH_PROVIDER_CONFIGS[provider];
-		const body = new URLSearchParams({
-			grant_type: 'refresh_token',
-			refresh_token: stored.refreshToken,
-			client_id: stored.clientId || config.clientId,
-		});
+		const body = config.flowKind === 'pkce_manual'
+			? JSON.stringify({
+				grant_type: 'refresh_token',
+				refresh_token: stored.refreshToken,
+				client_id: stored.clientId || config.clientId,
+				scope: config.scopes.join(' '),
+			})
+			: new URLSearchParams({
+				grant_type: 'refresh_token',
+				refresh_token: stored.refreshToken,
+				client_id: stored.clientId || config.clientId,
+			}).toString();
 
 		const response = await fetch(config.tokenEndpoint, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: body.toString(),
+			headers: config.flowKind === 'pkce_manual'
+				? buildOAuthTokenHeaders()
+				: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body,
 		});
 
 		if (!response.ok) {

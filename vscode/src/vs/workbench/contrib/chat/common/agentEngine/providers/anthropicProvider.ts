@@ -207,11 +207,26 @@ export class AnthropicProvider extends AbstractDirectorCodeProvider {
 	// ========================================================================
 
 	private buildHeaders(): Record<string, string> {
-		return {
+		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
-			'x-api-key': this.getAuthValue(), // [Director-Code] B1-1: explicit auth
 			'anthropic-version': '2023-06-01',
 		};
+
+		if (this.auth.kind === 'bearer') {
+			headers['Authorization'] = `Bearer ${this.auth.accessToken}`;
+			headers['anthropic-beta'] = [
+				'interleaved-thinking-2025-05-14',
+				'fine-grained-tool-streaming-2025-05-14',
+				'claude-code-20250219',
+				'oauth-2025-04-20',
+			].join(',');
+			headers['user-agent'] = 'claude-cli/2.1.74 (external, cli)';
+			headers['x-app'] = 'cli';
+		} else {
+			headers['x-api-key'] = this.auth.value;
+		}
+
+		return headers;
 	}
 
 	private buildRequestBody(params: CreateMessageParams): Record<string, any> {

@@ -31,7 +31,7 @@
 - **B1-1** ✅ auth 契约升级：`ProviderOptions.apiKey` → `ProviderAuth` 显式结构；abstractProvider + 三家 Provider + apiKeyService + directorCodeAgent + directorCodeModelProvider + 12 个测试文件（116 处替换）全部对齐
 - **B1-2** ✅ `oauthService.ts` 完全重写：统一 callback 模型 → provider-specific flow contracts（`pkce_manual` + `device_code`）；新接口 `startLogin/submitManualCode/pollLogin/getStatus/logout`；`handleCallback` 标记 `@deprecated` 并 throw；session 单飞锁 + TTL 清理 + `IOAuthStoredTokens`（含 `clientId`/`flowKind`）；63 个测试全通过
 - **B1-3** ✅ IOAuthService + IModelResolverService 注册到 `agentEngine.contribution.ts` DI 容器
-- **B1-4** ⏳ Anthropic PKCE 服务层已就绪（B1-2），需手动真实端点 smoke 验证
+- **B1-4** ⏳ Anthropic PKCE 服务层已对齐真实 Hermes/Claude Code 参数（clientId / authorize URL / token URL / redirect URI / scopes），并新增 `dev/smoke-anthropic-oauth.mjs` 手动 smoke harness；自动化验证已通过，仍需人工浏览器授权完成真实端点 smoke 后才能标记完成
 - **B1-5** ⏳ OpenAI transport spike 需手动验证 device code token 可用性
 - **B1-6 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
 

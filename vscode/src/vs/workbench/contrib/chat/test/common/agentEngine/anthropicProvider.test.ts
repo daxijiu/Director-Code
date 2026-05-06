@@ -123,6 +123,27 @@ suite("AgentEngine - AnthropicProvider", () => {
 			assert.strictEqual(capturedHeaders["anthropic-version"], "2023-06-01");
 		});
 
+		test("uses Bearer auth and OAuth headers for OAuth tokens", async () => {
+			let capturedHeaders: any = null;
+
+			mockFetch((_url, init) => {
+				capturedHeaders = init.headers;
+				return new Response(JSON.stringify(makeAnthropicResponse()), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				});
+			});
+
+			const provider = new AnthropicProvider({ auth: { kind: 'bearer', accessToken: "oauth-token" } });
+			await provider.createMessage(makeDefaultParams());
+
+			assert.strictEqual(capturedHeaders["Authorization"], "Bearer oauth-token");
+			assert.strictEqual(capturedHeaders["x-api-key"], undefined);
+			assert.ok(capturedHeaders["anthropic-beta"].includes("oauth-2025-04-20"));
+			assert.ok(capturedHeaders["anthropic-beta"].includes("claude-code-20250219"));
+			assert.strictEqual(capturedHeaders["x-app"], "cli");
+		});
+
 		test("uses custom baseURL", async () => {
 			let capturedUrl = "";
 
