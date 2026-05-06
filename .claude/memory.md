@@ -32,7 +32,7 @@
 - **B1-2** ✅ `oauthService.ts` 完全重写：统一 callback 模型 → provider-specific flow contracts（`pkce_manual` + `device_code`）；新接口 `startLogin/submitManualCode/pollLogin/getStatus/logout`；`handleCallback` 标记 `@deprecated` 并 throw；session 单飞锁 + TTL 清理 + `IOAuthStoredTokens`（含 `clientId`/`flowKind`）；63 个测试全通过
 - **B1-3** ✅ IOAuthService + IModelResolverService 注册到 `agentEngine.contribution.ts` DI 容器
 - **B1-4** ✅ Anthropic PKCE 真实端点 smoke 通过：`dev/smoke-anthropic-oauth.mjs` 完成浏览器授权 + token exchange，拿到 access/refresh token；Messages API 使用 OAuth bearer token 返回结构化 `429 rate_limit_error`（非 401），证明认证链与 Anthropic API 入口可用；自动化验证：transpile 0 errors，`oauthService.test.ts` + `anthropicProvider.test.ts` 共 84 tests passing
-- **B1-5** ⏳ OpenAI transport spike 需手动验证 device code token 可用性
+- **B1-5** ⏳ OpenAI transport spike 已新增 `dev/smoke-openai-codex-oauth.mjs` 手动 harness（Hermes deviceauth + `api.openai.com/v1/chat/completions` 对照 + `chatgpt.com/backend-api/codex` models/responses 验证）；下一步需用户跑真实登录 smoke 来冻结 endpoint / `authVariant=openai-codex` 结论
 - **B1-6 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施
 
 ## 权威文档位置
