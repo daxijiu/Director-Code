@@ -85,6 +85,16 @@ configurationRegistry.registerConfiguration({
 			default: '',
 			description: 'Custom API base URL. Leave empty for default. Useful for proxies or compatible APIs (e.g., DeepSeek).',
 		},
+		'directorCode.ai.authVariant': {
+			type: 'string',
+			enum: ['default', 'openai-codex'],
+			enumDescriptions: [
+				'Default API-key transport for the selected provider.',
+				'OpenAI ChatGPT/Codex OAuth transport.',
+			],
+			default: 'default',
+			description: 'Authentication transport variant. Only OpenAI uses "openai-codex"; other providers use "default".',
+		},
 		'directorCode.ai.maxTurns': {
 			type: 'number',
 			default: 25,

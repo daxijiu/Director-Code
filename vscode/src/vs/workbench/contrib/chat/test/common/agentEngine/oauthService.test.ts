@@ -60,12 +60,17 @@ class MockSecretStorageService implements ISecretStorageService {
 
 function makeDeviceCodeResponse(overrides: Record<string, any> = {}): object {
 	return {
-		device_code: 'dc-test-device-code',
+		device_auth_id: 'da-test-device-auth-id',
 		user_code: 'ABCD-1234',
-		verification_uri: 'https://auth.openai.com/device',
-		verification_uri_complete: 'https://auth.openai.com/device?user_code=ABCD-1234',
-		expires_in: 600,
 		interval: 5,
+		...overrides,
+	};
+}
+
+function makeDeviceAuthTokenResponse(overrides: Record<string, any> = {}): object {
+	return {
+		authorization_code: 'openai-codex-authorization-code',
+		code_verifier: 'openai-codex-code-verifier',
 		...overrides,
 	};
 }
@@ -181,10 +186,14 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const config = getOAuthProviderConfig("openai");
 			assert.strictEqual(config.provider, "openai");
 			assert.strictEqual(config.flowKind, "device_code");
-			assert.ok(config.deviceAuthorizationEndpoint!.includes("openai"));
+			assert.strictEqual(config.authVariant, "openai-codex");
+			assert.strictEqual(config.clientId, "app_EMoamEEZ73f0CkXaXp7hrann");
+			assert.ok(config.deviceAuthorizationEndpoint!.includes("deviceauth/usercode"));
+			assert.ok(config.deviceTokenEndpoint!.includes("deviceauth/token"));
+			assert.strictEqual(config.deviceVerificationEndpoint, "https://auth.openai.com/codex/device");
+			assert.strictEqual(config.redirectUri, "https://auth.openai.com/deviceauth/callback");
 			assert.ok(config.tokenEndpoint.includes("openai"));
 			assert.ok(config.scopes.length > 0);
-			assert.ok(config.clientId.length > 0);
 		});
 
 		test("OAUTH_CAPABLE_PROVIDERS includes anthropic and openai", () => {
@@ -277,19 +286,28 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 			assert.strictEqual(payload.flow, "device_code");
 			assert.ok(payload.sessionId.length > 0);
-			assert.strictEqual(payload.expiresIn, 600);
-			assert.strictEqual(payload.verificationUrl, "https://auth.openai.com/device?user_code=ABCD-1234");
+			assert.strictEqual(payload.expiresIn, 900);
+			assert.strictEqual(payload.verificationUrl, "https://auth.openai.com/codex/device");
 			assert.strictEqual(payload.userCode, "ABCD-1234");
 			assert.strictEqual(payload.authUrl, undefined);
 		});
 
-		test("uses verification_uri when verification_uri_complete is absent", async () => {
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				makeDeviceCodeResponse({ verification_uri_complete: undefined })
-			))) as any;
+		test("requests OpenAI Codex deviceauth user code with JSON client_id body", async () => {
+			let capturedUrl = "";
+			let capturedInit: RequestInit | undefined;
+			globalThis.fetch = ((url, init) => {
+				capturedUrl = String(url);
+				capturedInit = init;
+				return Promise.resolve(jsonResponse(makeDeviceCodeResponse()));
+			}) as any;
 
-			const payload = await oauthService.startLogin("openai");
-			assert.strictEqual(payload.verificationUrl, "https://auth.openai.com/device");
+			await oauthService.startLogin("openai");
+
+			assert.strictEqual(capturedUrl, "https://auth.openai.com/api/accounts/deviceauth/usercode");
+			assert.strictEqual((capturedInit!.headers as Record<string, string>)["Content-Type"], "application/json");
+			assert.deepStrictEqual(JSON.parse(capturedInit!.body as string), {
+				client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
+			});
 		});
 
 		test("stores device code session", async () => {
@@ -302,7 +320,9 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const session = JSON.parse(sessionJson!) as IOAuthSession;
 			assert.strictEqual(session.provider, "openai");
 			assert.strictEqual(session.flowKind, "device_code");
-			assert.strictEqual(session.deviceCode, "dc-test-device-code");
+			assert.strictEqual(session.deviceAuthId, "da-test-device-auth-id");
+			assert.strictEqual(session.userCode, "ABCD-1234");
+			assert.strictEqual(session.deviceCode, undefined);
 			assert.strictEqual(session.interval, 5);
 		});
 
@@ -313,7 +333,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				await oauthService.startLogin("openai");
 				assert.fail("Should have thrown");
 			} catch (err: any) {
-				assert.ok(err.message.includes("Device authorization failed"));
+				assert.ok(err.message.includes("OpenAI Codex device authorization failed"));
 			}
 		});
 	});
@@ -350,6 +370,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const stored = JSON.parse(storedJson!) as IOAuthStoredTokens;
 			assert.strictEqual(stored.clientId, "9d1c250a-e61b-44d9-88ed-5944d1962f5e");
 			assert.strictEqual(stored.flowKind, "pkce_manual");
+			assert.strictEqual(stored.authVariant, "default");
 			assert.strictEqual(stored.accessToken, "at-test-token");
 		});
 
@@ -477,11 +498,9 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			return payload.sessionId;
 		}
 
-		test("returns pending when authorization_pending", async () => {
+		test("returns pending while OpenAI Codex authorization is not complete", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				{ error: 'authorization_pending' }, 400
-			))) as any;
+			globalThis.fetch = (() => Promise.resolve(new Response("", { status: 403 }))) as any;
 
 			const result = await oauthService.pollLogin("openai", sessionId);
 			assert.strictEqual(result.status, "pending");
@@ -489,17 +508,31 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 		test("returns approved with tokens when user authorizes", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse()))) as any;
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse({ scope: "openid profile email offline_access" })));
+			}) as any;
 
 			const result = await oauthService.pollLogin("openai", sessionId);
 			assert.strictEqual(result.status, "approved");
 			assert.ok(result.tokens);
 			assert.strictEqual(result.tokens!.accessToken, "at-test-token");
+			assert.strictEqual(result.tokens!.authVariant, "openai-codex");
+			assert.strictEqual(calls, 2);
 		});
 
 		test("stores tokens on approval", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse()))) as any;
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse()));
+			}) as any;
 
 			await oauthService.pollLogin("openai", sessionId);
 
@@ -507,13 +540,20 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.ok(stored);
 			const parsed = JSON.parse(stored!) as IOAuthStoredTokens;
 			assert.strictEqual(parsed.accessToken, "at-test-token");
-			assert.strictEqual(parsed.clientId, "dc-openai-public-client");
+			assert.strictEqual(parsed.clientId, "app_EMoamEEZ73f0CkXaXp7hrann");
 			assert.strictEqual(parsed.flowKind, "device_code");
+			assert.strictEqual(parsed.authVariant, "openai-codex");
 		});
 
 		test("fires onDidChangeAuth on approval", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse()))) as any;
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse()));
+			}) as any;
 
 			const events: string[] = [];
 			disposables.add(oauthService.onDidChangeAuth(p => events.push(p)));
@@ -524,7 +564,13 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 		test("cleans up session on approval", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse()))) as any;
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse()));
+			}) as any;
 
 			await oauthService.pollLogin("openai", sessionId);
 
@@ -544,28 +590,42 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.strictEqual(result.status, "expired");
 		});
 
-		test("returns expired for expired_token error", async () => {
+		test("returns pending for OpenAI Codex 404 polling response", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				{ error: 'expired_token' }, 400
-			))) as any;
-
-			const result = await oauthService.pollLogin("openai", sessionId);
-			assert.strictEqual(result.status, "expired");
-		});
-
-		test("handles slow_down by increasing interval", async () => {
-			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				{ error: 'slow_down' }, 400
-			))) as any;
+			globalThis.fetch = (() => Promise.resolve(new Response("", { status: 404 }))) as any;
 
 			const result = await oauthService.pollLogin("openai", sessionId);
 			assert.strictEqual(result.status, "pending");
+		});
 
-			const sessionJson = await mockSecretService.get(`director-code.oauthSession.${sessionId}`);
-			const session = JSON.parse(sessionJson!) as IOAuthSession;
-			assert.strictEqual(session.interval, 10);
+		test("exchanges OpenAI Codex authorization_code with deviceauth callback redirect", async () => {
+			const sessionId = await setupDeviceSession();
+			const captured: Array<{ url: string; init?: RequestInit }> = [];
+			let calls = 0;
+			globalThis.fetch = ((url, init) => {
+				calls++;
+				captured.push({ url: String(url), init });
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse()));
+			}) as any;
+
+			const result = await oauthService.pollLogin("openai", sessionId);
+			assert.strictEqual(result.status, "approved");
+
+			assert.strictEqual(captured[0].url, "https://auth.openai.com/api/accounts/deviceauth/token");
+			assert.deepStrictEqual(JSON.parse(captured[0].init!.body as string), {
+				device_auth_id: "da-test-device-auth-id",
+				user_code: "ABCD-1234",
+			});
+			assert.strictEqual(captured[1].url, "https://auth.openai.com/oauth/token");
+			assert.strictEqual((captured[1].init!.headers as Record<string, string>)["Content-Type"], "application/x-www-form-urlencoded");
+			const form = new URLSearchParams(captured[1].init!.body as string);
+			assert.strictEqual(form.get("grant_type"), "authorization_code");
+			assert.strictEqual(form.get("code"), "openai-codex-authorization-code");
+			assert.strictEqual(form.get("redirect_uri"), "https://auth.openai.com/deviceauth/callback");
+			assert.strictEqual(form.get("client_id"), "app_EMoamEEZ73f0CkXaXp7hrann");
+			assert.strictEqual(form.get("code_verifier"), "openai-codex-code-verifier");
 		});
 
 		test("returns error for unknown session", async () => {
@@ -590,13 +650,26 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 		test("returns error on unexpected server error", async () => {
 			const sessionId = await setupDeviceSession();
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				{ error: 'server_error', error_description: 'Internal server error' }, 500
-			))) as any;
+			globalThis.fetch = (() => Promise.resolve(new Response("Internal server error", { status: 500 }))) as any;
 
 			const result = await oauthService.pollLogin("openai", sessionId);
 			assert.strictEqual(result.status, "error");
 			assert.ok(result.error!.includes("Internal server error"));
+		});
+
+		test("returns error when OpenAI Codex token exchange fails", async () => {
+			const sessionId = await setupDeviceSession();
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: new Response("invalid grant", { status: 400 }));
+			}) as any;
+
+			const result = await oauthService.pollLogin("openai", sessionId);
+			assert.strictEqual(result.status, "error");
+			assert.ok(result.error!.includes("OpenAI Codex token exchange failed"));
 		});
 
 		test("returns error on network failure", async () => {
@@ -628,12 +701,14 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				expiresAt: Date.now() + 3600000,
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
 
 			const status = await oauthService.getStatus("anthropic");
 			assert.strictEqual(status.loggedIn, true);
 			assert.strictEqual(status.flow, "pkce_manual");
+			assert.strictEqual(status.authVariant, "default");
 			assert.strictEqual(status.hasRefreshToken, true);
 			assert.ok(status.expiresAt! > Date.now());
 		});
@@ -644,6 +719,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				expiresAt: Date.now() - 1000,
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
 
@@ -657,14 +733,17 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				accessToken: "expired-token",
 				refreshToken: "rt-can-refresh",
 				expiresAt: Date.now() - 1000,
-				clientId: "dc-openai-public-client",
+				clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
 				flowKind: "device_code",
+				authVariant: "openai-codex",
 			};
 			await mockSecretService.set("director-code.oauth.openai", JSON.stringify(stored));
 
 			const status = await oauthService.getStatus("openai");
 			assert.strictEqual(status.loggedIn, true);
 			assert.strictEqual(status.flow, "device_code");
+			assert.strictEqual(status.authVariant, "openai-codex");
+			assert.strictEqual(status.sourceLabel, "OpenAI (ChatGPT/Codex OAuth)");
 			assert.strictEqual(status.hasRefreshToken, true);
 		});
 
@@ -673,6 +752,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				accessToken: "no-expiry",
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
 
@@ -686,6 +766,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				expiresAt: Date.now() + 3600000,
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
 
@@ -712,6 +793,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				accessToken: "token",
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(stored));
 
@@ -759,11 +841,13 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 				accessToken: "a-token",
 				clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 				flowKind: "pkce_manual",
+				authVariant: "default",
 			};
 			const openaiStored: IOAuthStoredTokens = {
 				accessToken: "o-token",
-				clientId: "dc-openai-public-client",
+				clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
 				flowKind: "device_code",
+				authVariant: "openai-codex",
 			};
 			await mockSecretService.set("director-code.oauth.anthropic", JSON.stringify(anthropicStored));
 			await mockSecretService.set("director-code.oauth.openai", JSON.stringify(openaiStored));
@@ -851,20 +935,26 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const payload = await oauthService.startLogin("openai");
 			assert.strictEqual(payload.flow, "device_code");
 
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(
-				{ error: 'authorization_pending' }, 400
-			))) as any;
+			globalThis.fetch = (() => Promise.resolve(new Response("", { status: 403 }))) as any;
 			const pending = await oauthService.pollLogin("openai", payload.sessionId);
 			assert.strictEqual(pending.status, "pending");
 
-			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse()))) as any;
+			let calls = 0;
+			globalThis.fetch = (() => {
+				calls++;
+				return Promise.resolve(calls === 1
+					? jsonResponse(makeDeviceAuthTokenResponse())
+					: jsonResponse(makeTokenResponse()));
+			}) as any;
 			const approved = await oauthService.pollLogin("openai", payload.sessionId);
 			assert.strictEqual(approved.status, "approved");
 			assert.ok(approved.tokens!.accessToken);
+			assert.strictEqual(approved.tokens!.authVariant, "openai-codex");
 
 			const status = await oauthService.getStatus("openai");
 			assert.strictEqual(status.loggedIn, true);
 			assert.strictEqual(status.flow, "device_code");
+			assert.strictEqual(status.authVariant, "openai-codex");
 		});
 
 		test("login → logout → getStatus returns logged out", async () => {
