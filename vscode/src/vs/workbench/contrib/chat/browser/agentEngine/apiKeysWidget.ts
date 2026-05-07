@@ -11,7 +11,7 @@
  */
 
 import './media/directorCodeSettings.css';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
+import { Disposable, MutableDisposable, type IDisposable } from '../../../../../base/common/lifecycle.js';
 import { Emitter } from '../../../../../base/common/event.js';
 import * as DOM from '../../../../../base/browser/dom.js';
 import { localize } from '../../../../../nls.js';
@@ -42,6 +42,7 @@ export class ApiKeysWidget extends Disposable {
 	private readonly providerRows = new Map<ProviderName, IProviderRowElements>();
 	private beforeTestFlush: (() => Promise<void>) | undefined;
 	private renderGeneration = 0;
+	private inputGeneration = 0;
 
 	constructor(
 		@IApiKeyService private readonly apiKeyService: IApiKeyService,
@@ -105,11 +106,9 @@ export class ApiKeysWidget extends Disposable {
 		// Input row: password input + save button
 		const inputRow = DOM.append(row, $('.dc-input-row'));
 
-		const input = DOM.append(inputRow, $<HTMLInputElement>('input.dc-api-key-input'));
-		input.type = 'password';
-		input.placeholder = localize('apiKeys.placeholder', 'Enter API key...');
-		input.autocomplete = 'off';
-		input.spellcheck = false;
+		const inputKeydown = this._register(new MutableDisposable<IDisposable>());
+		const input = this.createApiKeyInput(provider, inputKeydown);
+		DOM.append(inputRow, input);
 
 		const saveBtn = DOM.append(inputRow, $<HTMLButtonElement>('button.dc-btn.dc-btn-primary'));
 		saveBtn.textContent = localize('apiKeys.save', 'Save');
@@ -130,7 +129,7 @@ export class ApiKeysWidget extends Disposable {
 
 		// Store references
 		const elements: IProviderRowElements = {
-			row, statusBadge, input, saveBtn, testBtn, deleteBtn, testResult,
+			row, statusBadge, input, inputKeydown, saveBtn, testBtn, deleteBtn, testResult,
 		};
 		this.providerRows.set(provider, elements);
 
@@ -138,11 +137,36 @@ export class ApiKeysWidget extends Disposable {
 		this._register(DOM.addDisposableListener(saveBtn, 'click', () => this.handleSave(provider)));
 		this._register(DOM.addDisposableListener(testBtn, 'click', () => this.handleTest(provider)));
 		this._register(DOM.addDisposableListener(deleteBtn, 'click', () => this.handleDelete(provider)));
-		this._register(DOM.addDisposableListener(input, 'keydown', (e: KeyboardEvent) => {
+	}
+
+	private createApiKeyInput(provider: ProviderName, inputKeydown: MutableDisposable<IDisposable>): HTMLInputElement {
+		const input = $<HTMLInputElement>('input.dc-api-key-input');
+		input.type = 'password';
+		input.name = `director-code-${provider}-api-key-${++this.inputGeneration}`;
+		input.placeholder = localize('apiKeys.placeholder', 'Enter API key...');
+		input.autocomplete = 'new-password';
+		input.setAttribute('autocomplete', 'new-password');
+		input.setAttribute('autocapitalize', 'off');
+		input.setAttribute('autocorrect', 'off');
+		input.setAttribute('data-1p-ignore', 'true');
+		input.setAttribute('data-form-type', 'other');
+		input.setAttribute('data-lpignore', 'true');
+		input.spellcheck = false;
+
+		inputKeydown.value = DOM.addDisposableListener(input, 'keydown', (e: KeyboardEvent) => {
 			if (e.key === 'Enter') {
 				this.handleSave(provider);
 			}
-		}));
+		});
+
+		return input;
+	}
+
+	private rebuildApiKeyInput(provider: ProviderName, elements: IProviderRowElements, disabled = elements.input.disabled): void {
+		const nextInput = this.createApiKeyInput(provider, elements.inputKeydown);
+		nextInput.disabled = disabled;
+		elements.input.replaceWith(nextInput);
+		elements.input = nextInput;
 	}
 
 	/**
@@ -212,8 +236,8 @@ export class ApiKeysWidget extends Disposable {
 				elements.statusBadge.classList.add('dc-status-not-set');
 			}
 
-			// Clear input (don't show existing keys for security)
-			elements.input.value = '';
+			// Rebuild input so browser autofill state and plaintext DOM value are discarded.
+			this.rebuildApiKeyInput(provider, elements);
 		}
 
 		// Emit height change
@@ -235,13 +259,13 @@ export class ApiKeysWidget extends Disposable {
 		if (!value) {
 			return;
 		}
+		this.rebuildApiKeyInput(provider, elements);
 
 		elements.saveBtn.disabled = true;
 		elements.saveBtn.textContent = localize('apiKeys.saving', 'Saving...');
 
 		try {
 			await this.apiKeyService.setApiKey(provider, value);
-			elements.input.value = '';
 			// render() will be triggered by onDidChangeApiKey
 		} finally {
 			elements.saveBtn.disabled = false;
@@ -292,6 +316,7 @@ export class ApiKeysWidget extends Disposable {
 		}
 
 		elements.deleteBtn.disabled = true;
+		this.rebuildApiKeyInput(provider, elements);
 		try {
 			await this.apiKeyService.deleteApiKey(provider);
 			// render() will be triggered by onDidChangeApiKey
@@ -336,7 +361,8 @@ export class ApiKeysWidget extends Disposable {
 interface IProviderRowElements {
 	readonly row: HTMLElement;
 	readonly statusBadge: HTMLElement;
-	readonly input: HTMLInputElement;
+	input: HTMLInputElement;
+	readonly inputKeydown: MutableDisposable<IDisposable>;
 	readonly saveBtn: HTMLButtonElement;
 	readonly testBtn: HTMLButtonElement;
 	readonly deleteBtn: HTMLButtonElement;
