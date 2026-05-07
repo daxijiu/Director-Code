@@ -13,6 +13,7 @@
 import type { ApiType, LLMProvider, ProviderConfig } from './providerTypes.js';
 import { AnthropicProvider } from './anthropicProvider.js';
 import { OpenAIProvider } from './openaiProvider.js';
+import { OpenAICodexProvider } from './openaiCodexProvider.js';
 import { GeminiProvider } from './geminiProvider.js';
 
 /**
@@ -34,6 +35,8 @@ export function createProvider(apiType: ApiType, opts: ProviderConfig): LLMProvi
 			return new AnthropicProvider(opts);
 		case 'openai-completions':
 			return new OpenAIProvider(opts);
+		case 'openai-codex':
+			return new OpenAICodexProvider(opts);
 		case 'gemini-generative':
 			return new GeminiProvider(opts);
 		default: {
@@ -47,6 +50,7 @@ export function createProvider(apiType: ApiType, opts: ProviderConfig): LLMProvi
 // Re-export for convenience
 export { AnthropicProvider } from './anthropicProvider.js';
 export { OpenAIProvider } from './openaiProvider.js';
+export { OpenAICodexProvider } from './openaiCodexProvider.js';
 export { GeminiProvider } from './geminiProvider.js';
 export { AbstractDirectorCodeProvider, getDefaultCapabilities } from './abstractProvider.js';
 export type {

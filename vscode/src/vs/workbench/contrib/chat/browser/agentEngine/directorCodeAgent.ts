@@ -21,7 +21,7 @@ import { providerToApiType, type ProviderName } from '../../common/agentEngine/a
 import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
-import { findModelById } from '../../common/agentEngine/modelCatalog.js';
+import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../common/agentEngine/modelCatalog.js';
 import type {
 	IChatAgentImplementation,
 	IChatAgentRequest,
@@ -57,8 +57,11 @@ function missingAuthMessage(authState: IResolvedAuthState): string {
 	return `No API key configured for provider "${authState.provider}". Please set your API key in Director Code settings (Ctrl+Shift+P -> "Director Code: Open Settings").`;
 }
 
-function codexTransportPendingMessage(): string {
-	return 'OpenAI Codex OAuth login is available, but the Codex backend transport is not wired yet. Continue with B1-9, or switch directorCode.ai.authVariant back to "default" to use an API key transport.';
+function modelForAuthVariant(provider: ProviderName, modelId: string, authVariant: AuthVariantName): string {
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT && !isOpenAICodexModel(modelId)) {
+		return getDefaultModelForAuthVariant(provider, OPENAI_CODEX_AUTH_VARIANT);
+	}
+	return modelId || getDefaultModelForAuthVariant(provider, authVariant);
 }
 
 export class DirectorCodeAgent implements IChatAgentImplementation {
@@ -83,7 +86,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			let providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
 			let modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
 			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-			const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+			let configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
@@ -96,12 +99,16 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				if (modelDef) {
 					modelId = modelDef.id;
 					providerName = modelDef.provider;
+					if (modelDef.apiType === 'openai-codex') {
+						configuredAuthVariant = OPENAI_CODEX_AUTH_VARIANT;
+					}
 				}
 			}
 
 			// 2. Resolve auth state via the unified API-key/OAuth facade
 			const provider = providerName as ProviderName;
 			const authVariant = normalizeAuthVariantForProvider(provider, configuredAuthVariant);
+			modelId = modelForAuthVariant(provider, modelId, authVariant);
 			const resolved = await this.authStateService.resolveAuth(provider, modelId, authVariant, baseURL);
 			if (resolved.source === 'missing' || !resolved.auth) {
 				return {
@@ -111,17 +118,11 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 					timings: { totalElapsed: Date.now() - startTime },
 				};
 			}
-			if (resolved.source === 'oauth' && resolved.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-				return {
-					errorDetails: {
-						message: codexTransportPendingMessage(),
-					},
-					timings: { totalElapsed: Date.now() - startTime },
-				};
-			}
 
 			// 3. Create LLM provider with resolved options
-			const apiType = providerToApiType(provider);
+			const apiType = provider === 'openai' && resolved.authVariant === OPENAI_CODEX_AUTH_VARIANT
+				? 'openai-codex'
+				: providerToApiType(provider);
 			const llmProvider = createProvider(apiType, {
 				auth: resolved.auth,
 				baseURL: resolved.baseURL,

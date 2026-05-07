@@ -8,6 +8,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
 import { AnthropicProvider } from '../../../common/agentEngine/providers/anthropicProvider.js';
 import { OpenAIProvider } from '../../../common/agentEngine/providers/openaiProvider.js';
+import { OpenAICodexProvider } from '../../../common/agentEngine/providers/openaiCodexProvider.js';
 import { GeminiProvider } from '../../../common/agentEngine/providers/geminiProvider.js';
 
 suite("AgentEngine - ProviderFactory", () => {
@@ -26,6 +27,12 @@ suite("AgentEngine - ProviderFactory", () => {
 		const provider = createProvider("openai-completions", opts);
 		assert.ok(provider instanceof OpenAIProvider);
 		assert.strictEqual(provider.apiType, "openai-completions");
+	});
+
+	test("creates OpenAICodexProvider for openai-codex", () => {
+		const provider = createProvider("openai-codex", { auth: { kind: 'bearer', accessToken: "oauth-token" } });
+		assert.ok(provider instanceof OpenAICodexProvider);
+		assert.strictEqual(provider.apiType, "openai-codex");
 	});
 
 	test("creates GeminiProvider for gemini-generative", () => {
@@ -52,10 +59,10 @@ suite("AgentEngine - ProviderFactory", () => {
 	});
 
 	test("all providers implement LLMProvider interface", () => {
-		const types = ["anthropic-messages", "openai-completions", "gemini-generative"] as const;
+		const types = ["anthropic-messages", "openai-completions", "openai-codex", "gemini-generative"] as const;
 
 		for (const apiType of types) {
-			const provider = createProvider(apiType, opts);
+			const provider = createProvider(apiType, apiType === 'openai-codex' ? { auth: { kind: 'bearer', accessToken: "oauth-token" } } : opts);
 			assert.strictEqual(typeof provider.createMessage, "function", apiType + " should have createMessage");
 			assert.strictEqual(typeof provider.createMessageStream, "function", apiType + " should have createMessageStream");
 			assert.strictEqual(typeof provider.apiType, "string", apiType + " should have apiType");

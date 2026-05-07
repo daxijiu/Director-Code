@@ -18,7 +18,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ProviderName } from './apiKeyService.js';
-import { MODEL_CATALOG, getModelsForProvider, type IModelDefinition } from './modelCatalog.js';
+import { MODEL_CATALOG, getModelsForProvider, getOpenAICodexModels, type IModelDefinition } from './modelCatalog.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
 
 // ============================================================================
@@ -143,7 +143,19 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		cacheKey: string,
 	): Promise<IResolvedModel[]> {
 		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-			const models: IResolvedModel[] = [];
+			if (apiKey) {
+				try {
+					const apiModels = await this._fetchOpenAICodexModels(apiKey, baseURL);
+					if (apiModels.length > 0) {
+						this._cache.set(cacheKey, { models: apiModels, timestamp: Date.now() });
+						return apiModels;
+					}
+				} catch {
+					// Fall back to the static Codex allowlist.
+				}
+			}
+
+			const models = this._getOpenAICodexStaticModels();
 			this._cache.set(cacheKey, { models, timestamp: Date.now() });
 			return models;
 		}
@@ -214,6 +226,45 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			return data.data
 				.filter(m => this._isRelevantOpenAIModel(m.id))
 				.map(m => this._openAIModelToResolved(m.id, baseURL));
+		} finally {
+			clearTimeout(timeout);
+		}
+	}
+
+	private async _fetchOpenAICodexModels(accessToken: string, baseURL?: string): Promise<IResolvedModel[]> {
+		const base = (baseURL || 'https://chatgpt.com/backend-api/codex').replace(/\/$/, '');
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+		try {
+			const response = await fetch(`${base}/models?client_version=1.0.0`, {
+				headers: { 'Authorization': `Bearer ${accessToken}` },
+				signal: controller.signal,
+			});
+
+			if (!response.ok) { return []; }
+
+			const data = await response.json() as {
+				models?: Array<{
+					slug?: string;
+					display_name?: string;
+					visibility?: string;
+					supported_in_api?: boolean;
+					context_window?: number;
+					max_context_window?: number;
+					priority?: number;
+				}>;
+			};
+			if (!data.models || !Array.isArray(data.models)) { return []; }
+
+			const sortable = data.models
+				.filter(m => typeof m.slug === 'string' && m.slug.trim().length > 0)
+				.filter(m => m.supported_in_api !== false)
+				.filter(m => !['hide', 'hidden'].includes((m.visibility ?? '').trim().toLowerCase()))
+				.map(m => ({ model: m, priority: typeof m.priority === 'number' ? m.priority : 10_000 }));
+
+			sortable.sort((a, b) => a.priority - b.priority || a.model.slug!.localeCompare(b.model.slug!));
+			return sortable.map(({ model }) => this._openAICodexModelToResolved(model));
 		} finally {
 			clearTimeout(timeout);
 		}
@@ -292,6 +343,13 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		}));
 	}
 
+	private _getOpenAICodexStaticModels(): IResolvedModel[] {
+		return getOpenAICodexModels().map(m => ({
+			...m,
+			source: 'static' as const,
+		}));
+	}
+
 	// ========================================================================
 	// Helpers
 	// ========================================================================
@@ -320,6 +378,30 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			apiType: 'openai-completions',
 			maxInputTokens: 128_000,
 			maxOutputTokens: 16_384,
+			source: 'api' as const,
+		};
+	}
+
+	private _openAICodexModelToResolved(model: {
+		slug?: string;
+		display_name?: string;
+		context_window?: number;
+		max_context_window?: number;
+	}): IResolvedModel {
+		const id = model.slug!.trim();
+		const existing = getOpenAICodexModels().find(m => m.id === id);
+		if (existing) {
+			return { ...existing, source: 'api' as const };
+		}
+
+		return {
+			id,
+			name: model.display_name || id,
+			provider: 'openai',
+			family: 'openai-codex',
+			apiType: 'openai-codex',
+			maxInputTokens: model.max_context_window || model.context_window || 272_000,
+			maxOutputTokens: 64_000,
 			source: 'api' as const,
 		};
 	}

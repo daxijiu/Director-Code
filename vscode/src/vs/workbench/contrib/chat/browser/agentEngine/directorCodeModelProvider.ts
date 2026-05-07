@@ -32,7 +32,12 @@ import { ChatAgentLocation } from '../../common/constants.js';
 import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
-import { MODEL_CATALOG, findModelById, getDefaultModel } from '../../common/agentEngine/modelCatalog.js';
+import {
+	findModelById,
+	getDefaultModelForAuthVariant,
+	getModelsForProviderAndAuthVariant,
+	isOpenAICodexModel,
+} from '../../common/agentEngine/modelCatalog.js';
 
 // ============================================================================
 // Configuration
@@ -57,8 +62,19 @@ function missingAuthError(authState: IResolvedAuthState): Error {
 	return new Error(`No API key configured for ${authState.provider}`);
 }
 
-function codexTransportPendingError(): Error {
-	return new Error('OpenAI Codex OAuth login is available, but the Codex backend transport is not wired yet. Continue with B1-9, or switch directorCode.ai.authVariant back to "default" to use an API key transport.');
+function modelForAuthVariant(provider: ProviderName, modelId: string, authVariant: AuthVariantName): string {
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT && !isOpenAICodexModel(modelId)) {
+		return getDefaultModelForAuthVariant(provider, OPENAI_CODEX_AUTH_VARIANT);
+	}
+	return modelId || getDefaultModelForAuthVariant(provider, authVariant);
+}
+
+function capabilitiesForAuthVariant(authVariant: AuthVariantName): ILanguageModelChatMetadata['capabilities'] {
+	return {
+		vision: authVariant !== OPENAI_CODEX_AUTH_VARIANT,
+		toolCalling: true,
+		agentMode: true,
+	};
 }
 
 export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
@@ -87,10 +103,11 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		const configuredModel = this.configService.getValue<string>(CONFIG_MODEL) || '';
 		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
 		const authVariant = normalizeAuthVariantForProvider(providerName, configuredAuthVariant);
-		await this.authStateService.resolveAuth(providerName, configuredModel || getDefaultModel(providerName), authVariant);
+		const effectiveModel = modelForAuthVariant(providerName, configuredModel, authVariant);
+		await this.authStateService.resolveAuth(providerName, effectiveModel, authVariant);
 
 		// Filter catalog models by the configured provider
-		const catalogModels = MODEL_CATALOG.filter(m => m.provider === providerName);
+		const catalogModels = getModelsForProviderAndAuthVariant(providerName, authVariant);
 
 		const results: ILanguageModelChatMetadataAndIdentifier[] = catalogModels.map(m => ({
 			identifier: `${VENDOR}/${m.id}`,
@@ -107,23 +124,20 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 					[ChatAgentLocation.Chat]: false,
 				},
 				isUserSelectable: true,
-				capabilities: {
-					vision: true,
-					toolCalling: true,
-					agentMode: true,
-				},
+				capabilities: capabilitiesForAuthVariant(authVariant),
 				modelPickerCategory: undefined,
 			} satisfies ILanguageModelChatMetadata,
 		}));
 
 		// If the user typed a custom model ID not in the catalog, include it
-		if (configuredModel && !catalogModels.some(m => m.id === configuredModel)) {
+		const customModelId = authVariant === OPENAI_CODEX_AUTH_VARIANT ? effectiveModel : configuredModel;
+		if (customModelId && !catalogModels.some(m => m.id === customModelId)) {
 			results.push({
-				identifier: `${VENDOR}/${configuredModel}`,
+				identifier: `${VENDOR}/${customModelId}`,
 				metadata: {
 					extension: EXTENSION_ID,
-					name: configuredModel,
-					id: `${VENDOR}/${configuredModel}`,
+					name: customModelId,
+					id: `${VENDOR}/${customModelId}`,
 					vendor: VENDOR,
 					version: '1.0',
 					family: 'custom',
@@ -133,11 +147,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 						[ChatAgentLocation.Chat]: false,
 					},
 					isUserSelectable: true,
-					capabilities: {
-						vision: true,
-						toolCalling: true,
-						agentMode: true,
-					},
+					capabilities: capabilitiesForAuthVariant(authVariant),
 					modelPickerCategory: undefined,
 				} satisfies ILanguageModelChatMetadata,
 			});
@@ -154,23 +164,27 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		token: CancellationToken,
 	): Promise<ILanguageModelChatResponse> {
 		// 1. Resolve model — catalog hit or custom model from config
-		const shortId = modelId.replace(`${VENDOR}/`, '');
-		const modelDef = findModelById(shortId);
+		let shortId = modelId.replace(`${VENDOR}/`, '');
+		let modelDef = findModelById(shortId);
 		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
 		const effectiveProvider = (modelDef?.provider ?? providerName) as ProviderName;
-		const apiType = modelDef?.apiType ?? providerToApiType(effectiveProvider);
-		const maxOutputTokens = modelDef?.maxOutputTokens ?? 8_192;
 
 		// 2. Resolve auth state through the same facade used by the Agent path
 		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+		let configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+		if (modelDef?.apiType === 'openai-codex') {
+			configuredAuthVariant = OPENAI_CODEX_AUTH_VARIANT;
+		}
 		const authVariant = normalizeAuthVariantForProvider(effectiveProvider, configuredAuthVariant);
+		shortId = modelForAuthVariant(effectiveProvider, shortId, authVariant);
+		modelDef = findModelById(shortId);
+		const apiType = effectiveProvider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
+			? 'openai-codex'
+			: modelDef?.apiType ?? providerToApiType(effectiveProvider);
+		const maxOutputTokens = modelDef?.maxOutputTokens ?? 8_192;
 		const authState = await this.authStateService.resolveAuth(effectiveProvider, shortId, authVariant, baseURL);
 		if (authState.source === 'missing' || !authState.auth) {
 			throw missingAuthError(authState);
-		}
-		if (authState.source === 'oauth' && authState.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-			throw codexTransportPendingError();
 		}
 
 		// 3. Create provider with resolved auth/base/capabilities

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Manual OpenAI Codex OAuth transport spike harness for Director-Code B1-5.
+ * Manual OpenAI Codex OAuth transport smoke harness for Director-Code B1-9.
  *
  * Usage:
  *   node dev/smoke-openai-codex-oauth.mjs
@@ -346,7 +346,7 @@ async function smokeApiOpenAI(accessToken) {
 	}
 
 	const model = process.env.OPENAI_CODEX_API_MODEL || DEFAULT_API_MODEL;
-	console.log(`\nCalling current OpenAI provider endpoint (${API_OPENAI_CHAT_COMPLETIONS_URL}) with model ${model}...`);
+	console.log(`\nCalling legacy api.openai.com Chat Completions endpoint (${API_OPENAI_CHAT_COMPLETIONS_URL}) with model ${model}...`);
 	const result = await postJson(API_OPENAI_CHAT_COMPLETIONS_URL, {
 		model,
 		max_tokens: 8,
@@ -422,8 +422,8 @@ function printVerdict({ apiOpenAI, codexModels, codexResponses }) {
 
 	console.log('\nTransport verdict:');
 	if (isAuthRejected(apiOpenAI) && codexReached) {
-		console.log('- Current openaiProvider target rejected the Codex OAuth token.');
-		console.log('- Codex backend returned a non-auth response. Freeze OpenAI OAuth as authVariant=openai-codex and target chatgpt.com/backend-api/codex.');
+		console.log('- api.openai.com rejected the Codex OAuth token.');
+		console.log('- Codex backend returned a non-auth response. OpenAI OAuth must stay on authVariant=openai-codex and target chatgpt.com/backend-api/codex.');
 		return true;
 	}
 	if (apiOpenAI && apiOpenAI.status >= 200 && apiOpenAI.status < 300) {
@@ -432,12 +432,12 @@ function printVerdict({ apiOpenAI, codexModels, codexResponses }) {
 	}
 	if (codexReached) {
 		console.log(`- Codex backend returned a non-auth response, while api.openai.com status was ${apiOpenAI?.status ?? 'skipped'}.`);
-		console.log('- Default next step: keep OpenAI OAuth on the independent openai-codex transport path.');
+		console.log('- Verdict: keep OpenAI OAuth on the independent openai-codex transport path.');
 		return true;
 	}
 
 	console.log('- Codex backend was not proven reachable with this token in this run.');
-	console.log('- Do not connect OpenAI OAuth UI until B1-5 has a clear endpoint/authVariant result.');
+	console.log('- Do not ship OpenAI OAuth until B1-9 has a successful Codex backend smoke.');
 	return false;
 }
 

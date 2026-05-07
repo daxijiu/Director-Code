@@ -59,6 +59,14 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.strictEqual(models.length, expected.length);
 		});
 
+		test("returns static allowlist for openai-codex when no OAuth token", async () => {
+			mockFetchFailAll();
+			const models = await resolver.resolveModels("openai", undefined, undefined, "missing:openai:openai-codex", OPENAI_CODEX_AUTH_VARIANT);
+			assert.ok(models.length > 0);
+			assert.ok(models.every(m => m.source === "static"));
+			assert.ok(models.every(m => m.apiType === "openai-codex"));
+		});
+
 		test("returns static models for gemini when no API key", async () => {
 			mockFetchFailAll();
 			const models = await resolver.resolveModels("gemini");
@@ -125,6 +133,30 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.ok(models.some(m => m.id === "gpt-4o"));
 			assert.ok(models.every(m => m.source === "api"));
 			assert.ok(!models.some(m => m.id === "dall-e-3"));
+		});
+
+		test("fetches OpenAI Codex models from chatgpt.com backend endpoint", async () => {
+			const urls: string[] = [];
+			mockFetch((url) => {
+				urls.push(url);
+				if (url.includes("chatgpt.com/backend-api/codex/models")) {
+					return new Response(JSON.stringify({
+						models: [
+							{ slug: "gpt-5.2-codex", display_name: "GPT-5.2 Codex", visibility: "list", priority: 2 },
+							{ slug: "gpt-5.5", display_name: "GPT-5.5", visibility: "list", priority: 1 },
+							{ slug: "hidden-model", visibility: "hidden" },
+							{ slug: "unsupported-model", supported_in_api: false },
+						],
+					}), { status: 200 });
+				}
+				return new Response("", { status: 404 });
+			});
+
+			const models = await resolver.resolveModels("openai", "oauth-token", undefined, "oauth:openai", OPENAI_CODEX_AUTH_VARIANT);
+			assert.deepStrictEqual(models.map(m => m.id), ["gpt-5.5", "gpt-5.2-codex"]);
+			assert.ok(models.every(m => m.source === "api"));
+			assert.ok(models.every(m => m.apiType === "openai-codex"));
+			assert.ok(urls.every(url => !url.includes("api.openai.com")));
 		});
 
 		test("filters out non-GPT/o-series models", async () => {
@@ -363,20 +395,23 @@ suite("AgentEngine - ModelResolverService", () => {
 			const codexModels = await resolver.resolveModels("openai", "oauth-token", undefined, "oauth:openai", OPENAI_CODEX_AUTH_VARIANT);
 
 			assert.ok(defaultModels.length > 0);
-			assert.strictEqual(codexModels.length, 0);
+			assert.ok(codexModels.length > 0);
+			assert.ok(codexModels.every(m => m.apiType === "openai-codex"));
 		});
 
 		test("openai-codex resolver bucket does not call api.openai.com models endpoint", async () => {
-			let fetchCount = 0;
-			mockFetch(() => {
-				fetchCount++;
+			const urls: string[] = [];
+			mockFetch((url) => {
+				urls.push(url);
 				return new Response(JSON.stringify({ data: [{ id: "gpt-4o" }] }), { status: 200 });
 			});
 
 			const models = await resolver.resolveModels("openai", "oauth-token", undefined, "oauth:openai", OPENAI_CODEX_AUTH_VARIANT);
 
-			assert.strictEqual(models.length, 0);
-			assert.strictEqual(fetchCount, 0);
+			assert.ok(models.length > 0);
+			assert.ok(urls.length > 0);
+			assert.ok(urls.every(url => !url.includes("api.openai.com")));
+			assert.ok(urls.some(url => url.includes("chatgpt.com/backend-api/codex/models")));
 		});
 	});
 

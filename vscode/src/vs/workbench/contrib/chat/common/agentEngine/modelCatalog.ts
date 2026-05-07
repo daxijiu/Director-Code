@@ -13,7 +13,7 @@
  */
 
 import type { ProviderName } from './apiKeyService.js';
-import type { ApiType } from './providers/providerTypes.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
 
 // ============================================================================
 // Model Definitions
@@ -55,12 +55,36 @@ export const MODEL_CATALOG: readonly IModelDefinition[] = [
 	{ id: 'moonshot-v1-auto', name: 'Moonshot v1 Auto', family: 'moonshot', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 128_000, maxOutputTokens: 4_096 },
 ];
 
+export const DEFAULT_OPENAI_CODEX_MODEL = 'gpt-5.2-codex';
+
+export const OPENAI_CODEX_MODEL_CATALOG: readonly IModelDefinition[] = [
+	{ id: 'gpt-5.5', name: 'GPT-5.5', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.4', name: 'GPT-5.4', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.2-codex', name: 'GPT-5.2 Codex', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.1-codex-max', name: 'GPT-5.1 Codex Max', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+	{ id: 'gpt-5.1-codex-mini', name: 'GPT-5.1 Codex Mini', family: 'openai-codex', apiType: 'openai-codex', provider: 'openai', maxInputTokens: 272_000, maxOutputTokens: 64_000 },
+];
+
 /**
  * Get models for a specific provider. For compatible providers, returns
  * the built-in presets (users can also type custom model IDs).
  */
 export function getModelsForProvider(provider: ProviderName): readonly IModelDefinition[] {
 	return MODEL_CATALOG.filter(m => m.provider === provider);
+}
+
+export function getOpenAICodexModels(): readonly IModelDefinition[] {
+	return OPENAI_CODEX_MODEL_CATALOG;
+}
+
+export function getModelsForProviderAndAuthVariant(provider: ProviderName, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): readonly IModelDefinition[] {
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return getOpenAICodexModels();
+	}
+	return getModelsForProvider(provider);
 }
 
 /**
@@ -71,11 +95,23 @@ export function getDefaultModel(provider: ProviderName): string {
 	return models.length > 0 ? models[0].id : '';
 }
 
+export function getDefaultModelForAuthVariant(provider: ProviderName, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): string {
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return DEFAULT_OPENAI_CODEX_MODEL;
+	}
+	const models = getModelsForProviderAndAuthVariant(provider, authVariant);
+	return models.length > 0 ? models[0].id : '';
+}
+
 /**
  * Find a model definition by ID (searches all providers).
  */
 export function findModelById(id: string): IModelDefinition | undefined {
-	return MODEL_CATALOG.find(m => m.id === id);
+	return MODEL_CATALOG.find(m => m.id === id) ?? OPENAI_CODEX_MODEL_CATALOG.find(m => m.id === id);
+}
+
+export function isOpenAICodexModel(id: string): boolean {
+	return OPENAI_CODEX_MODEL_CATALOG.some(m => m.id === id);
 }
 
 /**

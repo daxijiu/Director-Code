@@ -46,6 +46,13 @@ const DEFAULT_CAPABILITIES: Record<ApiType, ProviderCapabilities> = {
 		thinking: false,
 		agentMode: true,
 	},
+	'openai-codex': {
+		vision: false,
+		toolCalling: true,
+		streaming: true,
+		thinking: true,
+		agentMode: true,
+	},
 	'gemini-generative': {
 		vision: true,
 		toolCalling: true,

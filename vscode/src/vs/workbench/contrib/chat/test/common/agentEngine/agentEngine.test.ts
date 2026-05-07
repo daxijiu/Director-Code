@@ -258,11 +258,16 @@ suite("AgentEngine - Core Logic", () => {
 			assert.ok(provider.apiType);
 		});
 
-		test("all 3 providers work with engine's createMessage interface", () => {
-			const types = ["anthropic-messages", "openai-completions", "gemini-generative"] as const;
+		test("all providers work with engine's createMessage interface", () => {
+			const types = ["anthropic-messages", "openai-completions", "openai-codex", "gemini-generative"] as const;
 
 			for (const apiType of types) {
-				const provider = createProvider(apiType, { auth: { kind: 'api-key', value: "test" } });
+				const provider = createProvider(
+					apiType,
+					apiType === 'openai-codex'
+						? { auth: { kind: 'bearer', accessToken: "oauth-token" } }
+						: { auth: { kind: 'api-key', value: "test" } },
+				);
 				assert.strictEqual(typeof provider.createMessage, "function");
 			}
 		});

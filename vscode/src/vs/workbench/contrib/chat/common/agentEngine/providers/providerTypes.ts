@@ -19,7 +19,7 @@
 // API Type
 // --------------------------------------------------------------------------
 
-export type ApiType = 'anthropic-messages' | 'openai-completions' | 'gemini-generative';
+export type ApiType = 'anthropic-messages' | 'openai-completions' | 'openai-codex' | 'gemini-generative';
 
 // --------------------------------------------------------------------------
 // Normalized Request

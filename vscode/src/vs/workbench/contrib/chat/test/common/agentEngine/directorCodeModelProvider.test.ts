@@ -20,10 +20,13 @@ import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import {
 	MODEL_CATALOG,
+	OPENAI_CODEX_MODEL_CATALOG,
 	getModelsForProvider,
+	getModelsForProviderAndAuthVariant,
 	findModelById,
 } from '../../../common/agentEngine/modelCatalog.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
+import { OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
 import { estimateTokens } from '../../../common/agentEngine/tokens.js';
 
 suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
@@ -72,6 +75,16 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 
 			assert.deepStrictEqual(modelCounts, [3, 4, 2]);
 		});
+
+		test("openai-codex has an isolated static model group", () => {
+			const defaultOpenAI = getModelsForProvider("openai");
+			const codexOpenAI = getModelsForProviderAndAuthVariant("openai", OPENAI_CODEX_AUTH_VARIANT);
+
+			assert.strictEqual(defaultOpenAI.length, 4);
+			assert.ok(codexOpenAI.length > 0);
+			assert.ok(codexOpenAI.every(m => m.apiType === "openai-codex"));
+			assert.ok(codexOpenAI.every(m => m.provider === "openai"));
+		});
 	});
 
 	// ====================================================================
@@ -110,7 +123,7 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 	suite("Model Resolution", () => {
 
 		test("findModelById resolves all catalog models", () => {
-			for (const model of MODEL_CATALOG) {
+			for (const model of [...MODEL_CATALOG, ...OPENAI_CODEX_MODEL_CATALOG]) {
 				const found = findModelById(model.id);
 				assert.ok(found, `could not find model ${model.id}`);
 				assert.strictEqual(found!.apiType, model.apiType);
@@ -134,8 +147,13 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 		});
 
 		test("each model can create its provider", () => {
-			for (const model of MODEL_CATALOG) {
-				const provider = createProvider(model.apiType, { auth: { kind: 'api-key', value: "test" } });
+			for (const model of [...MODEL_CATALOG, ...OPENAI_CODEX_MODEL_CATALOG]) {
+				const provider = createProvider(
+					model.apiType,
+					model.apiType === 'openai-codex'
+						? { auth: { kind: 'bearer', accessToken: "oauth-token" } }
+						: { auth: { kind: 'api-key', value: "test" } },
+				);
 				assert.strictEqual(provider.apiType, model.apiType);
 				assert.ok(typeof provider.createMessage === "function");
 				assert.ok(typeof provider.createMessageStream === "function");

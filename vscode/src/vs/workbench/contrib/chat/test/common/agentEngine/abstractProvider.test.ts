@@ -8,6 +8,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
 import { AbstractDirectorCodeProvider, getDefaultCapabilities } from '../../../common/agentEngine/providers/abstractProvider.js';
 import { AnthropicProvider } from '../../../common/agentEngine/providers/anthropicProvider.js';
 import { OpenAIProvider } from '../../../common/agentEngine/providers/openaiProvider.js';
+import { OpenAICodexProvider } from '../../../common/agentEngine/providers/openaiCodexProvider.js';
 import { GeminiProvider } from '../../../common/agentEngine/providers/geminiProvider.js';
 import type { CreateMessageParams, CreateMessageResponse, StreamEvent, ApiType, ProviderCapabilities } from '../../../common/agentEngine/providers/providerTypes.js';
 
@@ -122,6 +123,12 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 			assert.strictEqual(p.apiType, "openai-completions");
 		});
 
+		test("OpenAICodexProvider extends AbstractDirectorCodeProvider", () => {
+			const p = new OpenAICodexProvider({ auth: { kind: 'bearer', accessToken: "oauth-token" } });
+			assert.ok(p instanceof AbstractDirectorCodeProvider);
+			assert.strictEqual(p.apiType, "openai-codex");
+		});
+
 		test("GeminiProvider extends AbstractDirectorCodeProvider", () => {
 			const p = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 			assert.ok(p instanceof AbstractDirectorCodeProvider);
@@ -131,14 +138,18 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 		test("all providers expose capabilities", () => {
 			const anthropic = new AnthropicProvider({ auth: { kind: 'api-key', value: "key" } });
 			const openai = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			const codex = new OpenAICodexProvider({ auth: { kind: 'bearer', accessToken: "oauth-token" } });
 			const gemini = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
 
 			assert.ok(anthropic.capabilities);
 			assert.ok(openai.capabilities);
+			assert.ok(codex.capabilities);
 			assert.ok(gemini.capabilities);
 
 			assert.strictEqual(anthropic.capabilities.thinking, true);
 			assert.strictEqual(openai.capabilities.thinking, false);
+			assert.strictEqual(codex.capabilities.vision, false);
+			assert.strictEqual(codex.capabilities.thinking, true);
 			assert.strictEqual(gemini.capabilities.thinking, true);
 		});
 
@@ -168,6 +179,13 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 		test("returns correct defaults for openai-completions", () => {
 			const caps = getDefaultCapabilities("openai-completions");
 			assert.strictEqual(caps.thinking, false);
+			assert.strictEqual(caps.toolCalling, true);
+		});
+
+		test("returns correct defaults for openai-codex", () => {
+			const caps = getDefaultCapabilities("openai-codex");
+			assert.strictEqual(caps.vision, false);
+			assert.strictEqual(caps.thinking, true);
 			assert.strictEqual(caps.toolCalling, true);
 		});
 
