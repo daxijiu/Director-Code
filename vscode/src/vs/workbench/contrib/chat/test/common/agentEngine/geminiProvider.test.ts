@@ -100,10 +100,12 @@ suite("AgentEngine - GeminiProvider", () => {
 
 		test("sends correct request to generateContent endpoint", async () => {
 			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
 			let capturedBody: any = null;
 
 			mockFetch((url, init) => {
 				capturedUrl = url;
+				capturedHeaders = init.headers as Record<string, string>;
 				capturedBody = JSON.parse(init.body as string);
 				return new Response(JSON.stringify(makeGeminiResponse()), {
 					status: 200,
@@ -115,9 +117,27 @@ suite("AgentEngine - GeminiProvider", () => {
 			await provider.createMessage(makeDefaultParams());
 
 			assert.ok(capturedUrl.includes("/v1beta/models/gemini-2.5-pro:generateContent"));
-			assert.ok(capturedUrl.includes("key=gemini-key"));
+			assert.ok(!capturedUrl.includes("key=gemini-key"));
+			assert.strictEqual(capturedHeaders["x-goog-api-key"], "gemini-key");
 			assert.ok(capturedBody.contents);
 			assert.strictEqual(capturedBody.generationConfig.maxOutputTokens, 1024);
+		});
+
+		test("supports legacy query API key mode", async () => {
+			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
+
+			mockFetch((url, init) => {
+				capturedUrl = url;
+				capturedHeaders = init.headers as Record<string, string>;
+				return new Response(JSON.stringify(makeGeminiResponse()), { status: 200 });
+			});
+
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "gemini-key" }, geminiKeyInUrl: true });
+			await provider.createMessage(makeDefaultParams());
+
+			assert.ok(capturedUrl.includes("key=gemini-key"));
+			assert.strictEqual(capturedHeaders["x-goog-api-key"], undefined);
 		});
 
 		test("uses custom baseURL", async () => {
@@ -397,13 +417,15 @@ suite("AgentEngine - GeminiProvider", () => {
 
 		test("uses streamGenerateContent endpoint with alt=sse", async () => {
 			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
 
 			const sseLines = [
 				"data: " + JSON.stringify(makeGeminiResponse()),
 			];
 
-			mockFetch((url) => {
+			mockFetch((url, init) => {
 				capturedUrl = url;
+				capturedHeaders = init.headers as Record<string, string>;
 				return new Response(createSSEStream(sseLines), { status: 200 });
 			});
 
@@ -412,6 +434,8 @@ suite("AgentEngine - GeminiProvider", () => {
 
 			assert.ok(capturedUrl.includes(":streamGenerateContent"));
 			assert.ok(capturedUrl.includes("alt=sse"));
+			assert.ok(!capturedUrl.includes("key="));
+			assert.strictEqual(capturedHeaders["x-goog-api-key"], "key");
 		});
 
 		test("yields text events", async () => {

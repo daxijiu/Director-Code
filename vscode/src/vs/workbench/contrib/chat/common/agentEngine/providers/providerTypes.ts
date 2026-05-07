@@ -56,6 +56,7 @@ export type ProviderAuth =
 export interface ProviderOptions {
 	readonly auth: ProviderAuth;
 	readonly baseURL?: string;
+	readonly geminiKeyInUrl?: boolean;
 }
 
 /**

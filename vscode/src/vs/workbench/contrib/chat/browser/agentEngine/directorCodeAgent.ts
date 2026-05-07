@@ -21,6 +21,7 @@ import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
 import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
+import { CONFIG_GEMINI_KEY_IN_URL } from '../../common/agentEngine/geminiAuth.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../common/agentEngine/modelCatalog.js';
@@ -161,6 +162,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 				auth: resolved.auth,
 				baseURL: resolved.baseURL,
 				capabilities: resolved.capabilities,
+				geminiKeyInUrl: this.configurationService.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true,
 			});
 
 			// 4. Set up tool bridge

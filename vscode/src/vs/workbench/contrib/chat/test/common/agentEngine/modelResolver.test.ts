@@ -29,10 +29,16 @@ suite("AgentEngine - ModelResolverService", () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	function mockFetch(handler: (url: string) => Response | Promise<Response>) {
-		globalThis.fetch = ((url: string | URL | Request, _init?: RequestInit) => {
-			return Promise.resolve(handler(String(url)));
+	function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
+		globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => {
+			return Promise.resolve(handler(String(url), init));
 		}) as any;
+	}
+
+	function createMockConfigurationService(values: Record<string, unknown> = {}) {
+		return {
+			getValue: (key: string) => values[key],
+		};
 	}
 
 	function mockFetchFailAll() {
@@ -247,8 +253,12 @@ suite("AgentEngine - ModelResolverService", () => {
 		});
 
 		test("fetches Gemini models from /v1beta/models endpoint", async () => {
-			mockFetch((url) => {
+			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
+			mockFetch((url, init) => {
 				if (url.includes("/v1beta/models")) {
+					capturedUrl = url;
+					capturedHeaders = init?.headers as Record<string, string>;
 					return new Response(JSON.stringify({
 						models: [
 							{ name: "models/gemini-2.5-pro", displayName: "Gemini 2.5 Pro", inputTokenLimit: 1000000, outputTokenLimit: 65536, supportedGenerationMethods: ["generateContent"] },
@@ -264,6 +274,33 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.ok(models.length >= 2);
 			assert.ok(models.some(m => m.id === "gemini-2.5-pro"));
 			assert.ok(!models.some(m => m.id === "gemini-embedding-001"));
+			assert.ok(capturedUrl.endsWith("/v1beta/models"));
+			assert.ok(!capturedUrl.includes("key=key"));
+			assert.strictEqual(capturedHeaders["x-goog-api-key"], "key");
+		});
+
+		test("fetches Gemini models with query API key fallback when configured", async () => {
+			const queryResolver = new ModelResolverService(undefined, undefined, createMockConfigurationService({ 'directorCode.ai.geminiKeyInUrl': true }) as any);
+			disposables.add(queryResolver);
+			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
+			mockFetch((url, init) => {
+				if (url.includes("/v1beta/models")) {
+					capturedUrl = url;
+					capturedHeaders = init?.headers as Record<string, string>;
+					return new Response(JSON.stringify({
+						models: [
+							{ name: "models/gemini-2.5-pro", displayName: "Gemini 2.5 Pro", inputTokenLimit: 1000000, outputTokenLimit: 65536, supportedGenerationMethods: ["generateContent"] },
+						],
+					}), { status: 200 });
+				}
+				return new Response("", { status: 404 });
+			});
+
+			const models = await queryResolver.resolveModels("gemini", "gemini-key");
+			assert.ok(models.some(m => m.id === "gemini-2.5-pro"));
+			assert.ok(capturedUrl.includes("key=gemini-key"));
+			assert.strictEqual(capturedHeaders["x-goog-api-key"], undefined);
 		});
 
 		test("skips API layer for Anthropic (no models endpoint)", async () => {

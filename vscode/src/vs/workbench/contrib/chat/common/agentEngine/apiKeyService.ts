@@ -12,11 +12,13 @@
  */
 
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ApiType, ProviderCapabilities } from './providers/providerTypes.js';
 import { buildProviderUrl } from './providers/abstractProvider.js';
+import { buildGeminiAuthenticatedRequest, CONFIG_GEMINI_KEY_IN_URL } from './geminiAuth.js';
 
 // ============================================================================
 // Constants
@@ -286,6 +288,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 
 	constructor(
 		@ISecretStorageService private readonly secretService: ISecretStorageService,
+		@IConfigurationService private readonly configurationService?: IConfigurationService,
 	) {
 		super();
 
@@ -439,10 +442,16 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	private async _testGemini(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
 		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
 		const testModel = model || 'gemini-2.5-flash';
-		const response = await fetch(`${base}/v1beta/models/${testModel}:generateContent?key=${apiKey}`, {
+		const request = buildGeminiAuthenticatedRequest(
+			`${base}/v1beta/models/${testModel}:generateContent`,
+			apiKey,
+			this._useGeminiKeyInUrl(),
+		);
+		const response = await fetch(request.url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
+				...request.headers,
 			},
 			body: JSON.stringify({
 				contents: [{ parts: [{ text: 'hi' }] }],
@@ -456,6 +465,10 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
 		}
 		return { success: true, model: testModel };
+	}
+
+	private _useGeminiKeyInUrl(): boolean {
+		return this.configurationService?.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true;
 	}
 
 	// ========================================================================

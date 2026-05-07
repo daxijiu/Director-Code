@@ -32,8 +32,10 @@ import type {
 	NormalizedResponseBlock,
 	TokenUsage,
 	ApiType,
+	ProviderConfig,
 } from './providerTypes.js';
 import { AbstractDirectorCodeProvider } from './abstractProvider.js';
+import { buildGeminiAuthenticatedRequest } from '../geminiAuth.js';
 
 // ============================================================================
 // Gemini-specific types
@@ -88,6 +90,12 @@ function generateGeminiToolId(index: number): string {
 
 export class GeminiProvider extends AbstractDirectorCodeProvider {
 	readonly apiType = 'gemini-generative' as const;
+	private readonly keyInUrl: boolean;
+
+	constructor(opts: ProviderConfig) {
+		super(opts);
+		this.keyInUrl = opts.geminiKeyInUrl === true;
+	}
 
 	protected getApiType(): ApiType { return 'gemini-generative'; }
 	protected getDefaultBaseURL(): string { return 'https://generativelanguage.googleapis.com'; }
@@ -99,11 +107,15 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 
 	async createMessage(params: CreateMessageParams): Promise<CreateMessageResponse> {
 		const body = this.buildRequestBody(params);
-		const url = `${this.baseURL}/v1beta/models/${params.model}:generateContent?key=${this.getAuthValue()}`; // [Director-Code] B1-1
+		const request = buildGeminiAuthenticatedRequest(
+			`${this.baseURL}/v1beta/models/${params.model}:generateContent`,
+			this.getAuthValue(),
+			this.keyInUrl,
+		);
 
-		const response = await this.fetchWithErrorHandling(url, {
+		const response = await this.fetchWithErrorHandling(request.url, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...request.headers },
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
 		});
@@ -127,11 +139,15 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 
 	async *createMessageStream(params: CreateMessageParams): AsyncGenerator<StreamEvent> {
 		const body = this.buildRequestBody(params);
-		const url = `${this.baseURL}/v1beta/models/${params.model}:streamGenerateContent?alt=sse&key=${this.getAuthValue()}`; // [Director-Code] B1-1
+		const request = buildGeminiAuthenticatedRequest(
+			`${this.baseURL}/v1beta/models/${params.model}:streamGenerateContent?alt=sse`,
+			this.getAuthValue(),
+			this.keyInUrl,
+		);
 
-		const response = await this.fetchWithErrorHandling(url, {
+		const response = await this.fetchWithErrorHandling(request.url, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...request.headers },
 			body: JSON.stringify(body),
 			signal: params.abortSignal,
 		});

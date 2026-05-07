@@ -15,12 +15,14 @@
  */
 
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { IApiKeyService, type IApiKeyChangeEvent, type ProviderName } from './apiKeyService.js';
 import { MODEL_CATALOG, getModelsForProvider, getOpenAICodexModels, type IModelDefinition } from './modelCatalog.js';
 import { IOAuthService } from './oauthService.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
+import { buildGeminiAuthenticatedRequest, CONFIG_GEMINI_KEY_IN_URL } from './geminiAuth.js';
 
 // ============================================================================
 // Constants
@@ -149,6 +151,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	constructor(
 		@IApiKeyService apiKeyService?: IApiKeyService,
 		@IOAuthService oauthService?: IOAuthService,
+		@IConfigurationService private readonly configurationService?: IConfigurationService,
 	) {
 		super();
 
@@ -353,7 +356,13 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
 		try {
-			const response = await fetch(`${base}/v1beta/models?key=${apiKey}`, {
+			const request = buildGeminiAuthenticatedRequest(
+				`${base}/v1beta/models`,
+				apiKey,
+				this._useGeminiKeyInUrl(),
+			);
+			const response = await fetch(request.url, {
+				headers: request.headers,
 				signal: controller.signal,
 			});
 
@@ -368,6 +377,10 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		} finally {
 			clearTimeout(timeout);
 		}
+	}
+
+	private _useGeminiKeyInUrl(): boolean {
+		return this.configurationService?.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true;
 	}
 
 	// ========================================================================

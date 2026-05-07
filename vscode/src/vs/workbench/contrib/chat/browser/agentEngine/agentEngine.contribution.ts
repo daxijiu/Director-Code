@@ -102,6 +102,11 @@ configurationRegistry.registerConfiguration({
 			default: '',
 			description: 'Optional dedicated model ID for conversation compaction. Leave empty to use the provider default small model, then fall back to the active model if unavailable.',
 		},
+		'directorCode.ai.geminiKeyInUrl': {
+			type: 'boolean',
+			default: false,
+			description: 'Send Gemini API keys in the URL query string instead of the x-goog-api-key header. Leave disabled unless a proxy or compatibility issue requires the legacy query mode.',
+		},
 		'directorCode.ai.maxTurns': {
 			type: 'number',
 			default: 25,

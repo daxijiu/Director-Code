@@ -58,6 +58,12 @@ class MockSecretStorageService implements ISecretStorageService {
 	}
 }
 
+function createMockConfigurationService(values: Record<string, unknown> = {}) {
+	return {
+		getValue: (key: string) => values[key],
+	};
+}
+
 suite("AgentEngine - ApiKeyService", () => {
 
 	const disposables = new DisposableStore();
@@ -313,6 +319,47 @@ suite("AgentEngine - ApiKeyService", () => {
 				assert.strictEqual(result.success, true);
 				assert.strictEqual(capturedBody.max_tokens, undefined);
 				assert.strictEqual(capturedBody.max_completion_tokens, 1);
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
+		test("Gemini testConnection sends API key in header by default", async () => {
+			const originalFetch = globalThis.fetch;
+			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
+			globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => {
+				capturedUrl = String(url);
+				capturedHeaders = init!.headers as Record<string, string>;
+				return Promise.resolve(new Response("{}", { status: 200 }));
+			}) as any;
+			try {
+				const result = await apiKeyService.testConnection("gemini", "gemini-key", undefined, "gemini-2.5-flash");
+				assert.strictEqual(result.success, true);
+				assert.ok(capturedUrl.endsWith("/v1beta/models/gemini-2.5-flash:generateContent"));
+				assert.ok(!capturedUrl.includes("key=gemini-key"));
+				assert.strictEqual(capturedHeaders["x-goog-api-key"], "gemini-key");
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
+		test("Gemini testConnection supports query API key fallback", async () => {
+			const originalFetch = globalThis.fetch;
+			let capturedUrl = "";
+			let capturedHeaders: Record<string, string> = {};
+			const service = new ApiKeyService(mockSecretService as any, createMockConfigurationService({ 'directorCode.ai.geminiKeyInUrl': true }) as any);
+			disposables.add(service);
+			globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => {
+				capturedUrl = String(url);
+				capturedHeaders = init!.headers as Record<string, string>;
+				return Promise.resolve(new Response("{}", { status: 200 }));
+			}) as any;
+			try {
+				const result = await service.testConnection("gemini", "gemini-key", undefined, "gemini-2.5-flash");
+				assert.strictEqual(result.success, true);
+				assert.ok(capturedUrl.includes("key=gemini-key"));
+				assert.strictEqual(capturedHeaders["x-goog-api-key"], undefined);
 			} finally {
 				globalThis.fetch = originalFetch;
 			}
