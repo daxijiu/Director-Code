@@ -9,9 +9,14 @@ import {
 	MODEL_CATALOG,
 	getModelsForProvider,
 	getDefaultModel,
+	getModelsForProviderAndAuthVariant,
+	getDefaultModelForAuthVariant,
 	providerSupportsCustomModels,
 } from '../../../common/agentEngine/modelCatalog.js';
 import { SUPPORTED_PROVIDERS, BUILTIN_PROVIDERS, type ProviderName } from '../../../common/agentEngine/apiKeyService.js';
+import { PendingConfigurationWrites } from '../../../common/agentEngine/settingsWriteQueue.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
+import { OPENAI_CODEX_OAUTH_LABEL } from '../../../common/agentEngine/oauthService.js';
 
 suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
@@ -115,6 +120,61 @@ suite("AgentEngine - ProviderSettingsWidget (Logic)", () => {
 
 		test("returns empty string for anthropic-compatible", () => {
 			assert.strictEqual(getDefaultModel("anthropic-compatible"), "");
+		});
+	});
+
+	suite("Auth Variant Models", () => {
+
+		test("OpenAI Codex auth variant has isolated models", () => {
+			const defaultModels = getModelsForProviderAndAuthVariant("openai", DEFAULT_AUTH_VARIANT);
+			const codexModels = getModelsForProviderAndAuthVariant("openai", OPENAI_CODEX_AUTH_VARIANT);
+
+			assert.ok(defaultModels.length > 0);
+			assert.ok(codexModels.length > 0);
+			assert.notDeepStrictEqual(codexModels.map(m => m.id), defaultModels.map(m => m.id));
+		});
+
+		test("OpenAI Codex OAuth label stays explicit", () => {
+			assert.strictEqual(OPENAI_CODEX_OAUTH_LABEL, "OpenAI (ChatGPT/Codex OAuth)");
+		});
+
+		test("anthropic-compatible does not provide an empty model default as a value to force-save", () => {
+			assert.strictEqual(getDefaultModelForAuthVariant("anthropic-compatible", DEFAULT_AUTH_VARIANT), "");
+		});
+	});
+
+	suite("PendingConfigurationWrites", () => {
+
+		test("debounces repeated writes and flushes latest values", async () => {
+			const writes: Array<{ key: string; value: unknown }> = [];
+			const queue = new PendingConfigurationWrites((key, value) => {
+				writes.push({ key, value });
+			}, 10);
+
+			queue.queue("directorCode.ai.model", "old");
+			queue.queue("directorCode.ai.model", "new");
+			queue.queue("directorCode.ai.maxTurns", 42);
+			await queue.flush();
+
+			assert.deepStrictEqual(writes, [
+				{ key: "directorCode.ai.model", value: "new" },
+				{ key: "directorCode.ai.maxTurns", value: 42 },
+			]);
+		});
+
+		test("dispose flushes pending writes", async () => {
+			const writes: Array<{ key: string; value: unknown }> = [];
+			const queue = new PendingConfigurationWrites((key, value) => {
+				writes.push({ key, value });
+			}, 1000);
+
+			queue.queue("directorCode.ai.baseURL", "https://example.test");
+			queue.dispose(true);
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			assert.deepStrictEqual(writes, [
+				{ key: "directorCode.ai.baseURL", value: "https://example.test" },
+			]);
 		});
 	});
 

@@ -17,7 +17,7 @@
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { IApiKeyService, SUPPORTED_PROVIDERS, type ProviderName } from './apiKeyService.js';
+import { IApiKeyService, type IApiKeyChangeEvent, type ProviderName } from './apiKeyService.js';
 import { MODEL_CATALOG, getModelsForProvider, getOpenAICodexModels, type IModelDefinition } from './modelCatalog.js';
 import { IOAuthService } from './oauthService.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
@@ -465,8 +465,8 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			.forEach(([key]) => this._cache.delete(key));
 	}
 
-	private _providerFromApiKeyEvent(event: string): ProviderName | undefined {
-		return SUPPORTED_PROVIDERS.find(provider => event === provider || event.startsWith(`${provider}.`));
+	private _providerFromApiKeyEvent(event: IApiKeyChangeEvent): ProviderName | undefined {
+		return event.provider;
 	}
 
 	private _isRelevantOpenAIModel(id: string): boolean {

@@ -31,9 +31,17 @@ import { ProviderSettingsWidget } from './providerSettingsWidget.js';
 import { ApiKeysWidget } from './apiKeysWidget.js';
 import { OAuthWidget } from './oauthWidget.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IApiKeyService, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { PROVIDER_DISPLAY_NAMES, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { IAuthStateService, normalizeAuthVariantForProvider } from '../../common/agentEngine/authStateService.js';
+import { getDefaultModelForAuthVariant } from '../../common/agentEngine/modelCatalog.js';
+import { type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 
 const $ = DOM.$;
+
+const CONFIG_PROVIDER = 'directorCode.ai.provider';
+const CONFIG_MODEL = 'directorCode.ai.model';
+const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 
 // ============================================================================
 // Editor Icon
@@ -119,6 +127,7 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
+		void this.flushPendingWrites();
 		this.editorDisposables.clear();
 
 		this.bodyContainer = DOM.append(parent, $('.director-code-settings-editor'));
@@ -152,6 +161,7 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 		this.apiKeysWidget = this.editorDisposables.add(
 			this.instantiationService.createInstance(ApiKeysWidget)
 		);
+		this.apiKeysWidget.setBeforeTestFlush(() => this.flushPendingWrites());
 		this.bodyContainer.appendChild(this.apiKeysWidget.element);
 
 		// Separator
@@ -161,7 +171,18 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 		this.oauthWidget = this.editorDisposables.add(
 			this.instantiationService.createInstance(OAuthWidget)
 		);
+		this.oauthWidget.setBeforeOAuthActionFlush(() => this.flushPendingWrites());
+		this.oauthWidget.setActiveProvider(this.getCurrentProvider());
 		this.bodyContainer.appendChild(this.oauthWidget.element);
+
+		this.editorDisposables.add(this.instantiationService.invokeFunction(accessor => {
+			const configService = accessor.get(IConfigurationService);
+			return configService.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration(CONFIG_PROVIDER)) {
+					this.oauthWidget?.setActiveProvider(this.getCurrentProvider());
+				}
+			});
+		}));
 	}
 
 	override async setInput(
@@ -186,6 +207,20 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 	override focus(): void {
 		super.focus();
 	}
+
+	async flushPendingWrites(): Promise<void> {
+		await this.providerSettingsWidget?.flushPendingWrites();
+	}
+
+	override dispose(): void {
+		void this.flushPendingWrites();
+		super.dispose();
+	}
+
+	private getCurrentProvider(): ProviderName {
+		const configService = this.instantiationService.invokeFunction(accessor => accessor.get(IConfigurationService));
+		return (configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+	}
 }
 
 // ============================================================================
@@ -202,11 +237,13 @@ class DirectorCodeStatusBar extends Disposable {
 	readonly element: HTMLElement;
 	private providerValue!: HTMLElement;
 	private modelValue!: HTMLElement;
-	private apiKeyValue!: HTMLElement;
+	private authValue!: HTMLElement;
+	private readyValue!: HTMLElement;
+	private refreshGeneration = 0;
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
-		@IApiKeyService private readonly apiKeyService: IApiKeyService,
+		@IAuthStateService private readonly authStateService: IAuthStateService,
 	) {
 		super();
 		this.element = $('.dc-status-bar');
@@ -214,12 +251,17 @@ class DirectorCodeStatusBar extends Disposable {
 		this.refresh();
 
 		this._register(this.configService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('directorCode.ai.provider') || e.affectsConfiguration('directorCode.ai.model')) {
+			if (
+				e.affectsConfiguration(CONFIG_PROVIDER) ||
+				e.affectsConfiguration(CONFIG_MODEL) ||
+				e.affectsConfiguration(CONFIG_BASE_URL) ||
+				e.affectsConfiguration(CONFIG_AUTH_VARIANT)
+			) {
 				this.refresh();
 			}
 		}));
 
-		this._register(this.apiKeyService.onDidChangeApiKey(() => this.refresh()));
+		this._register(this.authStateService.onDidChangeAuthState(() => this.refresh()));
 	}
 
 	private create(): void {
@@ -233,27 +275,56 @@ class DirectorCodeStatusBar extends Disposable {
 		DOM.append(modelItem, $('.dc-status-bar-label')).textContent = 'Model:';
 		this.modelValue = DOM.append(modelItem, $('.dc-status-bar-value'));
 
-		// API Key status
-		const keyItem = DOM.append(this.element, $('.dc-status-bar-item'));
-		DOM.append(keyItem, $('.dc-status-bar-label')).textContent = 'API Key:';
-		this.apiKeyValue = DOM.append(keyItem, $('.dc-status-bar-value'));
+		// Auth method
+		const authItem = DOM.append(this.element, $('.dc-status-bar-item'));
+		DOM.append(authItem, $('.dc-status-bar-label')).textContent = 'Auth:';
+		this.authValue = DOM.append(authItem, $('.dc-status-bar-value'));
+
+		// Ready state
+		const readyItem = DOM.append(this.element, $('.dc-status-bar-item'));
+		DOM.append(readyItem, $('.dc-status-bar-label')).textContent = 'Status:';
+		this.readyValue = DOM.append(readyItem, $('.dc-status-bar-value'));
 	}
 
 	private async refresh(): Promise<void> {
-		const provider = this.configService.getValue<string>('directorCode.ai.provider') || 'anthropic';
-		const model = this.configService.getValue<string>('directorCode.ai.model') || 'claude-sonnet-4-6';
-		const hasKey = await this.apiKeyService.hasApiKey(provider as ProviderName);
+		const generation = ++this.refreshGeneration;
+		const provider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+		const authVariant = normalizeAuthVariantForProvider(provider, this.configService.getValue<string>(CONFIG_AUTH_VARIANT) as AuthVariantName | undefined);
+		const model = this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant);
+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
+		const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
+		if (generation !== this.refreshGeneration) {
+			return;
+		}
 
-		this.providerValue.textContent = provider;
+		this.providerValue.textContent = PROVIDER_DISPLAY_NAMES[provider] || provider;
 		this.modelValue.textContent = model;
 
-		this.apiKeyValue.classList.remove('dc-ready', 'dc-not-ready');
-		if (hasKey) {
-			this.apiKeyValue.textContent = 'Ready';
-			this.apiKeyValue.classList.add('dc-ready');
+		this.authValue.textContent = this.authMethodLabel(authState.source, authState.metadata?.sourceLabel);
+
+		this.readyValue.classList.remove('dc-ready', 'dc-not-ready');
+		if (authState.source === 'oauth') {
+			this.readyValue.textContent = 'Logged in';
+			this.readyValue.classList.add('dc-ready');
+		} else if (authState.source === 'provider-key' || authState.source === 'per-model-key') {
+			this.readyValue.textContent = 'Ready';
+			this.readyValue.classList.add('dc-ready');
 		} else {
-			this.apiKeyValue.textContent = 'Not set';
-			this.apiKeyValue.classList.add('dc-not-ready');
+			this.readyValue.textContent = 'Needs config';
+			this.readyValue.classList.add('dc-not-ready');
+		}
+	}
+
+	private authMethodLabel(source: string, sourceLabel: string | undefined): string {
+		switch (source) {
+			case 'oauth':
+				return sourceLabel || 'OAuth';
+			case 'per-model-key':
+				return 'Per-model API key';
+			case 'provider-key':
+				return 'API key';
+			default:
+				return 'Missing';
 		}
 	}
 }

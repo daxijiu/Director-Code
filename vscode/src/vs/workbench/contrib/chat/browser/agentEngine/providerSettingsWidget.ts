@@ -19,7 +19,11 @@ import { localize } from '../../../../../nls.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { ConfigurationTarget } from '../../../../../platform/configuration/common/configuration.js';
 import { SUPPORTED_PROVIDERS, PROVIDER_DISPLAY_NAMES, providerRequiresBaseURL, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
-import { getModelsForProvider, getDefaultModel, providerSupportsCustomModels } from '../../common/agentEngine/modelCatalog.js';
+import { IAuthStateService, normalizeAuthVariantForProvider } from '../../common/agentEngine/authStateService.js';
+import { IModelResolverService } from '../../common/agentEngine/modelResolver.js';
+import { getModelsForProviderAndAuthVariant, getDefaultModelForAuthVariant, providerSupportsCustomModels } from '../../common/agentEngine/modelCatalog.js';
+import { PendingConfigurationWrites } from '../../common/agentEngine/settingsWriteQueue.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 
 const $ = DOM.$;
 
@@ -30,9 +34,11 @@ const $ = DOM.$;
 const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
+const CONFIG_DEBOUNCE_DELAY_MS = 500;
 
 // ============================================================================
 // ProviderSettingsWidget
@@ -46,22 +52,31 @@ export class ProviderSettingsWidget extends Disposable {
 	readonly element: HTMLElement;
 
 	private providerSelect!: HTMLSelectElement;
+	private authVariantRow!: HTMLElement;
+	private authVariantSelect!: HTMLSelectElement;
 	private modelSelect!: HTMLSelectElement;
 	private modelCustomInput!: HTMLInputElement;
 	private modelCustomRow!: HTMLElement;
 	private baseURLInput!: HTMLInputElement;
 	private baseURLRow!: HTMLElement;
 	private baseURLHint!: HTMLElement;
+	private refreshModelsBtn!: HTMLButtonElement;
+	private refreshModelsResult!: HTMLElement;
 	private maxTurnsInput!: HTMLInputElement;
 	private maxTokensInput!: HTMLInputElement;
 	private maxInputTokensInput!: HTMLInputElement;
 
 	private _updating = false;
+	private readonly pendingWrites: PendingConfigurationWrites;
+	private authRefreshGeneration = 0;
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
+		@IAuthStateService private readonly authStateService: IAuthStateService,
+		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 	) {
 		super();
+		this.pendingWrites = new PendingConfigurationWrites((key, value) => this.writeConfigNow(key, value), CONFIG_DEBOUNCE_DELAY_MS);
 
 		this.element = $('.director-code-provider-settings-widget');
 		this.create(this.element);
@@ -73,11 +88,18 @@ export class ProviderSettingsWidget extends Disposable {
 				e.affectsConfiguration(CONFIG_PROVIDER) ||
 				e.affectsConfiguration(CONFIG_MODEL) ||
 				e.affectsConfiguration(CONFIG_BASE_URL) ||
+				e.affectsConfiguration(CONFIG_AUTH_VARIANT) ||
 				e.affectsConfiguration(CONFIG_MAX_TURNS) ||
 				e.affectsConfiguration(CONFIG_MAX_TOKENS) ||
 				e.affectsConfiguration(CONFIG_MAX_INPUT_TOKENS)
 			)) {
 				this.loadFromConfig();
+			}
+		}));
+
+		this._register(this.authStateService.onDidChangeAuthState(provider => {
+			if (provider === this.getCurrentProvider()) {
+				void this.refreshAuthBoundUI();
 			}
 		}));
 	}
@@ -98,12 +120,27 @@ export class ProviderSettingsWidget extends Disposable {
 			SUPPORTED_PROVIDERS.map(p => ({ value: p, label: PROVIDER_DISPLAY_NAMES[p] })),
 		);
 
+		this.authVariantRow = DOM.append(form, $('.dc-form-row'));
+		const authVariantLabel = DOM.append(this.authVariantRow, $<HTMLLabelElement>('label.dc-form-label'));
+		authVariantLabel.textContent = localize('providerSettings.authMethod', 'Authentication');
+		this.authVariantSelect = DOM.append(this.authVariantRow, $<HTMLSelectElement>('select.dc-form-select'));
+		this.appendOption(this.authVariantSelect, DEFAULT_AUTH_VARIANT, localize('providerSettings.authDefault', 'API Key / OpenAI API'));
+		this.appendOption(this.authVariantSelect, OPENAI_CODEX_AUTH_VARIANT, localize('providerSettings.authOpenAICodex', 'OpenAI (ChatGPT/Codex OAuth)'));
+		const authVariantHint = DOM.append(this.authVariantRow, $('.dc-form-hint'));
+		authVariantHint.textContent = localize('providerSettings.authHint', 'OAuth is only available for supported providers and is resolved separately from API keys.');
+
 		// Model select (populated dynamically from catalog)
 		this.modelSelect = this.createSelectRow(
 			form,
 			localize('providerSettings.model', 'Model'),
 			[],
 		);
+
+		const refreshRow = DOM.append(form, $('.dc-action-row.dc-model-refresh-row'));
+		this.refreshModelsBtn = DOM.append(refreshRow, $<HTMLButtonElement>('button.dc-btn.dc-btn-secondary'));
+		this.refreshModelsBtn.type = 'button';
+		this.refreshModelsBtn.textContent = localize('providerSettings.refreshModels', 'Refresh Models');
+		this.refreshModelsResult = DOM.append(refreshRow, $('.dc-test-result'));
 
 		// Custom model input (shown for compatible providers)
 		this.modelCustomRow = DOM.append(form, $('.dc-form-row'));
@@ -160,38 +197,47 @@ export class ProviderSettingsWidget extends Disposable {
 		this._register(DOM.addDisposableListener(this.providerSelect, 'change', () => {
 			this.onProviderChanged();
 		}));
+		this._register(DOM.addDisposableListener(this.authVariantSelect, 'change', () => {
+			this.onAuthVariantChanged();
+		}));
 		this._register(DOM.addDisposableListener(this.modelSelect, 'change', () => {
 			const value = this.modelSelect.value;
-			this.saveToConfig(CONFIG_MODEL, value);
+			if (!value) {
+				return;
+			}
+			this.queueConfigWrite(CONFIG_MODEL, value);
 			if (this.modelCustomInput) {
 				this.modelCustomInput.value = value;
 			}
 		}));
-		this._register(DOM.addDisposableListener(this.modelCustomInput, 'change', () => {
+		this._register(DOM.addDisposableListener(this.refreshModelsBtn, 'click', () => {
+			void this.refreshModels();
+		}));
+		this._register(DOM.addDisposableListener(this.modelCustomInput, 'input', () => {
 			const value = this.modelCustomInput.value.trim();
 			if (value) {
-				this.saveToConfig(CONFIG_MODEL, value);
+				this.queueConfigWrite(CONFIG_MODEL, value);
 			}
 		}));
-		this._register(DOM.addDisposableListener(this.baseURLInput, 'change', () => {
-			this.saveToConfig(CONFIG_BASE_URL, this.baseURLInput.value);
+		this._register(DOM.addDisposableListener(this.baseURLInput, 'input', () => {
+			this.queueConfigWrite(CONFIG_BASE_URL, this.baseURLInput.value);
 		}));
-		this._register(DOM.addDisposableListener(this.maxTurnsInput, 'change', () => {
+		this._register(DOM.addDisposableListener(this.maxTurnsInput, 'input', () => {
 			const val = parseInt(this.maxTurnsInput.value, 10);
 			if (!isNaN(val) && val >= 1 && val <= 100) {
-				this.saveToConfig(CONFIG_MAX_TURNS, val);
+				this.queueConfigWrite(CONFIG_MAX_TURNS, val);
 			}
 		}));
-		this._register(DOM.addDisposableListener(this.maxTokensInput, 'change', () => {
+		this._register(DOM.addDisposableListener(this.maxTokensInput, 'input', () => {
 			const val = parseInt(this.maxTokensInput.value, 10);
 			if (!isNaN(val) && val >= 256 && val <= 100000) {
-				this.saveToConfig(CONFIG_MAX_TOKENS, val);
+				this.queueConfigWrite(CONFIG_MAX_TOKENS, val);
 			}
 		}));
-		this._register(DOM.addDisposableListener(this.maxInputTokensInput, 'change', () => {
+		this._register(DOM.addDisposableListener(this.maxInputTokensInput, 'input', () => {
 			const val = parseInt(this.maxInputTokensInput.value, 10);
 			if (!isNaN(val) && val >= 0 && val <= 2000000) {
-				this.saveToConfig(CONFIG_MAX_INPUT_TOKENS, val);
+				this.queueConfigWrite(CONFIG_MAX_INPUT_TOKENS, val);
 			}
 		}));
 	}
@@ -202,14 +248,16 @@ export class ProviderSettingsWidget extends Disposable {
 
 	private loadFromConfig(): void {
 		const provider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-		const model = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
+		const authVariant = normalizeAuthVariantForProvider(provider, this.configService.getValue<string>(CONFIG_AUTH_VARIANT));
+		const model = this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant) || 'claude-sonnet-4-6';
 		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || '';
 		const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 		const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 		const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
 
 		this.providerSelect.value = provider;
-		this.populateModelSelect(provider);
+		this.authVariantSelect.value = authVariant;
+		this.populateModelSelect(provider, authVariant);
 		this.modelSelect.value = model;
 		this.modelCustomInput.value = model;
 		this.baseURLInput.value = baseURL;
@@ -218,6 +266,7 @@ export class ProviderSettingsWidget extends Disposable {
 		this.maxInputTokensInput.value = String(maxInputTokens);
 
 		this.updateProviderUI(provider);
+		void this.refreshAuthBoundUI();
 
 		const height = this.element.offsetHeight || 300;
 		this._onDidChangeContentHeight.fire(height);
@@ -225,21 +274,41 @@ export class ProviderSettingsWidget extends Disposable {
 
 	private onProviderChanged(): void {
 		const provider = this.providerSelect.value as ProviderName;
-		this.populateModelSelect(provider);
+		const authVariant = normalizeAuthVariantForProvider(provider, this.authVariantSelect.value);
+		this.authVariantSelect.value = authVariant;
+		this.populateModelSelect(provider, authVariant);
 
-		const defaultModel = getDefaultModel(provider);
-		this.modelSelect.value = defaultModel;
-		this.modelCustomInput.value = defaultModel;
+		const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
+		const existingModel = this.configService.getValue<string>(CONFIG_MODEL) || this.modelCustomInput.value.trim();
+		const nextModel = defaultModel || existingModel || '';
+		this.modelSelect.value = nextModel;
+		this.modelCustomInput.value = nextModel;
 
 		this.updateProviderUI(provider);
 
-		this._updating = true;
-		try {
-			this.configService.updateValue(CONFIG_PROVIDER, provider, ConfigurationTarget.USER);
-			this.configService.updateValue(CONFIG_MODEL, defaultModel, ConfigurationTarget.USER);
-		} finally {
-			this._updating = false;
+		this.queueConfigWrite(CONFIG_PROVIDER, provider);
+		this.queueConfigWrite(CONFIG_AUTH_VARIANT, authVariant);
+		if (nextModel) {
+			this.queueConfigWrite(CONFIG_MODEL, nextModel);
 		}
+		void this.refreshAuthBoundUI();
+	}
+
+	private onAuthVariantChanged(): void {
+		const provider = this.getCurrentProvider();
+		const authVariant = normalizeAuthVariantForProvider(provider, this.authVariantSelect.value);
+		this.authVariantSelect.value = authVariant;
+		this.populateModelSelect(provider, authVariant);
+
+		const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
+		if (defaultModel) {
+			this.modelSelect.value = defaultModel;
+			this.modelCustomInput.value = defaultModel;
+			this.queueConfigWrite(CONFIG_MODEL, defaultModel);
+		}
+		this.queueConfigWrite(CONFIG_AUTH_VARIANT, authVariant);
+		this.updateProviderUI(provider);
+		void this.refreshAuthBoundUI();
 	}
 
 	private updateProviderUI(provider: ProviderName): void {
@@ -248,6 +317,8 @@ export class ProviderSettingsWidget extends Disposable {
 
 		// Show/hide custom model input
 		this.modelCustomRow.style.display = supportsCustom ? '' : 'none';
+		this.authVariantRow.style.display = provider === 'openai' ? '' : 'none';
+		this.baseURLInput.disabled = false;
 
 		// Update base URL hint
 		if (requiresURL) {
@@ -263,28 +334,103 @@ export class ProviderSettingsWidget extends Disposable {
 		}
 	}
 
-	private populateModelSelect(provider: ProviderName): void {
+	private populateModelSelect(provider: ProviderName, authVariant: AuthVariantName): void {
 		// Clear existing options
 		while (this.modelSelect.options.length > 0) {
 			this.modelSelect.remove(0);
 		}
 
-		const models = getModelsForProvider(provider);
+		const models = getModelsForProviderAndAuthVariant(provider, authVariant);
 		for (const model of models) {
-			const option = document.createElement('option');
-			option.value = model.id;
-			option.textContent = model.name;
-			this.modelSelect.appendChild(option);
+			this.appendOption(this.modelSelect, model.id, model.name);
 		}
 	}
 
-	private saveToConfig(key: string, value: string | number): void {
+	async flushPendingWrites(): Promise<void> {
+		await this.pendingWrites.flush();
+	}
+
+	override dispose(): void {
+		this.pendingWrites.dispose(true);
+		super.dispose();
+	}
+
+	private queueConfigWrite(key: string, value: string | number): void {
+		this.pendingWrites.queue(key, value);
+	}
+
+	private async writeConfigNow(key: string, value: unknown): Promise<void> {
 		this._updating = true;
 		try {
-			this.configService.updateValue(key, value, ConfigurationTarget.USER);
+			await this.configService.updateValue(key, value, ConfigurationTarget.USER);
 		} finally {
 			this._updating = false;
 		}
+	}
+
+	private async refreshModels(): Promise<void> {
+		await this.flushPendingWrites();
+		const provider = this.getCurrentProvider();
+		const authVariant = this.getCurrentAuthVariant();
+		const model = this.getCurrentModel(provider, authVariant);
+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
+
+		this.refreshModelsBtn.disabled = true;
+		this.refreshModelsResult.textContent = localize('providerSettings.refreshingModels', 'Refreshing...');
+		this.refreshModelsResult.classList.remove('dc-test-success', 'dc-test-error');
+
+		try {
+			const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
+			const credential = authState.accessToken || authState.apiKey;
+			const models = await this.modelResolverService.refreshModels(provider, credential, authState.baseURL || baseURL, authState.identityKey, authState.authVariant);
+			this.populateModelSelect(provider, authVariant);
+			this.modelSelect.value = model;
+			this.refreshModelsResult.classList.add('dc-test-success');
+			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsSuccess', 'Refreshed {0} models', models.length);
+		} catch (err: any) {
+			this.refreshModelsResult.classList.add('dc-test-error');
+			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsFailed', 'Failed: {0}', err?.message || String(err));
+		} finally {
+			this.refreshModelsBtn.disabled = false;
+		}
+	}
+
+	private async refreshAuthBoundUI(): Promise<void> {
+		const generation = ++this.authRefreshGeneration;
+		const provider = this.getCurrentProvider();
+		const authVariant = this.getCurrentAuthVariant();
+		const model = this.getCurrentModel(provider, authVariant);
+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
+		const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
+		if (generation !== this.authRefreshGeneration) {
+			return;
+		}
+
+		const oauthActive = authState.source === 'oauth';
+		this.baseURLInput.disabled = oauthActive;
+		if (oauthActive) {
+			this.baseURLHint.textContent = authState.metadata?.sourceLabel === 'OpenAI (ChatGPT/Codex OAuth)'
+				? localize('providerSettings.baseURLOpenAICodexInactive', 'OpenAI Codex OAuth uses the ChatGPT Codex backend. Base URL applies only to the API-key path.')
+				: localize('providerSettings.baseURLOAuthInactive', 'OAuth is active for this provider. Base URL applies only to the API-key path.');
+		} else {
+			this.updateProviderUI(provider);
+		}
+	}
+
+	private getCurrentProvider(): ProviderName {
+		return (this.providerSelect.value || this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+	}
+
+	private getCurrentAuthVariant(): AuthVariantName {
+		return normalizeAuthVariantForProvider(this.getCurrentProvider(), this.authVariantSelect.value || this.configService.getValue<string>(CONFIG_AUTH_VARIANT));
+	}
+
+	private getCurrentModel(provider: ProviderName, authVariant: AuthVariantName): string {
+		return this.modelCustomInput.value.trim()
+			|| this.modelSelect.value
+			|| this.configService.getValue<string>(CONFIG_MODEL)
+			|| getDefaultModelForAuthVariant(provider, authVariant)
+			|| '';
 	}
 
 	// ====================================================================
@@ -299,10 +445,7 @@ export class ProviderSettingsWidget extends Disposable {
 
 		const select = DOM.append(row, $<HTMLSelectElement>('select.dc-form-select'));
 		for (const opt of options) {
-			const option = document.createElement('option');
-			option.value = opt.value;
-			option.textContent = opt.label;
-			select.appendChild(option);
+			this.appendOption(select, opt.value, opt.label);
 		}
 
 		return select;
@@ -320,5 +463,12 @@ export class ProviderSettingsWidget extends Disposable {
 		input.autocomplete = 'off';
 
 		return input;
+	}
+
+	private appendOption(select: HTMLSelectElement, value: string, label: string): void {
+		const option = document.createElement('option');
+		option.value = value;
+		option.textContent = label;
+		select.appendChild(option);
 	}
 }

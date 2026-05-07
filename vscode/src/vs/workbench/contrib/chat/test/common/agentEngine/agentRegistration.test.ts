@@ -147,7 +147,7 @@ suite("AgentEngine - Integration: Agent Registration Flow", () => {
 
 		test("API key change fires event that can trigger provider refresh", async () => {
 			const changedProviders: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(p => changedProviders.push(p)));
+			disposables.add(apiKeyService.onDidChangeApiKey(e => changedProviders.push(e.provider)));
 
 			await apiKeyService.setApiKey("anthropic", "key1");
 			await apiKeyService.setApiKey("openai", "key2");

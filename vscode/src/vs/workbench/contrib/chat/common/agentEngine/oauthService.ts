@@ -40,6 +40,8 @@ const PKCE_SESSION_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_DEVICE_CODE_INTERVAL_S = 5;
 const OPENAI_CODEX_DEVICE_EXPIRES_IN_S = 15 * 60;
 
+export const OPENAI_CODEX_OAUTH_LABEL = 'OpenAI (ChatGPT/Codex OAuth)';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -1041,7 +1043,7 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 	private _sourceLabel(provider: OAuthProviderName, authVariant: AuthVariantName = 'default'): string {
 		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-			return 'OpenAI (ChatGPT/Codex OAuth)';
+			return OPENAI_CODEX_OAUTH_LABEL;
 		}
 		return `${provider} OAuth`;
 	}

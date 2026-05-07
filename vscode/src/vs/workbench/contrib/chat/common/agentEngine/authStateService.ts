@@ -13,7 +13,7 @@
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IApiKeyService, SUPPORTED_PROVIDERS, type ProviderName } from './apiKeyService.js';
+import { IApiKeyService, type IApiKeyChangeEvent, type ProviderName } from './apiKeyService.js';
 import { IOAuthService, type OAuthProviderName } from './oauthService.js';
 import type { ProviderAuth, ProviderCapabilities } from './providers/providerTypes.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from './providers/providerTypes.js';
@@ -71,8 +71,8 @@ export function isApiKeyAuthState(state: IResolvedAuthState): boolean {
 	return state.source === 'per-model-key' || state.source === 'provider-key';
 }
 
-function providerFromApiKeyEvent(event: string): ProviderName | undefined {
-	return SUPPORTED_PROVIDERS.find(provider => event === provider || event.startsWith(`${provider}.`));
+function providerFromApiKeyEvent(event: IApiKeyChangeEvent): ProviderName | undefined {
+	return event.provider;
 }
 
 async function sha256Prefix(value: string): Promise<string> {

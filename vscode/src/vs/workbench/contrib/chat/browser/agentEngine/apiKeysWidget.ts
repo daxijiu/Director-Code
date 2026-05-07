@@ -17,8 +17,16 @@ import * as DOM from '../../../../../base/browser/dom.js';
 import { localize } from '../../../../../nls.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IApiKeyService, SUPPORTED_PROVIDERS, PROVIDER_DISPLAY_NAMES, type ProviderName, type IConnectionTestResult } from '../../common/agentEngine/apiKeyService.js';
+import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
+import { getDefaultModelForAuthVariant } from '../../common/agentEngine/modelCatalog.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 
 const $ = DOM.$;
+
+const CONFIG_PROVIDER = 'directorCode.ai.provider';
+const CONFIG_MODEL = 'directorCode.ai.model';
+const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 
 // ============================================================================
 // ApiKeysWidget
@@ -32,10 +40,13 @@ export class ApiKeysWidget extends Disposable {
 	readonly element: HTMLElement;
 	private container!: HTMLElement;
 	private readonly providerRows = new Map<ProviderName, IProviderRowElements>();
+	private beforeTestFlush: (() => Promise<void>) | undefined;
+	private renderGeneration = 0;
 
 	constructor(
 		@IApiKeyService private readonly apiKeyService: IApiKeyService,
 		@IConfigurationService private readonly configService: IConfigurationService,
+		@IAuthStateService private readonly authStateService: IAuthStateService,
 	) {
 		super();
 
@@ -45,6 +56,21 @@ export class ApiKeysWidget extends Disposable {
 
 		// Re-render when keys change (from external updates)
 		this._register(this.apiKeyService.onDidChangeApiKey(() => this.render()));
+		this._register(this.authStateService.onDidChangeAuthState(() => this.render()));
+		this._register(this.configService.onDidChangeConfiguration(e => {
+			if (
+				e.affectsConfiguration(CONFIG_PROVIDER) ||
+				e.affectsConfiguration(CONFIG_MODEL) ||
+				e.affectsConfiguration(CONFIG_BASE_URL) ||
+				e.affectsConfiguration(CONFIG_AUTH_VARIANT)
+			) {
+				this.render();
+			}
+		}));
+	}
+
+	setBeforeTestFlush(flush: () => Promise<void>): void {
+		this.beforeTestFlush = flush;
 	}
 
 	private create(parent: HTMLElement): void {
@@ -123,32 +149,71 @@ export class ApiKeysWidget extends Disposable {
 	 * Refresh the status of all provider rows.
 	 */
 	async render(): Promise<void> {
+		const generation = ++this.renderGeneration;
 		for (const provider of SUPPORTED_PROVIDERS) {
 			const elements = this.providerRows.get(provider);
 			if (!elements) {
 				continue;
 			}
 
-			const hasKey = await this.apiKeyService.hasApiKey(provider);
+			const [authState, hasProviderKey] = await Promise.all([
+				this.resolveProviderAuthState(provider),
+				this.apiKeyService.hasApiKey(provider),
+			]);
+			if (generation !== this.renderGeneration) {
+				return;
+			}
 
 			// Update status badge
-			elements.statusBadge.classList.remove('dc-status-set', 'dc-status-not-set');
-			if (hasKey) {
-				elements.statusBadge.textContent = localize('apiKeys.configured', 'Configured');
+			elements.statusBadge.classList.remove('dc-status-set', 'dc-status-not-set', 'dc-status-progress', 'dc-status-error');
+			elements.input.disabled = false;
+			elements.saveBtn.disabled = false;
+			elements.testResult.textContent = '';
+			elements.testResult.classList.remove('dc-test-success', 'dc-test-error');
+
+			if (authState.source === 'oauth') {
+				elements.statusBadge.textContent = localize('apiKeys.oauthActive', 'OAuth active');
 				elements.statusBadge.classList.add('dc-status-set');
+				elements.input.disabled = true;
+				elements.saveBtn.disabled = true;
+				elements.testBtn.disabled = true;
+				elements.deleteBtn.disabled = !hasProviderKey;
+				elements.testResult.textContent = localize('apiKeys.oauthActiveDetail', '{0} is active. API key controls are not used for the current auth path.', authState.metadata?.sourceLabel || 'OAuth');
+			} else if (authState.source === 'per-model-key') {
+				elements.statusBadge.textContent = localize('apiKeys.perModelConfigured', 'Per-model key');
+				elements.statusBadge.classList.add('dc-status-set');
+				elements.testBtn.disabled = !authState.apiKey;
+				elements.deleteBtn.disabled = !hasProviderKey;
+			} else if (authState.source === 'provider-key') {
+				elements.statusBadge.textContent = localize('apiKeys.providerConfigured', 'Provider key');
+				elements.statusBadge.classList.add('dc-status-set');
+				elements.testBtn.disabled = !authState.apiKey;
+				elements.deleteBtn.disabled = !hasProviderKey;
 			} else {
-				elements.statusBadge.textContent = localize('apiKeys.notConfigured', 'Not configured');
+				if (provider === 'openai' && authState.authVariant === OPENAI_CODEX_AUTH_VARIANT && hasProviderKey) {
+					elements.statusBadge.textContent = localize('apiKeys.apiKeyInactive', 'API key saved');
+					elements.statusBadge.classList.add('dc-status-progress');
+					elements.testResult.textContent = localize('apiKeys.openAICodexNeedsOAuth', 'OpenAI (ChatGPT/Codex OAuth) is selected; the saved API key belongs to the default API-key path.');
+				} else {
+					elements.statusBadge.textContent = localize('apiKeys.notConfigured', 'Not configured');
+					elements.statusBadge.classList.add('dc-status-not-set');
+				}
+				elements.testBtn.disabled = true;
+				elements.deleteBtn.disabled = !hasProviderKey;
+			}
+
+			if (authState.source !== 'oauth' && authState.source !== 'missing') {
+				elements.testResult.textContent = authState.source === 'per-model-key'
+					? localize('apiKeys.perModelDetail', 'Testing uses the key configured for this model.')
+					: '';
+			}
+
+			if (authState.source !== 'oauth' && !(provider === 'openai' && authState.authVariant === OPENAI_CODEX_AUTH_VARIANT && hasProviderKey) && authState.source === 'missing') {
 				elements.statusBadge.classList.add('dc-status-not-set');
 			}
 
-			// Update button states
-			elements.testBtn.disabled = !hasKey;
-			elements.deleteBtn.disabled = !hasKey;
-
 			// Clear input (don't show existing keys for security)
 			elements.input.value = '';
-			elements.testResult.textContent = '';
-			elements.testResult.classList.remove('dc-test-success', 'dc-test-error');
 		}
 
 		// Emit height change
@@ -190,21 +255,29 @@ export class ApiKeysWidget extends Disposable {
 			return;
 		}
 
+		await this.beforeTestFlush?.();
+
 		elements.testBtn.disabled = true;
 		elements.testBtn.textContent = localize('apiKeys.testing', 'Testing...');
 		elements.testResult.textContent = '';
 		elements.testResult.classList.remove('dc-test-success', 'dc-test-error');
 
 		try {
-			const apiKey = await this.apiKeyService.getApiKey(provider);
-			if (!apiKey) {
-				this.showTestResult(elements, { success: false, error: 'No API key stored' });
+			const authState = await this.resolveProviderAuthState(provider);
+			if (authState.source === 'oauth') {
+				this.showTestResult(elements, {
+					success: false,
+					error: localize('apiKeys.testOAuthActive', '{0} is active. API key Test Connection is not used for this auth path.', authState.metadata?.sourceLabel || 'OAuth'),
+				});
 				return;
 			}
 
-			const baseURL = this.configService.getValue<string>('directorCode.ai.baseURL') || undefined;
-			const model = this.configService.getValue<string>('directorCode.ai.model') || undefined;
-			const result = await this.apiKeyService.testConnection(provider, apiKey, baseURL, model);
+			if (!authState.apiKey) {
+				this.showTestResult(elements, { success: false, error: authState.metadata?.reason || 'No API key stored' });
+				return;
+			}
+
+			const result = await this.apiKeyService.testConnection(provider, authState.apiKey, authState.baseURL, authState.model);
 			this.showTestResult(elements, result);
 		} finally {
 			elements.testBtn.disabled = false;
@@ -238,6 +311,21 @@ export class ApiKeysWidget extends Disposable {
 			elements.testResult.classList.add('dc-test-error');
 			elements.testResult.textContent = localize('apiKeys.testFailed', 'Failed: {0}', result.error || 'Unknown error');
 		}
+	}
+
+	private async resolveProviderAuthState(provider: ProviderName): Promise<IResolvedAuthState> {
+		const configuredProvider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+		const configuredAuthVariant = this.configService.getValue<string>(CONFIG_AUTH_VARIANT) as AuthVariantName | undefined;
+		const authVariant = provider === configuredProvider
+			? normalizeAuthVariantForProvider(provider, configuredAuthVariant)
+			: DEFAULT_AUTH_VARIANT;
+		const model = provider === configuredProvider
+			? this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant)
+			: getDefaultModelForAuthVariant(provider, authVariant);
+		const baseURL = provider === configuredProvider
+			? this.configService.getValue<string>(CONFIG_BASE_URL) || undefined
+			: undefined;
+		return this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
 	}
 }
 

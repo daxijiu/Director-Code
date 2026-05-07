@@ -16,8 +16,10 @@ import {
 	PROVIDER_DISPLAY_NAMES,
 	PROVIDER_DEFAULT_URLS,
 	providerToApiType,
+	TEST_CONNECTION_TIMEOUT_MS,
 	type ProviderName,
 	type IModelConfig,
+	type IApiKeyChangeEvent,
 } from '../../../common/agentEngine/apiKeyService.js';
 import type { ISecretStorageService, ISecretStorageProvider } from '../../../../../../platform/secrets/common/secrets.js';
 
@@ -193,28 +195,32 @@ suite("AgentEngine - ApiKeyService", () => {
 	suite("Change Events", () => {
 
 		test("fires event when key is set", async () => {
-			const events: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(provider => events.push(provider)));
+			const events: IApiKeyChangeEvent[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(event => events.push(event)));
 
 			await apiKeyService.setApiKey("anthropic", "test-key");
 			assert.strictEqual(events.length, 1);
-			assert.strictEqual(events[0], "anthropic");
+			assert.strictEqual(events[0].provider, "anthropic");
+			assert.strictEqual(events[0].scope, "provider");
+			assert.strictEqual(events[0].changeKind, "set");
 		});
 
 		test("fires event when key is deleted", async () => {
 			await apiKeyService.setApiKey("openai", "key");
 
-			const events: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(provider => events.push(provider)));
+			const events: IApiKeyChangeEvent[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(event => events.push(event)));
 
 			await apiKeyService.deleteApiKey("openai");
 			assert.strictEqual(events.length, 1);
-			assert.strictEqual(events[0], "openai");
+			assert.strictEqual(events[0].provider, "openai");
+			assert.strictEqual(events[0].scope, "provider");
+			assert.strictEqual(events[0].changeKind, "delete");
 		});
 
 		test("does not fire for unrelated secret changes", async () => {
-			const events: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(provider => events.push(provider)));
+			const events: IApiKeyChangeEvent[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(event => events.push(event)));
 
 			// Set a secret with a different prefix
 			await mockSecretService.set("some-other-service.key", "value");
@@ -222,15 +228,15 @@ suite("AgentEngine - ApiKeyService", () => {
 		});
 
 		test("fires separate events for different providers", async () => {
-			const events: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(provider => events.push(provider)));
+			const events: IApiKeyChangeEvent[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(event => events.push(event)));
 
 			await apiKeyService.setApiKey("anthropic", "key1");
 			await apiKeyService.setApiKey("openai", "key2");
 
 			assert.strictEqual(events.length, 2);
-			assert.strictEqual(events[0], "anthropic");
-			assert.strictEqual(events[1], "openai");
+			assert.deepStrictEqual(events.map(e => e.provider), ["anthropic", "openai"]);
+			assert.ok(events.every(e => e.scope === "provider"));
 		});
 	});
 
@@ -312,6 +318,24 @@ suite("AgentEngine - ApiKeyService", () => {
 			}
 		});
 
+		test("testConnection passes a 15s abort signal to fetch", async () => {
+			const originalFetch = globalThis.fetch;
+			let capturedSignal: AbortSignal | undefined;
+			globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
+				capturedSignal = init?.signal ?? undefined;
+				return Promise.resolve(new Response("{}", { status: 200 }));
+			}) as any;
+			try {
+				assert.strictEqual(TEST_CONNECTION_TIMEOUT_MS, 15_000);
+				const result = await apiKeyService.testConnection("openai", "key", "https://api.openai.com/v1", "gpt-4o-mini");
+				assert.strictEqual(result.success, true);
+				assert.ok(capturedSignal);
+				assert.strictEqual(capturedSignal!.aborted, false);
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
 		test("testConnection with baseURL and model for all providers", async () => {
 			for (const provider of SUPPORTED_PROVIDERS) {
 				const result = await apiKeyService.testConnection(provider, "key", "https://localhost:1", "test-model");
@@ -385,11 +409,14 @@ suite("AgentEngine - ApiKeyService", () => {
 		});
 
 		test("change events fire for per-model key changes", async () => {
-			const events: string[] = [];
+			const events: IApiKeyChangeEvent[] = [];
 			disposables.add(apiKeyService.onDidChangeApiKey(e => events.push(e)));
 
 			await apiKeyService.setModelApiKey("openai", "gpt-4o", "key");
 			assert.ok(events.length > 0);
+			assert.strictEqual(events[0].provider, "openai");
+			assert.strictEqual(events[0].scope, "model");
+			assert.strictEqual(events[0].modelId, "gpt-4o");
 		});
 	});
 
@@ -454,6 +481,18 @@ suite("AgentEngine - ApiKeyService", () => {
 			const config = await apiKeyService.getModelConfig("anthropic", "claude-sonnet-4-6");
 			assert.strictEqual(config?.capabilities?.vision, false);
 			assert.strictEqual(config?.capabilities?.thinking, true);
+		});
+
+		test("change events fire for per-model config changes", async () => {
+			const events: IApiKeyChangeEvent[] = [];
+			disposables.add(apiKeyService.onDidChangeApiKey(e => events.push(e)));
+
+			await apiKeyService.setModelConfig("openai", "gpt-4o", { baseURL: "https://proxy.example" });
+			await apiKeyService.deleteModelConfig("openai", "gpt-4o");
+
+			assert.deepStrictEqual(events.map(e => e.scope), ["model-config", "model-config"]);
+			assert.deepStrictEqual(events.map(e => e.changeKind), ["set", "delete"]);
+			assert.ok(events.every(e => e.provider === "openai" && e.modelId === "gpt-4o"));
 		});
 	});
 

@@ -189,7 +189,7 @@ suite("AgentEngine - Integration: Configuration Flow", () => {
 
 		test("change events fire per-provider", async () => {
 			const events: string[] = [];
-			disposables.add(apiKeyService.onDidChangeApiKey(p => events.push(p)));
+			disposables.add(apiKeyService.onDidChangeApiKey(e => events.push(e.provider)));
 
 			await apiKeyService.setApiKey("anthropic", "key1");
 			await apiKeyService.setApiKey("openai", "key2");

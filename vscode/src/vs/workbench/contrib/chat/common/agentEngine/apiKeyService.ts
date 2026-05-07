@@ -30,6 +30,7 @@ import { buildProviderUrl } from './providers/abstractProvider.js';
 export const SECRET_KEY_PREFIX = 'director-code.apiKey';
 export const MODEL_KEY_PREFIX = 'director-code.modelKey';
 export const MODEL_CONFIG_PREFIX = 'director-code.modelConfig';
+export const TEST_CONNECTION_TIMEOUT_MS = 15_000;
 
 /**
  * Built-in provider names (always available).
@@ -90,6 +91,39 @@ export function providerRequiresBaseURL(provider: ProviderName): boolean {
  */
 export const OAUTH_CAPABLE_PROVIDERS: readonly ProviderName[] = ['anthropic', 'openai'];
 
+export function parseApiKeySecretKey(secretKey: string, changeKind: ApiKeyChangeKind): IApiKeyChangeEvent | undefined {
+	if (secretKey.startsWith(SECRET_KEY_PREFIX + '.')) {
+		const suffix = secretKey.slice(SECRET_KEY_PREFIX.length + 1);
+		const provider = SUPPORTED_PROVIDERS.find(candidate => candidate === suffix);
+		return provider ? { provider, scope: 'provider', changeKind, secretKey } : undefined;
+	}
+
+	if (secretKey.startsWith(MODEL_KEY_PREFIX + '.')) {
+		return parseProviderModelSecretKey(secretKey, MODEL_KEY_PREFIX, 'model', changeKind);
+	}
+
+	if (secretKey.startsWith(MODEL_CONFIG_PREFIX + '.')) {
+		return parseProviderModelSecretKey(secretKey, MODEL_CONFIG_PREFIX, 'model-config', changeKind);
+	}
+
+	return undefined;
+}
+
+function parseProviderModelSecretKey(
+	secretKey: string,
+	prefix: string,
+	scope: 'model' | 'model-config',
+	changeKind: ApiKeyChangeKind,
+): IApiKeyChangeEvent | undefined {
+	const suffix = secretKey.slice(prefix.length + 1);
+	const provider = SUPPORTED_PROVIDERS.find(candidate => suffix === candidate || suffix.startsWith(`${candidate}.`));
+	if (!provider) {
+		return undefined;
+	}
+	const modelId = suffix === provider ? undefined : suffix.slice(provider.length + 1);
+	return { provider, scope, changeKind, modelId, secretKey };
+}
+
 // ============================================================================
 // Connection Test Result
 // ============================================================================
@@ -99,6 +133,17 @@ export interface IConnectionTestResult {
 	readonly error?: string;
 	readonly model?: string;
 	readonly latencyMs?: number;
+}
+
+export type ApiKeyChangeScope = 'provider' | 'model' | 'model-config';
+export type ApiKeyChangeKind = 'set' | 'delete' | 'changed';
+
+export interface IApiKeyChangeEvent {
+	readonly provider: ProviderName;
+	readonly scope: ApiKeyChangeScope;
+	readonly changeKind: ApiKeyChangeKind;
+	readonly modelId?: string;
+	readonly secretKey: string;
 }
 
 // ============================================================================
@@ -134,10 +179,9 @@ export interface IApiKeyService {
 	readonly _serviceBrand: undefined;
 
 	/**
-	 * Fired when an API key changes (set or deleted).
-	 * The event payload is the provider name.
+	 * Fired when an API key or per-model configuration changes.
 	 */
-	readonly onDidChangeApiKey: Event<string>;
+	readonly onDidChangeApiKey: Event<IApiKeyChangeEvent>;
 
 	/**
 	 * Get the stored API key for a provider.
@@ -160,7 +204,8 @@ export interface IApiKeyService {
 	hasApiKey(provider: ProviderName): Promise<boolean>;
 
 	/**
-	 * Test the connection for a provider using the given API key.
+	 * Test the API-key connection for a provider using the given API key.
+	 * OAuth health/status checks intentionally go through IOAuthService/IAuthStateService.
 	 * Makes a minimal API request to verify the key is valid.
 	 * @param baseURL Custom API base URL (must match provider's expectations)
 	 * @param model Model ID to use for the test request (defaults to a cheap built-in model)
@@ -235,8 +280,9 @@ export interface IApiKeyService {
 export class ApiKeyService extends Disposable implements IApiKeyService {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeApiKey = this._register(new Emitter<string>());
-	readonly onDidChangeApiKey: Event<string> = this._onDidChangeApiKey.event;
+	private readonly _onDidChangeApiKey = this._register(new Emitter<IApiKeyChangeEvent>());
+	readonly onDidChangeApiKey: Event<IApiKeyChangeEvent> = this._onDidChangeApiKey.event;
+	private readonly pendingSecretEvents = new Map<string, IApiKeyChangeEvent>();
 
 	constructor(
 		@ISecretStorageService private readonly secretService: ISecretStorageService,
@@ -244,11 +290,16 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		super();
 
 		this._register(this.secretService.onDidChangeSecret((key) => {
-			if (key.startsWith(SECRET_KEY_PREFIX + '.') || key.startsWith(MODEL_KEY_PREFIX + '.')) {
-				const suffix = key.startsWith(MODEL_KEY_PREFIX)
-					? key.slice(MODEL_KEY_PREFIX.length + 1)
-					: key.slice(SECRET_KEY_PREFIX.length + 1);
-				this._onDidChangeApiKey.fire(suffix);
+			const pending = this.pendingSecretEvents.get(key);
+			if (pending) {
+				this.pendingSecretEvents.delete(key);
+				this._onDidChangeApiKey.fire(pending);
+				return;
+			}
+
+			const parsed = parseApiKeySecretKey(key, 'changed');
+			if (parsed) {
+				this._onDidChangeApiKey.fire(parsed);
 			}
 		}));
 	}
@@ -270,13 +321,17 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	}
 
 	async setApiKey(provider: ProviderName, key: string): Promise<void> {
-		await this.secretService.set(this._secretKey(provider), key);
+		const secretKey = this._secretKey(provider);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'provider', changeKind: 'set', secretKey });
+		await this.secretService.set(secretKey, key);
 		// Note: onDidChangeSecret will fire from the secret service,
 		// which we relay via _onDidChangeApiKey
 	}
 
 	async deleteApiKey(provider: ProviderName): Promise<void> {
-		await this.secretService.delete(this._secretKey(provider));
+		const secretKey = this._secretKey(provider);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'provider', changeKind: 'delete', secretKey });
+		await this.secretService.delete(secretKey);
 	}
 
 	async hasApiKey(provider: ProviderName): Promise<boolean> {
@@ -286,8 +341,10 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 
 	async testConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		const startTime = Date.now();
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), TEST_CONNECTION_TIMEOUT_MS);
 		try {
-			const result = await this._doTestConnection(provider, apiKey, baseURL, model);
+			const result = await this._doTestConnection(provider, apiKey, baseURL, model, controller.signal);
 			return {
 				...result,
 				latencyMs: Date.now() - startTime,
@@ -298,6 +355,8 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				error: err.message || String(err),
 				latencyMs: Date.now() - startTime,
 			};
+		} finally {
+			clearTimeout(timeout);
 		}
 	}
 
@@ -308,20 +367,20 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	 * URL construction mirrors the real Provider classes to avoid
 	 * mismatches when a custom baseURL is in use (e.g. DeepSeek).
 	 */
-	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
 		switch (provider) {
 			case 'anthropic':
 			case 'anthropic-compatible':
-				return this._testAnthropic(apiKey, baseURL, model);
+				return this._testAnthropic(apiKey, baseURL, model, signal);
 			case 'openai':
 			case 'openai-compatible':
-				return this._testOpenAI(apiKey, baseURL, model);
+				return this._testOpenAI(apiKey, baseURL, model, signal);
 			case 'gemini':
-				return this._testGemini(apiKey, baseURL, model);
+				return this._testGemini(apiKey, baseURL, model, signal);
 		}
 	}
 
-	private async _testAnthropic(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+	private async _testAnthropic(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
 		// Matches AnthropicProvider: baseURL defaults to 'https://api.anthropic.com', path = /v1/messages
 		const base = (baseURL || 'https://api.anthropic.com').replace(/\/$/, '');
 		const testModel = model || 'claude-haiku-4-5';
@@ -337,6 +396,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				max_tokens: 1,
 				messages: [{ role: 'user', content: 'hi' }],
 			}),
+			signal,
 		});
 
 		if (!response.ok) {
@@ -346,7 +406,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		return { success: true, model: testModel };
 	}
 
-	private async _testOpenAI(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+	private async _testOpenAI(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
 		// Matches OpenAIProvider: baseURL defaults to 'https://api.openai.com/v1', path = /chat/completions
 		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
 		const testModel = model || 'gpt-4o-mini';
@@ -366,6 +426,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				'Authorization': `Bearer ${apiKey}`,
 			},
 			body: JSON.stringify(body),
+			signal,
 		});
 
 		if (!response.ok) {
@@ -375,7 +436,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		return { success: true, model: testModel };
 	}
 
-	private async _testGemini(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
+	private async _testGemini(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
 		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
 		const testModel = model || 'gemini-2.5-flash';
 		const response = await fetch(`${base}/v1beta/models/${testModel}:generateContent?key=${apiKey}`, {
@@ -387,6 +448,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				contents: [{ parts: [{ text: 'hi' }] }],
 				generationConfig: { maxOutputTokens: 1 },
 			}),
+			signal,
 		});
 
 		if (!response.ok) {
@@ -409,11 +471,15 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	}
 
 	async setModelApiKey(provider: ProviderName, modelId: string, key: string): Promise<void> {
-		await this.secretService.set(this._modelSecretKey(provider, modelId), key);
+		const secretKey = this._modelSecretKey(provider, modelId);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'model', changeKind: 'set', modelId, secretKey });
+		await this.secretService.set(secretKey, key);
 	}
 
 	async deleteModelApiKey(provider: ProviderName, modelId: string): Promise<void> {
-		await this.secretService.delete(this._modelSecretKey(provider, modelId));
+		const secretKey = this._modelSecretKey(provider, modelId);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'model', changeKind: 'delete', modelId, secretKey });
+		await this.secretService.delete(secretKey);
 	}
 
 	async hasModelApiKey(provider: ProviderName, modelId: string): Promise<boolean> {
@@ -438,11 +504,15 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	}
 
 	async setModelConfig(provider: ProviderName, modelId: string, config: IModelConfig): Promise<void> {
-		await this.secretService.set(this._modelConfigKey(provider, modelId), JSON.stringify(config));
+		const secretKey = this._modelConfigKey(provider, modelId);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'model-config', changeKind: 'set', modelId, secretKey });
+		await this.secretService.set(secretKey, JSON.stringify(config));
 	}
 
 	async deleteModelConfig(provider: ProviderName, modelId: string): Promise<void> {
-		await this.secretService.delete(this._modelConfigKey(provider, modelId));
+		const secretKey = this._modelConfigKey(provider, modelId);
+		this.pendingSecretEvents.set(secretKey, { provider, scope: 'model-config', changeKind: 'delete', modelId, secretKey });
+		await this.secretService.delete(secretKey);
 	}
 
 	// ========================================================================

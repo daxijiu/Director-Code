@@ -14,8 +14,9 @@ import './media/directorCodeSettings.css';
 import * as DOM from '../../../../../base/browser/dom.js';
 import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
 import { localize } from '../../../../../nls.js';
-import { IOAuthService, type OAuthProviderName } from '../../common/agentEngine/oauthService.js';
+import { IOAuthService, OPENAI_CODEX_OAUTH_LABEL, type OAuthProviderName } from '../../common/agentEngine/oauthService.js';
 import { OAuthLoginController, type IOAuthLoginControllerState } from '../../common/agentEngine/oauthLoginController.js';
+import type { ProviderName } from '../../common/agentEngine/apiKeyService.js';
 
 const $ = DOM.$;
 
@@ -34,13 +35,14 @@ const OAUTH_PROVIDERS: readonly OAuthProviderName[] = ['anthropic', 'openai'];
 
 const PROVIDER_LABELS: Record<OAuthProviderName, string> = {
 	anthropic: 'Anthropic (Claude OAuth)',
-	openai: 'OpenAI (ChatGPT/Codex OAuth)',
+	openai: OPENAI_CODEX_OAUTH_LABEL,
 };
 
 export class OAuthWidget extends Disposable {
 	readonly element: HTMLElement;
 
 	private readonly rows = new Map<OAuthProviderName, OAuthProviderRow>();
+	private beforeOAuthActionFlush: (() => Promise<void>) | undefined;
 
 	constructor(
 		@IOAuthService private readonly oauthService: IOAuthService,
@@ -56,6 +58,21 @@ export class OAuthWidget extends Disposable {
 				row.controller.refreshStatus();
 			}
 		}));
+	}
+
+	setBeforeOAuthActionFlush(flush: () => Promise<void>): void {
+		this.beforeOAuthActionFlush = flush;
+	}
+
+	setActiveProvider(provider: ProviderName): void {
+		const oauthProvider = this.asOAuthProvider(provider);
+		this.element.style.display = oauthProvider ? '' : 'none';
+		for (const [rowProvider, row] of this.rows) {
+			row.row.style.display = rowProvider === oauthProvider ? '' : 'none';
+			if (rowProvider === oauthProvider) {
+				void row.controller.refreshStatus();
+			}
+		}
 	}
 
 	private create(parent: HTMLElement): void {
@@ -118,6 +135,7 @@ export class OAuthWidget extends Disposable {
 	}
 
 	private async handlePrimary(row: OAuthProviderRow): Promise<void> {
+		await this.beforeOAuthActionFlush?.();
 		if (row.controller.state.phase === 'approved') {
 			await row.controller.logout();
 			return;
@@ -126,6 +144,7 @@ export class OAuthWidget extends Disposable {
 	}
 
 	private async handleRefresh(row: OAuthProviderRow): Promise<void> {
+		await this.beforeOAuthActionFlush?.();
 		const state = row.controller.state;
 		if (state.flow === 'device_code' && state.sessionId && state.phase !== 'approved') {
 			await row.controller.pollOnce();
@@ -238,10 +257,10 @@ export class OAuthWidget extends Disposable {
 		const submit = DOM.append(codeRow, $<HTMLButtonElement>('button.dc-btn.dc-btn-primary'));
 		submit.type = 'button';
 		submit.textContent = localize('oauthWidget.submitCode', 'Submit Code');
-		row.detailDisposables.add(DOM.addDisposableListener(submit, 'click', () => row.controller.submitManualCode(input.value)));
+		row.detailDisposables.add(DOM.addDisposableListener(submit, 'click', () => this.submitManualCode(row, input.value)));
 		row.detailDisposables.add(DOM.addDisposableListener(input, 'keydown', (e: KeyboardEvent) => {
 			if (e.key === 'Enter') {
-				row.controller.submitManualCode(input.value);
+				void this.submitManualCode(row, input.value);
 			}
 		}));
 	}
@@ -265,6 +284,15 @@ export class OAuthWidget extends Disposable {
 		link.rel = 'noopener noreferrer';
 		link.textContent = label;
 		return link;
+	}
+
+	private async submitManualCode(row: OAuthProviderRow, code: string): Promise<void> {
+		await this.beforeOAuthActionFlush?.();
+		await row.controller.submitManualCode(code);
+	}
+
+	private asOAuthProvider(provider: ProviderName): OAuthProviderName | undefined {
+		return provider === 'anthropic' || provider === 'openai' ? provider : undefined;
 	}
 
 	private phaseLabel(state: IOAuthLoginControllerState): string {

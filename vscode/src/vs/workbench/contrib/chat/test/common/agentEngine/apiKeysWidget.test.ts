@@ -14,6 +14,7 @@ import {
 	type ProviderName,
 	type IApiKeyService,
 	type IConnectionTestResult,
+	type IApiKeyChangeEvent,
 } from '../../../common/agentEngine/apiKeyService.js';
 
 /**
@@ -32,8 +33,8 @@ class MockApiKeyService implements IApiKeyService {
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _store = new Map<string, string>();
-	private readonly _onDidChangeApiKey = new Emitter<string>();
-	readonly onDidChangeApiKey: Event<string> = this._onDidChangeApiKey.event;
+	private readonly _onDidChangeApiKey = new Emitter<IApiKeyChangeEvent>();
+	readonly onDidChangeApiKey: Event<IApiKeyChangeEvent> = this._onDidChangeApiKey.event;
 
 	async getApiKey(provider: ProviderName): Promise<string | undefined> {
 		return this._store.get(provider);
@@ -41,12 +42,12 @@ class MockApiKeyService implements IApiKeyService {
 
 	async setApiKey(provider: ProviderName, key: string): Promise<void> {
 		this._store.set(provider, key);
-		this._onDidChangeApiKey.fire(provider);
+		this._onDidChangeApiKey.fire({ provider, scope: 'provider', changeKind: 'set', secretKey: `mock.${provider}` });
 	}
 
 	async deleteApiKey(provider: ProviderName): Promise<void> {
 		this._store.delete(provider);
-		this._onDidChangeApiKey.fire(provider);
+		this._onDidChangeApiKey.fire({ provider, scope: 'provider', changeKind: 'delete', secretKey: `mock.${provider}` });
 	}
 
 	async hasApiKey(provider: ProviderName): Promise<boolean> {
@@ -150,7 +151,7 @@ suite("AgentEngine - ApiKeysWidget (Logic)", () => {
 
 		test("widget receives change events", async () => {
 			const events: string[] = [];
-			disposables.add(mockService.onDidChangeApiKey(p => events.push(p)));
+			disposables.add(mockService.onDidChangeApiKey(e => events.push(e.provider)));
 
 			await mockService.setApiKey("openai", "key");
 			await mockService.deleteApiKey("openai");
