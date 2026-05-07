@@ -14,6 +14,7 @@
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { DeferredPromise } from '../../../../../base/common/async.js';
+import { Disposable, type IDisposable } from '../../../../../base/common/lifecycle.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
 import {
@@ -81,9 +82,9 @@ function capabilitiesForAuthVariant(authVariant: AuthVariantName): ILanguageMode
 	};
 }
 
-export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
+export class DirectorCodeModelProvider extends Disposable implements ILanguageModelChatProvider {
 
-	private readonly _onDidChange = new Emitter<void>();
+	private readonly _onDidChange = this._register(new Emitter<void>());
 	readonly onDidChange: Event<void> = this._onDidChange.event;
 
 	constructor(
@@ -91,14 +92,16 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		@IAuthStateService private readonly authStateService: IAuthStateService,
 		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 	) {
+		super();
+
 		// Listen for configuration changes to refresh model list
-		this.configService.onDidChangeConfiguration(e => {
+		this._register(this.configService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration(CONFIG_PROVIDER) || e.affectsConfiguration(CONFIG_MODEL) || e.affectsConfiguration(CONFIG_BASE_URL) || e.affectsConfiguration(CONFIG_AUTH_VARIANT)) {
 				this._onDidChange.fire();
 			}
-		});
-		this.authStateService.onDidChangeAuthState(() => this._onDidChange.fire());
-		this.modelResolverService.onDidChangeModels(() => this._onDidChange.fire());
+		}));
+		this._register(this.authStateService.onDidChangeAuthState(() => this._onDidChange.fire()));
+		this._register(this.modelResolverService.onDidChangeModels(() => this._onDidChange.fire()));
 	}
 
 	async provideLanguageModelChatInfo(
@@ -212,6 +215,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		// 5. Create streaming response
 		const stream = new AsyncIterableSource<IChatResponsePart>();
 		const resultDeferred = new DeferredPromise<any>();
+		const abortSignal = this.createAbortSignal(token);
 
 		// 6. Run in background
 		(async () => {
@@ -222,7 +226,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 						maxTokens: maxOutputTokens,
 						system: '',
 						messages: normalizedMessages,
-						abortSignal: this.createAbortSignal(token),
+						abortSignal: abortSignal.signal,
 					})) {
 						if (token.isCancellationRequested) { break; }
 
@@ -238,6 +242,7 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 						maxTokens: maxOutputTokens,
 						system: '',
 						messages: normalizedMessages,
+						abortSignal: abortSignal.signal,
 					});
 					for (const block of response.content) {
 						if (block.type === 'text') {
@@ -250,6 +255,8 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 			} catch (err) {
 				stream.reject(err as Error);
 				resultDeferred.error(err as Error);
+			} finally {
+				abortSignal.dispose();
 			}
 		})();
 
@@ -398,9 +405,16 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		}
 	}
 
-	private createAbortSignal(token: CancellationToken): AbortSignal {
+	private createAbortSignal(token: CancellationToken): { signal: AbortSignal; dispose: () => void } {
 		const controller = new AbortController();
-		token.onCancellationRequested(() => controller.abort());
-		return controller.signal;
+		if (token.isCancellationRequested) {
+			controller.abort();
+			return { signal: controller.signal, dispose: () => { } };
+		}
+		const listener: IDisposable = token.onCancellationRequested(() => controller.abort());
+		return {
+			signal: controller.signal,
+			dispose: () => listener.dispose(),
+		};
 	}
 }

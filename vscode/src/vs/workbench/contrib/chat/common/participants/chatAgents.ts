@@ -262,6 +262,7 @@ export class ChatAgentService extends Disposable implements IChatAgentService {
 	declare _serviceBrand: undefined;
 
 	private _agents = new Map<string, IChatAgentEntry>();
+	private _dynamicAgentDisposables = new Map<string, IDisposable>();
 
 	private readonly _onDidChangeAgents = this._register(new Emitter<IChatAgent | undefined>());
 	readonly onDidChangeAgents: Event<IChatAgent | undefined> = this._onDidChangeAgents.event;
@@ -287,6 +288,14 @@ export class ChatAgentService extends Disposable implements IChatAgentService {
 				this._updateContextKeys();
 			}
 		}));
+	}
+
+	override dispose(): void {
+		for (const disposable of Array.from(this._dynamicAgentDisposables.values())) {
+			disposable.dispose();
+		}
+		this._dynamicAgentDisposables.clear();
+		super.dispose();
 	}
 
 	registerAgent(id: string, data: IChatAgentData): IDisposable {
@@ -383,19 +392,27 @@ export class ChatAgentService extends Disposable implements IChatAgentService {
 	}
 
 	registerDynamicAgent(data: IChatAgentData, agentImpl: IChatAgentImplementation): IDisposable {
-		data.isDynamic = true;
+		this._dynamicAgentDisposables.get(data.id)?.dispose();
+		data = { ...data, isDynamic: true };
 		const agent = { data, impl: agentImpl };
 		this._agents.set(data.id, agent);
 		this._updateAgentsContextKeys();
 		this._updateContextKeys();
 		this._onDidChangeAgents.fire(new MergedChatAgent(data, agentImpl));
 
-		return toDisposable(() => {
-			this._agents.delete(data.id);
+		const registration = toDisposable(() => {
+			if (this._agents.get(data.id) === agent) {
+				this._agents.delete(data.id);
+			}
+			if (this._dynamicAgentDisposables.get(data.id) === registration) {
+				this._dynamicAgentDisposables.delete(data.id);
+			}
 			this._updateAgentsContextKeys();
 			this._updateContextKeys();
 			this._onDidChangeAgents.fire(undefined);
 		});
+		this._dynamicAgentDisposables.set(data.id, registration);
+		return registration;
 	}
 
 	private _agentCompletionProviders = new Map<string, (query: string, token: CancellationToken) => Promise<IChatAgentCompletionItem[]>>();

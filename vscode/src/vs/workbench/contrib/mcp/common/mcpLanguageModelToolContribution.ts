@@ -38,6 +38,12 @@ interface ISyncedToolData {
 	store: DisposableStore;
 }
 
+export function formatMcpResourceLinkReadFailure(uri: URI, mimeType: string | undefined, error: unknown): string {
+	const reason = error instanceof Error ? error.message : String(error || 'unknown error');
+	const mime = mimeType ? ` (${mimeType})` : '';
+	return localize('mcp.resourceLink.imageReadFailed', "MCP resource image could not be read: {0}{1}. {2}", uri.toString(), mime, reason);
+}
+
 export class McpLanguageModelToolContribution extends Disposable implements IWorkbenchContribution {
 
 	public static readonly ID = 'workbench.contrib.mcp.languageModelTools';
@@ -344,14 +350,21 @@ class McpToolImplementation implements IToolImpl {
 
 				if (isForModel) {
 					if (item.mimeType && getAttachableImageExtension(item.mimeType)) {
-						result.content.push({
-							kind: 'data',
-							audience,
-							value: {
-								mimeType: item.mimeType,
-								data: await this._fileService.readFile(uri).then(f => f.value).catch(() => VSBuffer.alloc(0)),
-							}
-						});
+						try {
+							const file = await this._fileService.readFile(uri);
+							result.content.push({
+								kind: 'data',
+								audience,
+								value: {
+									mimeType: item.mimeType,
+									data: file.value,
+								}
+							});
+						} catch (error) {
+							const message = formatMcpResourceLinkReadFailure(uri, item.mimeType, error);
+							details.output.push({ type: 'embed', isText: true, value: message, audience });
+							result.content.push({ kind: 'text', audience, value: message });
+						}
 					} else {
 						addAsLinkedResource(uri, item.mimeType);
 					}

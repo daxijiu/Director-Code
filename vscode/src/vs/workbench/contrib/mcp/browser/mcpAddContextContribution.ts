@@ -11,8 +11,9 @@ import { localize } from '../../../../nls.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { ChatContextPick, IChatContextPickService } from '../../chat/browser/attachments/chatContextPickService.js';
-import { IMcpService, McpCapability } from '../common/mcpTypes.js';
+import { IMcpService, type McpCapability } from '../common/mcpTypes.js';
 import { McpResourcePickHelper } from './mcpResourceQuickAccess.js';
+import { shouldEnableMcpResourcePicker } from '../common/mcpResourcePickerState.js';
 
 export class McpAddContextContribution extends Disposable implements IWorkbenchContribution {
 	private readonly _addContextMenu = this._register(new MutableDisposable());
@@ -24,18 +25,11 @@ export class McpAddContextContribution extends Disposable implements IWorkbenchC
 		super();
 
 		const hasServersWithResources = derived(reader => {
-			let enabled = false;
+			const capabilities: (McpCapability | undefined)[] = [];
 			for (const server of mcpService.servers.read(reader)) {
-				const cap = server.capabilities.read(undefined);
-				if (cap === undefined) {
-					enabled = true; // until we know more
-				} else if (cap & McpCapability.Resources) {
-					enabled = true;
-					break;
-				}
+				capabilities.push(server.capabilities.read(reader));
 			}
-
-			return enabled;
+			return shouldEnableMcpResourcePicker(capabilities);
 		});
 
 		this._register(autorun(reader => {

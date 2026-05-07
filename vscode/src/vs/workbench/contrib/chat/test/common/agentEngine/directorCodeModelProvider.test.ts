@@ -18,6 +18,9 @@
 
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
+import { Emitter, Event } from '../../../../../../base/common/event.js';
+import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
+import { DirectorCodeModelProvider } from '../../../browser/agentEngine/directorCodeModelProvider.js';
 import {
 	MODEL_CATALOG,
 	OPENAI_CODEX_MODEL_CATALOG,
@@ -25,9 +28,56 @@ import {
 	getModelsForProviderAndAuthVariant,
 	findModelById,
 } from '../../../common/agentEngine/modelCatalog.js';
+import type { IAuthStateService, IResolvedAuthState } from '../../../common/agentEngine/authStateService.js';
+import type { IModelResolverService, IResolvedModel } from '../../../common/agentEngine/modelResolver.js';
+import type { ProviderName } from '../../../common/agentEngine/apiKeyService.js';
 import { createProvider } from '../../../common/agentEngine/providers/providerFactory.js';
-import { OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../../common/agentEngine/providers/providerTypes.js';
 import { estimateTokens } from '../../../common/agentEngine/tokens.js';
+
+class TestAuthStateService implements IAuthStateService {
+	declare readonly _serviceBrand: undefined;
+
+	private readonly _onDidChangeAuthState = new Emitter<ProviderName>();
+	readonly onDidChangeAuthState: Event<ProviderName> = this._onDidChangeAuthState.event;
+
+	async resolveAuth(provider: ProviderName, model: string, authVariant: AuthVariantName): Promise<IResolvedAuthState> {
+		return {
+			source: 'missing',
+			provider,
+			model,
+			authVariant,
+			identityKey: `missing:${provider}:${authVariant}`,
+		};
+	}
+
+	dispose(): void {
+		this._onDidChangeAuthState.dispose();
+	}
+}
+
+class TestModelResolverService implements IModelResolverService {
+	declare readonly _serviceBrand: undefined;
+
+	readonly onDidChangeModels: Event<ProviderName> = Event.None;
+
+	async resolveModels(provider: ProviderName): Promise<IResolvedModel[]> {
+		return getModelsForProvider(provider).map(model => ({ ...model, source: 'static' }));
+	}
+
+	async refreshModels(provider: ProviderName): Promise<IResolvedModel[]> {
+		return this.resolveModels(provider);
+	}
+
+	clearCache(): void { }
+}
+
+async function setConfigAndFire(configService: TestConfigurationService, key: string, value: unknown): Promise<void> {
+	await configService.setUserConfiguration(key, value);
+	configService.onDidChangeConfigurationEmitter.fire({
+		affectsConfiguration: (candidate: string) => candidate === key,
+	} as any);
+}
 
 suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 
@@ -84,6 +134,28 @@ suite("AgentEngine - DirectorCodeModelProvider (Logic)", () => {
 			assert.ok(codexOpenAI.length > 0);
 			assert.ok(codexOpenAI.every(m => m.apiType === "openai-codex"));
 			assert.ok(codexOpenAI.every(m => m.provider === "openai"));
+		});
+
+		test("dispose stops DirectorCodeModelProvider configuration listeners", async () => {
+			const configService = new TestConfigurationService({
+				'directorCode.ai.provider': 'anthropic',
+				'directorCode.ai.authVariant': DEFAULT_AUTH_VARIANT,
+			});
+			const authStateService = new TestAuthStateService();
+			const modelResolverService = new TestModelResolverService();
+			const provider = new DirectorCodeModelProvider(configService, authStateService, modelResolverService);
+			let changes = 0;
+			const listener = provider.onDidChange(() => changes++);
+
+			await setConfigAndFire(configService, 'directorCode.ai.provider', 'openai');
+			assert.strictEqual(changes, 1);
+
+			provider.dispose();
+			await setConfigAndFire(configService, 'directorCode.ai.provider', 'gemini');
+			assert.strictEqual(changes, 1);
+
+			listener.dispose();
+			authStateService.dispose();
 		});
 	});
 

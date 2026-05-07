@@ -110,4 +110,30 @@ suite('ChatAgents', function () {
 			assert.throws(() => chatAgentService.registerAgentImplementation(testAgentId, agentImpl));
 		});
 	});
+
+	suite('registerDynamicAgent', function () {
+		test('re-registering the same id disposes the old dynamic entry without removing the latest', () => {
+			const firstImpl: IChatAgentImplementation = {
+				invoke: async () => ({ details: 'first' }),
+			};
+			const secondImpl: IChatAgentImplementation = {
+				invoke: async () => ({ details: 'second' }),
+			};
+
+			const firstRegistration = chatAgentService.registerDynamicAgent(testAgentData, firstImpl);
+			const secondRegistration = chatAgentService.registerDynamicAgent(testAgentData, secondImpl);
+
+			let agents = chatAgentService.getActivatedAgents();
+			assert.strictEqual(agents.length, 1);
+			assert.strictEqual(agents[0].id, testAgentId);
+
+			firstRegistration.dispose();
+			agents = chatAgentService.getActivatedAgents();
+			assert.strictEqual(agents.length, 1);
+			assert.strictEqual(agents[0].id, testAgentId);
+
+			secondRegistration.dispose();
+			assert.strictEqual(chatAgentService.getActivatedAgents().length, 0);
+		});
+	});
 });
