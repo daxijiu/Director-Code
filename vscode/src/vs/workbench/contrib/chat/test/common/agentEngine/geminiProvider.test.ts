@@ -260,8 +260,24 @@ suite("AgentEngine - GeminiProvider", () => {
 			assert.ok(toolUse);
 			assert.strictEqual(toolUse.name, "search");
 			assert.deepStrictEqual(toolUse.input, { q: "test" });
-			assert.ok(toolUse.id.startsWith("gemini_call_"));
+			assert.strictEqual(toolUse.id, "gemini-fc-0");
 			assert.strictEqual(result.stopReason, "tool_use");
+		});
+
+		test("generates stable functionCall ids by response order", async () => {
+			mockFetch(() => new Response(JSON.stringify(makeGeminiResponse({
+				parts: [
+					{ functionCall: { name: "search", args: { q: "test" } } },
+					{ functionCall: { name: "read", args: { path: "file.ts" } } },
+				],
+				finishReason: "FUNCTION_CALL",
+			})), { status: 200 }));
+
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
+			const result = await provider.createMessage(makeDefaultParams());
+			const toolUses = result.content.filter(c => c.type === "tool_use") as any[];
+
+			assert.deepStrictEqual(toolUses.map(tool => tool.id), ["gemini-fc-0", "gemini-fc-1"]);
 		});
 
 		test("maps finishReason correctly", async () => {
@@ -455,7 +471,7 @@ suite("AgentEngine - GeminiProvider", () => {
 			const toolStart = events.find(e => e.type === "tool_use_start") as any;
 			assert.ok(toolStart);
 			assert.strictEqual(toolStart.name, "search");
-			assert.ok(toolStart.id.startsWith("gemini_call_"));
+			assert.strictEqual(toolStart.id, "gemini-fc-0");
 
 			const toolDelta = events.find(e => e.type === "tool_input_delta") as any;
 			assert.ok(toolDelta);
@@ -492,6 +508,25 @@ suite("AgentEngine - GeminiProvider", () => {
 				assert.fail("Should have thrown");
 			} catch (err: any) {
 				assert.strictEqual(err.status, 500);
+			}
+		});
+
+		test("throws structured error for Gemini error chunks", async () => {
+			const sseLines = [
+				"data: " + JSON.stringify({
+					error: { code: 400, status: "INVALID_ARGUMENT", message: "Bad stream chunk" },
+				}),
+			];
+
+			mockFetch(() => new Response(createSSEStream(sseLines), { status: 200 }));
+
+			const provider = new GeminiProvider({ auth: { kind: 'api-key', value: "key" } });
+			try {
+				await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
+				assert.fail("Should have thrown");
+			} catch (err: any) {
+				assert.strictEqual(err.status, 400);
+				assert.ok(err.message.includes("Bad stream chunk"));
 			}
 		});
 

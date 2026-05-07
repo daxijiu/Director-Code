@@ -93,7 +93,7 @@ export class AnthropicProvider extends AbstractDirectorCodeProvider {
 	async createMessage(params: CreateMessageParams): Promise<CreateMessageResponse> {
 		const body = this.buildRequestBody(params);
 
-		const response = await this.fetchWithErrorHandling(`${this.baseURL}/v1/messages`, {
+		const response = await this.fetchWithErrorHandling(this.buildUrl('/v1/messages'), {
 			method: 'POST',
 			headers: this.buildHeaders(),
 			body: JSON.stringify(body),
@@ -112,7 +112,7 @@ export class AnthropicProvider extends AbstractDirectorCodeProvider {
 		const body = this.buildRequestBody(params);
 		body.stream = true;
 
-		const response = await this.fetchWithErrorHandling(`${this.baseURL}/v1/messages`, {
+		const response = await this.fetchWithErrorHandling(this.buildUrl('/v1/messages'), {
 			method: 'POST',
 			headers: this.buildHeaders(),
 			body: JSON.stringify(body),

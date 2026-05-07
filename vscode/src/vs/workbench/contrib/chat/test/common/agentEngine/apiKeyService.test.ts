@@ -279,6 +279,39 @@ suite("AgentEngine - ApiKeyService", () => {
 			assert.ok(result.error);
 		});
 
+		test("OpenAI testConnection does not duplicate /v1 in baseURL", async () => {
+			const originalFetch = globalThis.fetch;
+			let capturedUrl = "";
+			globalThis.fetch = ((url: string | URL | Request) => {
+				capturedUrl = String(url);
+				return Promise.resolve(new Response("{}", { status: 200 }));
+			}) as any;
+			try {
+				const result = await apiKeyService.testConnection("openai", "key", "https://api.openai.com/v1/", "gpt-4o-mini");
+				assert.strictEqual(result.success, true);
+				assert.strictEqual(capturedUrl, "https://api.openai.com/v1/chat/completions");
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
+		test("OpenAI testConnection uses max_completion_tokens for reasoning models", async () => {
+			const originalFetch = globalThis.fetch;
+			let capturedBody: any = undefined;
+			globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
+				capturedBody = JSON.parse(init!.body as string);
+				return Promise.resolve(new Response("{}", { status: 200 }));
+			}) as any;
+			try {
+				const result = await apiKeyService.testConnection("openai", "key", "https://api.openai.com/v1", "o3-mini");
+				assert.strictEqual(result.success, true);
+				assert.strictEqual(capturedBody.max_tokens, undefined);
+				assert.strictEqual(capturedBody.max_completion_tokens, 1);
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
 		test("testConnection with baseURL and model for all providers", async () => {
 			for (const provider of SUPPORTED_PROVIDERS) {
 				const result = await apiKeyService.testConnection(provider, "key", "https://localhost:1", "test-model");

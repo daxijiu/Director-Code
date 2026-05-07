@@ -16,6 +16,7 @@ import { ISecretStorageService } from '../../../../../platform/secrets/common/se
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ApiType, ProviderCapabilities } from './providers/providerTypes.js';
+import { buildProviderUrl } from './providers/abstractProvider.js';
 
 // ============================================================================
 // Constants
@@ -324,7 +325,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		// Matches AnthropicProvider: baseURL defaults to 'https://api.anthropic.com', path = /v1/messages
 		const base = (baseURL || 'https://api.anthropic.com').replace(/\/$/, '');
 		const testModel = model || 'claude-haiku-4-5';
-		const response = await fetch(`${base}/v1/messages`, {
+		const response = await fetch(buildProviderUrl(base, '/v1/messages'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -349,17 +350,22 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		// Matches OpenAIProvider: baseURL defaults to 'https://api.openai.com/v1', path = /chat/completions
 		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
 		const testModel = model || 'gpt-4o-mini';
-		const response = await fetch(`${base}/chat/completions`, {
+		const body: Record<string, any> = {
+			model: testModel,
+			messages: [{ role: 'user', content: 'hi' }],
+		};
+		if (/^o(?:1|3|4)(?:-|$)/.test(testModel)) {
+			body.max_completion_tokens = 1;
+		} else {
+			body.max_tokens = 1;
+		}
+		const response = await fetch(buildProviderUrl(base, '/chat/completions'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${apiKey}`,
 			},
-			body: JSON.stringify({
-				model: testModel,
-				max_tokens: 1,
-				messages: [{ role: 'user', content: 'hi' }],
-			}),
+			body: JSON.stringify(body),
 		});
 
 		if (!response.ok) {

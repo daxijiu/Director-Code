@@ -143,6 +143,37 @@ suite("AgentEngine - OpenAIProvider", () => {
 			assert.ok(capturedUrl.startsWith("https://api.deepseek.com/v1/chat/completions"));
 		});
 
+		test("does not duplicate /v1 for custom baseURL ending in /v1", async () => {
+			let capturedUrl = "";
+
+			mockFetch((url) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				baseURL: "https://api.openai.com/v1/",
+			});
+			await provider.createMessage(makeDefaultParams());
+
+			assert.strictEqual(capturedUrl, "https://api.openai.com/v1/chat/completions");
+		});
+
+		test("uses max_completion_tokens for reasoning models", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			await provider.createMessage(makeDefaultParams({ model: "o3-mini", maxTokens: 321 }));
+
+			assert.strictEqual(capturedBody.max_tokens, undefined);
+			assert.strictEqual(capturedBody.max_completion_tokens, 321);
+		});
+
 		test("converts system prompt to system message", async () => {
 			let capturedBody: any = null;
 
@@ -189,6 +220,39 @@ suite("AgentEngine - OpenAIProvider", () => {
 			assert.ok(toolMsg, "should have a tool role message");
 			assert.strictEqual(toolMsg.tool_call_id, "call_1");
 			assert.strictEqual(toolMsg.content, "Result here");
+		});
+
+		test("converts image blocks to OpenAI image_url content parts", async () => {
+			let capturedBody: any = null;
+
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			await provider.createMessage(makeDefaultParams({
+				messages: [{
+					role: "user",
+					content: [
+						{ type: "text", text: "What is in this image?" },
+						{ type: "image", source: { media_type: "image/png", data: "iVBORw0KGgo=" } },
+						{ type: "image", source: { url: "https://example.com/cat.png" } },
+					],
+				}],
+			}));
+
+			const userMsg = capturedBody.messages.find((m: any) => m.role === "user");
+			assert.ok(Array.isArray(userMsg.content));
+			assert.deepStrictEqual(userMsg.content[0], { type: "text", text: "What is in this image?" });
+			assert.deepStrictEqual(userMsg.content[1], {
+				type: "image_url",
+				image_url: { url: "data:image/png;base64,iVBORw0KGgo=" },
+			});
+			assert.deepStrictEqual(userMsg.content[2], {
+				type: "image_url",
+				image_url: { url: "https://example.com/cat.png" },
+			});
 		});
 
 		test("converts assistant tool_use blocks to tool_calls", async () => {
@@ -441,6 +505,29 @@ suite("AgentEngine - OpenAIProvider", () => {
 
 			assert.strictEqual(capturedBody.stream, true);
 			assert.deepStrictEqual(capturedBody.stream_options, { include_usage: true });
+		});
+
+		test("retries once without stream_options when provider rejects include_usage", async () => {
+			const capturedBodies: any[] = [];
+			let calls = 0;
+			const sseLines = ["data: [DONE]"];
+			mockFetch((_url, init) => {
+				calls++;
+				capturedBodies.push(JSON.parse(init.body as string));
+				return calls === 1
+					? new Response("unsupported stream_options include_usage", { status: 400, statusText: "Bad Request" })
+					: new Response(createSSEStream(sseLines), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				baseURL: "https://openai-compatible.example/v1",
+			});
+			await collectStreamEvents(provider.createMessageStream!(makeDefaultParams()));
+
+			assert.strictEqual(calls, 2);
+			assert.deepStrictEqual(capturedBodies[0].stream_options, { include_usage: true });
+			assert.strictEqual(capturedBodies[1].stream_options, undefined);
 		});
 	});
 

@@ -33,10 +33,14 @@ import { AbstractDirectorCodeProvider } from './abstractProvider.js';
 
 interface OpenAIChatMessage {
 	role: 'system' | 'user' | 'assistant' | 'tool';
-	content?: string | null;
+	content?: string | null | OpenAIContentPart[];
 	tool_calls?: OpenAIToolCall[];
 	tool_call_id?: string;
 }
+
+type OpenAIContentPart =
+	| { type: 'text'; text: string }
+	| { type: 'image_url'; image_url: { url: string } };
 
 interface OpenAIToolCall {
 	id: string;
@@ -107,6 +111,7 @@ interface OpenAIStreamChunk {
 
 export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	readonly apiType = 'openai-completions' as const;
+	private static readonly includeUsageUnsupportedBaseURLs = new Set<string>();
 
 	protected getApiType(): ApiType { return 'openai-completions'; }
 	protected getDefaultBaseURL(): string { return 'https://api.openai.com/v1'; }
@@ -122,15 +127,15 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 
 		const body: Record<string, any> = {
 			model: params.model,
-			max_tokens: params.maxTokens,
 			messages,
 		};
+		this.applyMaxTokens(body, params.model, params.maxTokens);
 
 		if (tools && tools.length > 0) {
 			body.tools = tools;
 		}
 
-		const response = await this.fetchWithErrorHandling(`${this.baseURL}/chat/completions`, {
+		const response = await this.fetchWithErrorHandling(this.buildUrl('/chat/completions'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -154,27 +159,44 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 
 		const body: Record<string, any> = {
 			model: params.model,
-			max_tokens: params.maxTokens,
 			messages,
 			stream: true,
-			stream_options: { include_usage: true },
 		};
+		this.applyMaxTokens(body, params.model, params.maxTokens);
+		if (!OpenAIProvider.includeUsageUnsupportedBaseURLs.has(this.baseURL)) {
+			body.stream_options = { include_usage: true };
+		}
 
 		if (tools && tools.length > 0) {
 			body.tools = tools;
 		}
 
-		const response = await this.fetchWithErrorHandling(`${this.baseURL}/chat/completions`, {
+		let response: Response;
+		try {
+			response = await this.postChatCompletions(body, params.abortSignal);
+		} catch (err: any) {
+			if (body.stream_options && this.isIncludeUsageUnsupportedError(err)) {
+				OpenAIProvider.includeUsageUnsupportedBaseURLs.add(this.baseURL);
+				delete body.stream_options;
+				response = await this.postChatCompletions(body, params.abortSignal);
+			} else {
+				throw err;
+			}
+		}
+
+		yield* this.parseOpenAISSEStream(response.body!);
+	}
+
+	private postChatCompletions(body: Record<string, any>, abortSignal?: AbortSignal): Promise<Response> {
+		return this.fetchWithErrorHandling(this.buildUrl('/chat/completions'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${this.getAuthValue()}`, // [Director-Code] B1-1
 			},
 			body: JSON.stringify(body),
-			signal: params.abortSignal,
+			signal: abortSignal,
 		});
-
-		yield* this.parseOpenAISSEStream(response.body!);
 	}
 
 	// ========================================================================
@@ -274,11 +296,17 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 		}
 
 		const textParts: string[] = [];
+		const imageParts: OpenAIContentPart[] = [];
 		const toolResults: Array<{ tool_use_id: string; content: string }> = [];
 
 		for (const block of msg.content) {
 			if (block.type === 'text') {
 				textParts.push(block.text);
+			} else if (block.type === 'image') {
+				const imagePart = this.convertImageBlock(block.source);
+				if (imagePart) {
+					imageParts.push(imagePart);
+				}
 			} else if (block.type === 'tool_result') {
 				toolResults.push({
 					tool_use_id: block.tool_use_id,
@@ -295,7 +323,15 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			});
 		}
 
-		if (textParts.length > 0) {
+		if (imageParts.length > 0) {
+			result.push({
+				role: 'user',
+				content: [
+					...textParts.filter(Boolean).map(text => ({ type: 'text' as const, text })),
+					...imageParts,
+				],
+			});
+		} else if (textParts.length > 0) {
 			result.push({ role: 'user', content: textParts.join('\n') });
 		}
 	}
@@ -427,5 +463,38 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			default:
 				return reason;
 		}
+	}
+
+	private applyMaxTokens(body: Record<string, any>, model: string, maxTokens: number): void {
+		if (/^o(?:1|3|4)(?:-|$)/.test(model)) {
+			body.max_completion_tokens = maxTokens;
+		} else {
+			body.max_tokens = maxTokens;
+		}
+	}
+
+	private convertImageBlock(source: any): OpenAIContentPart | undefined {
+		if (!source) {
+			return undefined;
+		}
+		if (typeof source === 'string') {
+			return { type: 'image_url', image_url: { url: source } };
+		}
+		if (typeof source.url === 'string' && source.url) {
+			return { type: 'image_url', image_url: { url: source.url } };
+		}
+		const mediaType = source.media_type || source.mimeType;
+		if (typeof source.data === 'string' && typeof mediaType === 'string') {
+			return {
+				type: 'image_url',
+				image_url: { url: `data:${mediaType};base64,${source.data}` },
+			};
+		}
+		return undefined;
+	}
+
+	private isIncludeUsageUnsupportedError(err: any): boolean {
+		const message = String(err?.message || '');
+		return err?.status === 400 && /stream_options|include_usage/i.test(message);
 	}
 }

@@ -43,6 +43,10 @@ class TestProvider extends AbstractDirectorCodeProvider {
 		return this.parseSSEData<T>(data);
 	}
 
+	exposeBuildUrl(path: string, baseURL?: string): string {
+		return this.buildUrl(path, baseURL);
+	}
+
 	get exposedApiKey(): string { return this.getAuthValue(); }
 	get exposedBaseURL(): string { return this.baseURL; }
 }
@@ -319,6 +323,52 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 			assert.deepStrictEqual(lines, ["hello", "world"]);
 		});
 
+		test("flushes trailing data line without final newline", async () => {
+			const encoder = new TextEncoder();
+			const stream = new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(encoder.encode("data: tail-payload"));
+					controller.close();
+				},
+			});
+
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
+			const lines: string[] = [];
+			for await (const line of p.exposeReadSSELines(stream)) {
+				lines.push(line);
+			}
+
+			assert.deepStrictEqual(lines, ["tail-payload"]);
+		});
+
+		test("truncates oversized SSE buffer and warns", async () => {
+			const encoder = new TextEncoder();
+			const hugePayload = "x".repeat(1024 * 1024 + 100);
+			const stream = new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(encoder.encode(`data: ${hugePayload}`));
+					controller.close();
+				},
+			});
+			const originalWarn = console.warn;
+			let warned = false;
+			console.warn = () => { warned = true; };
+			try {
+				const p = new TestProvider({ auth: { kind: 'api-key', value: "key" } });
+				const lines: string[] = [];
+				for await (const line of p.exposeReadSSELines(stream)) {
+					lines.push(line);
+				}
+
+				assert.strictEqual(warned, true);
+				assert.strictEqual(lines.length, 1);
+				assert.ok(lines[0].length < hugePayload.length);
+				assert.ok(lines[0].length <= 1024 * 1024);
+			} finally {
+				console.warn = originalWarn;
+			}
+		});
+
 		test("handles empty stream", async () => {
 			const stream = new ReadableStream<Uint8Array>({
 				start(controller) { controller.close(); },
@@ -331,6 +381,26 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 			}
 
 			assert.strictEqual(lines.length, 0);
+		});
+	});
+
+	// ---------------------------------------------------------------
+	// buildUrl
+	// ---------------------------------------------------------------
+	suite("buildUrl", () => {
+		test("does not duplicate /v1 when baseURL already ends with /v1", () => {
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" }, baseURL: "https://api.test.com/v1" });
+			assert.strictEqual(p.exposeBuildUrl("/v1/messages"), "https://api.test.com/v1/messages");
+		});
+
+		test("adds /v1 path for baseURL without /v1", () => {
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" }, baseURL: "https://api.test.com" });
+			assert.strictEqual(p.exposeBuildUrl("/v1/messages"), "https://api.test.com/v1/messages");
+		});
+
+		test("does not rewrite non-v1 custom proxy paths", () => {
+			const p = new TestProvider({ auth: { kind: 'api-key', value: "key" }, baseURL: "https://proxy.test.com/v2" });
+			assert.strictEqual(p.exposeBuildUrl("/chat/completions"), "https://proxy.test.com/v2/chat/completions");
 		});
 	});
 

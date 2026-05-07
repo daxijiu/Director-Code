@@ -62,6 +62,20 @@ const DEFAULT_CAPABILITIES: Record<ApiType, ProviderCapabilities> = {
 	},
 };
 
+const MAX_SSE_BUFFER_SIZE = 1024 * 1024;
+
+export function buildProviderUrl(baseURL: string, path: string): string {
+	const base = baseURL.replace(/\/+$/, '');
+	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+	if (base.endsWith('/v1') && normalizedPath.startsWith('/v1/')) {
+		return `${base}${normalizedPath.slice('/v1'.length)}`;
+	}
+	if (base.endsWith('/v1') && normalizedPath === '/v1') {
+		return base;
+	}
+	return `${base}${normalizedPath}`;
+}
+
 /**
  * Get default capabilities for a given API type.
  */
@@ -131,6 +145,10 @@ export abstract class AbstractDirectorCodeProvider implements LLMProvider {
 		return response;
 	}
 
+	protected buildUrl(path: string, baseURL: string = this.baseURL): string {
+		return buildProviderUrl(baseURL, path);
+	}
+
 	// ========================================================================
 	// Common SSE stream infrastructure
 	// ========================================================================
@@ -149,22 +167,41 @@ export abstract class AbstractDirectorCodeProvider implements LLMProvider {
 		try {
 			while (true) {
 				const { done, value } = await reader.read();
-				if (done) { break; }
+				if (done) {
+					buffer += decoder.decode();
+					break;
+				}
 
 				buffer += decoder.decode(value, { stream: true });
+				if (buffer.length > MAX_SSE_BUFFER_SIZE) {
+					console.warn(`[Director-Code] SSE buffer exceeded ${MAX_SSE_BUFFER_SIZE} bytes; truncating buffered data.`);
+					const tailSize = MAX_SSE_BUFFER_SIZE - 'data: '.length;
+					buffer = buffer.includes('data:')
+						? `data: ${buffer.slice(-tailSize)}`
+						: buffer.slice(-MAX_SSE_BUFFER_SIZE);
+				}
+
 				const lines = buffer.split('\n');
 				buffer = lines.pop()!;
 
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (!trimmed.startsWith('data: ')) { continue; }
-					const data = trimmed.slice(6).trim();
-					if (!data) { continue; }
-					yield data;
-				}
+				yield* this.extractSSEDataLines(lines);
+			}
+
+			if (buffer.trim()) {
+				yield* this.extractSSEDataLines([buffer]);
 			}
 		} finally {
 			reader.releaseLock();
+		}
+	}
+
+	private *extractSSEDataLines(lines: string[]): Generator<string> {
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed.startsWith('data:')) { continue; }
+			const data = trimmed.slice('data:'.length).trim();
+			if (!data) { continue; }
+			yield data;
 		}
 	}
 

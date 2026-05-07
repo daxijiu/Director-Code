@@ -78,14 +78,8 @@ interface GeminiResponse {
 	error?: { code: number; message: string; status: string };
 }
 
-// ============================================================================
-// Tool ID generation
-// ============================================================================
-
-let geminiCallCounter = 0;
-
-function generateGeminiToolId(name: string): string {
-	return `gemini_call_${++geminiCallCounter}_${name}`;
+function generateGeminiToolId(index: number): string {
+	return `gemini-fc-${index}`;
 }
 
 // ============================================================================
@@ -152,16 +146,26 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 	private async *parseGeminiSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamEvent> {
 		let usage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 		let finishReason = 'end_turn';
+		let functionCallIndex = 0;
 
 		for await (const data of this.readSSELines(body)) {
 			const chunk = this.parseSSEData<GeminiResponse>(data);
 			if (!chunk) { continue; }
 
+			if (chunk.error) {
+				const err: any = new Error(
+					`Gemini API error: ${chunk.error.code} ${chunk.error.status}: ${chunk.error.message}`,
+				);
+				err.status = chunk.error.code;
+				throw err;
+			}
+
 			if (chunk.candidates) {
 				for (const candidate of chunk.candidates) {
 					if (candidate.content?.parts) {
 						for (const part of candidate.content.parts) {
-							yield* this.processStreamPart(part);
+							const index = 'functionCall' in part ? functionCallIndex++ : functionCallIndex;
+							yield* this.processStreamPart(part, index);
 						}
 					}
 					if (candidate.finishReason) {
@@ -181,7 +185,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 		yield { type: 'message_complete', usage, stopReason: finishReason };
 	}
 
-	private *processStreamPart(part: GeminiPart): Generator<StreamEvent> {
+	private *processStreamPart(part: GeminiPart, functionCallIndex: number): Generator<StreamEvent> {
 		if ('text' in part) {
 			if (part.thought) {
 				yield { type: 'thinking', thinking: part.text };
@@ -190,7 +194,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 			}
 		} else if ('functionCall' in part) {
 			const fc = part.functionCall;
-			const id = generateGeminiToolId(fc.name);
+			const id = generateGeminiToolId(functionCallIndex);
 			yield { type: 'tool_use_start', id, name: fc.name };
 			yield { type: 'tool_input_delta', json: JSON.stringify(fc.args || {}) };
 		}
@@ -327,6 +331,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 		}
 
 		const content: NormalizedResponseBlock[] = [];
+		let functionCallIndex = 0;
 
 		for (const part of candidate.content?.parts || []) {
 			if ('text' in part && !part.thought) {
@@ -335,7 +340,7 @@ export class GeminiProvider extends AbstractDirectorCodeProvider {
 				const fc = part.functionCall;
 				content.push({
 					type: 'tool_use',
-					id: generateGeminiToolId(fc.name),
+					id: generateGeminiToolId(functionCallIndex++),
 					name: fc.name,
 					input: fc.args || {},
 				});
