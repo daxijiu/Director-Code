@@ -23,6 +23,7 @@ import { MODEL_CATALOG, getModelsForProvider, getOpenAICodexModels, type IModelD
 import { IOAuthService } from './oauthService.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
 import { buildGeminiAuthenticatedRequest, CONFIG_GEMINI_KEY_IN_URL } from './geminiAuth.js';
+import { fetchJsonWithTimeout } from './fetchUtils.js';
 
 // ============================================================================
 // Constants
@@ -289,94 +290,60 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 
 	private async _fetchOpenAIModels(apiKey: string, baseURL: string | undefined, providerType: 'openai' | 'openai-compatible'): Promise<IResolvedModel[]> {
 		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-		try {
-			const response = await fetch(`${base}/models`, {
-				headers: { 'Authorization': `Bearer ${apiKey}` },
-				signal: controller.signal,
-			});
+		const { data } = await fetchJsonWithTimeout<{ data?: Array<{ id: string; owned_by?: string }> }>(`${base}/models`, {
+			headers: { 'Authorization': `Bearer ${apiKey}` },
+		}, { timeoutMs: FETCH_TIMEOUT_MS });
+		if (!data.data || !Array.isArray(data.data)) { return []; }
 
-			if (!response.ok) { return []; }
-
-			const data = await response.json() as { data?: Array<{ id: string; owned_by?: string }> };
-			if (!data.data || !Array.isArray(data.data)) { return []; }
-
-			return data.data
-				.filter(m => this._isRelevantOpenAIModel(m.id, providerType))
-				.map(m => this._openAIModelToResolved(m.id, providerType));
-		} finally {
-			clearTimeout(timeout);
-		}
+		return data.data
+			.filter(m => this._isRelevantOpenAIModel(m.id, providerType))
+			.map(m => this._openAIModelToResolved(m.id, providerType));
 	}
 
 	private async _fetchOpenAICodexModels(accessToken: string, baseURL?: string): Promise<IResolvedModel[]> {
 		const base = (baseURL || 'https://chatgpt.com/backend-api/codex').replace(/\/$/, '');
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-		try {
-			const response = await fetch(`${base}/models?client_version=1.0.0`, {
-				headers: { 'Authorization': `Bearer ${accessToken}` },
-				signal: controller.signal,
-			});
+		const { data } = await fetchJsonWithTimeout<{
+			models?: Array<{
+				slug?: string;
+				display_name?: string;
+				visibility?: string;
+				supported_in_api?: boolean;
+				context_window?: number;
+				max_context_window?: number;
+				priority?: number;
+			}>;
+		}>(`${base}/models?client_version=1.0.0`, {
+			headers: { 'Authorization': `Bearer ${accessToken}` },
+		}, { timeoutMs: FETCH_TIMEOUT_MS });
+		if (!data.models || !Array.isArray(data.models)) { return []; }
 
-			if (!response.ok) { return []; }
+		const sortable = data.models
+			.filter(m => typeof m.slug === 'string' && m.slug.trim().length > 0)
+			.filter(m => m.supported_in_api !== false)
+			.filter(m => !['hide', 'hidden'].includes((m.visibility ?? '').trim().toLowerCase()))
+			.map(m => ({ model: m, priority: typeof m.priority === 'number' ? m.priority : 10_000 }));
 
-			const data = await response.json() as {
-				models?: Array<{
-					slug?: string;
-					display_name?: string;
-					visibility?: string;
-					supported_in_api?: boolean;
-					context_window?: number;
-					max_context_window?: number;
-					priority?: number;
-				}>;
-			};
-			if (!data.models || !Array.isArray(data.models)) { return []; }
-
-			const sortable = data.models
-				.filter(m => typeof m.slug === 'string' && m.slug.trim().length > 0)
-				.filter(m => m.supported_in_api !== false)
-				.filter(m => !['hide', 'hidden'].includes((m.visibility ?? '').trim().toLowerCase()))
-				.map(m => ({ model: m, priority: typeof m.priority === 'number' ? m.priority : 10_000 }));
-
-			sortable.sort((a, b) => a.priority - b.priority || a.model.slug!.localeCompare(b.model.slug!));
-			return sortable.map(({ model }) => this._openAICodexModelToResolved(model));
-		} finally {
-			clearTimeout(timeout);
-		}
+		sortable.sort((a, b) => a.priority - b.priority || a.model.slug!.localeCompare(b.model.slug!));
+		return sortable.map(({ model }) => this._openAICodexModelToResolved(model));
 	}
 
 	private async _fetchGeminiModels(apiKey: string, baseURL?: string): Promise<IResolvedModel[]> {
 		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+		const request = buildGeminiAuthenticatedRequest(
+			`${base}/v1beta/models`,
+			apiKey,
+			this._useGeminiKeyInUrl(),
+		);
+		const { data } = await fetchJsonWithTimeout<{ models?: Array<{ name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number; supportedGenerationMethods?: string[] }> }>(request.url, {
+			headers: request.headers,
+		}, { timeoutMs: FETCH_TIMEOUT_MS });
+		if (!data.models || !Array.isArray(data.models)) { return []; }
 
-		try {
-			const request = buildGeminiAuthenticatedRequest(
-				`${base}/v1beta/models`,
-				apiKey,
-				this._useGeminiKeyInUrl(),
-			);
-			const response = await fetch(request.url, {
-				headers: request.headers,
-				signal: controller.signal,
-			});
-
-			if (!response.ok) { return []; }
-
-			const data = await response.json() as { models?: Array<{ name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number; supportedGenerationMethods?: string[] }> };
-			if (!data.models || !Array.isArray(data.models)) { return []; }
-
-			return data.models
-				.filter(m => this._isRelevantGeminiModel(m.name, m.supportedGenerationMethods))
-				.map(m => this._geminiModelToResolved(m));
-		} finally {
-			clearTimeout(timeout);
-		}
+		return data.models
+			.filter(m => this._isRelevantGeminiModel(m.name, m.supportedGenerationMethods))
+			.map(m => this._geminiModelToResolved(m));
 	}
 
 	private _useGeminiKeyInUrl(): boolean {
@@ -389,24 +356,14 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 
 	private async _fetchFromCDN(provider: ProviderName): Promise<IResolvedModel[]> {
 		try {
-			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+			const { data } = await fetchJsonWithTimeout<ICDNModelList>(CDN_MODEL_LIST_URL, {}, { timeoutMs: FETCH_TIMEOUT_MS });
+			if (!data.models || !Array.isArray(data.models)) { return []; }
 
-			try {
-				const response = await fetch(CDN_MODEL_LIST_URL, {
-					signal: controller.signal,
-				});
-
-				if (!response.ok) { return []; }
-
-				const data = await response.json() as ICDNModelList;
-				if (!data.models || !Array.isArray(data.models)) { return []; }
-
-				return data.models
-					.filter(m => m.provider === provider)
-					.map(m => ({
-						id: m.id,
-						name: m.name,
+			return data.models
+				.filter(m => m.provider === provider)
+				.map(m => ({
+					id: m.id,
+					name: m.name,
 					provider: m.provider,
 					family: m.family || 'unknown',
 					apiType: m.apiType,
@@ -415,9 +372,6 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 					metadataKnown: !!(m.maxInputTokens && m.maxOutputTokens),
 					source: 'cdn' as const,
 				}));
-			} finally {
-				clearTimeout(timeout);
-			}
 		} catch {
 			return [];
 		}

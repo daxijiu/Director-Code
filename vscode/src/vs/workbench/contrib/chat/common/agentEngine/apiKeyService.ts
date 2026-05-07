@@ -19,6 +19,7 @@ import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ApiType, ProviderCapabilities } from './providers/providerTypes.js';
 import { buildProviderUrl } from './providers/abstractProvider.js';
 import { buildGeminiAuthenticatedRequest, CONFIG_GEMINI_KEY_IN_URL } from './geminiAuth.js';
+import { fetchWithTimeout, getResponseErrorMessage } from './fetchUtils.js';
 
 // ============================================================================
 // Constants
@@ -344,10 +345,8 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 
 	async testConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		const startTime = Date.now();
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), TEST_CONNECTION_TIMEOUT_MS);
 		try {
-			const result = await this._doTestConnection(provider, apiKey, baseURL, model, controller.signal);
+			const result = await this._doTestConnection(provider, apiKey, baseURL, model);
 			return {
 				...result,
 				latencyMs: Date.now() - startTime,
@@ -358,8 +357,6 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				error: err.message || String(err),
 				latencyMs: Date.now() - startTime,
 			};
-		} finally {
-			clearTimeout(timeout);
 		}
 	}
 
@@ -370,24 +367,24 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	 * URL construction mirrors the real Provider classes to avoid
 	 * mismatches when a custom baseURL is in use (e.g. DeepSeek).
 	 */
-	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
+	private async _doTestConnection(provider: ProviderName, apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		switch (provider) {
 			case 'anthropic':
 			case 'anthropic-compatible':
-				return this._testAnthropic(apiKey, baseURL, model, signal);
+				return this._testAnthropic(apiKey, baseURL, model);
 			case 'openai':
 			case 'openai-compatible':
-				return this._testOpenAI(apiKey, baseURL, model, signal);
+				return this._testOpenAI(apiKey, baseURL, model);
 			case 'gemini':
-				return this._testGemini(apiKey, baseURL, model, signal);
+				return this._testGemini(apiKey, baseURL, model);
 		}
 	}
 
-	private async _testAnthropic(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
+	private async _testAnthropic(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		// Matches AnthropicProvider: baseURL defaults to 'https://api.anthropic.com', path = /v1/messages
 		const base = (baseURL || 'https://api.anthropic.com').replace(/\/$/, '');
 		const testModel = model || 'claude-haiku-4-5';
-		const response = await fetch(buildProviderUrl(base, '/v1/messages'), {
+		const response = await fetchWithTimeout(buildProviderUrl(base, '/v1/messages'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -399,17 +396,15 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				max_tokens: 1,
 				messages: [{ role: 'user', content: 'hi' }],
 			}),
-			signal,
-		});
+		}, { timeoutMs: TEST_CONNECTION_TIMEOUT_MS });
 
 		if (!response.ok) {
-			const body = await response.text();
-			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+			return { success: false, error: await getResponseErrorMessage(response) };
 		}
 		return { success: true, model: testModel };
 	}
 
-	private async _testOpenAI(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
+	private async _testOpenAI(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		// Matches OpenAIProvider: baseURL defaults to 'https://api.openai.com/v1', path = /chat/completions
 		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
 		const testModel = model || 'gpt-4o-mini';
@@ -422,24 +417,22 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		} else {
 			body.max_tokens = 1;
 		}
-		const response = await fetch(buildProviderUrl(base, '/chat/completions'), {
+		const response = await fetchWithTimeout(buildProviderUrl(base, '/chat/completions'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${apiKey}`,
 			},
 			body: JSON.stringify(body),
-			signal,
-		});
+		}, { timeoutMs: TEST_CONNECTION_TIMEOUT_MS });
 
 		if (!response.ok) {
-			const body = await response.text();
-			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+			return { success: false, error: await getResponseErrorMessage(response) };
 		}
 		return { success: true, model: testModel };
 	}
 
-	private async _testGemini(apiKey: string, baseURL?: string, model?: string, signal?: AbortSignal): Promise<IConnectionTestResult> {
+	private async _testGemini(apiKey: string, baseURL?: string, model?: string): Promise<IConnectionTestResult> {
 		const base = (baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
 		const testModel = model || 'gemini-2.5-flash';
 		const request = buildGeminiAuthenticatedRequest(
@@ -447,7 +440,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 			apiKey,
 			this._useGeminiKeyInUrl(),
 		);
-		const response = await fetch(request.url, {
+		const response = await fetchWithTimeout(request.url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -457,12 +450,10 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 				contents: [{ parts: [{ text: 'hi' }] }],
 				generationConfig: { maxOutputTokens: 1 },
 			}),
-			signal,
-		});
+		}, { timeoutMs: TEST_CONNECTION_TIMEOUT_MS });
 
 		if (!response.ok) {
-			const body = await response.text();
-			return { success: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+			return { success: false, error: await getResponseErrorMessage(response) };
 		}
 		return { success: true, model: testModel };
 	}

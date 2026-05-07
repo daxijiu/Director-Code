@@ -26,6 +26,7 @@ import { ISecretStorageService } from '../../../../../platform/secrets/common/se
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type FlowKind } from './providers/providerTypes.js';
+import { fetchWithTimeout } from './fetchUtils.js';
 
 // ============================================================================
 // Constants
@@ -39,6 +40,7 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 const PKCE_SESSION_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_DEVICE_CODE_INTERVAL_S = 5;
 const OPENAI_CODEX_DEVICE_EXPIRES_IN_S = 15 * 60;
+const OAUTH_FETCH_TIMEOUT_MS = 15_000;
 
 export const OPENAI_CODEX_OAUTH_LABEL = 'OpenAI (ChatGPT/Codex OAuth)';
 
@@ -453,11 +455,11 @@ export class OAuthService extends Disposable implements IOAuthService {
 			scope: config.scopes.join(' '),
 		});
 
-		const response = await fetch(config.deviceAuthorizationEndpoint, {
+		const response = await fetchWithTimeout(config.deviceAuthorizationEndpoint, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: body.toString(),
-		});
+		}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 
 		if (!response.ok) {
 			const errText = await response.text().catch(() => '');
@@ -503,11 +505,11 @@ export class OAuthService extends Disposable implements IOAuthService {
 		config: IOAuthProviderConfig,
 		sessionId: string,
 	): Promise<IOAuthLoginPayload> {
-		const response = await fetch(config.deviceAuthorizationEndpoint!, {
+		const response = await fetchWithTimeout(config.deviceAuthorizationEndpoint!, {
 			method: 'POST',
 			headers: buildJsonHeaders(),
 			body: JSON.stringify({ client_id: config.clientId }),
-		});
+		}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 
 		if (!response.ok) {
 			const errText = await response.text().catch(() => '');
@@ -596,11 +598,11 @@ export class OAuthService extends Disposable implements IOAuthService {
 			state: callbackState ?? session.state,
 		};
 
-		const response = await fetch(config.tokenEndpoint, {
+		const response = await fetchWithTimeout(config.tokenEndpoint, {
 			method: 'POST',
 			headers: buildOAuthTokenHeaders(),
 			body: JSON.stringify(body),
-		});
+		}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 
 		if (!response.ok) {
 			const errBody = await response.text().catch(() => '');
@@ -664,11 +666,11 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 		let response: Response;
 		try {
-			response = await fetch(config.tokenEndpoint, {
+			response = await fetchWithTimeout(config.tokenEndpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: body.toString(),
-			});
+			}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 		} catch (err: any) {
 			return { status: 'error', error: `Network error: ${err.message}` };
 		}
@@ -736,14 +738,14 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 		let pollResponse: Response;
 		try {
-			pollResponse = await fetch(config.deviceTokenEndpoint, {
+			pollResponse = await fetchWithTimeout(config.deviceTokenEndpoint, {
 				method: 'POST',
 				headers: buildJsonHeaders(),
 				body: JSON.stringify({
 					device_auth_id: session.deviceAuthId,
 					user_code: session.userCode,
 				}),
-			});
+			}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 		} catch (err: any) {
 			return { status: 'error', error: `Network error: ${err.message}` };
 		}
@@ -776,11 +778,11 @@ export class OAuthService extends Disposable implements IOAuthService {
 
 		let tokenResponse: Response;
 		try {
-			tokenResponse = await fetch(config.tokenEndpoint, {
+			tokenResponse = await fetchWithTimeout(config.tokenEndpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: form.toString(),
-			});
+			}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 		} catch (err: any) {
 			return { status: 'error', error: `Network error: ${err.message}` };
 		}
@@ -915,13 +917,13 @@ export class OAuthService extends Disposable implements IOAuthService {
 				client_id: stored.clientId || config.clientId,
 			}).toString();
 
-		const response = await fetch(config.tokenEndpoint, {
+		const response = await fetchWithTimeout(config.tokenEndpoint, {
 			method: 'POST',
 			headers: config.flowKind === 'pkce_manual'
 				? buildOAuthTokenHeaders()
 				: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body,
-		});
+		}, { timeoutMs: OAUTH_FETCH_TIMEOUT_MS });
 
 		if (!response.ok) {
 			throw new Error(`Token refresh failed: ${response.status}`);

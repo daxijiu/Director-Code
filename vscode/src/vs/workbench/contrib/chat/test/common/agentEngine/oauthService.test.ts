@@ -321,6 +321,8 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 			assert.strictEqual(capturedUrl, "https://auth.openai.com/api/accounts/deviceauth/usercode");
 			assert.strictEqual((capturedInit!.headers as Record<string, string>)["Content-Type"], "application/json");
+			assert.ok(capturedInit!.signal);
+			assert.strictEqual(capturedInit!.signal!.aborted, false);
 			assert.deepStrictEqual(JSON.parse(capturedInit!.body as string), {
 				client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
 			});

@@ -121,8 +121,10 @@ suite("AgentEngine - ModelResolverService", () => {
 	suite("Provider API (Layer 1)", () => {
 
 		test("fetches OpenAI models from /models endpoint", async () => {
-			mockFetch((url) => {
+			let capturedSignal: AbortSignal | undefined;
+			mockFetch((url, init) => {
 				if (url.includes("/models")) {
+					capturedSignal = init?.signal ?? undefined;
 					return new Response(JSON.stringify({
 						data: [
 							{ id: "gpt-4o", owned_by: "openai" },
@@ -145,6 +147,8 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.ok(!models.some(m => m.id === "dall-e-3"));
 			assert.ok(!models.some(m => m.id === "tts-1"));
 			assert.ok(!models.some(m => m.id === "omni-moderation-latest"));
+			assert.ok(capturedSignal);
+			assert.strictEqual(capturedSignal!.aborted, false);
 		});
 
 		test("fetches OpenAI Codex models from chatgpt.com backend endpoint", async () => {

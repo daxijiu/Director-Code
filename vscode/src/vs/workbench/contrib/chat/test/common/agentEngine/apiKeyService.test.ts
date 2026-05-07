@@ -324,6 +324,20 @@ suite("AgentEngine - ApiKeyService", () => {
 			}
 		});
 
+		test("testConnection returns consistent HTTP error format", async () => {
+			const originalFetch = globalThis.fetch;
+			globalThis.fetch = (() => {
+				return Promise.resolve(new Response("rate limited", { status: 429 }));
+			}) as any;
+			try {
+				const result = await apiKeyService.testConnection("openai", "key", "https://api.openai.com/v1", "gpt-4o-mini");
+				assert.strictEqual(result.success, false);
+				assert.strictEqual(result.error, "HTTP 429: rate limited");
+			} finally {
+				globalThis.fetch = originalFetch;
+			}
+		});
+
 		test("Gemini testConnection sends API key in header by default", async () => {
 			const originalFetch = globalThis.fetch;
 			let capturedUrl = "";
