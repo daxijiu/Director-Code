@@ -86,6 +86,22 @@ function makeTokenResponse(overrides: Record<string, any> = {}): object {
 	};
 }
 
+function base64UrlJson(value: object): string {
+	const bytes = new TextEncoder().encode(JSON.stringify(value));
+	let binary = '';
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+	return btoa(binary)
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=+$/, '');
+}
+
+function makeJwt(payload: object): string {
+	return `${base64UrlJson({ alg: 'none', typ: 'JWT' })}.${base64UrlJson(payload)}.signature`;
+}
+
 function jsonResponse(body: object, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
@@ -372,6 +388,21 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.strictEqual(stored.flowKind, "pkce_manual");
 			assert.strictEqual(stored.authVariant, "default");
 			assert.strictEqual(stored.accessToken, "at-test-token");
+			assert.match(stored.authIdentityKey!, /^oauth:anthropic:default:token:[a-f0-9]{16}$/);
+		});
+
+		test("stores subject-based authIdentityKey when access token is a JWT", async () => {
+			const sessionId = await setupPkceSession();
+			globalThis.fetch = (() => Promise.resolve(jsonResponse(makeTokenResponse({
+				access_token: makeJwt({ sub: "anthropic-user-123" }),
+			})))) as any;
+
+			await oauthService.submitManualCode("anthropic", sessionId, "code");
+
+			const storedJson = await mockSecretService.get("director-code.oauth.anthropic");
+			assert.ok(storedJson);
+			const stored = JSON.parse(storedJson!) as IOAuthStoredTokens;
+			assert.match(stored.authIdentityKey!, /^oauth:anthropic:default:subject:[a-f0-9]{16}$/);
 		});
 
 		test("exchanges manual code with Anthropic JSON body and callback state", async () => {
@@ -711,6 +742,11 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.strictEqual(status.authVariant, "default");
 			assert.strictEqual(status.hasRefreshToken, true);
 			assert.ok(status.expiresAt! > Date.now());
+			assert.match(status.authIdentityKey!, /^oauth:anthropic:default:token:[a-f0-9]{16}$/);
+
+			const upgradedJson = await mockSecretService.get("director-code.oauth.anthropic");
+			const upgraded = JSON.parse(upgradedJson!) as IOAuthStoredTokens;
+			assert.strictEqual(upgraded.authIdentityKey, status.authIdentityKey);
 		});
 
 		test("returns loggedIn: false for expired token without refresh", async () => {
@@ -726,6 +762,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const status = await oauthService.getStatus("anthropic");
 			assert.strictEqual(status.loggedIn, false);
 			assert.strictEqual(status.flow, "pkce_manual");
+			assert.match(status.authIdentityKey!, /^oauth:anthropic:default:token:[a-f0-9]{16}$/);
 		});
 
 		test("returns loggedIn: true for expired token with refresh", async () => {
@@ -745,6 +782,27 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			assert.strictEqual(status.authVariant, "openai-codex");
 			assert.strictEqual(status.sourceLabel, "OpenAI (ChatGPT/Codex OAuth)");
 			assert.strictEqual(status.hasRefreshToken, true);
+			assert.match(status.authIdentityKey!, /^oauth:openai:openai-codex:token:[a-f0-9]{16}$/);
+		});
+
+		test("uses OpenAI ChatGPT account claim as subject identity", async () => {
+			const stored: IOAuthStoredTokens = {
+				accessToken: makeJwt({
+					'https://api.openai.com/auth': {
+						chatgpt_account_id: 'chatgpt-account-123',
+					},
+				}),
+				refreshToken: "rt",
+				expiresAt: Date.now() + 3600000,
+				clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
+				flowKind: "device_code",
+				authVariant: "openai-codex",
+			};
+			await mockSecretService.set("director-code.oauth.openai", JSON.stringify(stored));
+
+			const status = await oauthService.getStatus("openai");
+			assert.strictEqual(status.loggedIn, true);
+			assert.match(status.authIdentityKey!, /^oauth:openai:openai-codex:subject:[a-f0-9]{16}$/);
 		});
 
 		test("returns loggedIn: true for token without expiresAt", async () => {
@@ -802,7 +860,12 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 
 			const tokens = await oauthService.getTokens("openai");
 
-			assert.deepStrictEqual(tokens, stored);
+			assert.strictEqual(tokens!.accessToken, stored.accessToken);
+			assert.strictEqual(tokens!.refreshToken, stored.refreshToken);
+			assert.strictEqual(tokens!.clientId, stored.clientId);
+			assert.strictEqual(tokens!.flowKind, stored.flowKind);
+			assert.strictEqual(tokens!.authVariant, stored.authVariant);
+			assert.match(tokens!.authIdentityKey!, /^oauth:openai:openai-codex:token:[a-f0-9]{16}$/);
 		});
 
 		test("returns undefined when no tokens are stored", async () => {

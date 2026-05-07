@@ -75,9 +75,12 @@ function providerFromApiKeyEvent(event: string): ProviderName | undefined {
 	return SUPPORTED_PROVIDERS.find(provider => event === provider || event.startsWith(`${provider}.`));
 }
 
-function fingerprintSecret(value: string): string {
-	const tail = value.slice(-4) || 'empty';
-	return `len:${value.length}:tail:${tail}`;
+async function sha256Prefix(value: string): Promise<string> {
+	const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+	return Array.from(new Uint8Array(hash))
+		.map(byte => byte.toString(16).padStart(2, '0'))
+		.join('')
+		.slice(0, 16);
 }
 
 function isOAuthProvider(provider: ProviderName): provider is OAuthProviderName {
@@ -156,6 +159,7 @@ export class AuthStateService extends Disposable implements IAuthStateService {
 		const capabilities = modelConfig?.capabilities || undefined;
 		const identityScope = hasPerModelKey ? model : 'provider';
 		const auth: ProviderAuth = { kind: 'api-key', value: apiKey };
+		const keyHash = await sha256Prefix(apiKey);
 
 		return {
 			source,
@@ -166,7 +170,7 @@ export class AuthStateService extends Disposable implements IAuthStateService {
 			auth,
 			baseURL,
 			capabilities,
-			identityKey: `api-key:${provider}:${identityScope}:${fingerprintSecret(apiKey)}`,
+			identityKey: `api-key:${provider}:${identityScope}:${keyHash}`,
 			metadata: {
 				sourceLabel: hasPerModelKey ? `${provider} per-model API key` : `${provider} API key`,
 			},
@@ -211,7 +215,7 @@ export class AuthStateService extends Disposable implements IAuthStateService {
 			accessToken: tokens.accessToken,
 			refreshToken: tokens.refreshToken,
 			auth,
-			identityKey: `oauth:${provider}:${authVariant}:${fingerprintSecret(tokens.accessToken)}`,
+			identityKey: tokens.authIdentityKey ?? `oauth:${provider}:${authVariant}:token:${await sha256Prefix(tokens.refreshToken || tokens.accessToken)}`,
 			metadata: {
 				sourceLabel: status.sourceLabel,
 				expiresAt: tokens.expiresAt ?? status.expiresAt,

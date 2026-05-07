@@ -134,7 +134,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 		assert.strictEqual(state.authVariant, DEFAULT_AUTH_VARIANT);
 		assert.strictEqual(state.apiKey, 'provider-key');
 		assert.deepStrictEqual(state.auth, { kind: 'api-key', value: 'provider-key' });
-		assert.ok(state.identityKey?.includes('provider'));
+		assert.match(state.identityKey!, /^api-key:anthropic:provider:[a-f0-9]{16}$/);
 	});
 
 	test('prefers matching OAuth state over API keys', async () => {
@@ -146,6 +146,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
 			flowKind: 'pkce_manual',
 			authVariant: DEFAULT_AUTH_VARIANT,
+			authIdentityKey: 'oauth:anthropic:default:subject:stable-user',
 		};
 		oauthService.tokensByProvider.set('anthropic', tokens);
 		oauthService.statusByProvider.set('anthropic', {
@@ -154,6 +155,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			sourceLabel: 'anthropic OAuth',
 			flow: 'pkce_manual',
 			authVariant: DEFAULT_AUTH_VARIANT,
+			authIdentityKey: tokens.authIdentityKey,
 			expiresAt: tokens.expiresAt,
 			hasRefreshToken: true,
 		});
@@ -169,6 +171,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			refreshToken: 'anthropic-refresh-token',
 			clientId: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
 		});
+		assert.strictEqual(state.identityKey, 'oauth:anthropic:default:subject:stable-user');
 	});
 
 	test('resolves per-model API key and model config', async () => {
@@ -185,7 +188,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 		assert.strictEqual(state.apiKey, 'model-key');
 		assert.strictEqual(state.baseURL, 'https://proxy.example/v1');
 		assert.strictEqual(state.capabilities?.vision, false);
-		assert.ok(state.identityKey?.includes('gpt-4o'));
+		assert.match(state.identityKey!, /^api-key:openai:gpt-4o:[a-f0-9]{16}$/);
 	});
 
 	test('falls back to global baseURL when no model config is set', async () => {
@@ -213,6 +216,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			clientId: 'app_EMoamEEZ73f0CkXaXp7hrann',
 			flowKind: 'device_code',
 			authVariant: OPENAI_CODEX_AUTH_VARIANT,
+			authIdentityKey: 'oauth:openai:openai-codex:subject:codex-user',
 		};
 		oauthService.tokensByProvider.set('openai', tokens);
 		oauthService.statusByProvider.set('openai', {
@@ -221,6 +225,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			sourceLabel: 'OpenAI (ChatGPT/Codex OAuth)',
 			flow: 'device_code',
 			authVariant: OPENAI_CODEX_AUTH_VARIANT,
+			authIdentityKey: tokens.authIdentityKey,
 			expiresAt: tokens.expiresAt,
 			hasRefreshToken: true,
 		});
@@ -236,7 +241,7 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 			refreshToken: 'codex-refresh-token',
 			clientId: 'app_EMoamEEZ73f0CkXaXp7hrann',
 		});
-		assert.ok(state.identityKey?.includes(OPENAI_CODEX_AUTH_VARIANT));
+		assert.strictEqual(state.identityKey, 'oauth:openai:openai-codex:subject:codex-user');
 	});
 
 	test('does not use OpenAI OAuth when default authVariant is requested', async () => {

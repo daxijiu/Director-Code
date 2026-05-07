@@ -197,6 +197,30 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.strictEqual(newModel!.name, "gpt-5-turbo");
 		});
 
+		test("keeps native OpenAI provider when a custom baseURL is configured", async () => {
+			mockFetch(() => new Response(JSON.stringify({
+				data: [{ id: "gpt-5-turbo", owned_by: "proxy" }],
+			}), { status: 200 }));
+
+			const models = await resolver.resolveModels("openai", "key", "https://proxy.example.com/v1", "api-key:openai:provider:a");
+			const newModel = models.find(m => m.id === "gpt-5-turbo");
+
+			assert.ok(newModel);
+			assert.strictEqual(newModel!.provider, "openai");
+		});
+
+		test("keeps openai-compatible provider even when model id matches OpenAI catalog", async () => {
+			mockFetch(() => new Response(JSON.stringify({
+				data: [{ id: "gpt-4o", owned_by: "proxy" }],
+			}), { status: 200 }));
+
+			const models = await resolver.resolveModels("openai-compatible", "key", "https://proxy.example.com/v1", "api-key:openai-compatible:provider:a");
+			const model = models.find(m => m.id === "gpt-4o");
+
+			assert.ok(model);
+			assert.strictEqual(model!.provider, "openai-compatible");
+		});
+
 		test("fetches Gemini models from /v1beta/models endpoint", async () => {
 			mockFetch((url) => {
 				if (url.includes("/v1beta/models")) {
@@ -375,15 +399,96 @@ suite("AgentEngine - ModelResolverService", () => {
 		});
 
 		test("different baseURLs have separate caches", async () => {
-			mockFetch(() => new Response(JSON.stringify({
-				data: [{ id: "gpt-4o" }],
-			}), { status: 200 }));
+			let fetchCount = 0;
+			mockFetch(() => {
+				fetchCount++;
+				return new Response(JSON.stringify({
+					data: [{ id: "gpt-4o" }],
+				}), { status: 200 });
+			});
 
 			const a = await resolver.resolveModels("openai", "key", "https://api-a.com/v1");
 			const b = await resolver.resolveModels("openai", "key", "https://api-b.com/v1");
 
 			assert.ok(a.length > 0);
 			assert.ok(b.length > 0);
+			assert.strictEqual(fetchCount, 2);
+		});
+
+		test("different auth identity keys have separate caches", async () => {
+			let fetchCount = 0;
+			mockFetch(() => {
+				fetchCount++;
+				return new Response(JSON.stringify({
+					data: [{ id: "gpt-4o" }],
+				}), { status: 200 });
+			});
+
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:b", DEFAULT_AUTH_VARIANT);
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+
+			assert.strictEqual(fetchCount, 2);
+		});
+
+		test("equivalent OpenAI /v1 baseURLs share a cache bucket", async () => {
+			let fetchCount = 0;
+			const urls: string[] = [];
+			mockFetch((url) => {
+				fetchCount++;
+				urls.push(url);
+				return new Response(JSON.stringify({
+					data: [{ id: "gpt-4o" }],
+				}), { status: 200 });
+			});
+
+			await resolver.resolveModels("openai", "key", "https://api.openai.com", "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			await resolver.resolveModels("openai", "key", "https://api.openai.com/v1/", "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+
+			assert.strictEqual(fetchCount, 1);
+			assert.strictEqual(urls[0], "https://api.openai.com/v1/models");
+		});
+
+		test("deduplicates in-flight requests for the same cache bucket", async () => {
+			let fetchCount = 0;
+			let release!: () => void;
+			globalThis.fetch = (() => {
+				fetchCount++;
+				return new Promise<Response>(resolve => {
+					release = () => resolve(new Response(JSON.stringify({
+						data: [{ id: "gpt-4o" }],
+					}), { status: 200 }));
+				});
+			}) as any;
+
+			const first = resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			const second = resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			await Promise.resolve();
+			assert.strictEqual(fetchCount, 1);
+
+			release();
+			const [firstModels, secondModels] = await Promise.all([first, second]);
+			assert.strictEqual(firstModels, secondModels);
+		});
+
+		test("refreshModels clears all cache buckets for the provider", async () => {
+			let fetchCount = 0;
+			mockFetch(() => {
+				fetchCount++;
+				return new Response(JSON.stringify({
+					data: [{ id: "gpt-4o" }],
+				}), { status: 200 });
+			});
+
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:b", DEFAULT_AUTH_VARIANT);
+			assert.strictEqual(fetchCount, 2);
+
+			await resolver.refreshModels("openai", "key", undefined, "api-key:openai:provider:c", DEFAULT_AUTH_VARIANT);
+			assert.strictEqual(fetchCount, 3);
+
+			await resolver.resolveModels("openai", "key", undefined, "api-key:openai:provider:a", DEFAULT_AUTH_VARIANT);
+			assert.strictEqual(fetchCount, 4);
 		});
 
 		test("different authVariant values have separate caches", async () => {

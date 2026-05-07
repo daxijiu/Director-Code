@@ -84,6 +84,7 @@ export interface IOAuthStatus {
 	readonly sourceLabel: string;
 	readonly flow?: OAuthFlowKind;
 	readonly authVariant?: AuthVariantName;
+	readonly authIdentityKey?: string;
 	readonly expiresAt?: number;
 	readonly hasRefreshToken?: boolean;
 }
@@ -110,12 +111,14 @@ export interface IOAuthTokens {
 	readonly tokenType?: string;
 	readonly scope?: string;
 	readonly authVariant?: AuthVariantName;
+	readonly authIdentityKey?: string;
 }
 
 export interface IOAuthStoredTokens extends IOAuthTokens {
 	readonly clientId: string;
 	readonly flowKind: OAuthFlowKind;
 	readonly authVariant: AuthVariantName;
+	readonly authIdentityKey?: string;
 }
 
 // ============================================================================
@@ -184,6 +187,75 @@ function base64UrlEncode(buffer: Uint8Array): string {
 		.replace(/\+/g, '-')
 		.replace(/\//g, '_')
 		.replace(/=+$/, '');
+}
+
+function decodeBase64UrlText(value: string): string | undefined {
+	try {
+		const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+		const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+		const binary = atob(padded);
+		const bytes = new Uint8Array(binary.length);
+		for (let i = 0; i < binary.length; i++) {
+			bytes[i] = binary.charCodeAt(i);
+		}
+		return new TextDecoder().decode(bytes);
+	} catch {
+		return undefined;
+	}
+}
+
+function decodeJwtPayload(token: string): Record<string, any> | undefined {
+	const parts = token.split('.');
+	if (parts.length !== 3) {
+		return undefined;
+	}
+	const text = decodeBase64UrlText(parts[1]);
+	if (!text) {
+		return undefined;
+	}
+	try {
+		return JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+}
+
+function extractOAuthSubject(provider: OAuthProviderName, accessToken: string): string | undefined {
+	const payload = decodeJwtPayload(accessToken);
+	if (!payload) {
+		return undefined;
+	}
+	if (typeof payload.sub === 'string' && payload.sub) {
+		return payload.sub;
+	}
+	if (provider === 'openai') {
+		const authClaim = payload['https://api.openai.com/auth'];
+		if (typeof authClaim?.chatgpt_account_id === 'string' && authClaim.chatgpt_account_id) {
+			return authClaim.chatgpt_account_id;
+		}
+	}
+	return undefined;
+}
+
+async function sha256Prefix(value: string): Promise<string> {
+	const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+	return Array.from(new Uint8Array(hash))
+		.map(byte => byte.toString(16).padStart(2, '0'))
+		.join('')
+		.slice(0, 16);
+}
+
+async function deriveOAuthIdentityKey(
+	provider: OAuthProviderName,
+	authVariant: AuthVariantName,
+	tokens: IOAuthTokens,
+): Promise<string> {
+	const subject = extractOAuthSubject(provider, tokens.accessToken);
+	if (subject) {
+		return `oauth:${provider}:${authVariant}:subject:${await sha256Prefix(subject)}`;
+	}
+	const fallbackSecret = tokens.refreshToken || tokens.accessToken;
+	return `oauth:${provider}:${authVariant}:token:${await sha256Prefix(fallbackSecret)}`;
 }
 
 function generateSessionId(): string {
@@ -759,6 +831,7 @@ export class OAuthService extends Disposable implements IOAuthService {
 				sourceLabel: this._sourceLabel(provider, authVariant),
 				flow: stored.flowKind,
 				authVariant,
+				authIdentityKey: stored.authIdentityKey,
 			};
 		}
 
@@ -768,6 +841,7 @@ export class OAuthService extends Disposable implements IOAuthService {
 			sourceLabel: this._sourceLabel(provider, authVariant),
 			flow: stored.flowKind,
 			authVariant,
+			authIdentityKey: stored.authIdentityKey,
 			expiresAt: stored.expiresAt,
 			hasRefreshToken,
 		};
@@ -979,7 +1053,8 @@ export class OAuthService extends Disposable implements IOAuthService {
 		flowKind: OAuthFlowKind,
 		authVariant: AuthVariantName,
 	): Promise<void> {
-		const stored: IOAuthStoredTokens = { ...tokens, clientId, flowKind, authVariant };
+		const authIdentityKey = tokens.authIdentityKey ?? await deriveOAuthIdentityKey(provider, authVariant, tokens);
+		const stored: IOAuthStoredTokens = { ...tokens, clientId, flowKind, authVariant, authIdentityKey };
 		await this.secretService.set(this._tokenKey(provider), JSON.stringify(stored));
 	}
 
@@ -989,7 +1064,18 @@ export class OAuthService extends Disposable implements IOAuthService {
 			return undefined;
 		}
 		try {
-			return JSON.parse(json) as IOAuthStoredTokens;
+			const stored = JSON.parse(json) as IOAuthStoredTokens;
+			if (!stored.authIdentityKey && stored.accessToken) {
+				const authVariant = stored.authVariant ?? OAUTH_PROVIDER_CONFIGS[provider].authVariant;
+				const upgraded: IOAuthStoredTokens = {
+					...stored,
+					authVariant,
+					authIdentityKey: await deriveOAuthIdentityKey(provider, authVariant, stored),
+				};
+				await this.secretService.set(this._tokenKey(provider), JSON.stringify(upgraded));
+				return upgraded;
+			}
+			return stored;
 		} catch {
 			return undefined;
 		}

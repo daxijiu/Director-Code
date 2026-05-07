@@ -17,16 +17,18 @@
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
-import type { ProviderName } from './apiKeyService.js';
+import { IApiKeyService, SUPPORTED_PROVIDERS, type ProviderName } from './apiKeyService.js';
 import { MODEL_CATALOG, getModelsForProvider, getOpenAICodexModels, type IModelDefinition } from './modelCatalog.js';
+import { IOAuthService } from './oauthService.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const FETCH_TIMEOUT_MS = 5_000;
+const MAX_PROVIDER_CACHE_BUCKETS = 8;
 
 const CDN_MODEL_LIST_URL = 'https://raw.githubusercontent.com/daxijiu/Director-Code/master/model-catalog.json';
 
@@ -104,31 +106,67 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	readonly onDidChangeModels: Event<ProviderName> = this._onDidChangeModels.event;
 
 	private readonly _cache = new Map<string, CacheEntry>();
+	private readonly _inFlight = new Map<string, Promise<IResolvedModel[]>>();
+
+	constructor(
+		@IApiKeyService apiKeyService?: IApiKeyService,
+		@IOAuthService oauthService?: IOAuthService,
+	) {
+		super();
+
+		if (apiKeyService) {
+			this._register(apiKeyService.onDidChangeApiKey(event => {
+				const provider = this._providerFromApiKeyEvent(event);
+				if (provider) {
+					this._deleteProviderBuckets(provider);
+					this._onDidChangeModels.fire(provider);
+				}
+			}));
+		}
+
+		if (oauthService) {
+			this._register(oauthService.onDidChangeAuth(provider => {
+				this._deleteProviderBuckets(provider);
+				this._onDidChangeModels.fire(provider);
+			}));
+		}
+	}
 
 	// ========================================================================
 	// Public API
 	// ========================================================================
 
 	async resolveModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): Promise<IResolvedModel[]> {
-		const cacheKey = this._cacheKey(provider, baseURL, authIdentityKey, authVariant);
+		const normalizedBaseURL = this._normalizeBaseURLForCache(provider, baseURL, authVariant);
+		const cacheKey = this._cacheKey(provider, normalizedBaseURL, authIdentityKey, authVariant);
 		const cached = this._cache.get(cacheKey);
 		if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
 			return cached.models;
 		}
 
-		return this._resolveAndCache(provider, apiKey, baseURL, authVariant, cacheKey);
+		const inFlight = this._inFlight.get(cacheKey);
+		if (inFlight) {
+			return inFlight;
+		}
+
+		const promise = this._resolveAndCache(provider, apiKey, normalizedBaseURL, authVariant, cacheKey)
+			.finally(() => this._inFlight.delete(cacheKey));
+		this._inFlight.set(cacheKey, promise);
+		return promise;
 	}
 
 	async refreshModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): Promise<IResolvedModel[]> {
-		const cacheKey = this._cacheKey(provider, baseURL, authIdentityKey, authVariant);
-		this._cache.delete(cacheKey);
-		const result = await this._resolveAndCache(provider, apiKey, baseURL, authVariant, cacheKey);
+		const normalizedBaseURL = this._normalizeBaseURLForCache(provider, baseURL, authVariant);
+		const cacheKey = this._cacheKey(provider, normalizedBaseURL, authIdentityKey, authVariant);
+		this._deleteProviderBuckets(provider);
+		const result = await this._resolveAndCache(provider, apiKey, normalizedBaseURL, authVariant, cacheKey);
 		this._onDidChangeModels.fire(provider);
 		return result;
 	}
 
 	clearCache(): void {
 		this._cache.clear();
+		this._inFlight.clear();
 	}
 
 	// ========================================================================
@@ -147,7 +185,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 				try {
 					const apiModels = await this._fetchOpenAICodexModels(apiKey, baseURL);
 					if (apiModels.length > 0) {
-						this._cache.set(cacheKey, { models: apiModels, timestamp: Date.now() });
+						this._setCache(provider, cacheKey, apiModels);
 						return apiModels;
 					}
 				} catch {
@@ -156,7 +194,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			}
 
 			const models = this._getOpenAICodexStaticModels();
-			this._cache.set(cacheKey, { models, timestamp: Date.now() });
+			this._setCache(provider, cacheKey, models);
 			return models;
 		}
 
@@ -164,7 +202,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		if (apiKey) {
 			const apiModels = await this._fetchFromProviderAPI(provider, apiKey, baseURL);
 			if (apiModels.length > 0) {
-				this._cache.set(cacheKey, { models: apiModels, timestamp: Date.now() });
+				this._setCache(provider, cacheKey, apiModels);
 				return apiModels;
 			}
 		}
@@ -172,13 +210,13 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		// Layer 2: CDN JSON
 		const cdnModels = await this._fetchFromCDN(provider);
 		if (cdnModels.length > 0) {
-			this._cache.set(cacheKey, { models: cdnModels, timestamp: Date.now() });
+			this._setCache(provider, cacheKey, cdnModels);
 			return cdnModels;
 		}
 
 		// Layer 3: Static MODEL_CATALOG
 		const staticModels = this._getStaticModels(provider);
-		this._cache.set(cacheKey, { models: staticModels, timestamp: Date.now() });
+		this._setCache(provider, cacheKey, staticModels);
 		return staticModels;
 	}
 
@@ -194,8 +232,9 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		try {
 			switch (provider) {
 				case 'openai':
+					return await this._fetchOpenAIModels(apiKey, baseURL, 'openai');
 				case 'openai-compatible':
-					return await this._fetchOpenAIModels(apiKey, baseURL);
+					return await this._fetchOpenAIModels(apiKey, baseURL, 'openai-compatible');
 				case 'gemini':
 					return await this._fetchGeminiModels(apiKey, baseURL);
 				case 'anthropic':
@@ -207,7 +246,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		}
 	}
 
-	private async _fetchOpenAIModels(apiKey: string, baseURL?: string): Promise<IResolvedModel[]> {
+	private async _fetchOpenAIModels(apiKey: string, baseURL: string | undefined, providerType: 'openai' | 'openai-compatible'): Promise<IResolvedModel[]> {
 		const base = (baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -225,7 +264,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 
 			return data.data
 				.filter(m => this._isRelevantOpenAIModel(m.id))
-				.map(m => this._openAIModelToResolved(m.id, baseURL));
+				.map(m => this._openAIModelToResolved(m.id, providerType));
 		} finally {
 			clearTimeout(timeout);
 		}
@@ -354,8 +393,80 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	// Helpers
 	// ========================================================================
 
-	private _cacheKey(provider: ProviderName, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): string {
-		return `${provider}:${baseURL || 'default'}:${authIdentityKey || 'anonymous'}:${authVariant}`;
+	private _cacheKey(provider: ProviderName, normalizedBaseURL: string | undefined, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): string {
+		return `${provider}:${normalizedBaseURL || 'default'}:${authIdentityKey || 'no-key'}:${authVariant}`;
+	}
+
+	private _normalizeBaseURLForCache(provider: ProviderName, baseURL: string | undefined, authVariant: AuthVariantName): string | undefined {
+		const base = (baseURL || this._defaultBaseURLForProvider(provider, authVariant)).trim().replace(/\/+$/, '');
+		if (!base) {
+			return undefined;
+		}
+
+		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+			return base;
+		}
+
+		if (provider === 'openai' || provider === 'openai-compatible') {
+			return base.endsWith('/v1') ? base : `${base}/v1`;
+		}
+
+		if (provider === 'anthropic' || provider === 'anthropic-compatible') {
+			return base.replace(/\/v1$/, '');
+		}
+
+		return base;
+	}
+
+	private _defaultBaseURLForProvider(provider: ProviderName, authVariant: AuthVariantName): string {
+		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+			return 'https://chatgpt.com/backend-api/codex';
+		}
+		switch (provider) {
+			case 'anthropic':
+				return 'https://api.anthropic.com';
+			case 'openai':
+				return 'https://api.openai.com/v1';
+			case 'gemini':
+				return 'https://generativelanguage.googleapis.com';
+			case 'openai-compatible':
+			case 'anthropic-compatible':
+				return '';
+		}
+	}
+
+	private _deleteProviderBuckets(provider: ProviderName): void {
+		const prefix = `${provider}:`;
+		for (const key of this._cache.keys()) {
+			if (key.startsWith(prefix)) {
+				this._cache.delete(key);
+			}
+		}
+		for (const key of this._inFlight.keys()) {
+			if (key.startsWith(prefix)) {
+				this._inFlight.delete(key);
+			}
+		}
+	}
+
+	private _setCache(provider: ProviderName, cacheKey: string, models: IResolvedModel[]): void {
+		this._cache.set(cacheKey, { models, timestamp: Date.now() });
+
+		const prefix = `${provider}:`;
+		const providerEntries = Array.from(this._cache.entries())
+			.filter(([key]) => key.startsWith(prefix));
+		if (providerEntries.length <= MAX_PROVIDER_CACHE_BUCKETS) {
+			return;
+		}
+
+		providerEntries
+			.sort((a, b) => a[1].timestamp - b[1].timestamp)
+			.slice(0, providerEntries.length - MAX_PROVIDER_CACHE_BUCKETS)
+			.forEach(([key]) => this._cache.delete(key));
+	}
+
+	private _providerFromApiKeyEvent(event: string): ProviderName | undefined {
+		return SUPPORTED_PROVIDERS.find(provider => event === provider || event.startsWith(`${provider}.`));
 	}
 
 	private _isRelevantOpenAIModel(id: string): boolean {
@@ -363,17 +474,16 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		return prefixes.some(p => id.startsWith(p));
 	}
 
-	private _openAIModelToResolved(id: string, baseURL?: string): IResolvedModel {
+	private _openAIModelToResolved(id: string, providerType: 'openai' | 'openai-compatible'): IResolvedModel {
 		const existing = MODEL_CATALOG.find(m => m.id === id);
 		if (existing) {
-			return { ...existing, source: 'api' as const };
+			return { ...existing, provider: providerType, source: 'api' as const };
 		}
 
-		const isCompatible = !!baseURL;
 		return {
 			id,
 			name: id,
-			provider: isCompatible ? 'openai-compatible' : 'openai',
+			provider: providerType,
 			family: id.startsWith('o') ? 'o-series' : 'gpt-4',
 			apiType: 'openai-completions',
 			maxInputTokens: 128_000,

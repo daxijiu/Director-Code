@@ -31,11 +31,11 @@ import { estimateTokens } from '../../common/agentEngine/tokens.js';
 import { ChatAgentLocation } from '../../common/constants.js';
 import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
+import { IModelResolverService } from '../../common/agentEngine/modelResolver.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 import {
 	findModelById,
 	getDefaultModelForAuthVariant,
-	getModelsForProviderAndAuthVariant,
 	isOpenAICodexModel,
 } from '../../common/agentEngine/modelCatalog.js';
 
@@ -85,14 +85,16 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
 		@IAuthStateService private readonly authStateService: IAuthStateService,
+		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 	) {
 		// Listen for configuration changes to refresh model list
 		this.configService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(CONFIG_PROVIDER) || e.affectsConfiguration(CONFIG_MODEL) || e.affectsConfiguration(CONFIG_AUTH_VARIANT)) {
+			if (e.affectsConfiguration(CONFIG_PROVIDER) || e.affectsConfiguration(CONFIG_MODEL) || e.affectsConfiguration(CONFIG_BASE_URL) || e.affectsConfiguration(CONFIG_AUTH_VARIANT)) {
 				this._onDidChange.fire();
 			}
 		});
 		this.authStateService.onDidChangeAuthState(() => this._onDidChange.fire());
+		this.modelResolverService.onDidChangeModels(() => this._onDidChange.fire());
 	}
 
 	async provideLanguageModelChatInfo(
@@ -101,13 +103,19 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 	): Promise<ILanguageModelChatMetadataAndIdentifier[]> {
 		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
 		const configuredModel = this.configService.getValue<string>(CONFIG_MODEL) || '';
+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
 		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
 		const authVariant = normalizeAuthVariantForProvider(providerName, configuredAuthVariant);
 		const effectiveModel = modelForAuthVariant(providerName, configuredModel, authVariant);
-		await this.authStateService.resolveAuth(providerName, effectiveModel, authVariant);
+		const authState = await this.authStateService.resolveAuth(providerName, effectiveModel, authVariant, baseURL);
 
-		// Filter catalog models by the configured provider
-		const catalogModels = getModelsForProviderAndAuthVariant(providerName, authVariant);
+		const catalogModels = await this.modelResolverService.resolveModels(
+			providerName,
+			authState.accessToken ?? authState.apiKey,
+			authState.baseURL ?? baseURL,
+			authState.identityKey,
+			authState.authVariant,
+		);
 
 		const results: ILanguageModelChatMetadataAndIdentifier[] = catalogModels.map(m => ({
 			identifier: `${VENDOR}/${m.id}`,
