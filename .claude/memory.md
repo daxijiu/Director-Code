@@ -34,7 +34,8 @@
 - **B1-4** ✅ Anthropic PKCE 真实端点 smoke 通过：`dev/smoke-anthropic-oauth.mjs` 完成浏览器授权 + token exchange，拿到 access/refresh token；Messages API 使用 OAuth bearer token 返回结构化 `429 rate_limit_error`（非 401），证明认证链与 Anthropic API 入口可用；自动化验证：transpile 0 errors，`oauthService.test.ts` + `anthropicProvider.test.ts` 共 84 tests passing
 - **B1-5** ✅ OpenAI transport spike 结论冻结：`dev/smoke-openai-codex-oauth.mjs` 真实 deviceauth 登录 + token exchange 成功；`chatgpt.com/backend-api/codex/models` 返回 200 且可列出 Codex 模型；`chatgpt.com/backend-api/codex/responses` 返回 400（非 401/403，已到达 Codex 后端）；`api.openai.com/v1/chat/completions` 对照返回 429。后续 OpenAI OAuth 固定走独立 `authVariant=openai-codex` + `chatgpt.com/backend-api/codex` transport，不复用 `openai-completions`
 - **B1-6** ✅ OpenAI deviceauth 登录与状态链完成：`oauthService.ts` 的 OpenAI 占位标准 device_code 已替换为 Hermes/Codex `deviceauth/usercode` + `deviceauth/token` + `oauth/token` 二段交换；token/status 持久化 `authVariant=openai-codex`，配置 schema 新增 `directorCode.ai.authVariant`；验证：`oauthService.test.ts` 65 passing，`transpile-client-esbuild` 0 errors
-- **B1-7 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施；当前下一步为 B1-7：接 Settings UI 的 OpenAI OAuth device-code 状态/轮询入口，仍不得把 OAuth token 混入 API-key `openai-completions`
+- **B1-7** ✅ OAuth widget/controller 状态机内核完成：新增 `oauthLoginController.ts`（phase 固定为 `starting / awaiting_user / submitting / polling / approved / error`）与 `oauthWidget.ts`；Settings 底部 `Subscription & Login` 已从 Coming Soon 替换为 Anthropic PKCE code 提交 + OpenAI `OpenAI (ChatGPT/Codex OAuth)` device-code / user_code / polling 入口；API key Test Connection 与 OAuth Refresh/Check Now 分离；验证：`oauthLoginController.test.ts` + `oauthService.test.ts` 共 73 passing，`transpile-client-esbuild` 0 errors
+- **B1-8 ~ B1-9 / B2 / 原A5 / B3** ⏳ 待实施；当前下一步为 B1-8：新增 `IAuthStateService`，让 Agent / 标准 Chat / ModelResolver 消费统一 auth 状态，并按 `authVariant` 分桶
 
 ## 权威文档位置
 

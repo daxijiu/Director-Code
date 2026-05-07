@@ -29,6 +29,7 @@ import { Codicon } from '../../../../../base/common/codicons.js';
 import { ThemeIcon } from '../../../../../base/common/themables.js';
 import { ProviderSettingsWidget } from './providerSettingsWidget.js';
 import { ApiKeysWidget } from './apiKeysWidget.js';
+import { OAuthWidget } from './oauthWidget.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IApiKeyService, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 
@@ -104,6 +105,7 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 	private bodyContainer: HTMLElement | undefined;
 	private providerSettingsWidget: ProviderSettingsWidget | undefined;
 	private apiKeysWidget: ApiKeysWidget | undefined;
+	private oauthWidget: OAuthWidget | undefined;
 	private statusBar: DirectorCodeStatusBar | undefined;
 
 	constructor(
@@ -155,18 +157,11 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 		// Separator
 		DOM.append(this.bodyContainer, $('.dc-separator'));
 
-		// OAuth / Subscription placeholder
-		const oauthSection = DOM.append(this.bodyContainer, $('.dc-oauth-placeholder'));
-		const oauthHeader = DOM.append(oauthSection, $('.dc-section-header'));
-		oauthHeader.textContent = localize('directorCode.oauth.title', 'Subscription & Login');
-		const oauthDesc = DOM.append(oauthSection, $('.dc-section-subtitle'));
-		oauthDesc.textContent = localize('directorCode.oauth.desc',
-			'OAuth login and subscription-based access to LLM providers will be available in a future update. Currently, only API key authentication is supported.');
-		const oauthBtn = DOM.append(oauthSection, $<HTMLButtonElement>('button.dc-btn.dc-btn-secondary'));
-		oauthBtn.textContent = localize('directorCode.oauth.comingSoon', 'Coming Soon');
-		oauthBtn.disabled = true;
-		oauthBtn.style.maxWidth = '180px';
-		oauthBtn.style.marginTop = '8px';
+		// OAuth / Subscription widget (B1-7 state machine shell)
+		this.oauthWidget = this.editorDisposables.add(
+			this.instantiationService.createInstance(OAuthWidget)
+		);
+		this.bodyContainer.appendChild(this.oauthWidget.element);
 	}
 
 	override async setInput(

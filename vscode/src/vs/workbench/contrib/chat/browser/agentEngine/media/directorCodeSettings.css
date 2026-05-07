@@ -166,6 +166,16 @@
 	color: var(--vscode-foreground);
 }
 
+.dc-status-progress {
+	background-color: var(--vscode-charts-blue, #3794ff);
+	color: #fff;
+}
+
+.dc-status-error {
+	background-color: var(--vscode-errorForeground, #f44747);
+	color: #fff;
+}
+
 /* --- Input Row --- */
 
 .dc-input-row {
@@ -258,6 +268,68 @@
 
 .dc-test-error {
 	color: var(--vscode-errorForeground, #f44747);
+}
+
+/* --- OAuth Widget --- */
+
+.director-code-oauth-widget {
+	margin-bottom: 32px;
+}
+
+.dc-oauth-container {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 500px;
+}
+
+.dc-oauth-row .dc-action-row {
+	margin-top: 10px;
+}
+
+.dc-oauth-detail {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-height: 20px;
+	font-size: 12px;
+	line-height: 1.4;
+	color: var(--vscode-descriptionForeground);
+}
+
+.dc-oauth-link {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: none;
+	word-break: break-all;
+}
+
+.dc-oauth-link:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+.dc-oauth-code-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.dc-oauth-code-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.dc-oauth-user-code {
+	align-self: flex-start;
+	padding: 4px 8px;
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+	border-radius: 4px;
+	background-color: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0;
 }
 
 /* --- Editor Title --- */
