@@ -84,27 +84,6 @@ export function providerRequiresBaseURL(provider: ProviderName): boolean {
 	return provider === 'openai-compatible' || provider === 'anthropic-compatible';
 }
 
-// ============================================================================
-// Authentication Types (Phase 1: api-key only, others reserved for future)
-// ============================================================================
-
-export type AuthMethod = 'api-key' | 'oauth' | 'none';
-
-export interface IProviderAuth {
-	readonly method: AuthMethod;
-	readonly apiKey?: string;
-	readonly accessToken?: string;
-}
-
-/**
- * Get the auth method for a provider.
- * Returns the configured auth method. The actual OAuth availability
- * is determined at runtime by checking IOAuthService.
- */
-export function getProviderAuthMethod(_provider: ProviderName): AuthMethod {
-	return 'api-key';
-}
-
 /**
  * Providers that support OAuth 2.0 login.
  */
@@ -243,6 +222,7 @@ export interface IApiKeyService {
 	 *   Capabilities: per-model config → model catalog → provider defaults
 	 *
 	 * @param globalBaseURL The base URL from global settings (directorCode.ai.baseURL)
+	 * @deprecated Production paths must use IAuthStateService.resolveAuth(provider, model, authVariant).
 	 */
 	resolveProviderOptions(provider: ProviderName, modelId: string, globalBaseURL?: string): Promise<IResolvedProviderOptions | undefined>;
 }
@@ -463,6 +443,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 	// Resolved Options (three-level fallback)
 	// ========================================================================
 
+	/** @deprecated Production paths must use IAuthStateService.resolveAuth(provider, model, authVariant). */
 	async resolveProviderOptions(provider: ProviderName, modelId: string, globalBaseURL?: string): Promise<IResolvedProviderOptions | undefined> {
 		const apiKey = await this.getModelApiKey(provider, modelId);
 		if (!apiKey) {

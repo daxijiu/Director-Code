@@ -17,8 +17,10 @@ import { IConfigurationService } from '../../../../../platform/configuration/com
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
-import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 import { findModelById } from '../../common/agentEngine/modelCatalog.js';
 import type {
 	IChatAgentImplementation,
@@ -39,6 +41,7 @@ import { VSCodeToolBridge, getAgentToolDefinitions } from './toolBridge.js';
 const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
@@ -47,11 +50,22 @@ const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
 // DirectorCodeAgent
 // ============================================================================
 
+function missingAuthMessage(authState: IResolvedAuthState): string {
+	if (authState.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return 'No OpenAI Codex OAuth login found. Sign in under Director Code Settings > Subscription & Login.';
+	}
+	return `No API key configured for provider "${authState.provider}". Please set your API key in Director Code settings (Ctrl+Shift+P -> "Director Code: Open Settings").`;
+}
+
+function codexTransportPendingMessage(): string {
+	return 'OpenAI Codex OAuth login is available, but the Codex backend transport is not wired yet. Continue with B1-9, or switch directorCode.ai.authVariant back to "default" to use an API key transport.';
+}
+
 export class DirectorCodeAgent implements IChatAgentImplementation {
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
-		@IApiKeyService private readonly apiKeyService: IApiKeyService,
+		@IAuthStateService private readonly authStateService: IAuthStateService,
 		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 	) { }
@@ -69,6 +83,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			let providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
 			let modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
 			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
+			const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
@@ -84,25 +99,31 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				}
 			}
 
-			// 2. Resolve API key + per-model config via three-level fallback
-			const resolved = await this.apiKeyService.resolveProviderOptions(
-				providerName as ProviderName,
-				modelId,
-				baseURL,
-			);
-			if (!resolved) {
+			// 2. Resolve auth state via the unified API-key/OAuth facade
+			const provider = providerName as ProviderName;
+			const authVariant = normalizeAuthVariantForProvider(provider, configuredAuthVariant);
+			const resolved = await this.authStateService.resolveAuth(provider, modelId, authVariant, baseURL);
+			if (resolved.source === 'missing' || !resolved.auth) {
 				return {
 					errorDetails: {
-						message: `No API key configured for provider "${providerName}". Please set your API key in Director Code settings (Ctrl+Shift+P → "Director Code: Open Settings").`,
+						message: missingAuthMessage(resolved),
+					},
+					timings: { totalElapsed: Date.now() - startTime },
+				};
+			}
+			if (resolved.source === 'oauth' && resolved.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+				return {
+					errorDetails: {
+						message: codexTransportPendingMessage(),
 					},
 					timings: { totalElapsed: Date.now() - startTime },
 				};
 			}
 
 			// 3. Create LLM provider with resolved options
-			const apiType = providerToApiType(providerName as ProviderName);
-			const provider = createProvider(apiType, {
-				auth: resolved.auth, // [Director-Code] B1-1: explicit auth structure
+			const apiType = providerToApiType(provider);
+			const llmProvider = createProvider(apiType, {
+				auth: resolved.auth,
 				baseURL: resolved.baseURL,
 				capabilities: resolved.capabilities,
 			});
@@ -135,7 +156,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			const config: AgentEngineConfig = {
 				cwd,
 				model: modelId,
-				provider,
+				provider: llmProvider,
 				tools: toolDefinitions,
 				maxTurns,
 				maxTokens,
@@ -226,11 +247,11 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 		_history: IChatAgentHistoryEntry[],
 		_token: CancellationToken,
 	): Promise<IChatFollowup[]> {
-		// If there was an error related to missing API key, suggest opening settings
-		if (result.errorDetails?.message?.includes('No API key')) {
+		// If there was an error related to missing auth, suggest opening settings
+		if (result.errorDetails?.message?.includes('No API key') || result.errorDetails?.message?.includes('No OpenAI Codex OAuth')) {
 			return [{
 				kind: 'reply',
-				message: 'Open Director Code settings to configure API keys',
+				message: 'Open Director Code settings to configure authentication',
 				agentId: 'director-code',
 				title: 'Open Settings',
 			}];

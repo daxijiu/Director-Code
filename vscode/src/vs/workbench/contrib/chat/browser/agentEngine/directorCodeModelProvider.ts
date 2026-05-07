@@ -26,12 +26,13 @@ import type {
 	IChatResponsePart,
 } from '../../common/languageModels.js';
 import { AsyncIterableSource } from '../../../../../base/common/async.js';
-import type { NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import { estimateTokens } from '../../common/agentEngine/tokens.js';
 import { ChatAgentLocation } from '../../common/constants.js';
-import { IApiKeyService, providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
-import { MODEL_CATALOG, findModelById } from '../../common/agentEngine/modelCatalog.js';
+import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
+import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
+import { MODEL_CATALOG, findModelById, getDefaultModel } from '../../common/agentEngine/modelCatalog.js';
 
 // ============================================================================
 // Configuration
@@ -41,12 +42,24 @@ const VENDOR = 'director-code';
 const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 
 const EXTENSION_ID = new ExtensionIdentifier('director-code.agent');
 
 // ============================================================================
 // DirectorCodeModelProvider
 // ============================================================================
+
+function missingAuthError(authState: IResolvedAuthState): Error {
+	if (authState.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return new Error('No OpenAI Codex OAuth login found. Sign in under Director Code Settings > Subscription & Login.');
+	}
+	return new Error(`No API key configured for ${authState.provider}`);
+}
+
+function codexTransportPendingError(): Error {
+	return new Error('OpenAI Codex OAuth login is available, but the Codex backend transport is not wired yet. Continue with B1-9, or switch directorCode.ai.authVariant back to "default" to use an API key transport.');
+}
 
 export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 
@@ -55,22 +68,26 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
-		@IApiKeyService private readonly apiKeyService: IApiKeyService,
+		@IAuthStateService private readonly authStateService: IAuthStateService,
 	) {
 		// Listen for configuration changes to refresh model list
 		this.configService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(CONFIG_PROVIDER) || e.affectsConfiguration(CONFIG_MODEL)) {
+			if (e.affectsConfiguration(CONFIG_PROVIDER) || e.affectsConfiguration(CONFIG_MODEL) || e.affectsConfiguration(CONFIG_AUTH_VARIANT)) {
 				this._onDidChange.fire();
 			}
 		});
+		this.authStateService.onDidChangeAuthState(() => this._onDidChange.fire());
 	}
 
 	async provideLanguageModelChatInfo(
 		_options: ILanguageModelChatInfoOptions,
 		_token: CancellationToken,
 	): Promise<ILanguageModelChatMetadataAndIdentifier[]> {
-		const providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
+		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
 		const configuredModel = this.configService.getValue<string>(CONFIG_MODEL) || '';
+		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+		const authVariant = normalizeAuthVariantForProvider(providerName, configuredAuthVariant);
+		await this.authStateService.resolveAuth(providerName, configuredModel || getDefaultModel(providerName), authVariant);
 
 		// Filter catalog models by the configured provider
 		const catalogModels = MODEL_CATALOG.filter(m => m.provider === providerName);
@@ -140,19 +157,28 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 		const shortId = modelId.replace(`${VENDOR}/`, '');
 		const modelDef = findModelById(shortId);
 		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-		const effectiveProvider = modelDef?.provider ?? providerName;
-		const apiType = modelDef?.apiType ?? providerToApiType(providerName);
+		const effectiveProvider = (modelDef?.provider ?? providerName) as ProviderName;
+		const apiType = modelDef?.apiType ?? providerToApiType(effectiveProvider);
 		const maxOutputTokens = modelDef?.maxOutputTokens ?? 8_192;
 
-		// 2. Get API key
-		const apiKey = await this.apiKeyService.getApiKey(effectiveProvider as ProviderName);
-		if (!apiKey) {
-			throw new Error(`No API key configured for ${effectiveProvider}`);
+		// 2. Resolve auth state through the same facade used by the Agent path
+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
+		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+		const authVariant = normalizeAuthVariantForProvider(effectiveProvider, configuredAuthVariant);
+		const authState = await this.authStateService.resolveAuth(effectiveProvider, shortId, authVariant, baseURL);
+		if (authState.source === 'missing' || !authState.auth) {
+			throw missingAuthError(authState);
+		}
+		if (authState.source === 'oauth' && authState.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+			throw codexTransportPendingError();
 		}
 
-		// 3. Create provider with explicit auth structure
-		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-		const provider = createProvider(apiType, { auth: { kind: 'api-key', value: apiKey }, baseURL }); // [Director-Code] B1-1
+		// 3. Create provider with resolved auth/base/capabilities
+		const provider = createProvider(apiType, {
+			auth: authState.auth,
+			baseURL: authState.baseURL,
+			capabilities: authState.capabilities,
+		});
 
 		// 4. Convert VS Code messages → normalized format
 		const normalizedMessages = this.convertMessages(messages);

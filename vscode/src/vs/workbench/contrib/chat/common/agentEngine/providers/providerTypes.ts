@@ -39,6 +39,9 @@ export interface CreateMessageParams {
 export type AuthVariantName = 'default' | 'openai-codex';
 export type FlowKind = 'api-key' | 'pkce_manual' | 'device_code' | 'external';
 
+export const DEFAULT_AUTH_VARIANT: AuthVariantName = 'default';
+export const OPENAI_CODEX_AUTH_VARIANT: AuthVariantName = 'openai-codex';
+
 /**
  * Explicit authentication credential for LLM providers.
  * Replaces the former bare `apiKey: string` to distinguish API key from OAuth token.

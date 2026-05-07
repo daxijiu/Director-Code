@@ -8,6 +8,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
 import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
 import { ModelResolverService } from '../../../common/agentEngine/modelResolver.js';
 import { getModelsForProvider } from '../../../common/agentEngine/modelCatalog.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
 
 suite("AgentEngine - ModelResolverService", () => {
 
@@ -351,6 +352,31 @@ suite("AgentEngine - ModelResolverService", () => {
 
 			assert.ok(a.length > 0);
 			assert.ok(b.length > 0);
+		});
+
+		test("different authVariant values have separate caches", async () => {
+			mockFetch(() => new Response(JSON.stringify({
+				data: [{ id: "gpt-4o" }],
+			}), { status: 200 }));
+
+			const defaultModels = await resolver.resolveModels("openai", "key", undefined, "api-key:openai", DEFAULT_AUTH_VARIANT);
+			const codexModels = await resolver.resolveModels("openai", "oauth-token", undefined, "oauth:openai", OPENAI_CODEX_AUTH_VARIANT);
+
+			assert.ok(defaultModels.length > 0);
+			assert.strictEqual(codexModels.length, 0);
+		});
+
+		test("openai-codex resolver bucket does not call api.openai.com models endpoint", async () => {
+			let fetchCount = 0;
+			mockFetch(() => {
+				fetchCount++;
+				return new Response(JSON.stringify({ data: [{ id: "gpt-4o" }] }), { status: 200 });
+			});
+
+			const models = await resolver.resolveModels("openai", "oauth-token", undefined, "oauth:openai", OPENAI_CODEX_AUTH_VARIANT);
+
+			assert.strictEqual(models.length, 0);
+			assert.strictEqual(fetchCount, 0);
 		});
 	});
 

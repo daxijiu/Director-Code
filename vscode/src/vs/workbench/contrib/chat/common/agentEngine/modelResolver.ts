@@ -19,7 +19,7 @@ import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ProviderName } from './apiKeyService.js';
 import { MODEL_CATALOG, getModelsForProvider, type IModelDefinition } from './modelCatalog.js';
-import type { ApiType } from './providers/providerTypes.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
 
 // ============================================================================
 // Constants
@@ -80,12 +80,12 @@ export interface IModelResolverService {
 	 * Resolve models for a provider using the three-layer fallback.
 	 * Uses cache if fresh enough.
 	 */
-	resolveModels(provider: ProviderName, apiKey?: string, baseURL?: string): Promise<IResolvedModel[]>;
+	resolveModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant?: AuthVariantName): Promise<IResolvedModel[]>;
 
 	/**
 	 * Force refresh models for a provider (bypasses cache).
 	 */
-	refreshModels(provider: ProviderName, apiKey?: string, baseURL?: string): Promise<IResolvedModel[]>;
+	refreshModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant?: AuthVariantName): Promise<IResolvedModel[]>;
 
 	/**
 	 * Clear all cached model lists.
@@ -109,20 +109,20 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	// Public API
 	// ========================================================================
 
-	async resolveModels(provider: ProviderName, apiKey?: string, baseURL?: string): Promise<IResolvedModel[]> {
-		const cacheKey = this._cacheKey(provider, baseURL);
+	async resolveModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): Promise<IResolvedModel[]> {
+		const cacheKey = this._cacheKey(provider, baseURL, authIdentityKey, authVariant);
 		const cached = this._cache.get(cacheKey);
 		if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
 			return cached.models;
 		}
 
-		return this._resolveAndCache(provider, apiKey, baseURL, cacheKey);
+		return this._resolveAndCache(provider, apiKey, baseURL, authVariant, cacheKey);
 	}
 
-	async refreshModels(provider: ProviderName, apiKey?: string, baseURL?: string): Promise<IResolvedModel[]> {
-		const cacheKey = this._cacheKey(provider, baseURL);
+	async refreshModels(provider: ProviderName, apiKey?: string, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): Promise<IResolvedModel[]> {
+		const cacheKey = this._cacheKey(provider, baseURL, authIdentityKey, authVariant);
 		this._cache.delete(cacheKey);
-		const result = await this._resolveAndCache(provider, apiKey, baseURL, cacheKey);
+		const result = await this._resolveAndCache(provider, apiKey, baseURL, authVariant, cacheKey);
 		this._onDidChangeModels.fire(provider);
 		return result;
 	}
@@ -139,8 +139,15 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		provider: ProviderName,
 		apiKey: string | undefined,
 		baseURL: string | undefined,
+		authVariant: AuthVariantName,
 		cacheKey: string,
 	): Promise<IResolvedModel[]> {
+		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+			const models: IResolvedModel[] = [];
+			this._cache.set(cacheKey, { models, timestamp: Date.now() });
+			return models;
+		}
+
 		// Layer 1: Provider API
 		if (apiKey) {
 			const apiModels = await this._fetchFromProviderAPI(provider, apiKey, baseURL);
@@ -289,8 +296,8 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	// Helpers
 	// ========================================================================
 
-	private _cacheKey(provider: ProviderName, baseURL?: string): string {
-		return `${provider}:${baseURL || 'default'}`;
+	private _cacheKey(provider: ProviderName, baseURL?: string, authIdentityKey?: string, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): string {
+		return `${provider}:${baseURL || 'default'}:${authIdentityKey || 'anonymous'}:${authVariant}`;
 	}
 
 	private _isRelevantOpenAIModel(id: string): boolean {

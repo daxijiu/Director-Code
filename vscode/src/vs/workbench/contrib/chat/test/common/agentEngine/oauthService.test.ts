@@ -784,6 +784,35 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 	});
 
 	// ---------------------------------------------------------------
+	// getTokens
+	// ---------------------------------------------------------------
+
+	suite("getTokens", () => {
+
+		test("returns stored token metadata for auth facade consumers", async () => {
+			const stored: IOAuthStoredTokens = {
+				accessToken: "token",
+				refreshToken: "refresh",
+				expiresAt: Date.now() + 3600000,
+				clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
+				flowKind: "device_code",
+				authVariant: "openai-codex",
+			};
+			await mockSecretService.set("director-code.oauth.openai", JSON.stringify(stored));
+
+			const tokens = await oauthService.getTokens("openai");
+
+			assert.deepStrictEqual(tokens, stored);
+		});
+
+		test("returns undefined when no tokens are stored", async () => {
+			const tokens = await oauthService.getTokens("anthropic");
+
+			assert.strictEqual(tokens, undefined);
+		});
+	});
+
+	// ---------------------------------------------------------------
 	// logout
 	// ---------------------------------------------------------------
 	suite("logout", () => {

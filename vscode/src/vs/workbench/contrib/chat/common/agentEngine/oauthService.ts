@@ -25,7 +25,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
 import { ISecretStorageService } from '../../../../../platform/secrets/common/secrets.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { type AuthVariantName, type FlowKind } from './providers/providerTypes.js';
+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type FlowKind } from './providers/providerTypes.js';
 
 // ============================================================================
 // Constants
@@ -39,7 +39,6 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 const PKCE_SESSION_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_DEVICE_CODE_INTERVAL_S = 5;
 const OPENAI_CODEX_DEVICE_EXPIRES_IN_S = 15 * 60;
-const OPENAI_CODEX_AUTH_VARIANT: AuthVariantName = 'openai-codex';
 
 // ============================================================================
 // Types
@@ -245,6 +244,7 @@ export interface IOAuthService {
 	submitManualCode(provider: OAuthProviderName, sessionId: string, code: string): Promise<IOAuthTokens>;
 	pollLogin(provider: OAuthProviderName, sessionId: string): Promise<IOAuthPollResult>;
 	getStatus(provider: OAuthProviderName): Promise<IOAuthStatus>;
+	getTokens(provider: OAuthProviderName): Promise<IOAuthStoredTokens | undefined>;
 	logout(provider: OAuthProviderName): Promise<void>;
 
 	/** @deprecated Reserved for URI-callback-based provider expansion. Do not call directly. */
@@ -771,6 +771,10 @@ export class OAuthService extends Disposable implements IOAuthService {
 			expiresAt: stored.expiresAt,
 			hasRefreshToken,
 		};
+	}
+
+	async getTokens(provider: OAuthProviderName): Promise<IOAuthStoredTokens | undefined> {
+		return this._getStoredTokens(provider);
 	}
 
 	async logout(provider: OAuthProviderName): Promise<void> {

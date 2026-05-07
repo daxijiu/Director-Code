@@ -13,6 +13,7 @@ import {
 	type IOAuthPollResult,
 	type IOAuthService,
 	type IOAuthStatus,
+	type IOAuthStoredTokens,
 	type IOAuthTokens,
 	type OAuthProviderName,
 } from '../../../common/agentEngine/oauthService.js';
@@ -56,6 +57,10 @@ class MockOAuthService implements IOAuthService {
 
 	async getStatus(_provider: OAuthProviderName): Promise<IOAuthStatus> {
 		return this.status;
+	}
+
+	async getTokens(_provider: OAuthProviderName): Promise<IOAuthStoredTokens | undefined> {
+		return undefined;
 	}
 
 	async logout(provider: OAuthProviderName): Promise<void> {
