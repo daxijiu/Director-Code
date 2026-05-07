@@ -20,8 +20,8 @@ cd vscode && npm install
 npm run watch        # 增量编译
 npm run watch-client # 仅客户端
 
-# 完整构建 (Windows)
-./build.sh           # 构建脚本
+# 完整构建 (Windows，必须在 Git Bash 中运行)
+./build.sh
 # 构建产物在 VSCode-win32-x64/
 
 # ⚠️ 构建后必须清理 NLS 缓存（否则可能白屏）

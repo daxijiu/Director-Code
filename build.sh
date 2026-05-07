@@ -19,7 +19,11 @@ if [[ "${SHOULD_BUILD}" == "yes" ]]; then
 
   npm run gulp compile-build-without-mangling
   npm run gulp compile-extension-media
-  npm run gulp compile-extensions-build
+  if [[ "${DIRECTOR_CODE_SKIP_EXTENSIONS_BUILD}" == "1" ]]; then
+    echo "DIRECTOR_CODE_SKIP_EXTENSIONS_BUILD=1; skipping built-in extensions build. Use only for constrained local/CI builds unless release impact is separately verified."
+  else
+    npm run gulp compile-extensions-build
+  fi
   npm run gulp minify-vscode
 
   if [[ "${OS_NAME}" == "osx" ]]; then

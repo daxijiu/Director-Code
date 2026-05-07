@@ -126,6 +126,13 @@ A build helper script can be found at `dev/build.sh`.
 
 > **Note for Windows users**: Git Bash is the recommended shell because the build scripts rely on POSIX utilities (`sed`, `grep`, `find`, etc.) bundled with Git for Windows. If you use WSL2, follow the Linux dependencies section instead.
 
+### Director-Code build script notes
+
+- `prepare_vscode.sh` and the root `build.sh` are Bash/POSIX scripts. On Windows, run them from Git Bash (recommended), WSL, or MSYS2; PowerShell and `cmd.exe` are not supported for these scripts.
+- Set `DIRECTOR_CODE_SKIP_EXTENSIONS_BUILD=1` to skip `npm run gulp compile-extensions-build` in constrained local or CI environments where built-in extension downloads fail. Do not use this for RC/release builds unless the missing built-in extensions have been separately verified to be outside the Phase 1 release surface.
+- Electron download/cache artifacts are pinned to the repository-level `.electron-cache/` directory. The directory is ignored by git; root-level `electron-v*.zip` files are treated as abnormal artifacts and should be removed by the cleanup path.
+- `prepare_vscode.sh` installs a `trap cleanup EXIT` handler. If the script exits successfully, fails, or is interrupted, it restores `.npmrc.bak`, `package.json.bak`, `resources/server/manifest.json.bak`, and `product.json.bak` so developers do not need to clean those backup files manually.
+
 ### Insider
 
 The `insider` version can be built with `./dev/build.sh -i` on the `insider` branch.

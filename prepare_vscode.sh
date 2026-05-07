@@ -3,6 +3,62 @@
 
 set -e
 
+REPO_ROOT="$(pwd -P)"
+VSCODE_PREPARE_DIR=""
+NPMRC_REPLACED=0
+
+export ELECTRON_CUSTOM_DIR="${REPO_ROOT}/.electron-cache"
+mkdir -p "${ELECTRON_CUSTOM_DIR}"
+
+restore_npmrc() {
+  if [[ -n "${VSCODE_PREPARE_DIR}" && -d "${VSCODE_PREPARE_DIR}" ]]; then
+    if [[ -f "${VSCODE_PREPARE_DIR}/.npmrc.bak" ]]; then
+      mv -f "${VSCODE_PREPARE_DIR}/.npmrc.bak" "${VSCODE_PREPARE_DIR}/.npmrc"
+    elif [[ "${NPMRC_REPLACED}" == "1" ]]; then
+      rm -f "${VSCODE_PREPARE_DIR}/.npmrc"
+    fi
+  fi
+  NPMRC_REPLACED=0
+}
+
+restore_backup() {
+  local target="${1}"
+  local backup="${target}.bak"
+  if [[ -f "${backup}" ]]; then
+    mv -f "${backup}" "${target}"
+  fi
+}
+
+cleanup() {
+  local exit_code=$?
+  trap - EXIT INT TERM
+  { set +x; } 2>/dev/null
+
+  if [[ -n "${VSCODE_PREPARE_DIR}" && -d "${VSCODE_PREPARE_DIR}" ]]; then
+    (
+      cd "${VSCODE_PREPARE_DIR}" || exit 0
+      restore_npmrc
+      restore_backup "product.json"
+      restore_backup "package.json"
+      restore_backup "resources/server/manifest.json"
+    )
+  fi
+
+  shopt -s nullglob
+  local electron_zip
+  for electron_zip in "${REPO_ROOT}"/electron-v*.zip; do
+    echo "Warning: removing unexpected root Electron archive: ${electron_zip}" >&2
+    rm -f "${electron_zip}"
+  done
+  shopt -u nullglob
+
+  exit "${exit_code}"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 if [[ "${VSCODE_QUALITY}" == "insider" ]]; then
   cp -rp src/insider/* vscode/
 else
@@ -12,6 +68,7 @@ fi
 cp -f LICENSE vscode/LICENSE.txt
 
 cd vscode || { echo "'vscode' dir not found"; exit 1; }
+VSCODE_PREPARE_DIR="$(pwd -P)"
 
 { set +x; } 2>/dev/null
 
@@ -197,8 +254,11 @@ fi
 
 node build/npm/preinstall.ts
 
-mv .npmrc .npmrc.bak
+if [[ -f .npmrc ]]; then
+  mv .npmrc .npmrc.bak
+fi
 cp ../npmrc .npmrc
+NPMRC_REPLACED=1
 
 for i in {1..5}; do # try 5 times
   if [[ "${CI_BUILD}" != "no" && "${OS_NAME}" == "osx" ]]; then
@@ -216,7 +276,7 @@ for i in {1..5}; do # try 5 times
   sleep $(( 15 * (i + 1)))
 done
 
-mv .npmrc.bak .npmrc
+restore_npmrc
 # }}}
 
 # package.json
