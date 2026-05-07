@@ -84,16 +84,21 @@ function convertThinkingDeltaEvent(event: AgentThinkingDeltaEvent): IChatProgres
 /**
  * Convert assistant event to progress.
  *
- * Text content is SKIPPED here because it was already rendered incrementally
- * via text_delta streaming events. Only thinking blocks (which are not
- * streamed via thinking_delta in non-streaming fallback) are converted.
- * This prevents the duplicate text display bug.
+ * Text content is rendered only for non-streaming fallback responses. Streaming
+ * responses already emitted text_delta events, and AgentEngine leaves renderText
+ * false in that case to avoid duplicate display.
  */
 function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChatProgress[] {
 	const parts: IChatProgress[] = [];
 	const content = event.message.content;
 
 	if (typeof content === 'string') {
+		if (event.renderText && content) {
+			parts.push({
+				kind: 'markdownContent',
+				content: new MarkdownString(content),
+			});
+		}
 		return parts;
 	}
 
@@ -104,6 +109,12 @@ function convertAssistantEvent(event: AgentEvent & { type: 'assistant' }): IChat
 				value: block.thinking,
 			};
 			parts.push(thinkingPart);
+		} else if (event.renderText && block.type === 'text' && block.text) {
+			const markdownContent: IChatMarkdownContent = {
+				kind: 'markdownContent',
+				content: new MarkdownString(block.text),
+			};
+			parts.push(markdownContent);
 		}
 	}
 

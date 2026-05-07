@@ -30,6 +30,22 @@ suite("AgentEngine - ProgressBridge", () => {
 			assert.strictEqual(progress.length, 0);
 		});
 
+		test("renders text content when non-streaming fallback requests it", () => {
+			const event: AgentEvent = {
+				type: 'assistant',
+				renderText: true,
+				message: {
+					role: 'assistant',
+					content: [{ type: 'text', text: 'Non-streaming answer' }],
+				},
+			};
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 1);
+			assert.strictEqual(progress[0].kind, 'markdownContent');
+			assert.strictEqual((progress[0] as any).content.value, 'Non-streaming answer');
+		});
+
 		test("converts thinking content to thinking part", () => {
 			const event: AgentEvent = {
 				type: 'assistant',
@@ -45,7 +61,7 @@ suite("AgentEngine - ProgressBridge", () => {
 			assert.strictEqual((progress[0] as any).value, 'Let me reason...');
 		});
 
-		test("handles mixed text and thinking blocks (only thinking rendered)", () => {
+		test("handles mixed text and thinking blocks (only thinking rendered unless fallback requests text)", () => {
 			const event: AgentEvent = {
 				type: 'assistant',
 				message: {
@@ -60,6 +76,25 @@ suite("AgentEngine - ProgressBridge", () => {
 			const progress = agentEventToProgress(event);
 			assert.strictEqual(progress.length, 1);
 			assert.strictEqual(progress[0].kind, 'thinking');
+		});
+
+		test("renders mixed text and thinking when fallback requests text", () => {
+			const event: AgentEvent = {
+				type: 'assistant',
+				renderText: true,
+				message: {
+					role: 'assistant',
+					content: [
+						{ type: 'thinking', thinking: 'Reasoning...' },
+						{ type: 'text', text: 'Answer here' },
+					],
+				},
+			};
+
+			const progress = agentEventToProgress(event);
+			assert.strictEqual(progress.length, 2);
+			assert.strictEqual(progress[0].kind, 'thinking');
+			assert.strictEqual(progress[1].kind, 'markdownContent');
 		});
 
 		test("skips empty text blocks", () => {

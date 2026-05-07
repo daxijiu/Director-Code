@@ -13,7 +13,9 @@
  */
 
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
+import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
+import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
@@ -28,11 +30,13 @@ import type {
 	IChatAgentResult,
 	IChatAgentHistoryEntry,
 } from '../../common/participants/chatAgents.js';
-import type { IChatFollowup, IChatProgress } from '../../common/chatService/chatService.js';
+import { IChatService, type IChatFollowup, type IChatProgress } from '../../common/chatService/chatService.js';
+import type { IChatProgressResponseContent } from '../../common/model/chatModel.js';
 import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
 import { agentEventToProgress } from './progressBridge.js';
 import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';
 import { VSCodeToolBridge, getAgentToolDefinitions } from './toolBridge.js';
+import type { NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 
 // ============================================================================
 // Configuration keys
@@ -45,6 +49,8 @@ const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
+const MAX_REPLAY_SNAPSHOTS = 16;
+const MAX_REPLAY_MESSAGES = 200;
 
 // ============================================================================
 // DirectorCodeAgent
@@ -64,14 +70,20 @@ function modelForAuthVariant(provider: ProviderName, modelId: string, authVarian
 	return modelId || getDefaultModelForAuthVariant(provider, authVariant);
 }
 
-export class DirectorCodeAgent implements IChatAgentImplementation {
+export class DirectorCodeAgent extends Disposable implements IChatAgentImplementation {
+
+	private readonly _replaySnapshots = new Map<string, { messages: NormalizedMessageParam[]; lastUpdated: number }>();
+	private _chatServiceHooksRegistered = false;
 
 	constructor(
 		@IConfigurationService private readonly configService: IConfigurationService,
 		@IAuthStateService private readonly authStateService: IAuthStateService,
 		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
-	) { }
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+	) {
+		super();
+	}
 
 	async invoke(
 		request: IChatAgentRequest,
@@ -139,7 +151,12 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 			const toolDefinitions = getAgentToolDefinitions(this.toolsService);
 
 			// 5. Convert history to normalized messages
-			const previousMessages = historyToNormalizedMessages(history);
+			const richResponses = this.getRichResponses(request, history.length);
+			const historyMessages = historyToNormalizedMessages(history, richResponses);
+			const replaySnapshot = this.getReplaySnapshot(request.sessionResource);
+			const previousMessages = this.shouldUseReplaySnapshot(historyMessages, history, richResponses, replaySnapshot)
+				? replaySnapshot!.messages
+				: historyMessages;
 
 			// 6. Create AbortSignal from CancellationToken
 			const abortController = new AbortController();
@@ -224,6 +241,7 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 				}
 			} finally {
 				cancelListener.dispose();
+				this.pushReplaySnapshot(request.sessionResource, engine.getMessages());
 			}
 
 			// [Director-Code] A2: explicit cancelled metadata — no errorDetails (avoids red error UI)
@@ -269,5 +287,116 @@ export class DirectorCodeAgent implements IChatAgentImplementation {
 		}
 
 		return [];
+	}
+
+	private getRichResponses(request: IChatAgentRequest, historyLength: number): ReadonlyArray<ReadonlyArray<IChatProgressResponseContent>> | undefined {
+		if (historyLength === 0) {
+			return [];
+		}
+
+		const chatService = this.getChatService();
+		if (!chatService) {
+			return undefined;
+		}
+		this.ensureChatServiceHooks(chatService);
+
+		const session = chatService.getSession(request.sessionResource);
+		if (!session) {
+			return undefined;
+		}
+
+		const completedRequests = session.getRequests()
+			.filter(candidate => candidate.id !== request.requestId && !!candidate.response)
+			.slice(-historyLength);
+
+		return completedRequests.map(candidate => candidate.response!.entireResponse.value);
+	}
+
+	private getChatService(): IChatService | undefined {
+		try {
+			return this.instantiationService.invokeFunction(accessor => accessor.get(IChatService));
+		} catch {
+			return undefined;
+		}
+	}
+
+	private ensureChatServiceHooks(chatService: IChatService): void {
+		if (this._chatServiceHooksRegistered) {
+			return;
+		}
+		this._chatServiceHooksRegistered = true;
+		this._register(chatService.onDidDisposeSession(event => {
+			for (const resource of event.sessionResource) {
+				this._replaySnapshots.delete(this.sessionKey(resource));
+			}
+		}));
+	}
+
+	private shouldUseReplaySnapshot(
+		historyMessages: NormalizedMessageParam[],
+		history: IChatAgentHistoryEntry[],
+		richResponses: ReadonlyArray<ReadonlyArray<IChatProgressResponseContent>> | undefined,
+		replaySnapshot: { messages: NormalizedMessageParam[]; lastUpdated: number } | undefined,
+	): boolean {
+		if (!replaySnapshot || history.length === 0) {
+			return false;
+		}
+		if (!richResponses || richResponses.length !== history.length) {
+			return true;
+		}
+		const richHasToolInvocations = richResponses.some(response => response.some(part => part.kind === 'toolInvocation' || part.kind === 'toolInvocationSerialized'));
+		return !richHasToolInvocations && replaySnapshot.messages.length > historyMessages.length;
+	}
+
+	private getReplaySnapshot(sessionResource: IChatAgentRequest['sessionResource']): { messages: NormalizedMessageParam[]; lastUpdated: number } | undefined {
+		const key = this.sessionKey(sessionResource);
+		const snapshot = this._replaySnapshots.get(key);
+		if (snapshot) {
+			snapshot.lastUpdated = Date.now();
+		}
+		return snapshot;
+	}
+
+	private pushReplaySnapshot(sessionResource: IChatAgentRequest['sessionResource'], messages: NormalizedMessageParam[]): void {
+		if (messages.length === 0) {
+			return;
+		}
+
+		const key = this.sessionKey(sessionResource);
+		if (!this._replaySnapshots.has(key) && this._replaySnapshots.size >= MAX_REPLAY_SNAPSHOTS) {
+			let oldestKey: string | undefined;
+			let oldestTime = Number.POSITIVE_INFINITY;
+			for (const [candidateKey, snapshot] of this._replaySnapshots) {
+				if (snapshot.lastUpdated < oldestTime) {
+					oldestTime = snapshot.lastUpdated;
+					oldestKey = candidateKey;
+				}
+			}
+			if (oldestKey) {
+				this._replaySnapshots.delete(oldestKey);
+			}
+		}
+
+		this._replaySnapshots.set(key, {
+			messages: this.trimReplayMessages(messages),
+			lastUpdated: Date.now(),
+		});
+	}
+
+	private trimReplayMessages(messages: readonly NormalizedMessageParam[]): NormalizedMessageParam[] {
+		if (messages.length <= MAX_REPLAY_MESSAGES) {
+			return [...messages];
+		}
+
+		const firstUserMessage = messages.find(message => message.role === 'user');
+		const recent = messages.slice(-(MAX_REPLAY_MESSAGES - 1));
+		if (firstUserMessage && !recent.includes(firstUserMessage)) {
+			return [firstUserMessage, ...recent];
+		}
+		return messages.slice(-MAX_REPLAY_MESSAGES);
+	}
+
+	private sessionKey(sessionResource: IChatAgentRequest['sessionResource']): string {
+		return sessionResource.toString();
 	}
 }

@@ -16,7 +16,11 @@ import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { DeferredPromise } from '../../../../../base/common/async.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
-import type {
+import {
+	ChatMessageRole,
+	type IChatResponseDataPart,
+	type IChatResponsePromptTsxPart,
+	type IChatResponseTextPart,
 	ILanguageModelChatProvider,
 	ILanguageModelChatMetadata,
 	ILanguageModelChatMetadataAndIdentifier,
@@ -32,7 +36,7 @@ import { ChatAgentLocation } from '../../common/constants.js';
 import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
 import { IModelResolverService } from '../../common/agentEngine/modelResolver.js';
-import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedContentBlock, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 import {
 	findModelById,
 	getDefaultModelForAuthVariant,
@@ -271,17 +275,127 @@ export class DirectorCodeModelProvider implements ILanguageModelChatProvider {
 	// ========================================================================
 
 	private convertMessages(messages: IChatMessage[]): NormalizedMessageParam[] {
-		return messages.map(msg => ({
-			role: msg.role === 1 ? 'assistant' : 'user', // ChatMessageRole enum: 1 = Assistant
-			content: this.chatMessageToText(msg),
-		}));
+		return messages.map(msg => {
+			const blocks = this.chatMessageToBlocks(msg);
+			return {
+				role: msg.role === ChatMessageRole.Assistant ? 'assistant' : 'user',
+				content: this.normalizeMessageContent(blocks),
+			};
+		});
 	}
 
 	private chatMessageToText(message: IChatMessage): string {
-		return message.content
-			.filter((part): part is { type: 'text'; value: string } => part.type === 'text')
-			.map(part => part.value)
-			.join('') || '';
+		return message.content.map(part => {
+			switch (part.type) {
+				case 'text':
+					return part.value;
+				case 'tool_result':
+					return this.stringifyChatToolResult(part.value);
+				case 'tool_use':
+					return `[Tool use: ${part.name}]`;
+				case 'image_url':
+					return `[Image: ${part.value.mimeType}]`;
+				case 'data':
+					return `[Data: ${part.mimeType}, ${Math.max(1, Math.round(part.data.byteLength / 1024))}KB]`;
+				case 'thinking':
+					return '';
+			}
+		}).join('') || '';
+	}
+
+	private chatMessageToBlocks(message: IChatMessage): NormalizedContentBlock[] {
+		const blocks: NormalizedContentBlock[] = [];
+		for (const part of message.content) {
+			switch (part.type) {
+				case 'text':
+					if (part.value) {
+						blocks.push({ type: 'text', text: part.value });
+					}
+					break;
+				case 'image_url':
+					blocks.push({
+						type: 'image',
+						source: {
+							type: 'base64',
+							media_type: part.value.mimeType,
+							data: this.bytesToBase64(part.value.data.buffer),
+						},
+					});
+					break;
+				case 'data':
+					if (part.mimeType.startsWith('image/')) {
+						blocks.push({
+							type: 'image',
+							source: {
+								type: 'base64',
+								media_type: part.mimeType,
+								data: this.bytesToBase64(part.data.buffer),
+							},
+						});
+					} else {
+						blocks.push({ type: 'text', text: `[Data: ${part.mimeType}, ${Math.max(1, Math.round(part.data.byteLength / 1024))}KB]` });
+					}
+					break;
+				case 'tool_use':
+					blocks.push({
+						type: 'tool_use',
+						id: part.toolCallId,
+						name: part.name,
+						input: part.parameters,
+					});
+					break;
+				case 'tool_result':
+					blocks.push({
+						type: 'tool_result',
+						tool_use_id: part.toolCallId,
+						content: this.stringifyChatToolResult(part.value),
+						is_error: part.isError,
+					});
+					break;
+				case 'thinking':
+					break;
+			}
+		}
+		return blocks;
+	}
+
+	private normalizeMessageContent(blocks: NormalizedContentBlock[]): string | NormalizedContentBlock[] {
+		if (blocks.length === 0) {
+			return '';
+		}
+		if (blocks.every(block => block.type === 'text')) {
+			return blocks.map(block => block.type === 'text' ? block.text : '').join('');
+		}
+		return blocks;
+	}
+
+	private stringifyChatToolResult(parts: (IChatResponseTextPart | IChatResponsePromptTsxPart | IChatResponseDataPart)[]): string {
+		return parts.map(part => {
+			switch (part.type) {
+				case 'text':
+					return part.value;
+				case 'prompt_tsx':
+					return this.safeJson(part.value);
+				case 'data':
+					return `[Binary data: ${part.mimeType}, ${Math.max(1, Math.round(part.data.byteLength / 1024))}KB]`;
+			}
+		}).filter(Boolean).join('\n');
+	}
+
+	private bytesToBase64(bytes: Uint8Array): string {
+		let binary = '';
+		for (const byte of bytes) {
+			binary += String.fromCharCode(byte);
+		}
+		return btoa(binary);
+	}
+
+	private safeJson(value: unknown): string {
+		try {
+			return JSON.stringify(value);
+		} catch {
+			return String(value);
+		}
 	}
 
 	private createAbortSignal(token: CancellationToken): AbortSignal {

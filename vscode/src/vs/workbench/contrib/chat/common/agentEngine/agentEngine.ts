@@ -248,6 +248,7 @@ export class AgentEngine {
 			};
 
 			let streamingUsed = false;
+			let textDeltaEmitted = false;
 			try {
 				if (this.provider.createMessageStream) {
 					// [Director-Code] A3: streaming path with index-based multi-tool aggregation
@@ -267,6 +268,9 @@ export class AgentEngine {
 									currentTextBlock = { type: 'text', text: '' };
 								}
 								currentTextBlock.text += event.text;
+								if (event.text) {
+									textDeltaEmitted = true;
+								}
 								yield { type: 'text_delta', text: event.text } as AgentEvent;
 								break;
 
@@ -403,6 +407,7 @@ export class AgentEngine {
 					role: 'assistant',
 					content: response.content as any,
 				},
+				renderText: !textDeltaEmitted,
 			};
 
 			// [Director-Code] A3: improved max_tokens handling — distinguish tool truncation from text continuation

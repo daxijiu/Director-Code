@@ -139,6 +139,7 @@ export interface AgentAssistantEvent {
 		readonly role: 'assistant';
 		readonly content: ContentBlock[];
 	};
+	readonly renderText?: boolean;
 }
 
 /** Streaming text chunk — emitted as LLM generates text tokens. */
