@@ -128,7 +128,7 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 
 	protected override createEditor(parent: HTMLElement): void {
 		void this.flushPendingWrites();
-		this.editorDisposables.clear();
+		this.clearEditorWidgets();
 
 		this.bodyContainer = DOM.append(parent, $('.director-code-settings-editor'));
 
@@ -214,12 +214,23 @@ export class DirectorCodeSettingsEditor extends EditorPane {
 
 	override dispose(): void {
 		void this.flushPendingWrites();
+		this.clearEditorWidgets();
 		super.dispose();
 	}
 
 	private getCurrentProvider(): ProviderName {
 		const configService = this.instantiationService.invokeFunction(accessor => accessor.get(IConfigurationService));
 		return (configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
+	}
+
+	private clearEditorWidgets(): void {
+		this.editorDisposables.clear();
+		this.bodyContainer?.remove();
+		this.bodyContainer = undefined;
+		this.providerSettingsWidget = undefined;
+		this.apiKeysWidget = undefined;
+		this.oauthWidget = undefined;
+		this.statusBar = undefined;
 	}
 }
 
