@@ -156,8 +156,8 @@ export class DirectorCodeModelProvider extends Disposable implements ILanguageMo
 					vendor: VENDOR,
 					version: '1.0',
 					family: 'custom',
-					maxInputTokens: 128_000,
-					maxOutputTokens: 8_192,
+					maxInputTokens: 0,
+					maxOutputTokens: 0,
 					isDefaultForLocation: {
 						[ChatAgentLocation.Chat]: false,
 					},

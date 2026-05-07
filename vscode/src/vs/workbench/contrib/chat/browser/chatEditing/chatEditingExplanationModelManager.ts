@@ -15,6 +15,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
 import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
 import { ChatMessageRole, ILanguageModelsService } from '../../common/languageModels.js';
 import * as nls from '../../../../../nls.js';
+import { selectAuxiliaryLanguageModel } from '../agentEngine/auxiliaryModelSelection.js';
 
 /**
  * Simple diff info interface for explanation generation
@@ -237,8 +238,8 @@ export class ChatEditingExplanationModelManager extends Disposable implements IC
 
 		try {
 			// Select a model for understanding all changes together
-			const models = await this._languageModelsService.selectLanguageModels({ vendor: 'copilot', id: 'copilot-fast' });
-			if (!models.length) {
+			const model = await selectAuxiliaryLanguageModel(this._languageModelsService);
+			if (!model) {
 				for (const fileData of fileChanges) {
 					this._updateUriStatePartial(fileData.uri, {
 						progress: 'error',
@@ -282,7 +283,7 @@ Example response format:
 [{"explanation": "Added null check to prevent crash"}, {"explanation": "Renamed variable for clarity"}]`;
 
 			const response = await this._languageModelsService.sendChatRequest(
-				models[0],
+				model,
 				undefined,
 				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
 				{},

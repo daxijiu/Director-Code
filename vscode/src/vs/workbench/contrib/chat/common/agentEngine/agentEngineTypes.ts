@@ -114,6 +114,10 @@ export interface AgentEngineConfig {
 	readonly maxTokens: number;
 	/** Override context window size for auto-compact. 0 = use model default. */
 	readonly maxInputTokens?: number;
+	/** Optional dedicated model for LLM-based conversation compaction. */
+	readonly compactModel?: string;
+	/** Session-scoped key used to mark a compact model unavailable after 403/404. */
+	readonly compactModelUnavailableKey?: string;
 	readonly thinking?: { readonly type: string; readonly budget_tokens?: number };
 	readonly canUseTool?: CanUseToolFn;
 	readonly abortSignal?: AbortSignal;

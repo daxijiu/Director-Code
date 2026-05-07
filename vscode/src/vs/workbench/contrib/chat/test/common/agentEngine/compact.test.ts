@@ -7,12 +7,19 @@ import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import {
 	compactConversation,
+	clearCompactModelUnavailableForTests,
 	createAutoCompactState,
+	createCompactModelAvailabilityKey,
+	isCompactModelUnavailable,
+	markCompactModelUnavailable,
+	MIN_COMPACT_THRESHOLD,
 	microCompactMessages,
+	resolveCompactModel,
 	shouldAutoCompact,
 } from '../../../common/agentEngine/compact.js';
 import type { LLMProvider, CreateMessageParams, CreateMessageResponse } from '../../../common/agentEngine/providers/providerTypes.js';
 import type { AutoCompactState } from '../../../common/agentEngine/agentEngineTypes.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
 
 // --------------------------------------------------------------------------
 // Mock LLMProvider
@@ -42,6 +49,10 @@ suite('AgentEngine - Compact', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
+	setup(() => {
+		clearCompactModelUnavailableForTests();
+	});
+
 	// ---------------------------------------------------------------
 	// createAutoCompactState
 	// ---------------------------------------------------------------
@@ -67,10 +78,19 @@ suite('AgentEngine - Compact', () => {
 		test('returns true when messages exceed threshold', () => {
 			const state = createAutoCompactState();
 			// claude-sonnet-4-5 context window = 200000, threshold = 200000 - 13000 = 187000 tokens
-			// 4 chars per token, so we need 187000 * 4 = 748000 chars
 			const bigContent = 'x'.repeat(800_000);
 			const messages = [{ role: 'user', content: bigContent }];
 			assert.strictEqual(shouldAutoCompact(messages, 'claude-sonnet-4-5', state), true);
+		});
+
+		test('uses minimum compact threshold for small overrides', () => {
+			const state = createAutoCompactState();
+			assert.strictEqual(MIN_COMPACT_THRESHOLD, 8_000);
+			const belowMinimum = [{ role: 'user', content: 'x'.repeat(20_000) }];
+			const aboveMinimum = [{ role: 'user', content: 'x'.repeat(30_000) }];
+
+			assert.strictEqual(shouldAutoCompact(belowMinimum, 'tiny-model', state, 4_000), false);
+			assert.strictEqual(shouldAutoCompact(aboveMinimum, 'tiny-model', state, 4_000), true);
 		});
 
 		test('returns false after 3 consecutive failures', () => {
@@ -179,6 +199,116 @@ suite('AgentEngine - Compact', () => {
 			const promptContent = JSON.stringify(capturedMessages);
 			assert.ok(!promptContent.includes('base64data'), 'images should be stripped from compaction prompt');
 		});
+
+		test('uses dedicated compact model when provided', async () => {
+			let capturedModel = '';
+			const provider: LLMProvider = {
+				apiType: 'anthropic-messages',
+				createMessage: async (params: CreateMessageParams): Promise<CreateMessageResponse> => {
+					capturedModel = params.model;
+					return {
+						content: [{ type: 'text', text: 'A compact summary that is much shorter.' }],
+						stopReason: 'end_turn',
+						usage: { input_tokens: 10, output_tokens: 5 },
+					};
+				},
+			};
+			const state = createAutoCompactState();
+			const messages = [
+				{ role: 'user', content: 'x'.repeat(2000) },
+				{ role: 'assistant', content: 'x'.repeat(2000) },
+			];
+
+			const result = await compactConversation(provider, 'claude-sonnet-4-5', messages, state, { compactModel: 'claude-haiku-4-5' });
+
+			assert.strictEqual(capturedModel, 'claude-haiku-4-5');
+			assert.strictEqual(result.usedModel, 'claude-haiku-4-5');
+			assert.strictEqual(result.state.compacted, true);
+		});
+
+		test('marks compact model unavailable on 403/404 failures', async () => {
+			const unavailableKey = createCompactModelAvailabilityKey('anthropic', 'https://api.anthropic.com', 'api-key:anthropic:provider:test', DEFAULT_AUTH_VARIANT, 'claude-haiku-4-5');
+			const provider: LLMProvider = {
+				apiType: 'anthropic-messages',
+				createMessage: async (): Promise<CreateMessageResponse> => {
+					const err: any = new Error('not found');
+					err.status = 404;
+					throw err;
+				},
+			};
+
+			await compactConversation(provider, 'claude-sonnet-4-5', [{ role: 'user', content: 'hello' }], createAutoCompactState(), {
+				compactModel: 'claude-haiku-4-5',
+				unavailableKey,
+			});
+
+			assert.strictEqual(isCompactModelUnavailable(unavailableKey), true);
+		});
+	});
+
+	suite('resolveCompactModel', () => {
+		test('uses configured compact model when available', () => {
+			const result = resolveCompactModel({
+				provider: 'anthropic',
+				authVariant: DEFAULT_AUTH_VARIANT,
+				mainModel: 'claude-sonnet-4-6',
+				configuredCompactModel: 'claude-haiku-4-5',
+				availableModels: [
+					{ id: 'claude-sonnet-4-6', name: 'Claude Sonnet', provider: 'anthropic' },
+					{ id: 'claude-haiku-4-5', name: 'Claude Haiku', provider: 'anthropic' },
+				],
+			});
+
+			assert.strictEqual(result.model, 'claude-haiku-4-5');
+			assert.strictEqual(result.source, 'configured');
+		});
+
+		test('falls back from cross auth variant OpenAI compact model', () => {
+			const result = resolveCompactModel({
+				provider: 'openai',
+				authVariant: OPENAI_CODEX_AUTH_VARIANT,
+				mainModel: 'gpt-5.5',
+				configuredCompactModel: 'gpt-4o-mini',
+				availableModels: [
+					{ id: 'gpt-5.5', name: 'GPT-5.5', provider: 'openai', apiType: 'openai-codex' },
+					{ id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider: 'openai', apiType: 'openai-codex', compactRank: 1 },
+				],
+			});
+
+			assert.strictEqual(result.model, 'gpt-5.3-codex-spark');
+			assert.strictEqual(result.source, 'provider-default');
+		});
+
+		test('skips session-unavailable compact models', () => {
+			const unavailableKey = 'openai:default:key:default:gpt-4o-mini';
+			clearCompactModelUnavailableForTests();
+			const resultBefore = resolveCompactModel({
+				provider: 'openai',
+				authVariant: DEFAULT_AUTH_VARIANT,
+				mainModel: 'gpt-4o',
+				availableModels: [
+					{ id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+					{ id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+				],
+				availabilityKeyForModel: id => id === 'gpt-4o-mini' ? unavailableKey : undefined,
+			});
+			assert.strictEqual(resultBefore.model, 'gpt-4o-mini');
+
+			clearCompactModelUnavailableForTests();
+			markCompactModelUnavailable(unavailableKey);
+			const resultAfter = resolveCompactModel({
+				provider: 'openai',
+				authVariant: DEFAULT_AUTH_VARIANT,
+				mainModel: 'gpt-4o',
+				availableModels: [
+					{ id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+					{ id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+				],
+				availabilityKeyForModel: id => id === 'gpt-4o-mini' ? unavailableKey : undefined,
+			});
+			assert.strictEqual(resultAfter.model, 'gpt-4o');
+			assert.strictEqual(resultAfter.source, 'main');
+		});
 	});
 
 	// ---------------------------------------------------------------
@@ -280,6 +410,26 @@ suite('AgentEngine - Compact', () => {
 
 			const result = microCompactMessages(messages); // default 50000
 			assert.ok(result[0].content[0].content.includes('...(truncated)...'));
+		});
+
+		test('replaces base64 and data URI tool results with placeholders', () => {
+			const base64 = 'QUJD'.repeat(1024);
+			const dataUri = `data:image/png;base64,${'B'.repeat(4096)}`;
+			const messages = [
+				{
+					role: 'user',
+					content: [
+						{ type: 'tool_result', tool_use_id: '1', content: base64 },
+						{ type: 'tool_result', tool_use_id: '2', content: dataUri },
+					],
+				},
+			];
+
+			const result = microCompactMessages(messages, 50_000);
+
+			assert.ok(result[0].content[0].content.includes('base64 payload'));
+			assert.ok(result[0].content[1].content.includes('data URI'));
+			assert.ok(!result[0].content[1].content.includes('BBBB'));
 		});
 	});
 });

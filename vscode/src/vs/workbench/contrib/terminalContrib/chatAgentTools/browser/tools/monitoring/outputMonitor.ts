@@ -18,8 +18,9 @@ import { ChatElicitationRequestPart } from '../../../../../chat/common/model/cha
 import { ChatModel } from '../../../../../chat/common/model/chatModel.js';
 import { ElicitationState, IChatService } from '../../../../../chat/common/chatService/chatService.js';
 import { ChatAgentLocation, ChatPermissionLevel } from '../../../../../chat/common/constants.js';
-import { ChatMessageRole, getTextResponseFromStream, type ILanguageModelChatSelector, ILanguageModelsService } from '../../../../../chat/common/languageModels.js';
+import { ChatMessageRole, getTextResponseFromStream, ILanguageModelsService } from '../../../../../chat/common/languageModels.js';
 import { IToolInvocationContext } from '../../../../../chat/common/tools/languageModelToolsService.js';
+import { selectAuxiliaryLanguageModel } from '../../../../../chat/browser/agentEngine/auxiliaryModelSelection.js';
 import { ITaskService } from '../../../../../tasks/common/taskService.js';
 import { ILinkLocation } from '../../taskHelpers.js';
 import { IConfirmationPrompt, IExecution, IPollingResult, OutputMonitorState, PollingConsts } from './types.js';
@@ -624,14 +625,7 @@ export class OutputMonitor extends Disposable implements IOutputMonitor {
 			return undefined;
 		}
 		const autoReply = this._configurationService.getValue(TerminalChatAgentToolsSettingId.AutoReplyToPrompts) || this._isAutopilotMode();
-		let model = this._chatWidgetService.getWidgetsByLocations(ChatAgentLocation.Chat)[0]?.input.currentLanguageModel;
-		if (model) {
-			const models = await this._safeSelectLanguageModels({ vendor: 'copilot', family: model.replaceAll('copilot/', '') });
-			model = models[0];
-		}
-		if (!model) {
-			model = await this._getLanguageModel();
-		}
+		const model = await this._getLanguageModel();
 		const prompt = confirmationPrompt.prompt;
 		const options = confirmationPrompt.options;
 
@@ -928,35 +922,8 @@ export class OutputMonitor extends Disposable implements IOutputMonitor {
 	}
 
 	private async _getLanguageModel(): Promise<string | undefined> {
-		const fastModels = await this._safeSelectLanguageModels({ vendor: 'copilot', id: 'copilot-fast' });
-		if (fastModels.length) {
-			return fastModels[0];
-		}
-
 		const widget = this._chatWidgetService.lastFocusedWidget ?? this._chatWidgetService.getWidgetsByLocations(ChatAgentLocation.Chat)[0];
-		const currentModel = widget?.input.currentLanguageModel;
-		if (currentModel) {
-			const currentFamilyModels = await this._safeSelectLanguageModels({ vendor: 'copilot', family: currentModel.replaceAll('copilot/', '') });
-			if (currentFamilyModels.length) {
-				return currentFamilyModels[0];
-			}
-		}
-
-		const copilotModels = await this._safeSelectLanguageModels({ vendor: 'copilot' });
-		if (copilotModels.length) {
-			return copilotModels[0];
-		}
-
-		return undefined;
-	}
-
-	private async _safeSelectLanguageModels(selector: ILanguageModelChatSelector): Promise<string[]> {
-		try {
-			return await this._languageModelsService.selectLanguageModels(selector);
-		} catch (error) {
-			this._logService.trace('OutputMonitor: selectLanguageModels failed', { selector, error });
-			return [];
-		}
+		return selectAuxiliaryLanguageModel(this._languageModelsService, widget?.input.currentLanguageModel);
 	}
 }
 

@@ -23,20 +23,21 @@ suite('AgentEngine - Tokens', () => {
 	// estimateTokens
 	// ---------------------------------------------------------------
 	suite('estimateTokens', () => {
-		test('estimates 4 chars per token', () => {
+		test('estimates UTF-8 bytes at 3.5 bytes per token', () => {
 			assert.strictEqual(estimateTokens(''), 0);
-			assert.strictEqual(estimateTokens('abcd'), 1);
-			assert.strictEqual(estimateTokens('abcdefgh'), 2);
+			assert.strictEqual(estimateTokens('abcd'), 2);
+			assert.strictEqual(estimateTokens('abcdefgh'), 3);
+			assert.strictEqual(estimateTokens('你好'), 2);
 		});
 
 		test('rounds up partial tokens', () => {
-			assert.strictEqual(estimateTokens('ab'), 1);    // ceil(2/4) = 1
-			assert.strictEqual(estimateTokens('abcde'), 2); // ceil(5/4) = 2
+			assert.strictEqual(estimateTokens('ab'), 1);    // ceil(2/3.5) = 1
+			assert.strictEqual(estimateTokens('abcde'), 2); // ceil(5/3.5) = 2
 		});
 
 		test('handles long text', () => {
 			const text = 'x'.repeat(4000);
-			assert.strictEqual(estimateTokens(text), 1000);
+			assert.strictEqual(estimateTokens(text), 1143);
 		});
 	});
 
@@ -46,10 +47,10 @@ suite('AgentEngine - Tokens', () => {
 	suite('estimateMessagesTokens', () => {
 		test('handles string content', () => {
 			const messages = [
-				{ role: 'user', content: 'abcdefgh' },     // 2 tokens
-				{ role: 'assistant', content: 'abcd' },     // 1 token
+				{ role: 'user', content: 'abcdefgh' },     // 3 tokens
+				{ role: 'assistant', content: 'abcd' },     // 2 tokens
 			];
-			assert.strictEqual(estimateMessagesTokens(messages), 3);
+			assert.strictEqual(estimateMessagesTokens(messages), 5);
 		});
 
 		test('handles array content with text blocks', () => {
@@ -57,12 +58,12 @@ suite('AgentEngine - Tokens', () => {
 				{
 					role: 'user',
 					content: [
-						{ type: 'text', text: 'abcdefgh' },     // 2 tokens
-						{ type: 'text', text: 'abcd' },         // 1 token
+						{ type: 'text', text: 'abcdefgh' },     // 3 tokens
+						{ type: 'text', text: 'abcd' },         // 2 tokens
 					],
 				},
 			];
-			assert.strictEqual(estimateMessagesTokens(messages), 3);
+			assert.strictEqual(estimateMessagesTokens(messages), 5);
 		});
 
 		test('handles tool_result content blocks', () => {
@@ -70,11 +71,11 @@ suite('AgentEngine - Tokens', () => {
 				{
 					role: 'user',
 					content: [
-						{ type: 'tool_result', tool_use_id: '1', content: 'abcdefgh' },  // 2 tokens via "content" path
+						{ type: 'tool_result', tool_use_id: '1', content: 'abcdefgh' },  // 3 tokens via "content" path
 					],
 				},
 			];
-			assert.strictEqual(estimateMessagesTokens(messages), 2);
+			assert.strictEqual(estimateMessagesTokens(messages), 3);
 		});
 
 		test('handles tool_use blocks via JSON.stringify fallback', () => {
@@ -96,15 +97,15 @@ suite('AgentEngine - Tokens', () => {
 
 		test('handles mixed content', () => {
 			const messages = [
-				{ role: 'user', content: 'abcd' },                                   // 1
+				{ role: 'user', content: 'abcd' },                                   // 2
 				{
 					role: 'assistant', content: [
-						{ type: 'text', text: 'abcdefgh' },                              // 2
+						{ type: 'text', text: 'abcdefgh' },                              // 3
 					]
 				},
-				{ role: 'user', content: [{ type: 'tool_result', tool_use_id: '1', content: 'abcd' }] }, // 1
+				{ role: 'user', content: [{ type: 'tool_result', tool_use_id: '1', content: 'abcd' }] }, // 2
 			];
-			assert.strictEqual(estimateMessagesTokens(messages), 4);
+			assert.strictEqual(estimateMessagesTokens(messages), 7);
 		});
 	});
 
@@ -173,7 +174,7 @@ suite('AgentEngine - Tokens', () => {
 		test('contains OpenAI models', () => {
 			assert.ok('gpt-4o' in MODEL_PRICING);
 			assert.ok('gpt-4o-mini' in MODEL_PRICING);
-			assert.ok('o1' in MODEL_PRICING);
+			assert.ok('o3' in MODEL_PRICING);
 		});
 
 		test('contains DeepSeek models', () => {

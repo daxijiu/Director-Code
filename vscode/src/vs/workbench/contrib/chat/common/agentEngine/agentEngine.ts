@@ -211,14 +211,21 @@ export class AgentEngine {
 						this.config.model,
 						this.messages as any[],
 						this.compactState,
+						{
+							compactModel: this.config.compactModel,
+							unavailableKey: this.config.compactModelUnavailableKey,
+							abortSignal: this.config.abortSignal,
+						},
 					);
 					this.messages = result.compactedMessages as MutableMessageParam[];
 					this.compactState = result.state;
 
-					yield { type: 'system', subtype: 'compact_boundary', message: 'Conversation compacted' };
+					if (result.summary) {
+						yield { type: 'system', subtype: 'compact_boundary', message: 'Conversation compacted' };
 
-					if (this.config.hookRegistry) {
-						await this.config.hookRegistry.execute('PostCompact', { toolName: 'compact' });
+						if (this.config.hookRegistry) {
+							await this.config.hookRegistry.execute('PostCompact', { toolName: 'compact' });
+						}
 					}
 				} catch {
 					// Continue with uncompacted messages
@@ -345,6 +352,11 @@ export class AgentEngine {
 									this.config.model,
 									this.messages as any[],
 									this.compactState,
+									{
+										compactModel: this.config.compactModel,
+										unavailableKey: this.config.compactModelUnavailableKey,
+										abortSignal: this.config.abortSignal,
+									},
 								);
 								this.messages = result.compactedMessages as MutableMessageParam[];
 								this.compactState = result.state;
@@ -373,6 +385,11 @@ export class AgentEngine {
 								this.config.model,
 								this.messages as any[],
 								this.compactState,
+								{
+									compactModel: this.config.compactModel,
+									unavailableKey: this.config.compactModelUnavailableKey,
+									abortSignal: this.config.abortSignal,
+								},
 							);
 							this.messages = result.compactedMessages as MutableMessageParam[];
 							this.compactState = result.state;

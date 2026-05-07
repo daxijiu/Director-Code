@@ -23,6 +23,7 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
 import { MANAGE_CHAT_COMMAND_ID } from '../../../common/constants.js';
 import { ILanguageModelChatMetadataAndIdentifier } from '../../../common/languageModels.js';
 import { DEFAULT_MODEL_PICKER_CATEGORY } from '../../../common/widget/input/modelPickerWidget.js';
+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
 import { ChatInputPickerActionViewItem, IChatInputPickerOptions } from './chatInputPickerActionItem.js';
 
 export interface IModelPickerDelegate {
@@ -116,6 +117,10 @@ function getModelPickerActionBarActionProvider(commandService: ICommandService, 
 						commandService.executeCommand(MANAGE_CHAT_COMMAND_ID);
 					}
 				});
+			}
+
+			if (isDirectorCodeBuiltInMode(productService.defaultChatAgent)) {
+				return additionalActions;
 			}
 
 			// Add sign-in / upgrade option if entitlement is anonymous / free / new user

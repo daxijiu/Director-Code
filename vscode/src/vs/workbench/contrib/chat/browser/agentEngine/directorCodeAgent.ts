@@ -24,6 +24,8 @@ import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthS
 import { createProvider } from '../../common/agentEngine/providers/providerFactory.js';
 import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../common/agentEngine/modelCatalog.js';
+import { IModelResolverService, normalizeModelResolverBaseURL } from '../../common/agentEngine/modelResolver.js';
+import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../common/agentEngine/compact.js';
 import type {
 	IChatAgentImplementation,
 	IChatAgentRequest,
@@ -46,6 +48,7 @@ const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
 const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
+const CONFIG_COMPACT_MODEL = 'directorCode.ai.compactModel';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
@@ -81,6 +84,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 	) {
 		super();
 	}
@@ -99,6 +103,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 			let modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
 			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
 			let configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
+			const configuredCompactModel = this.configService.getValue<string>(CONFIG_COMPACT_MODEL) || '';
 			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
@@ -130,6 +135,23 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 					timings: { totalElapsed: Date.now() - startTime },
 				};
 			}
+
+			const availableModels = await this.modelResolverService.resolveModels(
+				provider,
+				resolved.accessToken ?? resolved.apiKey,
+				resolved.baseURL ?? baseURL,
+				resolved.identityKey,
+				resolved.authVariant,
+			);
+			const normalizedBaseURL = normalizeModelResolverBaseURL(provider, resolved.baseURL ?? baseURL, resolved.authVariant);
+			const compactModelResolution = resolveCompactModel({
+				provider,
+				authVariant: resolved.authVariant,
+				mainModel: modelId,
+				configuredCompactModel,
+				availableModels,
+				availabilityKeyForModel: compactModelId => createCompactModelAvailabilityKey(provider, normalizedBaseURL, resolved.identityKey, resolved.authVariant, compactModelId),
+			});
 
 			// 3. Create LLM provider with resolved options
 			const apiType = provider === 'openai' && resolved.authVariant === OPENAI_CODEX_AUTH_VARIANT
@@ -179,6 +201,8 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 				maxTurns,
 				maxTokens,
 				maxInputTokens: maxInputTokens > 0 ? maxInputTokens : undefined,
+				compactModel: compactModelResolution.model,
+				compactModelUnavailableKey: compactModelResolution.unavailableKey,
 				abortSignal: abortController.signal,
 			};
 			const engine = new AgentEngine(config, toolBridge, previousMessages);

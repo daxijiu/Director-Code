@@ -29,6 +29,7 @@ import { ChatEntitlement, IChatEntitlementService, isProUser } from '../../../..
 import * as semver from '../../../../../../base/common/semver/semver.js';
 import { IModelPickerDelegate } from './modelPickerActionItem.js';
 import { IUpdateService, StateType } from '../../../../../../platform/update/common/update.js';
+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
 
 function isVersionAtLeast(current: string, required: string): boolean {
 	const currentSemver = semver.coerce(current);
@@ -158,6 +159,7 @@ export function buildModelPickerItems(
 	showUnavailableFeatured: boolean,
 	showFeatured: boolean,
 	hoverPosition?: IHoverPositionOptions,
+	neutralUnavailableModels: boolean = false,
 ): IActionListItem<IActionWidgetDropdownAction>[] {
 	const items: IActionListItem<IActionWidgetDropdownAction>[] = [];
 	if (models.length === 0) {
@@ -194,7 +196,10 @@ export function buildModelPickerItems(
 
 			const resolveModel = (id: string) => allModelsMap.get(id) ?? modelsByMetadataId.get(id);
 
-			const getUnavailableReason = (entry: IModelControlEntry): 'upgrade' | 'update' | 'admin' => {
+			const getUnavailableReason = (entry: IModelControlEntry): 'upgrade' | 'update' | 'admin' | 'configure' => {
+				if (neutralUnavailableModels) {
+					return 'configure';
+				}
 				const isBusinessOrEnterpriseUser = chatEntitlementService.entitlement === ChatEntitlement.Business || chatEntitlementService.entitlement === ChatEntitlement.Enterprise;
 				if (!isBusinessOrEnterpriseUser) {
 					return 'upgrade';
@@ -215,7 +220,7 @@ export function buildModelPickerItems(
 			// --- 2. Promoted section (selected + recently used + featured) ---
 			type PromotedItem =
 				| { kind: 'available'; model: ILanguageModelChatMetadataAndIdentifier }
-				| { kind: 'unavailable'; id: string; entry: IModelControlEntry; reason: 'upgrade' | 'update' | 'admin' };
+				| { kind: 'unavailable'; id: string; entry: IModelControlEntry; reason: 'upgrade' | 'update' | 'admin' | 'configure' };
 
 			const promotedItems: PromotedItem[] = [];
 
@@ -407,7 +412,7 @@ export function getModelPickerAccessibilityProvider() {
 function createUnavailableModelItem(
 	id: string,
 	entry: IModelControlEntry,
-	reason: 'upgrade' | 'update' | 'admin',
+	reason: 'upgrade' | 'update' | 'admin' | 'configure',
 	manageSettingsUrl: string | undefined,
 	updateStateType: StateType,
 	section?: string,
@@ -419,6 +424,8 @@ function createUnavailableModelItem(
 		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Upgrade](command:workbench.action.chat.upgradePlan \" \")"), { isTrusted: true });
 	} else if (reason === 'update') {
 		description = localize('chat.modelPicker.updateDescription', "Update VS Code");
+	} else if (reason === 'configure') {
+		description = new MarkdownString(localize('chat.modelPicker.configureLink', "[Configure](command:director-code.openSettings \" \")"), { isTrusted: true });
 	} else {
 		description = manageSettingsUrl
 			? new MarkdownString(localize('chat.modelPicker.adminLink', "[Contact your admin]({0})", manageSettingsUrl), { isTrusted: true })
@@ -431,6 +438,9 @@ function createUnavailableModelItem(
 		hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHover', "[Upgrade to GitHub Copilot Pro](command:workbench.action.chat.upgradePlan \" \") with a free 30-day trial to use the best models."));
 	} else if (reason === 'update') {
 		hoverContent = getUpdateHoverContent(updateStateType);
+	} else if (reason === 'configure') {
+		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
+		hoverContent.appendMarkdown(localize('chat.modelPicker.configureHover', "This model is not available. [Configure Director Code](command:director-code.openSettings \" \") to update your provider, authentication, or model list."));
 	} else {
 		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
 		hoverContent.appendMarkdown(localize('chat.modelPicker.adminHover', "This model is not available. Contact your administrator to enable it."));
@@ -602,6 +612,7 @@ export class ModelPickerWidget extends Disposable {
 			this._delegate.showUnavailableFeatured(),
 			this._delegate.showFeatured(),
 			this._hoverPosition,
+			isDirectorCodeBuiltInMode(this._productService.defaultChatAgent),
 		);
 
 		const listOptions = {

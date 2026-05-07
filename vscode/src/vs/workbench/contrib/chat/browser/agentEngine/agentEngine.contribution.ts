@@ -97,6 +97,11 @@ configurationRegistry.registerConfiguration({
 			default: 'default',
 			description: 'Authentication transport variant. Only OpenAI uses "openai-codex"; other providers use "default".',
 		},
+		'directorCode.ai.compactModel': {
+			type: 'string',
+			default: '',
+			description: 'Optional dedicated model ID for conversation compaction. Leave empty to use the provider default small model, then fall back to the active model if unavailable.',
+		},
 		'directorCode.ai.maxTurns': {
 			type: 'number',
 			default: 25,

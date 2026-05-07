@@ -247,17 +247,17 @@ suite('OutputMonitor', () => {
 		assert.strictEqual(optionResult?.suggestedOption, 'y', 'first option should be used as fallback');
 	});
 
-	test('auto reply uses fallback model to derive suggested option', async () => {
+	test('auto reply uses Director Code fallback model to derive suggested option', async () => {
 		instantiationService.stub(IConfigurationService, new TestConfigurationService({
 			[TerminalChatAgentToolsSettingId.AutoReplyToPrompts]: true
 		}));
 
 		let fallbackModelRequested = false;
 		instantiationService.stub(ILanguageModelsService, {
-			selectLanguageModels: async (selector: { id?: string }) => {
-				if (selector.id === 'copilot-fast') {
+			selectLanguageModels: async (selector: { vendor?: string }) => {
+				if (selector.vendor === 'director-code') {
 					fallbackModelRequested = true;
-					return ['copilot-fast'];
+					return ['director-code/claude-haiku-4-5'];
 				}
 				return [];
 			},

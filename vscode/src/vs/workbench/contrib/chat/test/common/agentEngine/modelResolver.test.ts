@@ -121,6 +121,9 @@ suite("AgentEngine - ModelResolverService", () => {
 						data: [
 							{ id: "gpt-4o", owned_by: "openai" },
 							{ id: "gpt-4o-mini", owned_by: "openai" },
+							{ id: "chatgpt-4o-latest", owned_by: "openai" },
+							{ id: "tts-1", owned_by: "openai" },
+							{ id: "omni-moderation-latest", owned_by: "openai" },
 							{ id: "dall-e-3", owned_by: "openai" },
 						],
 					}), { status: 200 });
@@ -131,8 +134,11 @@ suite("AgentEngine - ModelResolverService", () => {
 			const models = await resolver.resolveModels("openai", "test-key");
 			assert.ok(models.length >= 2);
 			assert.ok(models.some(m => m.id === "gpt-4o"));
+			assert.ok(models.some(m => m.id === "chatgpt-4o-latest"));
 			assert.ok(models.every(m => m.source === "api"));
 			assert.ok(!models.some(m => m.id === "dall-e-3"));
+			assert.ok(!models.some(m => m.id === "tts-1"));
+			assert.ok(!models.some(m => m.id === "omni-moderation-latest"));
 		});
 
 		test("fetches OpenAI Codex models from chatgpt.com backend endpoint", async () => {
@@ -195,6 +201,25 @@ suite("AgentEngine - ModelResolverService", () => {
 			assert.ok(newModel);
 			assert.strictEqual(newModel!.source, "api");
 			assert.strictEqual(newModel!.name, "gpt-5-turbo");
+			assert.strictEqual(newModel!.family, "unknown");
+			assert.strictEqual(newModel!.maxInputTokens, 0);
+			assert.strictEqual(newModel!.metadataKnown, false);
+		});
+
+		test("OpenAI-compatible only filters embedding models", async () => {
+			mockFetch(() => new Response(JSON.stringify({
+				data: [
+					{ id: "llama-3.1-70b", owned_by: "proxy" },
+					{ id: "my-embedding-model", owned_by: "proxy" },
+					{ id: "dall-e-compatible", owned_by: "proxy" },
+				],
+			}), { status: 200 }));
+
+			const models = await resolver.resolveModels("openai-compatible", "key", "https://proxy.example.com/v1", "api-key:openai-compatible:provider:a");
+
+			assert.ok(models.some(m => m.id === "llama-3.1-70b"));
+			assert.ok(models.some(m => m.id === "dall-e-compatible"));
+			assert.ok(!models.some(m => m.id === "my-embedding-model"));
 		});
 
 		test("keeps native OpenAI provider when a custom baseURL is configured", async () => {
@@ -226,8 +251,9 @@ suite("AgentEngine - ModelResolverService", () => {
 				if (url.includes("/v1beta/models")) {
 					return new Response(JSON.stringify({
 						models: [
-							{ name: "models/gemini-2.5-pro", displayName: "Gemini 2.5 Pro", inputTokenLimit: 1000000, outputTokenLimit: 65536 },
-							{ name: "models/gemini-2.5-flash", displayName: "Gemini 2.5 Flash" },
+							{ name: "models/gemini-2.5-pro", displayName: "Gemini 2.5 Pro", inputTokenLimit: 1000000, outputTokenLimit: 65536, supportedGenerationMethods: ["generateContent"] },
+							{ name: "models/gemini-2.5-flash", displayName: "Gemini 2.5 Flash", supportedGenerationMethods: ["generateContent"] },
+							{ name: "models/gemini-embedding-001", displayName: "Gemini Embedding", supportedGenerationMethods: ["embedContent"] },
 						],
 					}), { status: 200 });
 				}
@@ -237,6 +263,7 @@ suite("AgentEngine - ModelResolverService", () => {
 			const models = await resolver.resolveModels("gemini", "key");
 			assert.ok(models.length >= 2);
 			assert.ok(models.some(m => m.id === "gemini-2.5-pro"));
+			assert.ok(!models.some(m => m.id === "gemini-embedding-001"));
 		});
 
 		test("skips API layer for Anthropic (no models endpoint)", async () => {
@@ -332,8 +359,9 @@ suite("AgentEngine - ModelResolverService", () => {
 			const m = models.find(m2 => m2.id === "test-model");
 			assert.ok(m);
 			assert.strictEqual(m!.family, "unknown");
-			assert.strictEqual(m!.maxInputTokens, 128_000);
-			assert.strictEqual(m!.maxOutputTokens, 8_192);
+			assert.strictEqual(m!.maxInputTokens, 0);
+			assert.strictEqual(m!.maxOutputTokens, 0);
+			assert.strictEqual(m!.metadataKnown, false);
 		});
 	});
 

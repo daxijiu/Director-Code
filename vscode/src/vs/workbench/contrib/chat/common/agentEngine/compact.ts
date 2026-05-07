@@ -15,9 +15,110 @@
  * Ported from open-agent-sdk-typescript/src/utils/compact.ts
  */
 
-import type { LLMProvider, NormalizedMessageParam } from './providers/providerTypes.js';
+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type LLMProvider, type NormalizedMessageParam } from './providers/providerTypes.js';
 import type { AutoCompactState } from './agentEngineTypes.js';
 import { estimateMessagesTokens, getAutoCompactThreshold, AUTOCOMPACT_BUFFER_TOKENS } from './tokens.js';
+import { getCompactRank, getProviderDefaultCompactModel, type IModelEntry } from './modelCatalog.js';
+import type { ProviderName } from './apiKeyService.js';
+
+export const MIN_COMPACT_THRESHOLD = 8_000;
+
+const compactModelUnavailable = new Set<string>();
+
+export interface CompactModelResolution {
+	readonly model: string;
+	readonly unavailableKey?: string;
+	readonly source: 'configured' | 'provider-default' | 'main';
+}
+
+export interface CompactModelSelectionOptions {
+	readonly provider: ProviderName;
+	readonly authVariant: AuthVariantName;
+	readonly mainModel: string;
+	readonly configuredCompactModel?: string;
+	readonly availableModels?: readonly (IModelEntry & { readonly apiType?: string; readonly compactRank?: number })[];
+	readonly availabilityKeyForModel?: (modelId: string) => string | undefined;
+}
+
+export interface CompactConversationOptions {
+	readonly compactModel?: string;
+	readonly unavailableKey?: string;
+	readonly abortSignal?: AbortSignal;
+}
+
+export function createCompactModelAvailabilityKey(
+	provider: ProviderName,
+	normalizedBaseURL: string | undefined,
+	authIdentityKey: string | undefined,
+	authVariant: AuthVariantName,
+	compactModelId: string,
+): string {
+	return `${provider}:${normalizedBaseURL || 'default'}:${authIdentityKey || 'no-key'}:${authVariant}:${compactModelId}`;
+}
+
+export function isCompactModelUnavailable(key: string | undefined): boolean {
+	return !!key && compactModelUnavailable.has(key);
+}
+
+export function markCompactModelUnavailable(key: string | undefined): void {
+	if (key) {
+		compactModelUnavailable.add(key);
+	}
+}
+
+export function clearCompactModelUnavailableForTests(): void {
+	compactModelUnavailable.clear();
+}
+
+export function resolveCompactModel(options: CompactModelSelectionOptions): CompactModelResolution {
+	const availableModels = options.availableModels ?? [];
+	const availableById = new Map(availableModels.map(model => [model.id, model]));
+	const keyFor = (modelId: string) => options.availabilityKeyForModel?.(modelId);
+	const isAvailable = (modelId: string): boolean => {
+		if (modelId === options.mainModel) {
+			return true;
+		}
+		const key = keyFor(modelId);
+		return availableById.has(modelId) && !isCompactModelUnavailable(key);
+	};
+	const useCandidate = (modelId: string, source: CompactModelResolution['source']): CompactModelResolution | undefined => {
+		if (!modelId) {
+			return undefined;
+		}
+		if (isAvailable(modelId)) {
+			return { model: modelId, unavailableKey: keyFor(modelId), source };
+		}
+		return undefined;
+	};
+
+	const configuredCompactModel = options.configuredCompactModel?.trim();
+	if (configuredCompactModel) {
+		const configured = useCandidate(configuredCompactModel, 'configured');
+		if (configured) {
+			return configured;
+		}
+		console.warn(`[AgentEngine] Compact model "${configuredCompactModel}" is not available for provider "${options.provider}" (${options.authVariant}); falling back.`);
+	}
+
+	if (options.provider === 'openai' && options.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		const codexCandidate = availableModels
+			.filter(model => model.apiType === 'openai-codex')
+			.filter(model => !isCompactModelUnavailable(keyFor(model.id)))
+			.sort((a, b) => getCompactRank(a) - getCompactRank(b) || a.id.localeCompare(b.id))[0];
+		if (codexCandidate) {
+			return { model: codexCandidate.id, unavailableKey: keyFor(codexCandidate.id), source: 'provider-default' };
+		}
+		return { model: options.mainModel, source: 'main' };
+	}
+
+	const providerDefault = getProviderDefaultCompactModel(options.provider, options.authVariant);
+	const providerDefaultResolution = providerDefault ? useCandidate(providerDefault, 'provider-default') : undefined;
+	if (providerDefaultResolution) {
+		return providerDefaultResolution;
+	}
+
+	return { model: options.mainModel, source: 'main' };
+}
 
 // --------------------------------------------------------------------------
 // Auto-Compact State
@@ -48,7 +149,7 @@ export function shouldAutoCompact(
 		? maxInputTokensOverride - AUTOCOMPACT_BUFFER_TOKENS
 		: getAutoCompactThreshold(model);
 
-	return estimatedTokens >= threshold;
+	return estimatedTokens >= Math.max(MIN_COMPACT_THRESHOLD, threshold);
 }
 
 // --------------------------------------------------------------------------
@@ -60,11 +161,16 @@ export async function compactConversation(
 	model: string,
 	messages: any[],
 	state: AutoCompactState,
+	options: CompactConversationOptions = {},
 ): Promise<{
 	compactedMessages: NormalizedMessageParam[];
 	summary: string;
 	state: AutoCompactState;
+	usedModel: string;
 }> {
+	const compactModel = options.compactModel && !isCompactModelUnavailable(options.unavailableKey)
+		? options.compactModel
+		: model;
 	try {
 		// Strip images before compacting to save tokens
 		const strippedMessages = stripImagesFromMessages(messages);
@@ -73,7 +179,7 @@ export async function compactConversation(
 		const compactionPrompt = buildCompactionPrompt(strippedMessages);
 
 		const response = await provider.createMessage({
-			model,
+			model: compactModel,
 			maxTokens: 8192,
 			system: 'You are a conversation summarizer. Create a detailed summary of the conversation that preserves all important context, decisions made, files modified, tool outputs, and current state. The summary should allow the conversation to continue seamlessly.',
 			messages: [
@@ -82,6 +188,7 @@ export async function compactConversation(
 					content: compactionPrompt,
 				},
 			],
+			abortSignal: options.abortSignal,
 		});
 
 		const summary = response.content
@@ -96,6 +203,7 @@ export async function compactConversation(
 				compactedMessages: messages,
 				summary: '',
 				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
+				usedModel: compactModel,
 			};
 		}
 
@@ -111,6 +219,7 @@ export async function compactConversation(
 				compactedMessages: messages,
 				summary: '',
 				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
+				usedModel: compactModel,
 			};
 		}
 
@@ -130,8 +239,12 @@ export async function compactConversation(
 				turnCounter: state.turnCounter,
 				consecutiveFailures: 0,
 			},
+			usedModel: compactModel,
 		};
 	} catch (err: any) {
+		if (err?.status === 403 || err?.status === 404) {
+			markCompactModelUnavailable(options.unavailableKey);
+		}
 		return {
 			compactedMessages: messages,
 			summary: '',
@@ -139,6 +252,7 @@ export async function compactConversation(
 				...state,
 				consecutiveFailures: state.consecutiveFailures + 1,
 			},
+			usedModel: compactModel,
 		};
 	}
 }
@@ -157,6 +271,13 @@ export function microCompactMessages(
 
 		const content = (msg.content as any[]).map((block: any) => {
 			if (block.type === 'tool_result' && typeof block.content === 'string') {
+				const binaryPlaceholder = getBinaryToolResultPlaceholder(block.content);
+				if (binaryPlaceholder) {
+					return {
+						...block,
+						content: binaryPlaceholder,
+					};
+				}
 				if (block.content.length > maxToolResultChars) {
 					return {
 						...block,
@@ -172,6 +293,27 @@ export function microCompactMessages(
 
 		return { ...msg, content };
 	});
+}
+
+function getBinaryToolResultPlaceholder(content: string): string | undefined {
+	const trimmed = content.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	if (/^data:[^;\s]+;base64,[A-Za-z0-9+/_=-]{256,}$/i.test(trimmed)) {
+		return `[Large binary tool result omitted: data URI, ${content.length} chars]`;
+	}
+	const hasBase64AlphabetSignal = /[A-Z0-9+/_=-]/.test(trimmed);
+	const isPlainLowercaseRun = /^[a-z]+$/.test(trimmed);
+	const isSingleRepeatedChar = new Set(trimmed).size === 1;
+	if (trimmed.length >= 4096 && /^[A-Za-z0-9+/_=-]+$/.test(trimmed) && trimmed.length % 4 === 0 && hasBase64AlphabetSignal && !isPlainLowercaseRun && !isSingleRepeatedChar) {
+		return `[Large binary tool result omitted: base64 payload, ${content.length} chars]`;
+	}
+	const controlChars = content.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)?.length ?? 0;
+	if (controlChars >= 8 || controlChars / Math.max(1, content.length) > 0.01) {
+		return `[Large binary tool result omitted: binary payload, ${content.length} chars]`;
+	}
+	return undefined;
 }
 
 // --------------------------------------------------------------------------

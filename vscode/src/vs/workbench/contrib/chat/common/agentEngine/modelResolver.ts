@@ -67,6 +67,44 @@ interface CacheEntry {
 	timestamp: number;
 }
 
+export function getDefaultModelResolverBaseURL(provider: ProviderName, authVariant: AuthVariantName): string {
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return 'https://chatgpt.com/backend-api/codex';
+	}
+	switch (provider) {
+		case 'anthropic':
+			return 'https://api.anthropic.com';
+		case 'openai':
+			return 'https://api.openai.com/v1';
+		case 'gemini':
+			return 'https://generativelanguage.googleapis.com';
+		case 'openai-compatible':
+		case 'anthropic-compatible':
+			return '';
+	}
+}
+
+export function normalizeModelResolverBaseURL(provider: ProviderName, baseURL: string | undefined, authVariant: AuthVariantName = DEFAULT_AUTH_VARIANT): string | undefined {
+	const base = (baseURL || getDefaultModelResolverBaseURL(provider, authVariant)).trim().replace(/\/+$/, '');
+	if (!base) {
+		return undefined;
+	}
+
+	if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
+		return base;
+	}
+
+	if (provider === 'openai' || provider === 'openai-compatible') {
+		return base.endsWith('/v1') ? base : `${base}/v1`;
+	}
+
+	if (provider === 'anthropic' || provider === 'anthropic-compatible') {
+		return base.replace(/\/v1$/, '');
+	}
+
+	return base;
+}
+
 // ============================================================================
 // IModelResolverService Interface
 // ============================================================================
@@ -263,7 +301,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			if (!data.data || !Array.isArray(data.data)) { return []; }
 
 			return data.data
-				.filter(m => this._isRelevantOpenAIModel(m.id))
+				.filter(m => this._isRelevantOpenAIModel(m.id, providerType))
 				.map(m => this._openAIModelToResolved(m.id, providerType));
 		} finally {
 			clearTimeout(timeout);
@@ -321,11 +359,11 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 
 			if (!response.ok) { return []; }
 
-			const data = await response.json() as { models?: Array<{ name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number }> };
+			const data = await response.json() as { models?: Array<{ name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number; supportedGenerationMethods?: string[] }> };
 			if (!data.models || !Array.isArray(data.models)) { return []; }
 
 			return data.models
-				.filter(m => this._isRelevantGeminiModel(m.name))
+				.filter(m => this._isRelevantGeminiModel(m.name, m.supportedGenerationMethods))
 				.map(m => this._geminiModelToResolved(m));
 		} finally {
 			clearTimeout(timeout);
@@ -356,13 +394,14 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 					.map(m => ({
 						id: m.id,
 						name: m.name,
-						provider: m.provider,
-						family: m.family || 'unknown',
-						apiType: m.apiType,
-						maxInputTokens: m.maxInputTokens || 128_000,
-						maxOutputTokens: m.maxOutputTokens || 8_192,
-						source: 'cdn' as const,
-					}));
+					provider: m.provider,
+					family: m.family || 'unknown',
+					apiType: m.apiType,
+					maxInputTokens: m.maxInputTokens || 0,
+					maxOutputTokens: m.maxOutputTokens || 0,
+					metadataKnown: !!(m.maxInputTokens && m.maxOutputTokens),
+					source: 'cdn' as const,
+				}));
 			} finally {
 				clearTimeout(timeout);
 			}
@@ -398,41 +437,7 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 	}
 
 	private _normalizeBaseURLForCache(provider: ProviderName, baseURL: string | undefined, authVariant: AuthVariantName): string | undefined {
-		const base = (baseURL || this._defaultBaseURLForProvider(provider, authVariant)).trim().replace(/\/+$/, '');
-		if (!base) {
-			return undefined;
-		}
-
-		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-			return base;
-		}
-
-		if (provider === 'openai' || provider === 'openai-compatible') {
-			return base.endsWith('/v1') ? base : `${base}/v1`;
-		}
-
-		if (provider === 'anthropic' || provider === 'anthropic-compatible') {
-			return base.replace(/\/v1$/, '');
-		}
-
-		return base;
-	}
-
-	private _defaultBaseURLForProvider(provider: ProviderName, authVariant: AuthVariantName): string {
-		if (provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-			return 'https://chatgpt.com/backend-api/codex';
-		}
-		switch (provider) {
-			case 'anthropic':
-				return 'https://api.anthropic.com';
-			case 'openai':
-				return 'https://api.openai.com/v1';
-			case 'gemini':
-				return 'https://generativelanguage.googleapis.com';
-			case 'openai-compatible':
-			case 'anthropic-compatible':
-				return '';
-		}
+		return normalizeModelResolverBaseURL(provider, baseURL, authVariant);
 	}
 
 	private _deleteProviderBuckets(provider: ProviderName): void {
@@ -469,9 +474,16 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 		return event.provider;
 	}
 
-	private _isRelevantOpenAIModel(id: string): boolean {
-		const prefixes = ['gpt-', 'o1', 'o3', 'o4'];
-		return prefixes.some(p => id.startsWith(p));
+	private _isRelevantOpenAIModel(id: string, providerType: 'openai' | 'openai-compatible'): boolean {
+		const lower = id.toLowerCase();
+		if (providerType === 'openai-compatible') {
+			return !lower.includes('embed');
+		}
+
+		if (['embed', 'moderation', 'tts', 'whisper', 'dall-e'].some(excluded => lower.includes(excluded))) {
+			return false;
+		}
+		return /^(gpt-|o1|o3|o4|chatgpt-)/.test(id);
 	}
 
 	private _openAIModelToResolved(id: string, providerType: 'openai' | 'openai-compatible'): IResolvedModel {
@@ -484,10 +496,11 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			id,
 			name: id,
 			provider: providerType,
-			family: id.startsWith('o') ? 'o-series' : 'gpt-4',
+			family: 'unknown',
 			apiType: 'openai-completions',
-			maxInputTokens: 128_000,
-			maxOutputTokens: 16_384,
+			maxInputTokens: 0,
+			maxOutputTokens: 0,
+			metadataKnown: false,
 			source: 'api' as const,
 		};
 	}
@@ -510,14 +523,15 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			provider: 'openai',
 			family: 'openai-codex',
 			apiType: 'openai-codex',
-			maxInputTokens: model.max_context_window || model.context_window || 272_000,
-			maxOutputTokens: 64_000,
+			maxInputTokens: model.max_context_window || model.context_window || 0,
+			maxOutputTokens: 0,
+			metadataKnown: !!(model.max_context_window || model.context_window),
 			source: 'api' as const,
 		};
 	}
 
-	private _isRelevantGeminiModel(name: string): boolean {
-		return name.includes('gemini');
+	private _isRelevantGeminiModel(name: string, supportedGenerationMethods?: readonly string[]): boolean {
+		return name.includes('gemini') && !!supportedGenerationMethods?.includes('generateContent');
 	}
 
 	private _geminiModelToResolved(model: { name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number }): IResolvedModel {
@@ -531,10 +545,11 @@ export class ModelResolverService extends Disposable implements IModelResolverSe
 			id,
 			name: model.displayName || id,
 			provider: 'gemini',
-			family: id.includes('2.5') ? 'gemini-2' : 'gemini',
+			family: 'unknown',
 			apiType: 'gemini-generative',
-			maxInputTokens: model.inputTokenLimit || 1_000_000,
-			maxOutputTokens: model.outputTokenLimit || 65_536,
+			maxInputTokens: model.inputTokenLimit || 0,
+			maxOutputTokens: model.outputTokenLimit || 0,
+			metadataKnown: !!(model.inputTokenLimit && model.outputTokenLimit),
 			source: 'api' as const,
 		};
 	}

@@ -34,6 +34,7 @@ import { IChatMarkdownAnchorService } from './chatMarkdownAnchorService.js';
 import { ChatMessageRole, ILanguageModelsService } from '../../../common/languageModels.js';
 import './media/chatThinkingContent.css';
 import { IHoverService } from '../../../../../../platform/hover/browser/hover.js';
+import { selectAuxiliaryLanguageModel } from '../../agentEngine/auxiliaryModelSelection.js';
 
 
 function extractTextFromPart(content: IChatThinkingPart): string {
@@ -861,8 +862,8 @@ export class ChatThinkingContentPart extends ChatCollapsibleContentPart implemen
 		const timeout = setTimeout(() => cts.cancel(), 5000);
 
 		try {
-			const models = await this.languageModelsService.selectLanguageModels({ vendor: 'copilot', id: 'copilot-fast' });
-			if (!models.length) {
+			const model = await selectAuxiliaryLanguageModel(this.languageModelsService);
+			if (!model) {
 				this.setFallbackTitle();
 				return;
 			}
@@ -972,7 +973,7 @@ ${this.hookCount > 0 ? `EXAMPLES WITH BLOCKED CONTENT (from hooks):
 			Content: ${context}`;
 
 			const response = await this.languageModelsService.sendChatRequest(
-				models[0],
+				model,
 				undefined,
 				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
 				{},

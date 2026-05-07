@@ -82,6 +82,7 @@ function callBuild(
 		anonymous?: boolean;
 		showUnavailableFeatured?: boolean;
 		showFeatured?: boolean;
+		neutralUnavailableModels?: boolean;
 	} = {},
 ): IActionListItem<IActionWidgetDropdownAction>[] {
 	const onSelect = () => { };
@@ -103,6 +104,8 @@ function callBuild(
 		entitlementService,
 		opts.showUnavailableFeatured ?? true,
 		opts.showFeatured ?? true,
+		undefined,
+		opts.neutralUnavailableModels ?? false,
 	);
 }
 
@@ -628,6 +631,25 @@ suite('buildModelPickerItems', () => {
 		assert.ok(disabledItems[0].description.value.includes('Upgrade'));
 		assert.ok(disabledItems[1].description instanceof MarkdownString);
 		assert.ok(disabledItems[1].description.value.includes('Upgrade'));
+	});
+
+	test('neutral unavailable models show configure description instead of upgrade', () => {
+		const auto = createAutoModel();
+		const items = callBuild([auto], {
+			recentModelIds: ['model-a'],
+			controlModels: {
+				'model-a': { label: 'Model A', featured: true, exists: false },
+			},
+			entitlement: ChatEntitlement.Free,
+			neutralUnavailableModels: true,
+		});
+
+		const disabledItem = getActionItems(items).find(a => a.disabled);
+		assert.ok(disabledItem);
+		assert.ok(disabledItem.description instanceof MarkdownString);
+		assert.ok(disabledItem.description.value.includes('Configure'));
+		assert.ok(!disabledItem.description.value.includes('Upgrade'));
+		assert.ok(disabledItem.hover?.content.value.includes('Configure Director Code'));
 	});
 
 	test('anonymous user model selection triggers onSelect normally', () => {

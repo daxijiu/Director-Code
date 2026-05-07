@@ -35,6 +35,7 @@ const CONFIG_PROVIDER = 'directorCode.ai.provider';
 const CONFIG_MODEL = 'directorCode.ai.model';
 const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
 const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
+const CONFIG_COMPACT_MODEL = 'directorCode.ai.compactModel';
 const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
@@ -57,6 +58,7 @@ export class ProviderSettingsWidget extends Disposable {
 	private modelSelect!: HTMLSelectElement;
 	private modelCustomInput!: HTMLInputElement;
 	private modelCustomRow!: HTMLElement;
+	private compactModelInput!: HTMLInputElement;
 	private baseURLInput!: HTMLInputElement;
 	private baseURLRow!: HTMLElement;
 	private baseURLHint!: HTMLElement;
@@ -89,6 +91,7 @@ export class ProviderSettingsWidget extends Disposable {
 				e.affectsConfiguration(CONFIG_MODEL) ||
 				e.affectsConfiguration(CONFIG_BASE_URL) ||
 				e.affectsConfiguration(CONFIG_AUTH_VARIANT) ||
+				e.affectsConfiguration(CONFIG_COMPACT_MODEL) ||
 				e.affectsConfiguration(CONFIG_MAX_TURNS) ||
 				e.affectsConfiguration(CONFIG_MAX_TOKENS) ||
 				e.affectsConfiguration(CONFIG_MAX_INPUT_TOKENS)
@@ -152,6 +155,13 @@ export class ProviderSettingsWidget extends Disposable {
 		this.modelCustomInput.autocomplete = 'off';
 		const customModelHint = DOM.append(this.modelCustomRow, $('.dc-form-hint'));
 		customModelHint.textContent = localize('providerSettings.customModelHint', 'Select a preset above or type any model ID your API endpoint supports.');
+
+		this.compactModelInput = this.createInputRow(
+			form,
+			localize('providerSettings.compactModel', 'Compact Model'),
+			localize('providerSettings.compactModelPlaceholder', 'Blank = provider default small model'),
+			'text',
+		);
 
 		// Base URL
 		this.baseURLRow = DOM.append(form, $('.dc-form-row'));
@@ -219,6 +229,9 @@ export class ProviderSettingsWidget extends Disposable {
 				this.queueConfigWrite(CONFIG_MODEL, value);
 			}
 		}));
+		this._register(DOM.addDisposableListener(this.compactModelInput, 'input', () => {
+			this.queueConfigWrite(CONFIG_COMPACT_MODEL, this.compactModelInput.value.trim());
+		}));
 		this._register(DOM.addDisposableListener(this.baseURLInput, 'input', () => {
 			this.queueConfigWrite(CONFIG_BASE_URL, this.baseURLInput.value);
 		}));
@@ -250,6 +263,7 @@ export class ProviderSettingsWidget extends Disposable {
 		const provider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
 		const authVariant = normalizeAuthVariantForProvider(provider, this.configService.getValue<string>(CONFIG_AUTH_VARIANT));
 		const model = this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant) || 'claude-sonnet-4-6';
+		const compactModel = this.configService.getValue<string>(CONFIG_COMPACT_MODEL) || '';
 		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || '';
 		const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 		const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
@@ -260,6 +274,7 @@ export class ProviderSettingsWidget extends Disposable {
 		this.populateModelSelect(provider, authVariant);
 		this.modelSelect.value = model;
 		this.modelCustomInput.value = model;
+		this.compactModelInput.value = compactModel;
 		this.baseURLInput.value = baseURL;
 		this.maxTurnsInput.value = String(maxTurns);
 		this.maxTokensInput.value = String(maxTokens);
