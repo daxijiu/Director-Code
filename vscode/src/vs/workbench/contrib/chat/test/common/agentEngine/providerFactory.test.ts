@@ -10,12 +10,13 @@ import { AnthropicProvider } from '../../../common/agentEngine/providers/anthrop
 import { OpenAIProvider } from '../../../common/agentEngine/providers/openaiProvider.js';
 import { OpenAICodexProvider } from '../../../common/agentEngine/providers/openaiCodexProvider.js';
 import { GeminiProvider } from '../../../common/agentEngine/providers/geminiProvider.js';
+import type { ProviderConfig } from '../../../common/agentEngine/providers/providerTypes.js';
 
 suite("AgentEngine - ProviderFactory", () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	const opts = { auth: { kind: 'api-key', value: "test-key" } };
+	const opts: ProviderConfig = { auth: { kind: 'api-key', value: "test-key" } };
 
 	test("creates AnthropicProvider for anthropic-messages", () => {
 		const provider = createProvider("anthropic-messages", opts);

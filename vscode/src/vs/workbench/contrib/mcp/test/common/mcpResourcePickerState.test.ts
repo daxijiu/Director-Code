@@ -16,10 +16,10 @@ suite('McpResourcePickerState', () => {
 	});
 
 	test('disables when known servers do not expose resources', () => {
-		assert.strictEqual(shouldEnableMcpResourcePicker([0]), false);
+		assert.strictEqual(shouldEnableMcpResourcePicker([0 as McpCapability]), false);
 	});
 
 	test('enables when any known server exposes resources', () => {
-		assert.strictEqual(shouldEnableMcpResourcePicker([0, McpCapability.Resources]), true);
+		assert.strictEqual(shouldEnableMcpResourcePicker([0 as McpCapability, McpCapability.Resources]), true);
 	});
 });

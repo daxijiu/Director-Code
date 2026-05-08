@@ -349,7 +349,7 @@ export class OpenAICodexProvider extends AbstractDirectorCodeProvider {
 			}
 
 			if (event.type === 'response.output_item.done' && event.item) {
-				const willEmitText = !hasTextDelta && this.extractTextFromOutputItem(event.item).length > 0;
+				const willEmitText: boolean = !hasTextDelta && this.extractTextFromOutputItem(event.item).length > 0;
 				yield* this.emitOutputItemDone(event.item, emittedToolStarts, hasTextDelta, hasArgumentDelta, event.output_index);
 				hasTextDelta = hasTextDelta || willEmitText;
 				continue;

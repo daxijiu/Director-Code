@@ -649,7 +649,8 @@ suite('buildModelPickerItems', () => {
 		assert.ok(disabledItem.description instanceof MarkdownString);
 		assert.ok(disabledItem.description.value.includes('Configure'));
 		assert.ok(!disabledItem.description.value.includes('Upgrade'));
-		assert.ok(disabledItem.hover?.content.value.includes('Configure Director Code'));
+		assert.ok(disabledItem.hover?.content instanceof MarkdownString);
+		assert.ok(disabledItem.hover.content.value.includes('Configure Director Code'));
 	});
 
 	test('anonymous user model selection triggers onSelect normally', () => {

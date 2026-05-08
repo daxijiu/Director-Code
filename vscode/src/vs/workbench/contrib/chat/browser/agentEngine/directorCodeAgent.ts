@@ -162,7 +162,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 				auth: resolved.auth,
 				baseURL: resolved.baseURL,
 				capabilities: resolved.capabilities,
-				geminiKeyInUrl: this.configurationService.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true,
+				geminiKeyInUrl: this.configService.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true,
 			});
 
 			// 4. Set up tool bridge

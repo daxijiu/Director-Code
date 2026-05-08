@@ -14,7 +14,7 @@ import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { toDisposable } from '../../../../../base/common/lifecycle.js';
 import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../../platform/configuration/common/configurationRegistry.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
+import { registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
 import { Registry } from '../../../../../platform/registry/common/platform.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../../common/contributions.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
@@ -48,10 +48,10 @@ import { IModelResolverService, ModelResolverService } from '../../common/agentE
 // Service Registration
 // ============================================================================
 
-registerSingleton(IApiKeyService, ApiKeyService, InstantiationType.Delayed);
-registerSingleton(IOAuthService, OAuthService, InstantiationType.Delayed);
-registerSingleton(IAuthStateService, AuthStateService, InstantiationType.Delayed);
-registerSingleton(IModelResolverService, ModelResolverService, InstantiationType.Delayed);
+registerSingleton(IApiKeyService, new SyncDescriptor(ApiKeyService, [], true));
+registerSingleton(IOAuthService, new SyncDescriptor(OAuthService, [], true));
+registerSingleton(IAuthStateService, new SyncDescriptor(AuthStateService, [], true));
+registerSingleton(IModelResolverService, new SyncDescriptor(ModelResolverService, [], true));
 
 // ============================================================================
 // Configuration Registration

@@ -13,9 +13,7 @@ import {
 	generateCodeChallenge,
 	generateState,
 	getOAuthProviderConfig,
-	type IOAuthTokens,
 	type IOAuthSession,
-	type OAuthProviderName,
 	type IOAuthStoredTokens,
 } from '../../../common/agentEngine/oauthService.js';
 import { OAUTH_CAPABLE_PROVIDERS } from '../../../common/agentEngine/apiKeyService.js';
@@ -311,7 +309,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 		test("requests OpenAI Codex deviceauth user code with JSON client_id body", async () => {
 			let capturedUrl = "";
 			let capturedInit: RequestInit | undefined;
-			globalThis.fetch = ((url, init) => {
+			globalThis.fetch = ((url: Parameters<typeof fetch>[0], init?: RequestInit) => {
 				capturedUrl = String(url);
 				capturedInit = init;
 				return Promise.resolve(jsonResponse(makeDeviceCodeResponse()));
@@ -410,7 +408,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 		test("exchanges manual code with Anthropic JSON body and callback state", async () => {
 			const sessionId = await setupPkceSession();
 			let capturedInit: RequestInit | undefined;
-			globalThis.fetch = ((_url, init) => {
+			globalThis.fetch = ((_url: Parameters<typeof fetch>[0], init?: RequestInit) => {
 				capturedInit = init;
 				return Promise.resolve(jsonResponse(makeTokenResponse()));
 			}) as any;
@@ -635,7 +633,7 @@ suite("AgentEngine - OAuthService (B1-2)", () => {
 			const sessionId = await setupDeviceSession();
 			const captured: Array<{ url: string; init?: RequestInit }> = [];
 			let calls = 0;
-			globalThis.fetch = ((url, init) => {
+			globalThis.fetch = ((url: Parameters<typeof fetch>[0], init?: RequestInit) => {
 				calls++;
 				captured.push({ url: String(url), init });
 				return Promise.resolve(calls === 1

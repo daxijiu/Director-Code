@@ -572,6 +572,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			await apiKeyService.setApiKey("anthropic", "provider-key");
 			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
 			assert.ok(result);
+			assert.strictEqual(result!.auth.kind, 'api-key');
 			assert.strictEqual(result!.auth.value, "provider-key");
 		});
 
@@ -580,6 +581,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			await apiKeyService.setModelApiKey("anthropic", "claude-sonnet-4-6", "model-key");
 			const result = await apiKeyService.resolveProviderOptions("anthropic", "claude-sonnet-4-6");
 			assert.ok(result);
+			assert.strictEqual(result!.auth.kind, 'api-key');
 			assert.strictEqual(result!.auth.value, "model-key");
 		});
 
@@ -626,6 +628,7 @@ suite("AgentEngine - ApiKeyService", () => {
 			});
 
 			const result = await apiKeyService.resolveProviderOptions("openai", "gpt-4o", "https://global.com");
+			assert.strictEqual(result!.auth.kind, 'api-key');
 			assert.strictEqual(result!.auth.value, "model-key");
 			assert.strictEqual(result!.baseURL, "https://proxy.com/v1");
 			assert.strictEqual(result!.capabilities?.vision, true);

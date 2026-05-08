@@ -4509,10 +4509,10 @@ suite('LanguageModelToolsService', () => {
 			};
 
 			let invokedParams: any;
-			const tool = registerToolForTest(setup.service, store, 'test-a1-tool', {
-				invoke: async (_invocation, _countTokens, _token) => {
+			registerToolForTest(setup.service, store, 'test-a1-tool', {
+				invoke: async (_invocation, _countTokens, _progress, _token) => {
 					invokedParams = true;
-					return { content: [{ type: 'text', value: 'ok' }] };
+					return { content: [{ kind: 'text', value: 'ok' }] };
 				},
 			});
 
@@ -4528,6 +4528,7 @@ suite('LanguageModelToolsService', () => {
 			await setup.service.invokeTool(dto, async () => 0, CancellationToken.None);
 
 			assert.ok(invokedParams, 'tool should have been invoked');
+			assert.strictEqual(appendedToRequestId, targetRequestId);
 		});
 
 		test('invokeTool falls back to last request when chatRequestId is undefined', async () => {
@@ -4547,7 +4548,7 @@ suite('LanguageModelToolsService', () => {
 			registerToolForTest(setup.service, store, 'test-a1-fallback', {
 				invoke: async () => {
 					invokedOk = true;
-					return { content: [{ type: 'text', value: 'ok' }] };
+					return { content: [{ kind: 'text', value: 'ok' }] };
 				},
 			});
 
@@ -4579,7 +4580,7 @@ suite('LanguageModelToolsService', () => {
 			setup.chatService.addSession(fakeModel);
 
 			registerToolForTest(setup.service, store, 'test-a1-cancel', {
-				invoke: async () => ({ content: [{ type: 'text', value: 'should not reach' }] }),
+				invoke: async () => ({ content: [{ kind: 'text', value: 'should not reach' }] }),
 			});
 
 			const dto: IToolInvocation = {
