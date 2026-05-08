@@ -30,7 +30,7 @@ $urls = @(
 foreach ($url in $urls) { Invoke-WebRequest -Uri $url -UseBasicParsing -MaximumRedirection 5 -TimeoutSec 30 }
 ```
 
-Current remote result before Pages deployment:
+Current remote result:
 
 | URL | HTTP status | Result |
 | --- | ---: | --- |
@@ -38,7 +38,14 @@ Current remote result before Pages deployment:
 | `https://daxijiu.github.io/Director-Code/privacy/` | 404 | Blocked until Pages deploys |
 | `https://daxijiu.github.io/Director-Code/public-code/` | 404 | Blocked until Pages deploys |
 
-Conclusion: code-side URL configuration and local page content are ready, but the external release gate remains blocked until GitHub Pages serves these URLs with HTTP 200 and non-empty content.
+Post-push deployment status:
+
+- Commit: `c1695a422b5078a537243d6104f64c352ae4c4ad`
+- Workflow run: `https://github.com/daxijiu/Director-Code/actions/runs/25533716576`
+- Result: `GitHub Pages` workflow completed with `failure`.
+- Public unauthenticated log download returned HTTP 403, so the exact failing step was not readable from the local preflight shell.
+
+Conclusion: code-side URL configuration, local page content, and a Pages deployment workflow are present, but the external release gate remains blocked until GitHub Pages is enabled/configured for the repository and these URLs serve HTTP 200 with non-empty content.
 
 ## Clean Startup Smoke
 
@@ -125,7 +132,7 @@ Phase 1 B/C/D closure now includes:
 ## Remaining External-Release Blockers
 
 1. Rotate the exposed Gemini key outside the repository.
-2. Let the GitHub Pages workflow deploy, or enable Pages for the repository if GitHub reports it is not configured.
+2. Enable/configure GitHub Pages for the repository, inspect the failed `GitHub Pages` Actions run, then rerun the workflow.
 3. Re-probe all four product URL fields after deployment and confirm HTTP 200 plus non-empty, non-404 content.
 4. Produce a fresh RC build from the current commit and rerun clean startup with visual no-white-screen verification.
 5. Review the first public Terms, Privacy, and Public Code pages before announcing an external release.
