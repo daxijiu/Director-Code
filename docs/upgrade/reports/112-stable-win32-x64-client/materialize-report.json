@@ -4,7 +4,7 @@
   "phase": "P1",
   "batch": "layer",
   "status": "degraded",
-  "generatedAt": "2026-05-10T13:08:43.769Z",
+  "generatedAt": "2026-05-10T13:27:14.969Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/112-stable-win32-x64-client.json",

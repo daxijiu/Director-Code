@@ -116,10 +116,22 @@ CLI Agent 在这些场景下的劣势是明显的：没有文件树、没有预�
 
 ```bash
 git clone https://github.com/daxijiu/Director-Code.git
-cd Director-Code/vscode
+cd Director-Code
+bash scripts/upgrade/materialize-vscode.sh \
+  --profile docs/upgrade/profiles/112-stable-win32-x64-client.json \
+  --target vscode.generated \
+  --up-to-layer director \
+  --force
+
+cd vscode.generated/layers/director/vscode
 npm install
 npm run watch        # 开发模式（增量编译）
 ```
+
+P1 replay baseline: canonical source is the replay control plane (`patches/`,
+`src/`, `product.json`, `docs/upgrade/`, `scripts/upgrade/`). A local `vscode/`
+directory is a frozen read-only reference snapshot only; active work happens in
+`vscode.generated/layers/director/vscode` after materialization.
 
 ### 配置
 
@@ -155,7 +167,7 @@ Director-Code AI Settings 有多个入口：
 
 ```
 Director-Code/
-├── vscode/                                    # VS Code 源码 (fork 基础)
+├── vscode.generated/                         # generated workspace after materialize
 │   └── src/vs/workbench/contrib/chat/
 │       ├── common/agentEngine/                # Agent 核心（与模型无关）
 │       │   ├── agentEngine.ts                 # Agentic 主循环 + 流式输出
@@ -179,7 +191,7 @@ Director-Code/
 │           ├── directorCodeSettingsEditor.ts   # 设置界面
 │           ├── apiKeysWidget.ts                # API Key 管理 Widget
 │           └── providerSettingsWidget.ts       # Provider 配置 Widget
-├── sub-projects/                              # 参考项目
+├── scripts/upgrade/                          # P1 materialize, guard, validation tools
 │   ├── vscode-copilot-chat/                   # Copilot Chat 源码参考
 │   ├── free-code/                             # Claude Code 重构版参考
 │   ├── Claudable/                             # CLI 包装桌面应用参考
@@ -194,7 +206,7 @@ Director-Code/
 ## 开发
 
 ```bash
-cd vscode
+cd vscode.generated/layers/director/vscode
 
 # 编译（快速，~12 秒）
 npm run gulp -- transpile-client-esbuild

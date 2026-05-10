@@ -10,6 +10,7 @@ const FIXED_GENERATED_PATHS = [
   'docs/upgrade/script-migration-matrix.112.json',
   REPORT,
   'docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json',
+  'docs/upgrade/reports/112-stable-win32-x64-client/workflow-docs-report.json',
 ];
 const SOURCE_CLASSES = new Set(['upstream-vscode', 'vscodium-derived', 'director-owned', 'local-build-fix', 'generated-artifact', 'reference-only']);
 const EQUIVALENCE_SCOPES = new Set(['p1-strict', 'defer-non-p1', 'discard']);

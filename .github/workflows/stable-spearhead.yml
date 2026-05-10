@@ -2,92 +2,59 @@ name: stable-spearhead
 
 on:
   workflow_dispatch:
-    inputs:
-      new_release:
-        type: boolean
-        description: Force new Release
-      force_dispatch:
-        type: boolean
-        description: Force dispatch
-      dont_update:
-        type: boolean
-        description: Don't update VSCode
-  schedule:
-    - cron: '0 18 * * *'
+  repository_dispatch:
+    types: [stable]
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
+      - 'upstream/*.json'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
+
+env:
+  P1_PROFILE: docs/upgrade/profiles/112-stable-win32-x64-client.json
+  VSCODE_QUALITY: stable
+  OS_NAME: spearhead
+  VSCODE_ARCH: x64
+  VSCODE_DIR: ${{ github.workspace }}/vscode.generated/layers/director/vscode
+  ARTIFACTS_OUT: ${{ github.workspace }}/artifacts/out/stable/spearhead-x64/source
+  DRY_RUN: offline
 
 jobs:
-  build:
-    runs-on: macos-15
-    env:
-      APP_NAME: VSCodium
-      ASSETS_REPOSITORY: ${{ github.repository }}
-      BINARY_NAME: codium
-      GH_REPO_PATH: ${{ github.repository }}
-      ORG_NAME: ${{ github.repository_owner }}
-      OS_NAME: osx
-      SOURCEMAPS_REPOSITORY: ${{ github.repository_owner }}/sourcemaps
-      VERSIONS_REPOSITORY: ${{ github.repository_owner }}/versions
-      VSCODE_ARCH: arm64
-      VSCODE_LATEST: ${{ github.event.inputs.dont_update == 'true' && 'no' || 'yes' }}
-      VSCODE_QUALITY: stable
-
+  p1-replay-baseline:
+    name: P1 replay baseline guard
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Node.js environment
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
 
-      - name: Clone VSCode repo
-        run: . get_repo.sh
+      - name: Validate replay metadata
+        shell: bash
+        run: node scripts/upgrade/validate-all.mjs
 
-      - name: Check existing VSCodium tags/releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_RELEASE: ${{ github.event.inputs.new_release }}
-          IS_SPEARHEAD: 'yes'
-        run: . check_tags.sh
+      - name: Check workflow and doc migration
+        shell: bash
+        run: node scripts/upgrade/check-workflows.mjs
 
-      - name: Build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./build.sh
-        if: env.SHOULD_BUILD == 'yes'
+      - name: Materialize generated source
+        shell: bash
+        run: |
+          bash scripts/upgrade/materialize-vscode.sh \
+            --profile "${P1_PROFILE}" \
+            --target vscode.generated \
+            --up-to-layer director \
+            --force
 
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v7
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-        if: env.SHOULD_BUILD == 'yes' && github.event.inputs.dont_update != 'true'
-
-      - name: Update upstream version
-        run: ./update_upstream.sh
-        if: env.SHOULD_BUILD == 'yes' && github.event.inputs.dont_update != 'true'
-
-      - name: Prepare source
-        run: ./prepare_src.sh
-        if: env.SHOULD_BUILD == 'yes'
-
-      - name: Upload sourcemaps
-        env:
-          GITHUB_TOKEN: ${{ secrets.STRONGER_GITHUB_TOKEN }}
-          GITHUB_USERNAME: ${{ github.repository_owner }}
-        run: ./upload_sourcemaps.sh
-        if: env.SHOULD_BUILD == 'yes'
-
-      - name: Release source
-        env:
-          GITHUB_TOKEN: ${{ secrets.STRONGER_GITHUB_TOKEN }}
-          GITHUB_USERNAME: ${{ github.repository_owner }}
-        run: ./release.sh
-        if: env.SHOULD_BUILD == 'yes'
-
-      - name: Dispatch builds
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          event-type: stable
-        if: env.SHOULD_BUILD == 'yes' || github.event.inputs.force_dispatch == 'true'
+      - name: Assert canonical paths
+        shell: bash
+        run: |
+          test -d "${VSCODE_DIR}"
+          mkdir -p "${ARTIFACTS_OUT}"
+          test "${DRY_RUN}" = "offline"

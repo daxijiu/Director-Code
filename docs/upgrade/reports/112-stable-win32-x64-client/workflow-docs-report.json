@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "phase": "P1",
+  "batch": "workflow-docs",
+  "status": "passed",
+  "generatedAt": "2026-05-10T13:28:27.692Z",
+  "checks": {
+    "workflowLegacyEntrypoints": "passed",
+    "workflowMaterializeEntrypoints": "passed",
+    "activeDocsCanonicalSource": "passed",
+    "activeDocsLegacyCommands": "passed"
+  },
+  "summary": {
+    "workflowsChecked": 11,
+    "buildWorkflowsChecked": 8,
+    "docsChecked": 4,
+    "failures": 0
+  },
+  "workflows": [
+    {
+      "path": ".github/workflows/insider-linux.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/insider-macos.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/insider-spearhead.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/insider-windows.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/lock.yml",
+      "buildWorkflow": false,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": false,
+        "vscodeDir": false,
+        "artifactsOut": false,
+        "dryRunOffline": false,
+        "bashShell": false
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "buildWorkflow": false,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": false,
+        "vscodeDir": false,
+        "artifactsOut": false,
+        "dryRunOffline": false,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/stable-linux.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/stable-macos.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/stable-spearhead.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/stable-windows.yml",
+      "buildWorkflow": true,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "vscodeDir": true,
+        "artifactsOut": true,
+        "dryRunOffline": true,
+        "bashShell": true
+      },
+      "failures": []
+    },
+    {
+      "path": ".github/workflows/stale.yml",
+      "buildWorkflow": false,
+      "materializeReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": false,
+        "vscodeDir": false,
+        "artifactsOut": false,
+        "dryRunOffline": false,
+        "bashShell": false
+      },
+      "failures": []
+    }
+  ],
+  "docs": [
+    {
+      "path": "README.md",
+      "canonicalReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "generatedWorkspace": true,
+        "referenceReadonly": true
+      },
+      "failures": []
+    },
+    {
+      "path": "README_EN.md",
+      "canonicalReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "generatedWorkspace": true,
+        "referenceReadonly": true
+      },
+      "failures": []
+    },
+    {
+      "path": "CLAUDE.md",
+      "canonicalReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "generatedWorkspace": true,
+        "referenceReadonly": true
+      },
+      "failures": []
+    },
+    {
+      "path": "docs/howto-build.md",
+      "canonicalReady": true,
+      "legacyHits": [],
+      "requiredHits": {
+        "materialize": true,
+        "generatedWorkspace": true,
+        "referenceReadonly": true
+      },
+      "failures": []
+    }
+  ],
+  "failures": []
+}

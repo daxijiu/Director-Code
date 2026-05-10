@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:16:05.758Z",
+  "generatedAt": "2026-05-10T13:28:27.456Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 460,
-    "assetCount": 460,
+    "trackedOrPendingNonVscodeCount": 462,
+    "assetCount": 462,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -155,6 +155,7 @@
       "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
+      "docs/upgrade/reports/112-stable-win32-x64-client/workflow-docs-report.json",
       "docs/upgrade/schemas/change-inventory.schema.json",
       "docs/upgrade/schemas/deps-source-mutation-allowlist.schema.json",
       "docs/upgrade/schemas/profile.schema.json",
@@ -260,6 +261,7 @@
       "release.sh",
       "scripts/upgrade/check-reference-drift.mjs",
       "scripts/upgrade/check-script-matrix.mjs",
+      "scripts/upgrade/check-workflows.mjs",
       "scripts/upgrade/dry-run-guard.sh",
       "scripts/upgrade/freeze-reference.mjs",
       "scripts/upgrade/generate-change-inventory.mjs",
@@ -607,7 +609,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "58ae5711f59a64cf643f72a910d84e6d630ef47856e3e3e59a3cc3d33dee9c60",
+      "sha256": "b7e7a7f07c35267d01ff4c662c56201872596fde4eb36d3c8da745636de34611",
       "notes": "P1 replay control plane."
     },
     {
@@ -645,7 +647,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "71f90983b88c10476eb935d0c27a4886e67b116b303baaeb9b01f2b07c0f0730",
+      "sha256": "081e002485d03821f862d67c9cdb08029de8962166797e2638d714be67ecdfd8",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -658,7 +660,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "f270ff2a7f92c14be2328173b9e23a17188aaa72b04c6b823726828d64897310",
+      "sha256": "d2506c711d360be61c58f2a085b8207f73d04f815a5db4bc19f3ebeefcf8f936",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -671,7 +673,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "a27f7bad5e74cc2daa32f9be70f68f0f5c25d25baa15035c057c9d212a4699db",
+      "sha256": "85ea4996a51aa4dc2b99fbc8b106769dddb3a788d44af7a39994f6f11045be88",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -684,7 +686,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "26158243ff13a7eb93e9c164160de20019693c6b95da1bd03d0355ceefb9bcfe",
+      "sha256": "d306929a55e148bb6a908529646854f95c036a7c4dd16487f31215340a02a169",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -723,7 +725,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "5adcf738fa75f02e72db23cbfab31b13bdbea58df285bc90439c1a3769281e90",
+      "sha256": "a46fd88a119a5bc13d56b96cf9896f9634e33e27ee42c2700c7275360594a75b",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -736,7 +738,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "716dde3303314c4b216804e3e0fb1a2cc188f8545ababbfb23c91c009b95e71f",
+      "sha256": "4b9edeebc897fedfc7fb3db65f1df958cfff54fea91d25f57021773dfdb51e44",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -749,7 +751,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "b3a9b383c71267f9799095bd03b9244126f5d7ae258b8c98e07a34e169594ce2",
+      "sha256": "66d31ee6476b858fb51a579ac6fd274466473a04c0061ed3d6fc5316274d2907",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -762,7 +764,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "d07ae692f13a7d678d5b00610e00961ec318bc047953b87232fe0ed3a38fde34",
+      "sha256": "a5fd21caf0ebff3c8cc13a8e15af807bca5e8fc45dc4f1a0b95cf530bb9e58c3",
       "notes": "Workflow or repository automation asset."
     },
     {
@@ -811,7 +813,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "8a3bba739faada1c91bd7e23db638ccc014bc67f973bfc1e754f109ba40fe71d",
+      "sha256": "710135c34f9440e02f5aaba346257f7663c7f2cd7c9eb57109ee1557cddffd52",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -871,7 +873,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "49ce521dbc45314173af9b5a8d083b2dec6643e419258fc6b1d094dff27b1a82",
+      "sha256": "09026472cc1bb64e3f5349b921488a467f7a5335edf367c63e6f4525c5072f86",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -883,7 +885,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "a23ab447eeae78d002c24cf9dfe28894872e9d7c4028ea532cd67f2132c57cde",
+      "sha256": "be62d112b90a0854d1f39b8708c7493666639882e6f3f61ee219ceaa24bfd824",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -1951,7 +1953,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "72e61d21c48fb5a1e7e6078c86c87c7b0d62a16e55011e9047b90024638de6a2",
+      "sha256": "40278d2fa8f8d58faa55c367f660ebf007d9dd522ffeb003c1888a7700d1807e",
       "notes": "Active documentation asset."
     },
     {
@@ -2227,7 +2229,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "de9c6bc94bca35560baf380140ef64fbc6663e40fd61d02ea2bbb8e1518e4ef3",
+      "sha256": "18a7f3e917d6655a4430f16b5912a800ae67090a57d1527c63bd332f556c62c4",
       "notes": "P1 replay control plane."
     },
     {
@@ -2251,7 +2253,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "bab0e1b7a65ade1528b52607f739dc5589544ccc75d52ad5bbdbf89836bf49b7",
+      "sha256": "55e3e943faea3a3b37d9d3f9f7e3858ea262a14cef11258e8ecab052bf259428",
       "notes": "P1 replay control plane."
     },
     {
@@ -2263,7 +2265,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "3adf11aa66e27f04582b51cb5539dca29b17b3a3a98d47720de33b61ca5c3875",
+      "sha256": "b45c2128e6549f0653ec642659b428a249342720c2f6e77a17aa903b12c12937",
       "notes": "P1 replay control plane."
     },
     {
@@ -2276,6 +2278,18 @@
       "executable": false,
       "mode": "100644",
       "sha256": "542166e69b71d85e3e0b2fad3e7df06be7abca0dd5e317e650cc6350ad82aa8a",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/reports/112-stable-win32-x64-client/workflow-docs-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "08e8f94333b9c2bde77e3842b30912006dcac1fbc189b53fa3317217f95b3002",
       "notes": "P1 replay control plane."
     },
     {
@@ -2371,7 +2385,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "009e4704e98184c684c0dea6d8ce23c21e85d67a00f79e84430a91dc08d1c535",
+      "sha256": "c543cb4b7a33ca0ee7488da98bb2661c4f039d98f93ca39f6a5396c2ebb0a8f0",
       "notes": "P1 replay control plane."
     },
     {
@@ -3551,6 +3565,19 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "scripts/upgrade/check-workflows.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "0f9e67ddd1097035ef58b57a9fa0c0054a2af2b66fd3de4aba6b3a927aa29739",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "scripts/upgrade/dry-run-guard.sh",
       "assetKind": "script",
       "sourceClass": "director-owned",
@@ -3586,7 +3613,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "cca2148a7963ce836f1e2ce651375c6828245c6f4f516df3c4522e1ed1a739d0",
+      "sha256": "d66fc6ae807234d469a61e53b93e229aef5e7c85cc96280b66678862a83a6c1e",
       "notes": "P1 replay control plane."
     },
     {
@@ -3599,7 +3626,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "5171367d2f1b8158504987c520838020a8bd957bbcb38533b72620e58c8af59a",
+      "sha256": "e8dbb9c6b5a162c3151d0bf9891220a8830e3389bc155966a5e233347a3bd564",
       "notes": "P1 replay control plane."
     },
     {
@@ -3716,7 +3743,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "d2636d63344069a9b7da91cf50b67f117fca6d41fcd2b9d25c285747135aebb8",
+      "sha256": "4b233defd2fee3282588b631a516f7fdabeb669992c99d750f47b23dabda069a",
       "notes": "P1 replay control plane."
     },
     {
@@ -3768,7 +3795,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "8542f07bf36f3f159e113441a6c8c50558c9430887ad631cfbb04993b742fe4b",
+      "sha256": "b4a259560715fca15378d12a821e3591a22332c0725127fdadc47b016b71f37c",
       "notes": "P1 replay control plane."
     },
     {

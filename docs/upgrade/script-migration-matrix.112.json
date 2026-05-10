@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:16:05.369Z",
+  "generatedAt": "2026-05-10T13:28:27.573Z",
   "policy": {
     "referenceGuardRequiredFor": [
       "vscode-mutating",
@@ -24,90 +24,90 @@
     {
       "path": ".github/workflows/insider-linux.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/insider-macos.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/insider-spearhead.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/insider-windows.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/lock.yml",
       "scriptScope": "standalone-tool",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/pages.yml",
       "scriptScope": "standalone-tool",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/stable-linux.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/stable-macos.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/stable-spearhead.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/stable-windows.yml",
       "scriptScope": "artifact-producing",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": ".github/workflows/stale.yml",
       "scriptScope": "standalone-tool",
-      "status": "blocked-workflow-migration",
-      "referenceGuard": false,
-      "dryRunGuard": false,
-      "reason": "Workflow path migration is handled in Batch 6."
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Workflow uses P1 materialize guard and canonical generated/artifact paths."
     },
     {
       "path": "build.sh",
@@ -487,6 +487,14 @@
     },
     {
       "path": "scripts/upgrade/check-script-matrix.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/check-workflows.mjs",
       "scriptScope": "standalone-tool",
       "status": "static-checked",
       "referenceGuard": true,

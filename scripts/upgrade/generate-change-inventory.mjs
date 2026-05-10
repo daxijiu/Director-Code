@@ -12,6 +12,7 @@ const FIXED_GENERATED_PATHS = [
   'docs/upgrade/script-migration-matrix.112.json',
   `docs/upgrade/reports/${PROFILE_ID}/schema-inventory-report.json`,
   `docs/upgrade/reports/${PROFILE_ID}/script-artifact-report.json`,
+  `docs/upgrade/reports/${PROFILE_ID}/workflow-docs-report.json`,
 ];
 
 const SOURCE_CLASSES = new Set([

@@ -128,6 +128,11 @@ A build helper script can be found at `dev/build.sh`.
 
 ### Director-Code build script notes
 
+- P1 uses replay materialization. Run
+  `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/112-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`,
+  then work from `vscode.generated/layers/director/vscode`.
+- The local `vscode/` directory is a frozen read-only reference snapshot only.
+  Scripts must not mutate it.
 - `prepare_vscode.sh` and the root `build.sh` are Bash/POSIX scripts. On Windows, run them from Git Bash (recommended), WSL, or MSYS2; PowerShell and `cmd.exe` are not supported for these scripts.
 - Set `DIRECTOR_CODE_SKIP_EXTENSIONS_BUILD=1` to skip `npm run gulp compile-extensions-build` in constrained local or CI environments where built-in extension downloads fail. Do not use this for RC/release builds unless the missing built-in extensions have been separately verified to be outside the Phase 1 release surface.
 - Electron download/cache artifacts are pinned to the repository-level `.electron-cache/` directory. The directory is ignored by git; root-level `electron-v*.zip` files are treated as abnormal artifacts and should be removed by the cleanup path.
@@ -146,15 +151,16 @@ The script `dev/build.sh` provides several flags:
 - `-i`: build the Insiders version
 - `-l`: build with latest version of Visual Studio Code
 - `-o`: skip the build step
-- `-p`: generate the packages/assets/installers
+- `-p`: legacy flag for packages/installers; P1 canonical outputs are staged
+  under `artifacts/out/{quality}/{platform}-{arch}/{target}/`
 - `-s`: do not retrieve the source code of Visual Studio Code, it won't delete the existing build
 
 ## <a id="build-ci"></a>Build for CI/Downstream
 
-Here is the base script to build VSCodium:
+P1 CI/downstream jobs first materialize the generated source and then run build
+or package steps from that generated workspace:
 
 ```bash
-# Export necessary environment variables
 export SHOULD_BUILD="yes"
 export SHOULD_BUILD_REH="no"
 export CI_BUILD="no"
@@ -162,9 +168,18 @@ export OS_NAME="linux"
 export VSCODE_ARCH="${vscode_arch}"
 export VSCODE_QUALITY="stable"
 export RELEASE_VERSION="${version}"
+export VSCODE_DIR="${PWD}/vscode.generated/layers/director/vscode"
+export ARTIFACTS_OUT="${PWD}/artifacts/out/stable/linux-${VSCODE_ARCH}/source"
 
-. get_repo.sh
-. build.sh
+bash scripts/upgrade/materialize-vscode.sh \
+  --profile docs/upgrade/profiles/112-stable-win32-x64-client.json \
+  --target vscode.generated \
+  --up-to-layer director \
+  --force
+
+cd "${VSCODE_DIR}"
+npm install
+npm run gulp -- transpile-client-esbuild
 ```
 
 To go further, you should look at how we build it:

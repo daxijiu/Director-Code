@@ -110,14 +110,26 @@ Director-Code is designed not just for coding. It's equally (or more) suited for
 
 ## Quick Start
 
-### Build from Source (Windows)
+### Build from Source (P1 Replay Baseline)
 
 ```bash
 git clone https://github.com/daxijiu/Director-Code.git
-cd Director-Code/vscode
+cd Director-Code
+bash scripts/upgrade/materialize-vscode.sh \
+  --profile docs/upgrade/profiles/112-stable-win32-x64-client.json \
+  --target vscode.generated \
+  --up-to-layer director \
+  --force
+
+cd vscode.generated/layers/director/vscode
 npm install
 npm run watch        # Dev mode (incremental)
 ```
+
+The canonical source for this repository is the replay control plane: `patches/`,
+`src/`, `product.json`, `docs/upgrade/`, and `scripts/upgrade/`. The local
+`vscode/` directory, when present, is a frozen read-only reference snapshot; it is
+not the active development source.
 
 ### Configure
 
