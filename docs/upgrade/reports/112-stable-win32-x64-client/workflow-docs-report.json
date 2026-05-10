@@ -4,7 +4,7 @@
   "phase": "P1",
   "batch": "workflow-docs",
   "status": "passed",
-  "generatedAt": "2026-05-10T13:28:27.692Z",
+  "generatedAt": "2026-05-10T13:32:47.008Z",
   "checks": {
     "workflowLegacyEntrypoints": "passed",
     "workflowMaterializeEntrypoints": "passed",

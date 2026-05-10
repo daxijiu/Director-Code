@@ -3,7 +3,7 @@
 # ============================================================
 
 # --- 构建产物 (顶层) ---
-VSCode-*/
+VSCode-*
 VSCodium*/
 assets/
 sourcemaps/
@@ -14,6 +14,11 @@ sourcemaps/
 vscode.generated/
 artifacts/generated/
 artifacts/out/
+
+# --- P1 remove-active-source guards ---
+vscode/
+vscode-reh-*
+vscode-cli/
 
 # --- macOS ---
 .DS_Store

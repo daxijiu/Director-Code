@@ -4,7 +4,7 @@
   "phase": "P1",
   "batch": "script-artifact",
   "status": "passed",
-  "generatedAt": "2026-05-10T13:28:27.573Z",
+  "generatedAt": "2026-05-10T13:32:46.888Z",
   "checks": {
     "executableInventoryLoaded": "passed",
     "referenceGuardCoverage": "passed",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:28:27.573Z",
+  "generatedAt": "2026-05-10T13:32:46.888Z",
   "policy": {
     "referenceGuardRequiredFor": [
       "vscode-mutating",

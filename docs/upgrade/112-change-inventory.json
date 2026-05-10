@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:28:27.456Z",
+  "generatedAt": "2026-05-10T13:32:46.770Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
     "trackedOrPendingNonVscodeCount": 462,
@@ -609,7 +609,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "b7e7a7f07c35267d01ff4c662c56201872596fde4eb36d3c8da745636de34611",
+      "sha256": "7e1148ec605af61011291c22ffe5fa44d9e89c540b527b67292135914fe56ca3",
       "notes": "P1 replay control plane."
     },
     {
@@ -789,7 +789,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "b2badd4016e7bfae653ae91dffa1601a084d740c23d783fcf5fb17fc350dd31c",
+      "sha256": "77bf8b2be6a4075f7c3fa701b1120d1c6a46a70edaf04075cef4d24b8e13f33d",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -2229,7 +2229,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "18a7f3e917d6655a4430f16b5912a800ae67090a57d1527c63bd332f556c62c4",
+      "sha256": "852de913ab9c7999bdc5f32e24d55e9747ad88272dd165bd12318532a2d0d2e0",
       "notes": "P1 replay control plane."
     },
     {
@@ -2253,7 +2253,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "55e3e943faea3a3b37d9d3f9f7e3858ea262a14cef11258e8ecab052bf259428",
+      "sha256": "03be0e1f25d08ec42ae7cfb98731503e1264f0e9e6f732d5561603a3fad49c13",
       "notes": "P1 replay control plane."
     },
     {
@@ -2265,7 +2265,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "b45c2128e6549f0653ec642659b428a249342720c2f6e77a17aa903b12c12937",
+      "sha256": "871e851b94a4d9082c23282207439d2c4639b4e9af30877eadfeccf89a96beb7",
       "notes": "P1 replay control plane."
     },
     {
@@ -2289,7 +2289,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "08e8f94333b9c2bde77e3842b30912006dcac1fbc189b53fa3317217f95b3002",
+      "sha256": "3c486f6cacf28a3930623711e54d5cc5c8e2e3ae7657e344d50089143f4443c8",
       "notes": "P1 replay control plane."
     },
     {
@@ -2385,7 +2385,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "c543cb4b7a33ca0ee7488da98bb2661c4f039d98f93ca39f6a5396c2ebb0a8f0",
+      "sha256": "0db03fcd33d6abaaf9f263f9bce3a942e619f01e179cf660375c1745a01847c4",
       "notes": "P1 replay control plane."
     },
     {
@@ -3548,7 +3548,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "ca8f181bb26007d3b4e90dcce3c74cb3a3cfb52a3653e29d3ccfb27cda9c160e",
+      "sha256": "2390e484ebf1a00282b829a70f3b3e32cfefdd98db29e2fc57b17ece5a4708dc",
       "notes": "P1 replay control plane."
     },
     {

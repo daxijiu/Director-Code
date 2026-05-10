@@ -4,7 +4,7 @@
   "phase": "P1",
   "batch": "schema-inventory",
   "status": "passed",
-  "generatedAt": "2026-05-10T13:28:27.456Z",
+  "generatedAt": "2026-05-10T13:32:46.770Z",
   "checks": {
     "profileSchema": "passed",
     "referenceManifestSchema": "passed",
