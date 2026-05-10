@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:08:54.942Z",
+  "generatedAt": "2026-05-10T13:11:31.705Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 449,
-    "assetCount": 449,
+    "trackedOrPendingNonVscodeCount": 455,
+    "assetCount": 455,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -146,9 +146,12 @@
       "docs/upgrade/expected/112-stable-win32-x64-client/package.expected.json",
       "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json",
       "docs/upgrade/expected/112-stable-win32-x64-client/server-manifest.expected.json",
+      "docs/upgrade/overlay-allowlist.112.json",
+      "docs/upgrade/product.delete.112.json",
       "docs/upgrade/profiles/112-stable-win32-x64-client.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
+      "docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
       "docs/upgrade/schemas/change-inventory.schema.json",
@@ -234,6 +237,7 @@
       "patches/osx/fix-emulated-urls.patch",
       "patches/remove-mangle.patch",
       "patches/report-issue.patch",
+      "patches/series.112.json",
       "patches/sourcemaps.patch",
       "patches/telemetry.patch",
       "patches/terminal-suggest.patch",
@@ -255,6 +259,7 @@
       "scripts/upgrade/check-reference-drift.mjs",
       "scripts/upgrade/freeze-reference.mjs",
       "scripts/upgrade/generate-change-inventory.mjs",
+      "scripts/upgrade/generate-series.mjs",
       "scripts/upgrade/generate-vscodium-layer.mjs",
       "scripts/upgrade/materialize-vscode.mjs",
       "scripts/upgrade/materialize-vscode.sh",
@@ -267,6 +272,7 @@
       "scripts/upgrade/validate-profile.mjs",
       "scripts/upgrade/validate-reference-manifest.mjs",
       "scripts/upgrade/validate-report.mjs",
+      "scripts/upgrade/validate-series.mjs",
       "src/insider/resources/darwin/bat.icns",
       "src/insider/resources/darwin/bower.icns",
       "src/insider/resources/darwin/c.icns",
@@ -2160,6 +2166,30 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "docs/upgrade/overlay-allowlist.112.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "97b83dad8c3fb3266e07a8e5dfee0faf93c899f9061e37d6d5b072c77ddb48ec",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/product.delete.112.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "760882d18fe4a5e0abacc73eb5789a6a2d92a66e3fa1a9f527b559d647557464",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "docs/upgrade/profiles/112-stable-win32-x64-client.json",
       "assetKind": "doc",
       "sourceClass": "director-owned",
@@ -2196,6 +2226,18 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "3a6450374fc61e9bd3f426444b257fe4e33b4c22c12a5937f62d9aab2adb257b",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
       "assetKind": "doc",
       "sourceClass": "director-owned",
@@ -2204,7 +2246,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "85c097e8bb7da76f42dbe6b11cf3d690a9025da759ee177cbeccd8a3cf3a9922",
+      "sha256": "6a2ec23d0f12c079463b8a221b56c6041759c3fc4bbc10f0b2ec381cf125a4ad",
       "notes": "P1 replay control plane."
     },
     {
@@ -3221,6 +3263,18 @@
       "notes": "Patch-like replay asset; series ownership is validated in a later batch."
     },
     {
+      "path": "patches/series.112.json",
+      "assetKind": "patch",
+      "sourceClass": "vscodium-derived",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "f105044930c59e01af8ff2d1ee7fc9b18eddbc9646a1eb7e3a2a8c8432e4a043",
+      "notes": "Patch-like replay asset; series ownership is validated in a later batch."
+    },
+    {
       "path": "patches/sourcemaps.patch",
       "assetKind": "patch",
       "sourceClass": "vscodium-derived",
@@ -3481,6 +3535,19 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "scripts/upgrade/generate-series.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "0072575d370ba2cf7ed79861350109e154951ed1539d7aa8bac022bf97c1aa43",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "scripts/upgrade/generate-vscodium-layer.mjs",
       "assetKind": "script",
       "sourceClass": "director-owned",
@@ -3568,7 +3635,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "4bba89295b1523218daecad5fbadbacfecd943ccea60283d7c3543f29e14cbb2",
+      "sha256": "b36478be2a7bf9eb1a30c005f305f43a315d4f2b91cc88905918108521aaa9d8",
       "notes": "P1 replay control plane."
     },
     {
@@ -3633,7 +3700,20 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "e9b5f2da20f15a0d4c0195d334457578191e3bfd55a80acae474e18b0c88d636",
+      "sha256": "11cb6c831aed1523d2bb1d58a9861d95c1e4e3cf1373e205ce26c70e35d8bf1b",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/validate-series.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "e6d11633a1fcc7c2870a0eb41d2b83b53f22ffca679d73579cbac16a03c3f49b",
       "notes": "P1 replay control plane."
     },
     {

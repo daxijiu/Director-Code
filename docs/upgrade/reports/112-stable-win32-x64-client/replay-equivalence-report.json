@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "phase": "P1",
+  "batch": "replay-equivalence",
+  "status": "degraded",
+  "generatedAt": "2026-05-10T13:11:31.318Z",
+  "checks": {
+    "patchSeriesValidation": "passed",
+    "overlayAllowlist": "captured",
+    "productExpected": "captured",
+    "sourceEquivalence": "blocked-until-layer-application"
+  },
+  "inputs": {
+    "referenceManifest": "docs/upgrade/112-reference-manifest.json",
+    "patchSeries": "patches/series.112.json",
+    "overlayAllowlist": "docs/upgrade/overlay-allowlist.112.json",
+    "productDelete": "docs/upgrade/product.delete.112.json",
+    "productExpected": "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json"
+  },
+  "patchSeries": {
+    "count": 60,
+    "enabled": 57,
+    "deferred": 1,
+    "archived": 2,
+    "vscodiumLayer": 0,
+    "directorLayer": 60
+  },
+  "blockers": [
+    {
+      "id": "source-equivalence",
+      "status": "recorded",
+      "detail": "Strict source equivalence requires Layer 1 and Director delta application. Current materialize scaffold writes bootstrap checkpoints only; the blocker is carried forward while script/artifact/docs migration proceeds."
+    }
+  ]
+}

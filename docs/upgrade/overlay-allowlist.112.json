@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "allowlist": [
+    {
+      "path": "src/stable/**",
+      "sourceClass": "director-owned",
+      "equivalenceScope": "p1-strict",
+      "reason": "Stable Director/VSCodium overlay resources copied into the materialized VS Code tree."
+    },
+    {
+      "path": "src/insider/**",
+      "sourceClass": "director-owned",
+      "equivalenceScope": "defer-non-p1",
+      "reason": "Insider overlay is path-safe but not part of stable/win32/x64/client strict equivalence."
+    },
+    {
+      "path": "announcements-*.json",
+      "sourceClass": "director-owned",
+      "equivalenceScope": "p1-strict",
+      "reason": "Postprocess announcement inputs captured as expected files during freeze."
+    }
+  ]
+}

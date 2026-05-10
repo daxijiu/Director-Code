@@ -7,6 +7,7 @@ const reports = [
   'docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json',
   'docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json',
   'docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json',
+  'docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json',
 ];
 
 function main() {
