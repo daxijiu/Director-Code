@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "phase": "P1",
+  "batch": "freeze",
+  "status": "passed",
+  "generatedAt": "2026-05-10T12:53:12.345Z",
+  "manifest": {
+    "path": "docs/upgrade/112-reference-manifest.json",
+    "sha256": "9fa4bfde174880b7309551becb06db7bc737b1c9175f1edd9504af5080d66b7c",
+    "referenceFilesHash": "db2901bbdb058f092136378602f47cbb99f7049d5610616d74f4ec0e9cc906a0"
+  },
+  "archive": {
+    "path": ".cache/reference/112/vscode-reference.tar.gz",
+    "format": "tar.gz",
+    "sha256": "6609a24182d44c10ce5f3d19b6106cd5c41cbf6232eef0d6667ef076eab85690",
+    "fileListPath": ".cache/reference/112/vscode-reference-filelist.txt",
+    "fileListSha256": "f880a6e87ee80d924214d304423eaa468c6c1aece0c538ec8ef07201843ec2b2",
+    "fileCount": 10039,
+    "command": "node scripts/upgrade/freeze-reference.mjs internal-tar-gzip",
+    "tools": {
+      "tar": "scripts/upgrade/freeze-reference.mjs node tar writer",
+      "zstd": "unavailable; used gzip fallback",
+      "gzip": "node v22.22.0 zlib"
+    }
+  },
+  "expected": [
+    {
+      "source": "vscode/product.json",
+      "path": "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json",
+      "sha256": "a35f9974773ff322813269e1c5986d4c338cfbf76bece7a024870e8c0f8e2f0e"
+    },
+    {
+      "source": "vscode/package.json",
+      "path": "docs/upgrade/expected/112-stable-win32-x64-client/package.expected.json",
+      "sha256": "36cf8e358e8d234f3f0535b07603ff13a34d978c3210e1e6de91507ec506a212"
+    },
+    {
+      "source": "vscode/resources/server/manifest.json",
+      "path": "docs/upgrade/expected/112-stable-win32-x64-client/server-manifest.expected.json",
+      "sha256": "ab1e56adf9cfc9c4c8b967b067812b0c00fde739d44632daa0ed8a194937f083"
+    },
+    {
+      "source": "announcements-builtin.json",
+      "path": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-builtin.expected.json",
+      "sha256": "f171c90e5540d56f6269f2d6a10364fe37fd6c1fde6aed83a83e61eac125dd7b"
+    },
+    {
+      "source": "announcements-extra.json",
+      "path": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-extra.expected.json",
+      "sha256": "22d47f60d5de27f229831a2146bbe0285d0439c8b32094b2f1925d30e05f48dc"
+    }
+  ],
+  "checks": {
+    "archiveCreated": "passed",
+    "referenceDriftDuringFreeze": "passed",
+    "caseInsensitivePathCollisions": "passed",
+    "hygiene": "passed"
+  },
+  "hygiene": {
+    "status": "passed",
+    "scannedFiles": 6,
+    "findings": []
+  }
+}

@@ -2,6 +2,10 @@
 
 set -ex
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${SCRIPT_DIR}/scripts/upgrade/reference-guard.sh"
+reference_guard_assert_not_reference "${SCRIPT_DIR}/vscode" "${BASH_SOURCE[0]}" || exit $?
+
 cd cli
 
 export CARGO_NET_GIT_FETCH_WITH_CLI="true"

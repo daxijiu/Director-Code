@@ -9,6 +9,12 @@ assets/
 sourcemaps/
 .electron-cache/
 
+# --- P1 replay/freeze local outputs ---
+.cache/
+vscode.generated/
+artifacts/generated/
+artifacts/out/
+
 # --- macOS ---
 .DS_Store
 

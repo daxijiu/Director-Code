@@ -2,6 +2,10 @@
 
 set -e
 
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+. "${REPO_ROOT}/scripts/upgrade/reference-guard.sh"
+reference_guard_assert_not_reference "${REPO_ROOT}/vscode" "${BASH_SOURCE[0]}" || exit $?
+
 normalize_file() {
   if [[ "${1}" == *patch ]]; then
     FILE="${1}"

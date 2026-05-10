@@ -3,6 +3,10 @@
 
 set -ex
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${SCRIPT_DIR}/scripts/upgrade/reference-guard.sh"
+reference_guard_assert_not_reference "$(pwd -P)" "${BASH_SOURCE[0]}" || exit $?
+
 # list of urls to match:
 # - mobile.events.data.microsoft.com
 # - vortex.data.microsoft.com
