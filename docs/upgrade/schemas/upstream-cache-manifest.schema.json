@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "remote", "tag", "commit", "archiveSha256", "fetchedAt", "cleanStatus"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "remote": { "type": "string" },
+    "tag": { "type": "string" },
+    "commit": { "type": "string" },
+    "archiveSha256": { "type": "string" },
+    "fetchedAt": { "type": "string" },
+    "cleanStatus": { "enum": ["clean", "dirty", "archive-only"] }
+  }
+}

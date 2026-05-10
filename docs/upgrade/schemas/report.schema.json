@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "profile", "phase", "batch", "status", "generatedAt", "checks"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "phase": { "type": "string" },
+    "batch": { "type": "string" },
+    "status": { "enum": ["passed", "failed", "degraded", "blocked"] },
+    "generatedAt": { "type": "string" },
+    "checks": { "type": "object" }
+  }
+}

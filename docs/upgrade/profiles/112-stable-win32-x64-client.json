@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "quality": "stable",
+  "osName": "windows",
+  "platform": "win32",
+  "arch": "x64",
+  "buildTarget": "client",
+  "releaseVersion": "1.112.01907",
+  "BUILD_SOURCEVERSION": "7d2fbd4df8a934dc92e9552a608d600f990042df",
+  "APP_NAME": "Director-Code",
+  "BINARY_NAME": "director-code",
+  "VSCODE_QUALITY": "stable",
+  "OS_NAME": "windows",
+  "VSCODE_ARCH": "x64",
+  "upstreams": {
+    "vscode": {
+      "remote": "https://github.com/microsoft/vscode.git",
+      "tag": "1.112.0",
+      "commit": "07ff9d6178ede9a1bd12ad3399074d726ebe6e43"
+    },
+    "vscodium": {
+      "remote": "https://github.com/VSCodium/vscodium.git",
+      "tag": "1.112.01907",
+      "commit": "cb68d26217b4a707754faf2801a08410bec7bbee"
+    }
+  },
+  "expectedPaths": {
+    "product": "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json",
+    "package": "docs/upgrade/expected/112-stable-win32-x64-client/package.expected.json",
+    "serverManifest": "docs/upgrade/expected/112-stable-win32-x64-client/server-manifest.expected.json",
+    "announcementsBuiltin": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-builtin.expected.json",
+    "announcementsExtra": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-extra.expected.json"
+  },
+  "artifactPaths": {
+    "generatedRoot": "vscode.generated",
+    "directorSource": "vscode.generated/layers/director/vscode",
+    "clientIntermediate": "vscode.generated/layers/director/VSCode-win32-x64",
+    "outRoot": "artifacts/out/stable/win32-x64",
+    "generatedReports": "artifacts/generated/112-stable-win32-x64-client",
+    "committedReports": "docs/upgrade/reports/112-stable-win32-x64-client"
+  },
+  "toolRanges": {
+    "node": ">=22 <23",
+    "git": ">=2.40",
+    "bash": "git-bash-or-compatible"
+  },
+  "canonicalCommand": "scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/112-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --install-deps --build-artifact --fresh-cache --force"
+}

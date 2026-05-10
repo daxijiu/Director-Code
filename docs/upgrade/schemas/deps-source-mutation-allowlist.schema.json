@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "profile", "allowedMutations"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "allowedMutations": { "type": "array" }
+  }
+}

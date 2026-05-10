@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "phase": "P1",
+  "batch": "schema-inventory",
+  "status": "passed",
+  "generatedAt": "2026-05-10T13:00:11.434Z",
+  "checks": {
+    "profileSchema": "passed",
+    "referenceManifestSchema": "passed",
+    "changeInventorySchema": "passed",
+    "inventoryCoverage": "passed",
+    "executableScriptScopes": "passed",
+    "claudeSettingsLocal": "passed"
+  },
+  "inventory": {
+    "path": "docs/upgrade/112-change-inventory.json",
+    "assetCount": 441,
+    "executableAssetCount": 79
+  }
+}

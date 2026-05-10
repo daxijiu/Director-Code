@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "profile",
+    "phase",
+    "batch",
+    "generatedAt",
+    "referenceRoot",
+    "outer",
+    "inner",
+    "archive",
+    "counts",
+    "audits",
+    "referenceFilesHash",
+    "files",
+    "deleted"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "phase": { "type": "string" },
+    "batch": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "referenceRoot": { "type": "string" },
+    "outer": { "type": "object" },
+    "inner": { "type": "object" },
+    "archive": { "type": "object" },
+    "counts": { "type": "object" },
+    "audits": { "type": "object" },
+    "referenceFilesHash": { "type": "string" },
+    "files": { "type": "array" },
+    "deleted": { "type": "array" }
+  }
+}

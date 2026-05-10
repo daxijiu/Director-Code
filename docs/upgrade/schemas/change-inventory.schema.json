@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "profile",
+    "generatedAt",
+    "coverage",
+    "targetSets",
+    "assets"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "coverage": { "type": "object" },
+    "targetSets": { "type": "object" },
+    "assets": { "type": "array" }
+  }
+}
