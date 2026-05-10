@@ -247,5 +247,21 @@ suite("AgentEngine - MessageNormalization", () => {
 			assert.deepStrictEqual((messages[1].content as any[]).map(block => block.id), ["tool_complete"]);
 			assert.deepStrictEqual((messages[2].content as any[]).map(block => block.tool_use_id), ["tool_complete"]);
 		});
+
+		test("preserves thinking when requested", () => {
+			const history = [makeHistoryEntry("Question", "Plain fallback")];
+			const richResponses = [[
+				{ kind: "thinking", value: "hidden reasoning" },
+				{ kind: "markdownContent", content: { value: "Answer" } },
+			]] as any;
+
+			const messages = historyToNormalizedMessages(history, richResponses, { preserveThinking: true });
+
+			assert.strictEqual(messages.length, 2);
+			assert.deepStrictEqual(messages[1].content, [
+				{ type: "thinking", thinking: "hidden reasoning" },
+				{ type: "text", text: "Answer" },
+			]);
+		});
 	});
 });

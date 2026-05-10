@@ -17,9 +17,11 @@ import { ISecretStorageService } from '../../../../../platform/secrets/common/se
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import type { ApiType, ProviderCapabilities } from './providers/providerTypes.js';
+import { mergeProviderCapabilities } from './providers/providerTypes.js';
 import { buildProviderUrl } from './providers/abstractProvider.js';
 import { buildGeminiAuthenticatedRequest, CONFIG_GEMINI_KEY_IN_URL } from './geminiAuth.js';
 import { fetchWithTimeout, getResponseErrorMessage } from './fetchUtils.js';
+import { getCatalogCapabilitiesForModel } from './modelCatalog.js';
 
 // ============================================================================
 // Constants
@@ -160,6 +162,18 @@ export interface IApiKeyChangeEvent {
 export interface IModelConfig {
 	readonly baseURL?: string;
 	readonly capabilities?: ProviderCapabilities;
+}
+
+export function resolveConfiguredProviderCapabilities(
+	provider: ProviderName,
+	modelId: string,
+	modelConfig?: IModelConfig,
+	apiType: ApiType = providerToApiType(provider),
+): ProviderCapabilities | undefined {
+	return mergeProviderCapabilities(
+		getCatalogCapabilitiesForModel(provider, modelId, apiType),
+		modelConfig?.capabilities,
+	);
 }
 
 /**
@@ -533,7 +547,7 @@ export class ApiKeyService extends Disposable implements IApiKeyService {
 		const modelConfig = await this.getModelConfig(provider, modelId);
 
 		const baseURL = modelConfig?.baseURL || globalBaseURL || undefined;
-		const capabilities = modelConfig?.capabilities || undefined;
+		const capabilities = resolveConfiguredProviderCapabilities(provider, modelId, modelConfig);
 
 		// [Director-Code] B1-1: wrap API key in explicit auth structure
 		return { auth: { kind: 'api-key', value: apiKey }, baseURL, capabilities };

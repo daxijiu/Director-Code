@@ -191,6 +191,27 @@ suite('AgentEngine - AuthStateService (B1-8)', () => {
 		assert.match(state.identityKey!, /^api-key:openai:gpt-4o:[a-f0-9]{16}$/);
 	});
 
+	test('resolves DeepSeek V4 catalog capabilities and leaves R1 unchanged', async () => {
+		await apiKeyService.setApiKey('openai-compatible', 'provider-key');
+
+		const v4 = await authStateService.resolveAuth('openai-compatible', 'deepseek-v4-flash', DEFAULT_AUTH_VARIANT);
+		const r1 = await authStateService.resolveAuth('openai-compatible', 'deepseek-reasoner', DEFAULT_AUTH_VARIANT);
+
+		assert.deepStrictEqual(v4.capabilities?.reasoningEcho, { field: 'reasoning_content', includeEmpty: true });
+		assert.strictEqual(r1.capabilities?.reasoningEcho, undefined);
+	});
+
+	test('per-model reasoningEcho false disables DeepSeek V4 catalog capabilities', async () => {
+		await apiKeyService.setApiKey('openai-compatible', 'provider-key');
+		await apiKeyService.setModelConfig('openai-compatible', 'deepseek-v4-pro', {
+			capabilities: { reasoningEcho: false },
+		});
+
+		const state = await authStateService.resolveAuth('openai-compatible', 'deepseek-v4-pro', DEFAULT_AUTH_VARIANT);
+
+		assert.strictEqual(state.capabilities?.reasoningEcho, false);
+	});
+
 	test('falls back to global baseURL when no model config is set', async () => {
 		await apiKeyService.setApiKey('openai', 'provider-key');
 

@@ -19,6 +19,10 @@ const MAX_INLINE_TOOL_RESULT_CHARS = 4000;
 const TOOL_RESULT_HEAD_CHARS = 2500;
 const TOOL_RESULT_TAIL_CHARS = 1000;
 
+export interface HistoryNormalizationOptions {
+	readonly preserveThinking?: boolean;
+}
+
 /**
  * Extract the user's text message from an IChatAgentRequest.
  */
@@ -35,6 +39,7 @@ export function requestToUserMessage(request: IChatAgentRequest): string {
 export function historyToNormalizedMessages(
 	history: IChatAgentHistoryEntry[],
 	richResponses?: ReadonlyArray<ReadonlyArray<IChatProgressResponseContent>>,
+	options: HistoryNormalizationOptions = {},
 ): NormalizedMessageParam[] {
 	if (richResponses && richResponses.length !== history.length) {
 		console.warn(`[Director-Code] rich response history length mismatch: history=${history.length}, richResponses=${richResponses.length}; falling back to plain text history.`);
@@ -57,7 +62,7 @@ export function historyToNormalizedMessages(
 			});
 		}
 
-		messages.push(...richResponseToNormalizedMessages(richResponses[i]));
+		messages.push(...richResponseToNormalizedMessages(richResponses[i], options));
 	}
 
 	return messages;
@@ -86,7 +91,10 @@ function historyToPlainTextMessages(history: IChatAgentHistoryEntry[]): Normaliz
 	return messages;
 }
 
-function richResponseToNormalizedMessages(response: ReadonlyArray<IChatProgressResponseContent>): NormalizedMessageParam[] {
+function richResponseToNormalizedMessages(
+	response: ReadonlyArray<IChatProgressResponseContent>,
+	options: HistoryNormalizationOptions,
+): NormalizedMessageParam[] {
 	const messages: NormalizedMessageParam[] = [];
 	let assistantBlocks: NormalizedContentBlock[] = [];
 	let pendingToolResults: NormalizedContentBlock[] = [];
@@ -114,6 +122,13 @@ function richResponseToNormalizedMessages(response: ReadonlyArray<IChatProgressR
 
 	for (const part of response) {
 		if (part.kind === 'thinking') {
+			if (options.preserveThinking) {
+				flushToolRound();
+				const thinking = String((part as any).value ?? '');
+				if (thinking) {
+					assistantBlocks.push({ type: 'thinking', thinking });
+				}
+			}
 			continue;
 		}
 

@@ -13,7 +13,7 @@
  */
 
 import type { ProviderName } from './apiKeyService.js';
-import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName } from './providers/providerTypes.js';
+import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type ApiType, type AuthVariantName, type ProviderCapabilities } from './providers/providerTypes.js';
 
 // ============================================================================
 // Model Definitions
@@ -43,6 +43,7 @@ export interface IModelDefinition extends IModelEntry {
 	readonly metadataKnown?: boolean;
 	readonly pricing?: IModelPricing;
 	readonly compactRank?: number;
+	readonly capabilities?: ProviderCapabilities;
 }
 
 export const FALLBACK_MODEL_PRICING: IModelPricing = {
@@ -69,6 +70,8 @@ export const MODEL_CATALOG: readonly IModelDefinition[] = [
 	// OpenAI-compatible presets (shown under openai-compatible provider)
 	{ id: 'deepseek-chat', name: 'DeepSeek Chat (V3)', family: 'deepseek', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 128_000, maxOutputTokens: 8_192, pricing: { input: 0.27 / 1_000_000, output: 1.1 / 1_000_000 } },
 	{ id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', family: 'deepseek', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 128_000, maxOutputTokens: 8_192, pricing: { input: 0.55 / 1_000_000, output: 2.19 / 1_000_000 } },
+	{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', family: 'deepseek', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 1_000_000, maxOutputTokens: 384_000, pricing: { input: 0.14 / 1_000_000, output: 0.28 / 1_000_000 }, capabilities: { thinking: true, reasoningEcho: { field: 'reasoning_content', includeEmpty: true } } },
+	{ id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', family: 'deepseek', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 1_000_000, maxOutputTokens: 384_000, pricing: { input: 1.74 / 1_000_000, output: 3.48 / 1_000_000 }, capabilities: { thinking: true, reasoningEcho: { field: 'reasoning_content', includeEmpty: true } } },
 	{ id: 'qwen-plus', name: 'Qwen Plus', family: 'qwen', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 131_072, maxOutputTokens: 8_192 },
 	{ id: 'moonshot-v1-auto', name: 'Moonshot v1 Auto', family: 'moonshot', apiType: 'openai-completions', provider: 'openai-compatible', maxInputTokens: 128_000, maxOutputTokens: 4_096 },
 ];
@@ -126,6 +129,25 @@ export function getDefaultModelForAuthVariant(provider: ProviderName, authVarian
  */
 export function findModelById(id: string): IModelDefinition | undefined {
 	return MODEL_CATALOG.find(m => m.id === id) ?? OPENAI_CODEX_MODEL_CATALOG.find(m => m.id === id);
+}
+
+export function findModelByIdForProvider(provider: ProviderName, id: string): IModelDefinition | undefined {
+	return getModelsForProvider(provider).find(m => m.id === id);
+}
+
+export function getCatalogCapabilitiesForModel(provider: ProviderName, modelId: string, apiType: ApiType): ProviderCapabilities | undefined {
+	const providerScoped = findModelByIdForProvider(provider, modelId)?.capabilities;
+	if (providerScoped) {
+		return providerScoped;
+	}
+	const normalizedModelId = modelId.toLowerCase();
+	if (
+		apiType === 'openai-completions'
+		&& (normalizedModelId === 'deepseek-v4-flash' || normalizedModelId === 'deepseek-v4-pro')
+	) {
+		return { thinking: true, reasoningEcho: { field: 'reasoning_content', includeEmpty: true } };
+	}
+	return undefined;
 }
 
 export function isOpenAICodexModel(id: string): boolean {

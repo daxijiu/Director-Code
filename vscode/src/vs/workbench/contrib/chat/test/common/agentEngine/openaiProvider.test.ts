@@ -26,6 +26,7 @@ function createSSEStream(lines: string[]): ReadableStream<Uint8Array> {
 
 function makeOpenAIResponse(overrides?: Partial<{
 	content: string | null;
+	reasoning_content: string | null;
 	tool_calls: any[];
 	finish_reason: string;
 	usage: any;
@@ -37,6 +38,7 @@ function makeOpenAIResponse(overrides?: Partial<{
 			message: {
 				role: "assistant",
 				content: overrides?.content !== undefined ? overrides.content : "Hello!",
+				reasoning_content: overrides?.reasoning_content,
 				tool_calls: overrides?.tool_calls,
 			},
 			finish_reason: overrides?.finish_reason ?? "stop",
@@ -285,6 +287,156 @@ suite("AgentEngine - OpenAIProvider", () => {
 			assert.strictEqual(assistantMsg.tool_calls[0].function.name, "search");
 		});
 
+		test("does not send reasoning_content by default", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			await provider.createMessage(makeDefaultParams({
+				messages: [{
+					role: "assistant",
+					content: [
+						{ type: "thinking", thinking: "hidden" },
+						{ type: "text", text: "Visible" },
+					],
+				}],
+			}));
+
+			const assistantMsg = capturedBody.messages.find((m: any) => m.role === "assistant");
+			assert.strictEqual(assistantMsg.reasoning_content, undefined);
+			assert.strictEqual(assistantMsg.content, "Visible");
+		});
+
+		test("sends reasoning_content when reasoningEcho capability is enabled", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				capabilities: { reasoningEcho: { field: "reasoning_content", includeEmpty: true } },
+			});
+			await provider.createMessage(makeDefaultParams({
+				messages: [{
+					role: "assistant",
+					content: [
+						{ type: "thinking", thinking: "part1" },
+						{ type: "thinking", thinking: "part2" },
+						{ type: "text", text: "Visible" },
+					],
+				}],
+			}));
+
+			const assistantMsg = capturedBody.messages.find((m: any) => m.role === "assistant");
+			assert.strictEqual(assistantMsg.reasoning_content, "part1part2");
+			assert.strictEqual(assistantMsg.content, "Visible");
+		});
+
+		test("sends empty reasoning_content when enabled and assistant has no thinking", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				capabilities: { reasoningEcho: { field: "reasoning_content", includeEmpty: true } },
+			});
+			await provider.createMessage(makeDefaultParams({
+				messages: [{ role: "assistant", content: "Visible" }],
+			}));
+
+			const assistantMsg = capturedBody.messages.find((m: any) => m.role === "assistant");
+			assert.strictEqual(assistantMsg.reasoning_content, "");
+		});
+
+		test("enables reasoning_content for exact DeepSeek V4 model ids", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			await provider.createMessage(makeDefaultParams({
+				model: "deepseek-v4-pro",
+				messages: [{ role: "assistant", content: "Visible" }],
+			}));
+
+			const assistantMsg = capturedBody.messages.find((m: any) => m.role === "assistant");
+			assert.strictEqual(assistantMsg.reasoning_content, "");
+		});
+
+		test("does not enable reasoning_content for DeepSeek R1 by default", async () => {
+			let capturedBody: any = null;
+			mockFetch((_url, init) => {
+				capturedBody = JSON.parse(init.body as string);
+				return new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({ auth: { kind: 'api-key', value: "key" } });
+			await provider.createMessage(makeDefaultParams({
+				model: "deepseek-reasoner",
+				messages: [{ role: "assistant", content: "Visible" }],
+			}));
+
+			const assistantMsg = capturedBody.messages.find((m: any) => m.role === "assistant");
+			assert.strictEqual(assistantMsg.reasoning_content, undefined);
+		});
+
+		test("retries once with reasoning_content when provider requires it", async () => {
+			const capturedBodies: any[] = [];
+			let calls = 0;
+			mockFetch((_url, init) => {
+				calls++;
+				capturedBodies.push(JSON.parse(init.body as string));
+				return calls === 1
+					? new Response(JSON.stringify({ error: { message: "The reasoning_content in the thinking mode must be passed back to the API." } }), { status: 400, statusText: "Bad Request" })
+					: new Response(JSON.stringify(makeOpenAIResponse()), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				baseURL: "https://deepseek-alias.example/v1",
+			});
+			await provider.createMessage(makeDefaultParams({
+				model: "custom-deepseek-v4",
+				messages: [{ role: "assistant", content: "Visible" }],
+			}));
+
+			assert.strictEqual(calls, 2);
+			assert.strictEqual(capturedBodies[0].messages[1].reasoning_content, undefined);
+			assert.strictEqual(capturedBodies[1].messages[1].reasoning_content, "");
+		});
+
+		test("does not apply reasoning fallback when reasoningEcho is explicitly disabled", async () => {
+			let calls = 0;
+			mockFetch(() => {
+				calls++;
+				return new Response(JSON.stringify({ error: { message: "The reasoning_content in the thinking mode must be passed back to the API." } }), { status: 400, statusText: "Bad Request" });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				capabilities: { reasoningEcho: false },
+			});
+
+			await assert.rejects(
+				() => provider.createMessage(makeDefaultParams({
+					model: "custom-deepseek-v4-disabled",
+					messages: [{ role: "assistant", content: "Visible" }],
+				})),
+				(err: any) => err.status === 400,
+			);
+			assert.strictEqual(calls, 1);
+		});
+
 		test("maps finish_reason correctly", async () => {
 			// stop → end_turn
 			mockFetch(() => new Response(JSON.stringify(makeOpenAIResponse({ finish_reason: "stop" })), { status: 200 }));
@@ -528,6 +680,40 @@ suite("AgentEngine - OpenAIProvider", () => {
 			assert.strictEqual(calls, 2);
 			assert.deepStrictEqual(capturedBodies[0].stream_options, { include_usage: true });
 			assert.strictEqual(capturedBodies[1].stream_options, undefined);
+		});
+
+		test("can apply reasoning fallback and stream_options fallback in one stream request", async () => {
+			const capturedBodies: any[] = [];
+			let calls = 0;
+			const sseLines = ["data: [DONE]"];
+			mockFetch((_url, init) => {
+				calls++;
+				capturedBodies.push(JSON.parse(init.body as string));
+				if (calls === 1) {
+					return new Response(JSON.stringify({ error: { message: "The reasoning_content in the thinking mode must be passed back to the API." } }), { status: 400, statusText: "Bad Request" });
+				}
+				if (calls === 2) {
+					return new Response("unsupported stream_options include_usage", { status: 400, statusText: "Bad Request" });
+				}
+				return new Response(createSSEStream(sseLines), { status: 200 });
+			});
+
+			const provider = new OpenAIProvider({
+				auth: { kind: 'api-key', value: "key" },
+				baseURL: "https://stream-deepseek-alias.example/v1",
+			});
+			await collectStreamEvents(provider.createMessageStream!(makeDefaultParams({
+				model: "custom-v4",
+				messages: [{ role: "assistant", content: "Visible" }],
+			})));
+
+			assert.strictEqual(calls, 3);
+			assert.deepStrictEqual(capturedBodies[0].stream_options, { include_usage: true });
+			assert.strictEqual(capturedBodies[0].messages[1].reasoning_content, undefined);
+			assert.deepStrictEqual(capturedBodies[1].stream_options, { include_usage: true });
+			assert.strictEqual(capturedBodies[1].messages[1].reasoning_content, "");
+			assert.strictEqual(capturedBodies[2].stream_options, undefined);
+			assert.strictEqual(capturedBodies[2].messages[1].reasoning_content, "");
 		});
 	});
 

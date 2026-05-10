@@ -109,6 +109,16 @@ suite("AgentEngine - AbstractDirectorCodeProvider", () => {
 			assert.strictEqual(p.capabilities.toolCalling, false);
 			assert.strictEqual(p.capabilities.streaming, true);
 		});
+
+		test("merges partial custom capabilities with provider defaults", () => {
+			const p = new TestProvider({
+				auth: { kind: 'api-key', value: "key" },
+				capabilities: { reasoningEcho: { field: "reasoning_content", includeEmpty: true } },
+			});
+			assert.strictEqual(p.capabilities.vision, true);
+			assert.strictEqual(p.capabilities.toolCalling, true);
+			assert.deepStrictEqual(p.capabilities.reasoningEcho, { field: "reasoning_content", includeEmpty: true });
+		});
 	});
 
 	// ---------------------------------------------------------------

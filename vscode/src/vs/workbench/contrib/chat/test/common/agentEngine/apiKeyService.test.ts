@@ -619,6 +619,27 @@ suite("AgentEngine - ApiKeyService", () => {
 			assert.strictEqual(result!.capabilities, undefined);
 		});
 
+		test("includes catalog reasoningEcho for exact DeepSeek V4 models", async () => {
+			await apiKeyService.setApiKey("openai-compatible", "key");
+			const result = await apiKeyService.resolveProviderOptions("openai-compatible", "deepseek-v4-pro");
+			assert.deepStrictEqual(result!.capabilities?.reasoningEcho, { field: "reasoning_content", includeEmpty: true });
+		});
+
+		test("does not include reasoningEcho for DeepSeek R1 by default", async () => {
+			await apiKeyService.setApiKey("openai-compatible", "key");
+			const result = await apiKeyService.resolveProviderOptions("openai-compatible", "deepseek-reasoner");
+			assert.strictEqual(result!.capabilities?.reasoningEcho, undefined);
+		});
+
+		test("per-model reasoningEcho false disables catalog reasoningEcho", async () => {
+			await apiKeyService.setApiKey("openai-compatible", "key");
+			await apiKeyService.setModelConfig("openai-compatible", "deepseek-v4-pro", {
+				capabilities: { reasoningEcho: false },
+			});
+			const result = await apiKeyService.resolveProviderOptions("openai-compatible", "deepseek-v4-pro");
+			assert.strictEqual(result!.capabilities?.reasoningEcho, false);
+		});
+
 		test("full resolution with all levels populated", async () => {
 			await apiKeyService.setApiKey("openai", "provider-key");
 			await apiKeyService.setModelApiKey("openai", "gpt-4o", "model-key");

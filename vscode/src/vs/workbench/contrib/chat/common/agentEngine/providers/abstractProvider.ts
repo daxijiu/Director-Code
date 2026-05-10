@@ -26,6 +26,7 @@ import type {
 	ProviderCapabilities,
 	ProviderAuth,
 } from './providerTypes.js';
+import { mergeProviderCapabilities } from './providerTypes.js';
 
 // ============================================================================
 // Default capabilities per API type
@@ -101,7 +102,7 @@ export abstract class AbstractDirectorCodeProvider implements LLMProvider {
 	constructor(opts: ProviderConfig) {
 		this.auth = opts.auth;
 		this.baseURL = (opts.baseURL || this.getDefaultBaseURL()).replace(/\/$/, '');
-		this.capabilities = opts.capabilities ?? getDefaultCapabilities(this.getApiType());
+		this.capabilities = mergeProviderCapabilities(getDefaultCapabilities(this.getApiType()), opts.capabilities) ?? {};
 	}
 
 	/** Extract the credential string for HTTP headers, regardless of auth kind. */

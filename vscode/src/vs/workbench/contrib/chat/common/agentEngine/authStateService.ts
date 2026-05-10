@@ -13,7 +13,7 @@
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IApiKeyService, type IApiKeyChangeEvent, type ProviderName } from './apiKeyService.js';
+import { IApiKeyService, providerToApiType, resolveConfiguredProviderCapabilities, type IApiKeyChangeEvent, type ProviderName } from './apiKeyService.js';
 import { IOAuthService, type OAuthProviderName } from './oauthService.js';
 import type { ProviderAuth, ProviderCapabilities } from './providers/providerTypes.js';
 import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from './providers/providerTypes.js';
@@ -156,7 +156,7 @@ export class AuthStateService extends Disposable implements IAuthStateService {
 
 		const source: AuthStateSource = hasPerModelKey ? 'per-model-key' : 'provider-key';
 		const baseURL = modelConfig?.baseURL || globalBaseURL || undefined;
-		const capabilities = modelConfig?.capabilities || undefined;
+		const capabilities = resolveConfiguredProviderCapabilities(provider, model, modelConfig);
 		const identityScope = hasPerModelKey ? model : 'provider';
 		const auth: ProviderAuth = { kind: 'api-key', value: apiKey };
 		const keyHash = await sha256Prefix(apiKey);
@@ -215,6 +215,14 @@ export class AuthStateService extends Disposable implements IAuthStateService {
 			accessToken: tokens.accessToken,
 			refreshToken: tokens.refreshToken,
 			auth,
+			capabilities: resolveConfiguredProviderCapabilities(
+				provider,
+				model,
+				undefined,
+				provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
+					? 'openai-codex'
+					: providerToApiType(provider),
+			),
 			identityKey: tokens.authIdentityKey ?? `oauth:${provider}:${authVariant}:token:${await sha256Prefix(tokens.refreshToken || tokens.accessToken)}`,
 			metadata: {
 				sourceLabel: status.sourceLabel,

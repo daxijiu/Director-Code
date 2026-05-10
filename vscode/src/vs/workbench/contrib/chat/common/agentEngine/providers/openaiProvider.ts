@@ -24,8 +24,10 @@ import type {
 	NormalizedResponseBlock,
 	TokenUsage,
 	ApiType,
+	ProviderReasoningEcho,
 } from './providerTypes.js';
 import { AbstractDirectorCodeProvider } from './abstractProvider.js';
+import { getCatalogCapabilitiesForModel } from '../modelCatalog.js';
 
 // ============================================================================
 // OpenAI-specific types (minimal, no SDK dependency)
@@ -36,6 +38,7 @@ interface OpenAIChatMessage {
 	content?: string | null | OpenAIContentPart[];
 	tool_calls?: OpenAIToolCall[];
 	tool_call_id?: string;
+	reasoning_content?: string;
 }
 
 type OpenAIContentPart =
@@ -67,6 +70,7 @@ interface OpenAIChatResponse {
 		message: {
 			role: 'assistant';
 			content: string | null;
+			reasoning_content?: string | null;
 			tool_calls?: OpenAIToolCall[];
 		};
 		finish_reason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | string;
@@ -112,6 +116,7 @@ interface OpenAIStreamChunk {
 export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	readonly apiType = 'openai-completions' as const;
 	private static readonly includeUsageUnsupportedBaseURLs = new Set<string>();
+	private static readonly reasoningEchoRuntimeCache = new Map<string, ProviderReasoningEcho>();
 
 	protected getApiType(): ApiType { return 'openai-completions'; }
 	protected getDefaultBaseURL(): string { return 'https://api.openai.com/v1'; }
@@ -122,31 +127,36 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	// ========================================================================
 
 	async createMessage(params: CreateMessageParams): Promise<CreateMessageResponse> {
-		const messages = this.convertMessages(params.system, params.messages);
-		const tools = params.tools ? this.convertTools(params.tools) : undefined;
+		let reasoningFallback: ProviderReasoningEcho | undefined;
+		let reasoningFallbackApplied = false;
 
-		const body: Record<string, any> = {
-			model: params.model,
-			messages,
-		};
-		this.applyMaxTokens(body, params.model, params.maxTokens);
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const { body, appliedReasoningEcho } = this.buildChatCompletionsBody(params, {
+				reasoningEcho: reasoningFallback,
+			});
 
-		if (tools && tools.length > 0) {
-			body.tools = tools;
+			try {
+				const response = await this.postChatCompletions(body, params.abortSignal);
+				if (reasoningFallbackApplied) {
+					this.rememberReasoningEcho(params.model, reasoningFallback!);
+				}
+				const data = (await response.json()) as OpenAIChatResponse;
+				return this.convertResponse(data);
+			} catch (err: any) {
+				if (
+					!appliedReasoningEcho
+					&& this.canApplyReasoningFallback(params.model)
+					&& this.isReasoningContentRequiredError(err)
+				) {
+					reasoningFallback = { field: 'reasoning_content', includeEmpty: true };
+					reasoningFallbackApplied = true;
+					continue;
+				}
+				throw err;
+			}
 		}
 
-		const response = await this.fetchWithErrorHandling(this.buildUrl('/chat/completions'), {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${this.getAuthValue()}`, // [Director-Code] B1-1
-			},
-			body: JSON.stringify(body),
-			signal: params.abortSignal,
-		});
-
-		const data = (await response.json()) as OpenAIChatResponse;
-		return this.convertResponse(data);
+		throw new Error('OpenAI API error: reasoning_content retry exhausted');
 	}
 
 	// ========================================================================
@@ -154,37 +164,83 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	// ========================================================================
 
 	async *createMessageStream(params: CreateMessageParams): AsyncGenerator<StreamEvent> {
-		const messages = this.convertMessages(params.system, params.messages);
-		const tools = params.tools ? this.convertTools(params.tools) : undefined;
+		let includeUsage = !OpenAIProvider.includeUsageUnsupportedBaseURLs.has(this.baseURL);
+		let includeUsageFallbackApplied = false;
+		let reasoningFallback: ProviderReasoningEcho | undefined;
+		let reasoningFallbackApplied = false;
+		let response: Response | undefined;
 
+		for (let attempt = 0; attempt < 3; attempt++) {
+			const { body, appliedReasoningEcho } = this.buildChatCompletionsBody(params, {
+				stream: true,
+				includeUsage,
+				reasoningEcho: reasoningFallback,
+			});
+
+			try {
+				response = await this.postChatCompletions(body, params.abortSignal);
+				if (reasoningFallbackApplied) {
+					this.rememberReasoningEcho(params.model, reasoningFallback!);
+				}
+				break;
+			} catch (err: any) {
+				if (body.stream_options && !includeUsageFallbackApplied && this.isIncludeUsageUnsupportedError(err)) {
+					OpenAIProvider.includeUsageUnsupportedBaseURLs.add(this.baseURL);
+					includeUsage = false;
+					includeUsageFallbackApplied = true;
+					continue;
+				}
+				if (
+					!appliedReasoningEcho
+					&& !reasoningFallbackApplied
+					&& this.canApplyReasoningFallback(params.model)
+					&& this.isReasoningContentRequiredError(err)
+				) {
+					reasoningFallback = { field: 'reasoning_content', includeEmpty: true };
+					reasoningFallbackApplied = true;
+					continue;
+				}
+				throw err;
+			}
+		}
+
+		if (!response) {
+			throw new Error('OpenAI API error: streaming retry exhausted');
+		}
+
+		yield* this.parseOpenAISSEStream(response.body!);
+	}
+
+	private buildChatCompletionsBody(
+		params: CreateMessageParams,
+		options: {
+			readonly stream?: boolean;
+			readonly includeUsage?: boolean;
+			readonly reasoningEcho?: ProviderReasoningEcho;
+		} = {},
+	): { body: Record<string, any>; appliedReasoningEcho: boolean } {
+		const reasoningEcho = this.resolveReasoningEcho(params.model, options.reasoningEcho);
+		const messages = this.convertMessages(params.system, params.messages, reasoningEcho);
+		const tools = params.tools ? this.convertTools(params.tools) : undefined;
 		const body: Record<string, any> = {
 			model: params.model,
 			messages,
-			stream: true,
 		};
-		this.applyMaxTokens(body, params.model, params.maxTokens);
-		if (!OpenAIProvider.includeUsageUnsupportedBaseURLs.has(this.baseURL)) {
-			body.stream_options = { include_usage: true };
+
+		if (options.stream) {
+			body.stream = true;
+			if (options.includeUsage) {
+				body.stream_options = { include_usage: true };
+			}
 		}
+
+		this.applyMaxTokens(body, params.model, params.maxTokens);
 
 		if (tools && tools.length > 0) {
 			body.tools = tools;
 		}
 
-		let response: Response;
-		try {
-			response = await this.postChatCompletions(body, params.abortSignal);
-		} catch (err: any) {
-			if (body.stream_options && this.isIncludeUsageUnsupportedError(err)) {
-				OpenAIProvider.includeUsageUnsupportedBaseURLs.add(this.baseURL);
-				delete body.stream_options;
-				response = await this.postChatCompletions(body, params.abortSignal);
-			} else {
-				throw err;
-			}
-		}
-
-		yield* this.parseOpenAISSEStream(response.body!);
+		return { body, appliedReasoningEcho: !!reasoningEcho };
 	}
 
 	private postChatCompletions(body: Record<string, any>, abortSignal?: AbortSignal): Promise<Response> {
@@ -268,6 +324,7 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	private convertMessages(
 		system: string,
 		messages: readonly NormalizedMessageParam[],
+		reasoningEcho?: ProviderReasoningEcho,
 	): OpenAIChatMessage[] {
 		const result: OpenAIChatMessage[] = [];
 
@@ -279,7 +336,7 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			if (msg.role === 'user') {
 				this.convertUserMessage(msg, result);
 			} else if (msg.role === 'assistant') {
-				this.convertAssistantMessage(msg, result);
+				this.convertAssistantMessage(msg, result, reasoningEcho);
 			}
 		}
 
@@ -339,14 +396,18 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	private convertAssistantMessage(
 		msg: NormalizedMessageParam,
 		result: OpenAIChatMessage[],
+		reasoningEcho?: ProviderReasoningEcho,
 	): void {
 		if (typeof msg.content === 'string') {
-			result.push({ role: 'assistant', content: msg.content });
+			const assistantMsg: OpenAIChatMessage = { role: 'assistant', content: msg.content };
+			this.applyReasoningEcho(assistantMsg, [], reasoningEcho);
+			result.push(assistantMsg);
 			return;
 		}
 
 		const textParts: string[] = [];
 		const toolCalls: OpenAIToolCall[] = [];
+		const thinkingParts: string[] = [];
 
 		for (const block of msg.content) {
 			if (block.type === 'text') {
@@ -362,6 +423,8 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 							: JSON.stringify(block.input),
 					},
 				});
+			} else if (block.type === 'thinking') {
+				thinkingParts.push(block.thinking);
 			}
 		}
 
@@ -374,7 +437,51 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 			assistantMsg.tool_calls = toolCalls;
 		}
 
+		this.applyReasoningEcho(assistantMsg, thinkingParts, reasoningEcho);
 		result.push(assistantMsg);
+	}
+
+	private applyReasoningEcho(
+		message: OpenAIChatMessage,
+		thinkingParts: readonly string[],
+		reasoningEcho?: ProviderReasoningEcho,
+	): void {
+		if (!reasoningEcho) {
+			return;
+		}
+		message.reasoning_content = thinkingParts.length > 0 ? thinkingParts.join('') : '';
+	}
+
+	private resolveReasoningEcho(model: string, override?: ProviderReasoningEcho): ProviderReasoningEcho | undefined {
+		if (this.capabilities.reasoningEcho === false) {
+			return undefined;
+		}
+		if (this.capabilities.reasoningEcho) {
+			return this.capabilities.reasoningEcho;
+		}
+		if (override) {
+			return override;
+		}
+		const catalogCapabilities = getCatalogCapabilitiesForModel('openai-compatible', model, this.apiType);
+		if (catalogCapabilities?.reasoningEcho) {
+			return catalogCapabilities.reasoningEcho;
+		}
+		return OpenAIProvider.reasoningEchoRuntimeCache.get(this.reasoningEchoCacheKey(model));
+	}
+
+	private canApplyReasoningFallback(model: string): boolean {
+		return this.capabilities.reasoningEcho !== false && !this.resolveReasoningEcho(model);
+	}
+
+	private rememberReasoningEcho(model: string, reasoningEcho: ProviderReasoningEcho): void {
+		if (this.capabilities.reasoningEcho === false) {
+			return;
+		}
+		OpenAIProvider.reasoningEchoRuntimeCache.set(this.reasoningEchoCacheKey(model), reasoningEcho);
+	}
+
+	private reasoningEchoCacheKey(model: string): string {
+		return `${this.baseURL.toLowerCase()}::${model.toLowerCase()}`;
 	}
 
 	// ========================================================================
@@ -496,5 +603,13 @@ export class OpenAIProvider extends AbstractDirectorCodeProvider {
 	private isIncludeUsageUnsupportedError(err: any): boolean {
 		const message = String(err?.message || '');
 		return err?.status === 400 && /stream_options|include_usage/i.test(message);
+	}
+
+	private isReasoningContentRequiredError(err: any): boolean {
+		const message = String(err?.message || '');
+		return err?.status === 400
+			&& /reasoning_content/i.test(message)
+			&& /must be passed back/i.test(message)
+			&& !/must\s+not/i.test(message);
 	}
 }

@@ -256,11 +256,13 @@ export class AgentEngine {
 
 			let streamingUsed = false;
 			let textDeltaEmitted = false;
+			let responseContentForHistory: NormalizedResponseBlock[] | undefined;
 			try {
 				if (this.provider.createMessageStream) {
 					// [Director-Code] A3: streaming path with index-based multi-tool aggregation
 					streamingUsed = true;
 					const contentBlocks: NormalizedResponseBlock[] = [];
+					const historyThinkingParts: string[] = [];
 					let currentTextBlock: { type: 'text'; text: string } | undefined;
 					const pendingTools = new Map<number, { id: string; name: string; input: string }>();
 					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
@@ -282,6 +284,9 @@ export class AgentEngine {
 								break;
 
 							case 'thinking':
+								if (this.shouldPreserveThinkingInHistory()) {
+									historyThinkingParts.push(event.thinking);
+								}
 								yield { type: 'thinking_delta', thinking: event.thinking } as AgentEvent;
 								break;
 
@@ -325,6 +330,11 @@ export class AgentEngine {
 						contentBlocks.push(this.finalizeToolBlock(tool));
 					}
 
+					responseContentForHistory = this.contentForHistory(
+						historyThinkingParts.length > 0
+							? [{ type: 'thinking', thinking: historyThinkingParts.join('') }, ...contentBlocks]
+							: contentBlocks,
+					);
 					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
 				} else {
 					// Non-streaming fallback
@@ -416,8 +426,10 @@ export class AgentEngine {
 
 			// Track usage
 			this.trackUsage(response.usage);
+			const historyContent = responseContentForHistory ?? this.contentForHistory(response.content);
 
-			// Yield assistant message (full content including thinking for UI display)
+			// Yield assistant message for UI display. Streaming thinking has already
+			// been emitted as thinking_delta; history-only thinking stays out of this.
 			yield {
 				type: 'assistant',
 				message: {
@@ -432,7 +444,7 @@ export class AgentEngine {
 				const hasIncompleteTool = response.content.some((b: any) => b.type === 'tool_use' && b._jsonParseError);
 				maxOutputRecoveryAttempts++;
 				if (hasIncompleteTool) {
-					const cleanContent = response.content.filter((b: any) => !(b.type === 'tool_use' && b._jsonParseError));
+					const cleanContent = historyContent.filter((b: any) => !(b.type === 'tool_use' && b._jsonParseError));
 					this.messages.push({ role: 'assistant', content: cleanContent as any });
 					this.messages.push({ role: 'user', content: 'Your previous response was truncated in the middle of a tool call JSON. Please re-output the complete tool call(s).' });
 				} else {
@@ -462,7 +474,7 @@ export class AgentEngine {
 						content: `JSON parse error in tool call '${b.name}': ${b._jsonParseError}. Please retry with valid JSON.`,
 						is_error: true,
 					}));
-					this.messages.push({ role: 'assistant', content: response.content as any });
+					this.messages.push({ role: 'assistant', content: historyContent as any });
 					this.messages.push({ role: 'user', content: errorResults });
 					continue;
 				}
@@ -473,15 +485,14 @@ export class AgentEngine {
 					content: `Tool '${b.name}' failed after ${MAX_JSON_RETRIES + 1} attempts due to invalid JSON. Skip this tool and continue.`,
 					is_error: true,
 				}));
-				this.messages.push({ role: 'assistant', content: response.content as any });
+				this.messages.push({ role: 'assistant', content: historyContent as any });
 				this.messages.push({ role: 'user', content: skipResults });
 				continue;
 			}
 
 			if (toolUseBlocks.length === 0) {
-				// No tool calls — add assistant message (filtered) and exit loop
-				const finalContent = response.content.filter((b: any) => b.type !== 'thinking');
-				this.messages.push({ role: 'assistant', content: finalContent as any });
+				// No tool calls — add assistant message and exit loop
+				this.messages.push({ role: 'assistant', content: historyContent as any });
 				break;
 			}
 
@@ -513,11 +524,8 @@ export class AgentEngine {
 				};
 			}
 
-			// [Director-Code] A3: filter out thinking blocks before pushing to history
-			const contentForHistory = response.content.filter((b: any) => b.type !== 'thinking');
-
-			// Add assistant message (without thinking) to conversation
-			this.messages.push({ role: 'assistant', content: contentForHistory as any });
+			// Add assistant message to conversation
+			this.messages.push({ role: 'assistant', content: historyContent as any });
 
 			// Add tool results to conversation
 			this.messages.push({
@@ -588,6 +596,17 @@ export class AgentEngine {
 			block._rawInput = tool.input;
 		}
 		return block;
+	}
+
+	private shouldPreserveThinkingInHistory(): boolean {
+		return this.provider.apiType === 'openai-completions';
+	}
+
+	private contentForHistory(content: readonly NormalizedResponseBlock[]): NormalizedResponseBlock[] {
+		if (this.shouldPreserveThinkingInHistory()) {
+			return [...content];
+		}
+		return content.filter(block => block.type !== 'thinking');
 	}
 
 	// ========================================================================

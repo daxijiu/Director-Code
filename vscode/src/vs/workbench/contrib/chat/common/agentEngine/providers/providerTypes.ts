@@ -69,6 +69,25 @@ export interface ProviderCapabilities {
 	readonly streaming?: boolean;
 	readonly thinking?: boolean;
 	readonly agentMode?: boolean;
+	readonly reasoningEcho?: false | ProviderReasoningEcho;
+}
+
+export interface ProviderReasoningEcho {
+	readonly field: 'reasoning_content';
+	readonly includeEmpty?: boolean;
+}
+
+export function mergeProviderCapabilities(
+	base: ProviderCapabilities | undefined,
+	override: ProviderCapabilities | undefined,
+): ProviderCapabilities | undefined {
+	if (!base) {
+		return override;
+	}
+	if (!override) {
+		return base;
+	}
+	return { ...base, ...override };
 }
 
 /**
@@ -149,6 +168,9 @@ export type StreamEvent =
 export interface LLMProvider {
 	/** The API type this provider implements. */
 	readonly apiType: ApiType;
+
+	/** Capabilities for this provider/model combination. */
+	readonly capabilities?: ProviderCapabilities;
 
 	/** Send a message and get a complete response (used for compact, etc.). */
 	createMessage(params: CreateMessageParams): Promise<CreateMessageResponse>;

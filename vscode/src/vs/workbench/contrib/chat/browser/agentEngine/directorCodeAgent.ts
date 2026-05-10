@@ -56,6 +56,14 @@ const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
 const MAX_REPLAY_SNAPSHOTS = 16;
 const MAX_REPLAY_MESSAGES = 200;
 
+interface ReplaySnapshot {
+	readonly messages: NormalizedMessageParam[];
+	lastUpdated: number;
+	readonly provider: ProviderName;
+	readonly model: string;
+	readonly apiType: AgentEngineConfig['provider']['apiType'];
+}
+
 // ============================================================================
 // DirectorCodeAgent
 // ============================================================================
@@ -76,7 +84,7 @@ function modelForAuthVariant(provider: ProviderName, modelId: string, authVarian
 
 export class DirectorCodeAgent extends Disposable implements IChatAgentImplementation {
 
-	private readonly _replaySnapshots = new Map<string, { messages: NormalizedMessageParam[]; lastUpdated: number }>();
+	private readonly _replaySnapshots = new Map<string, ReplaySnapshot>();
 	private _chatServiceHooksRegistered = false;
 
 	constructor(
@@ -176,9 +184,11 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 
 			// 5. Convert history to normalized messages
 			const richResponses = this.getRichResponses(request, history.length);
-			const historyMessages = historyToNormalizedMessages(history, richResponses);
+			const historyMessages = historyToNormalizedMessages(history, richResponses, {
+				preserveThinking: apiType === 'openai-completions',
+			});
 			const replaySnapshot = this.getReplaySnapshot(request.sessionResource);
-			const previousMessages = this.shouldUseReplaySnapshot(historyMessages, history, richResponses, replaySnapshot)
+			const previousMessages = this.shouldUseReplaySnapshot(historyMessages, history, richResponses, replaySnapshot, provider, modelId, apiType)
 				? replaySnapshot!.messages
 				: historyMessages;
 
@@ -267,7 +277,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 				}
 			} finally {
 				cancelListener.dispose();
-				this.pushReplaySnapshot(request.sessionResource, engine.getMessages());
+				this.pushReplaySnapshot(request.sessionResource, engine.getMessages(), provider, modelId, apiType);
 			}
 
 			// [Director-Code] A2: explicit cancelled metadata — no errorDetails (avoids red error UI)
@@ -362,9 +372,15 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 		historyMessages: NormalizedMessageParam[],
 		history: IChatAgentHistoryEntry[],
 		richResponses: ReadonlyArray<ReadonlyArray<IChatProgressResponseContent>> | undefined,
-		replaySnapshot: { messages: NormalizedMessageParam[]; lastUpdated: number } | undefined,
+		replaySnapshot: ReplaySnapshot | undefined,
+		provider: ProviderName,
+		model: string,
+		apiType: AgentEngineConfig['provider']['apiType'],
 	): boolean {
 		if (!replaySnapshot || history.length === 0) {
+			return false;
+		}
+		if (replaySnapshot.provider !== provider || replaySnapshot.model !== model || replaySnapshot.apiType !== apiType) {
 			return false;
 		}
 		if (!richResponses || richResponses.length !== history.length) {
@@ -374,7 +390,7 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 		return !richHasToolInvocations && replaySnapshot.messages.length > historyMessages.length;
 	}
 
-	private getReplaySnapshot(sessionResource: IChatAgentRequest['sessionResource']): { messages: NormalizedMessageParam[]; lastUpdated: number } | undefined {
+	private getReplaySnapshot(sessionResource: IChatAgentRequest['sessionResource']): ReplaySnapshot | undefined {
 		const key = this.sessionKey(sessionResource);
 		const snapshot = this._replaySnapshots.get(key);
 		if (snapshot) {
@@ -383,7 +399,13 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 		return snapshot;
 	}
 
-	private pushReplaySnapshot(sessionResource: IChatAgentRequest['sessionResource'], messages: NormalizedMessageParam[]): void {
+	private pushReplaySnapshot(
+		sessionResource: IChatAgentRequest['sessionResource'],
+		messages: NormalizedMessageParam[],
+		provider: ProviderName,
+		model: string,
+		apiType: AgentEngineConfig['provider']['apiType'],
+	): void {
 		if (messages.length === 0) {
 			return;
 		}
@@ -406,6 +428,9 @@ export class DirectorCodeAgent extends Disposable implements IChatAgentImplement
 		this._replaySnapshots.set(key, {
 			messages: this.trimReplayMessages(messages),
 			lastUpdated: Date.now(),
+			provider,
+			model,
+			apiType,
 		});
 	}
 
