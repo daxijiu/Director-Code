@@ -5,6 +5,8 @@ const SCHEMA = 'docs/upgrade/schemas/report.schema.json';
 const reports = [
   'docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json',
   'docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json',
+  'docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json',
+  'docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json',
 ];
 
 function main() {

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:00:11.434Z",
+  "generatedAt": "2026-05-10T13:08:54.942Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 441,
-    "assetCount": 441,
+    "trackedOrPendingNonVscodeCount": 449,
+    "assetCount": 449,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -148,7 +148,9 @@
       "docs/upgrade/expected/112-stable-win32-x64-client/server-manifest.expected.json",
       "docs/upgrade/profiles/112-stable-win32-x64-client.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
+      "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
+      "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
       "docs/upgrade/schemas/change-inventory.schema.json",
       "docs/upgrade/schemas/deps-source-mutation-allowlist.schema.json",
       "docs/upgrade/schemas/profile.schema.json",
@@ -156,6 +158,7 @@
       "docs/upgrade/schemas/report.schema.json",
       "docs/upgrade/schemas/series.schema.json",
       "docs/upgrade/schemas/upstream-cache-manifest.schema.json",
+      "docs/upgrade/vscodium-layer.112.json",
       "docs/usage.md",
       "font-size/.artifactrc.yml",
       "font-size/.editorconfig",
@@ -252,8 +255,12 @@
       "scripts/upgrade/check-reference-drift.mjs",
       "scripts/upgrade/freeze-reference.mjs",
       "scripts/upgrade/generate-change-inventory.mjs",
+      "scripts/upgrade/generate-vscodium-layer.mjs",
+      "scripts/upgrade/materialize-vscode.mjs",
+      "scripts/upgrade/materialize-vscode.sh",
       "scripts/upgrade/reference-guard.sh",
       "scripts/upgrade/reference-manifest-lib.mjs",
+      "scripts/upgrade/safe-delete.sh",
       "scripts/upgrade/validate-all.mjs",
       "scripts/upgrade/validate-change-inventory.mjs",
       "scripts/upgrade/validate-json.mjs",
@@ -450,6 +457,7 @@
       "upload_sourcemaps.sh",
       "upstream/insider.json",
       "upstream/stable.json",
+      "upstream/vscodium-stable.json",
       "utils.sh",
       "version.sh"
     ],
@@ -2176,6 +2184,18 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "de9c6bc94bca35560baf380140ef64fbc6663e40fd61d02ea2bbb8e1518e4ef3",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
       "assetKind": "doc",
       "sourceClass": "director-owned",
@@ -2184,7 +2204,19 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "bc6d22c78055fedcbe042233b7029f3f39ed651c614bde83826235c93ce46be9",
+      "sha256": "85c097e8bb7da76f42dbe6b11cf3d690a9025da759ee177cbeccd8a3cf3a9922",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "542166e69b71d85e3e0b2fad3e7df06be7abca0dd5e317e650cc6350ad82aa8a",
       "notes": "P1 replay control plane."
     },
     {
@@ -2269,6 +2301,18 @@
       "executable": false,
       "mode": "100644",
       "sha256": "186c03a3c4d3358fc0aeba5f65aa43691709fe53edbdedfc0b17309ee563d5d5",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/vscodium-layer.112.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "34824a403d8f5c96b04e422b20ad4ed8b24fe8834b1b187be607e1b15d47fe4d",
       "notes": "P1 replay control plane."
     },
     {
@@ -3437,6 +3481,45 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "scripts/upgrade/generate-vscodium-layer.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "3630b29c7fc15e767a5c8ab120f5718409915ab954589af06dfe40eb5c94929c",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/materialize-vscode.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "c60036d69106aed2194e56005144325df24df5c81613616d9a46e441b779ac63",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/materialize-vscode.sh",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "6942b5bcafc09eebf73f18ebe84d02ca1c23c269e889c7df7cc09748d0a94151",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "scripts/upgrade/reference-guard.sh",
       "assetKind": "script",
       "sourceClass": "director-owned",
@@ -3460,6 +3543,19 @@
       "scriptScope": "standalone-tool",
       "mode": "100644",
       "sha256": "b433e0785caa6d409e40140e9b1fded32b86380af00a60b5c784319ce007e045",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/safe-delete.sh",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "217104e9659c21e5a76c7a120b2b2369c170e49bb55dc6042c35922a9c23d938",
       "notes": "P1 replay control plane."
     },
     {
@@ -3537,7 +3633,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "9679d9858c90f21363c8ae58dff902ba0feffddbc86e64c031e3d8e42bbd67cd",
+      "sha256": "e9b5f2da20f15a0d4c0195d334457578191e3bfd55a80acae474e18b0c88d636",
       "notes": "P1 replay control plane."
     },
     {
@@ -5826,6 +5922,18 @@
       "executable": false,
       "mode": "100644",
       "sha256": "f574b41116960654bfd5d90bdfa143f2374412da688d2032a004c5cde817935d",
+      "notes": "Tracked repository replay asset."
+    },
+    {
+      "path": "upstream/vscodium-stable.json",
+      "assetKind": "json",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "e1d55aea86bd0f4957946fa18a8e95ebbbfe9534396c8c83ce4bd4d14ddeb979",
       "notes": "Tracked repository replay asset."
     },
     {
