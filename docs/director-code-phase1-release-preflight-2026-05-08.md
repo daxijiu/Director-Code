@@ -113,7 +113,7 @@ Browser-test note: `npx playwright install chromium` failed with TLS `ECONNRESET
 - OpenAI OAuth/Codex: token exchange succeeded. `chatgpt.com/backend-api/codex/models` returned HTTP 200. Codex Responses endpoint returned non-auth HTTP 400. `api.openai.com` returned HTTP 429. Verdict remains to keep OpenAI OAuth on the independent `openai-codex` transport path.
 - Gemini D1: `generateContent` and `models.list` both returned HTTP 200 with the API key supplied only via `x-goog-api-key`.
 
-Detailed Gemini evidence is recorded in `docs/director-code-gemini-header-auth-smoke-D1.md`.
+Detailed Gemini evidence is recorded in `docs/expired/evidence/director-code-gemini-header-auth-smoke-D1.md`.
 
 ## Release Notes Draft
 

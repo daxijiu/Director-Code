@@ -16,7 +16,12 @@
       "Bash(npx mocha:*)",
       "Bash(node test/unit/node/index.js --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts\")",
       "Bash(npm run:*)",
-      "Bash(node test/unit/node/index.js --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts\")"
+      "Bash(node test/unit/node/index.js --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts\" --run \"src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts\")",
+      "Bash(node -e \"const {getHostArch} = require\\('@electron/get'\\); console.log\\(require\\('@electron/get'\\).getElectronCacheDir ? require\\('@electron/get'\\).getElectronCacheDir\\(\\) : 'N/A'\\)\")",
+      "Bash(node -e \"console.log\\(process.env.LOCALAPPDATA + '/electron/Cache'\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('product.json','r',encoding='utf-8'\\)\\); print\\('electronRepository:', d.get\\('electronRepository', 'NOT SET'\\)\\)\")",
+      "Bash(node -e ':*)",
+      "Bash(python -c ':*)"
     ]
   }
 }

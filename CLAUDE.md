@@ -66,8 +66,8 @@ npm run watch-client # 仅客户端
 | `.cursor/plan-03-provider-settings.md` | **Provider 与设置**: 双层架构、流式 Provider、密钥管理 |
 | `.cursor/plan-04-phase2-acp.md` | **Phase 2 ACP**: 协议层设计、参考 MCP+vscode-acp |
 | `.cursor/plan-05-phase3-cli.md` | **Phase 3 CLI**: 适配器框架、输出解析、外部编辑集成 |
-| `.cursor/copilot-chat-extension-analysis.md` | **Copilot Chat 源码分析**: ToolCallingLoop、BYOK、Provider 层 |
-| `.cursor/plans/phase_1_细节优化*.plan.md` | **Phase 1.5 细节优化计划**: 品牌修复、Test Connection、Provider 扩展 (已完成) |
+
+历史分析报告与已完成计划已归档到 `docs/expired/`，当前执行以 `.cursor/plan-01-roadmap.md` ~ `.cursor/plan-05-phase3-cli.md` 和 `docs/director-code-remediation-plan-v2.md` 为准。
 
 ### 实施路线
 

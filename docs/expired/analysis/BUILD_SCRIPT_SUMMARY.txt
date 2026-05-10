@@ -1,0 +1,59 @@
+BUILD SCRIPT ANALYSIS - CONCISE SUMMARY
+=====================================
+
+The ./dev/build.sh script works because it handles FIVE critical issues that manual gulp commands miss:
+
+1. MEMORY MANAGEMENT
+   - Script: export NODE_OPTIONS="--max-old-space-size=8192"
+   - Manual: ❌ No memory setting → Out-of-memory failures
+   - Why: Gulp tasks are memory-intensive
+
+2. ELECTRON BINARY DOWNLOAD
+   - Script: export ELECTRON_SKIP_BINARY_DOWNLOAD=1 during npm ci
+           → Prevents failed downloads during dependency install
+           → Electron is compiled later during gulp tasks
+   - Manual: ❌ Default behavior tries to download during npm
+   - Why: Network issues downloading Electron binary
+
+3. NPM CONFIGURATION TUNING
+   - Script: Custom .npmrc with:
+             • build_from_source=true (build native modules)
+             • legacy-peer-deps=true (allow mismatches)
+             • timeout=180000 (3min instead of default 2min)
+           • 5x retry loop with exponential backoff (30-150s delays)
+   - Manual: ❌ Default settings, no retry
+   - Why: Network timeouts and peer dependency conflicts
+
+4. PREPROCESSING STEP (prepare_vscode.sh)
+   - Script: Applies patches, modifies product.json BEFORE gulp
+   - Key fix: Changes extension gallery from Microsoft to open-vsx
+   - Manual: ❌ Skipped entirely
+   - Why: Critical configuration changes needed for fork to work
+
+5. INSTALLER GENERATION
+   - Script: Calls prepare_assets.sh which runs:
+             npm run gulp "vscode-win32-x64-system-setup"
+             npm run gulp "vscode-win32-x64-user-setup"
+             build/windows/msi/build.sh
+   - Manual: ❌ Skipped entirely
+   - Why: Setup.exe and MSI files only created here
+
+QUICK REFERENCE - Must-Haves for Manual Build:
+==============================================
+□ export NODE_OPTIONS="--max-old-space-size=8192"
+□ export ELECTRON_SKIP_BINARY_DOWNLOAD=1
+□ export VSCODE_SKIP_NODE_VERSION_CHECK="yes"
+□ cp npmrc vscode/.npmrc (with 180s timeout)
+□ Run . prepare_vscode.sh (before gulp)
+□ Run gulp tasks IN THIS ORDER:
+  - npm run gulp compile-build-without-mangling
+  - npm run gulp compile-extension-media
+  - npm run gulp compile-extensions-build
+  - npm run gulp minify-vscode
+  - npm run gulp vscode-win32-x64-min-ci
+□ Run . prepare_assets.sh (for setup.exe/MSI)
+
+Most likely reason manual build failed:
+→ Missing NODE_OPTIONS → Out of memory during minify-vscode
+→ Or: Skipped prepare_vscode.sh → Wrong extension gallery
+→ Or: Skipped prepare_assets.sh → No installer generated

@@ -2,7 +2,7 @@
 
 > **定位**：本文档是 Director-Code Phase 1/1.5/1.5+ 的**收口修复执行计划**。它负责 A-D 批次的修复决策、实现细节与验收标准。**路线图、阶段划分与长期规划仍以 `.cursor/` 计划文档为准**；本文档只负责当前收口修复，不替代 `.cursor/plan-01-roadmap.md` ~ `.cursor/plan-05-*.md`。
 >
-> **来源**：`docs/director-code-final-remediation-plan-by-GPT5.4-2026-04-15.md`（原始版本，保留存档）
+> **来源**：`docs/expired/plans/director-code-final-remediation-plan-by-GPT5.4-2026-04-15.md`（原始版本，保留存档）
 >
 > **修订记录**：
 > - v2.0（2026-04-15）：从原始版本整合定稿
