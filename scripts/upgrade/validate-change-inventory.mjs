@@ -5,6 +5,12 @@ import { run, toPosix } from './reference-manifest-lib.mjs';
 const INVENTORY = 'docs/upgrade/112-change-inventory.json';
 const SCHEMA = 'docs/upgrade/schemas/change-inventory.schema.json';
 const REPORT = 'docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json';
+const FIXED_GENERATED_PATHS = [
+  INVENTORY,
+  'docs/upgrade/script-migration-matrix.112.json',
+  REPORT,
+  'docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json',
+];
 const SOURCE_CLASSES = new Set(['upstream-vscode', 'vscodium-derived', 'director-owned', 'local-build-fix', 'generated-artifact', 'reference-only']);
 const EQUIVALENCE_SCOPES = new Set(['p1-strict', 'defer-non-p1', 'discard']);
 const SCRIPT_SCOPES = new Set(['vscode-mutating', 'artifact-producing', 'release-side-effect', 'standalone-tool', 'docs-only']);
@@ -60,11 +66,10 @@ function collectExpectedPaths() {
     .filter((filePath) => !filePath.startsWith('artifacts/generated/'))
     .filter((filePath) => !filePath.startsWith('artifacts/out/'));
 
-  if (!paths.includes(INVENTORY)) {
-    paths.push(INVENTORY);
-  }
-  if (!paths.includes(REPORT)) {
-    paths.push(REPORT);
+  for (const fixedPath of FIXED_GENERATED_PATHS) {
+    if (!paths.includes(fixedPath)) {
+      paths.push(fixedPath);
+    }
   }
 
   return [...new Set(paths)].sort();

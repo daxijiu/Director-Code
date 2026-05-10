@@ -2,6 +2,11 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+. "${SCRIPT_DIR}/scripts/upgrade/dry-run-guard.sh"
+dry_run_exit_if_requested "${BASH_SOURCE[0]}"
+dry_run_require_for_side_effect "${BASH_SOURCE[0]}"
+
 npm install -g checksum github-release-cli
 
 mkdir -p sourcemaps

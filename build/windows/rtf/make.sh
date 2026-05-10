@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P))"
+. "${REPO_ROOT}/scripts/upgrade/reference-guard.sh"
+reference_guard_assert_not_reference "${VSCODE_DIR:-${REPO_ROOT}/vscode}" "${BASH_SOURCE[0]}" || exit $?
+
 cd "$( dirname "${BASH_SOURCE[0]}" )"/../../../vscode || { echo "'vscode' dir not found"; exit 1; }
 
 input=LICENSE.txt

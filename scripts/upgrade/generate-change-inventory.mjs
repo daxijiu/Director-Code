@@ -7,6 +7,12 @@ import { getWorkspaceRoot, run, toPosix, writeJson } from './reference-manifest-
 const PROFILE_ID = '112-stable-win32-x64-client';
 const INVENTORY_PATH = 'docs/upgrade/112-change-inventory.json';
 const REPORT_PATH = `docs/upgrade/reports/${PROFILE_ID}/schema-inventory-report.json`;
+const FIXED_GENERATED_PATHS = [
+  'docs/upgrade/112-change-inventory.json',
+  'docs/upgrade/script-migration-matrix.112.json',
+  `docs/upgrade/reports/${PROFILE_ID}/schema-inventory-report.json`,
+  `docs/upgrade/reports/${PROFILE_ID}/script-artifact-report.json`,
+];
 
 const SOURCE_CLASSES = new Set([
   'upstream-vscode',
@@ -95,11 +101,10 @@ function collectReplayAssetPaths(root) {
     .filter((filePath) => !filePath.startsWith('artifacts/generated/'))
     .filter((filePath) => !filePath.startsWith('artifacts/out/'));
 
-  if (!paths.includes(INVENTORY_PATH)) {
-    paths.push(INVENTORY_PATH);
-  }
-  if (!paths.includes(REPORT_PATH)) {
-    paths.push(REPORT_PATH);
+  for (const fixedPath of FIXED_GENERATED_PATHS) {
+    if (!paths.includes(fixedPath)) {
+      paths.push(fixedPath);
+    }
   }
 
   return [...new Set(paths)].sort();
@@ -251,7 +256,7 @@ function classifyScriptScope(filePath) {
     return 'standalone-tool';
   }
 
-  if (/(release|upload|update_version|update_upstream|check_version)\.(sh|ps1|mjs|js|ts|py)$/.test(normalized)) {
+  if (/(release|upload|sourcemaps|update_version|update_upstream|check_version)\.(sh|ps1|mjs|js|ts|py)$/.test(normalized)) {
     return 'release-side-effect';
   }
 

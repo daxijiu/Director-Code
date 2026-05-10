@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:11:31.705Z",
+  "generatedAt": "2026-05-10T13:16:05.758Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 455,
-    "assetCount": 455,
+    "trackedOrPendingNonVscodeCount": 460,
+    "assetCount": 460,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -153,6 +153,7 @@
       "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
+      "docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
       "docs/upgrade/schemas/change-inventory.schema.json",
       "docs/upgrade/schemas/deps-source-mutation-allowlist.schema.json",
@@ -161,6 +162,7 @@
       "docs/upgrade/schemas/report.schema.json",
       "docs/upgrade/schemas/series.schema.json",
       "docs/upgrade/schemas/upstream-cache-manifest.schema.json",
+      "docs/upgrade/script-migration-matrix.112.json",
       "docs/upgrade/vscodium-layer.112.json",
       "docs/usage.md",
       "font-size/.artifactrc.yml",
@@ -257,8 +259,11 @@
       "product.json",
       "release.sh",
       "scripts/upgrade/check-reference-drift.mjs",
+      "scripts/upgrade/check-script-matrix.mjs",
+      "scripts/upgrade/dry-run-guard.sh",
       "scripts/upgrade/freeze-reference.mjs",
       "scripts/upgrade/generate-change-inventory.mjs",
+      "scripts/upgrade/generate-script-matrix.mjs",
       "scripts/upgrade/generate-series.mjs",
       "scripts/upgrade/generate-vscodium-layer.mjs",
       "scripts/upgrade/materialize-vscode.mjs",
@@ -941,7 +946,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "d527317eab418bdd09706aef95270dfd9777fd791254cdc9f666de78199a85e7",
+      "sha256": "b9a4f539f3c9f19255ac54677e927f4e3fc8a44a1d5581d329db9e47f7539ac3",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -1171,7 +1176,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "f7575bf7c296b2fbbf583e1737e0d71353cc8264323d99a4200ce66f0f376b35",
+      "sha256": "91a557f994ccdd3ba9a7780833d2feb17ee7ecb59931ad4ebed3912e6c1a2ad6",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -1184,7 +1189,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "dff6ad8d612a6a5e7c29fee614f056e15fadcfca3927eb858c224984a91c1d9e",
+      "sha256": "cd8d26c3ddfe8f0ab3ed290ab91b8f95db9cd510f5eeecd81ec0850ff3868432",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -1197,7 +1202,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "0ee89d3606a163ff5ae04b09ffeeb3972b395db487c16f34cc92f15583ec0518",
+      "sha256": "9f8c4c48c8fd3b230232a02cf0311ca865060a6c761ca911d39c8a8fcb6ff72d",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -1427,7 +1432,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "a43648f39b5325198bdc2f893963b817b0a7afc978c3382c69ebe50fbe2e22a9",
+      "sha256": "f6c7cc8345f6e7d3b6d52590a873ac68b8fe4c9d0162c6ccb52f1fe2a9ab05db",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -2246,7 +2251,19 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "6a2ec23d0f12c079463b8a221b56c6041759c3fc4bbc10f0b2ec381cf125a4ad",
+      "sha256": "bab0e1b7a65ade1528b52607f739dc5589544ccc75d52ad5bbdbf89836bf49b7",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "3adf11aa66e27f04582b51cb5539dca29b17b3a3a98d47720de33b61ca5c3875",
       "notes": "P1 replay control plane."
     },
     {
@@ -2343,6 +2360,18 @@
       "executable": false,
       "mode": "100644",
       "sha256": "186c03a3c4d3358fc0aeba5f65aa43691709fe53edbdedfc0b17309ee563d5d5",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/script-migration-matrix.112.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "009e4704e98184c684c0dea6d8ce23c21e85d67a00f79e84430a91dc08d1c535",
       "notes": "P1 replay control plane."
     },
     {
@@ -3441,7 +3470,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "e43c1a9155f804cdbf5795247d59c5c0d89e518b1b75fed54f3d07706a1d0ff9",
+      "sha256": "d50aa752512ebe835aed30f5c79d569f5efbd32ba7297d5b05a001aa4b77cd52",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -3454,7 +3483,7 @@
       "executable": true,
       "scriptScope": "artifact-producing",
       "mode": "100644",
-      "sha256": "dd293912f41f3f8905afab7e8d82d0a4568ddab48bc450ae05ba05f8090bac4a",
+      "sha256": "e43debb1fecfd3913f02de78c0229509a39ac28989f0623763a67162a176d422",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -3492,7 +3521,7 @@
       "executable": true,
       "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "23ab524bb5be4489ae7ffddfe772941809e01e54eaaab5515b86e1ff814ff27f",
+      "sha256": "dac235aa060020a7956ed6309aca862ffb7a117f921829fcc6a5cc871de4f315",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -3506,6 +3535,32 @@
       "scriptScope": "standalone-tool",
       "mode": "100644",
       "sha256": "ca8f181bb26007d3b4e90dcce3c74cb3a3cfb52a3653e29d3ccfb27cda9c160e",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/check-script-matrix.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "0cbdc7befaabdbb513d93195fa346f3ee7bb14602dcf22f02c155bebe7a0679f",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/dry-run-guard.sh",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "5706d15585bad5b63e84f7242b1fad595abe544f455872eaa4c02857028b55a2",
       "notes": "P1 replay control plane."
     },
     {
@@ -3531,7 +3586,20 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "5e3a2ff2dc1dd066feb24d2fdbffcda0d3dafad3aa33334c349a719f87d32022",
+      "sha256": "cca2148a7963ce836f1e2ce651375c6828245c6f4f516df3c4522e1ed1a739d0",
+      "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/generate-script-matrix.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "5171367d2f1b8158504987c520838020a8bd957bbcb38533b72620e58c8af59a",
       "notes": "P1 replay control plane."
     },
     {
@@ -3635,7 +3703,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "b36478be2a7bf9eb1a30c005f305f43a315d4f2b91cc88905918108521aaa9d8",
+      "sha256": "a162e037dddd18ab58690c897cefb27a8e392f01b24f907b6d522af64c70531f",
       "notes": "P1 replay control plane."
     },
     {
@@ -3648,7 +3716,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "3b52ecd66adec5ad3096799dc9e9c95a88ef56fc2314b6072ed6cdb8df4f913f",
+      "sha256": "d2636d63344069a9b7da91cf50b67f117fca6d41fcd2b9d25c285747135aebb8",
       "notes": "P1 replay control plane."
     },
     {
@@ -3700,7 +3768,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "11cb6c831aed1523d2bb1d58a9861d95c1e4e3cf1373e205ce26c70e35d8bf1b",
+      "sha256": "8542f07bf36f3f159e113441a6c8c50558c9430887ad631cfbb04993b742fe4b",
       "notes": "P1 replay control plane."
     },
     {
@@ -5838,7 +5906,7 @@
       "executable": true,
       "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "9c6d3dbb99e9ece886e002a3fc845048761a032509c8d08035d17a3fbbb46bd9",
+      "sha256": "703d692fbef893a20bb365396dfb62e4df95469d778641dc649140544175ef11",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -5925,7 +5993,7 @@
       "executable": true,
       "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "d4b6b7dff19e50980761828c16237e9ebad1993efdf8f9debad7e81ada029fa2",
+      "sha256": "18cef0a95c7a57c1fd52a765f45047d86396423e2e590794d68a2849c1952511",
       "notes": "Build, development, packaging, or auxiliary replay asset."
     },
     {
@@ -5951,7 +6019,7 @@
       "executable": true,
       "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "a8135e309f0c77b049b105ecf0636b6291439d7a586b8e83ea43033018daafbe",
+      "sha256": "4f70e0aa880bf11c63e3caa01f0e1e77323f03cd0411163d5958b7e1a25c10a2",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -5964,7 +6032,7 @@
       "executable": true,
       "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "42fd0926f3527398bedcdccb4823bb0044aaf8779781f2832417afd4ef073cb9",
+      "sha256": "7c09720395594a44a4511ff7216bea3d82fb32dd2f038f8ce0806b73a909c92d",
       "notes": "Tracked repository replay asset."
     },
     {
@@ -5975,9 +6043,9 @@
       "equivalenceScope": "p1-strict",
       "replaySet": "replay-assets",
       "executable": true,
-      "scriptScope": "standalone-tool",
+      "scriptScope": "release-side-effect",
       "mode": "100644",
-      "sha256": "65673282c6a16332990e540f914bb6ebb059715036188fe41f4495db13185b84",
+      "sha256": "67e62e4a7c2284318ff0756d9915b0ff4a7787ad0f15d5346f8e450136102025",
       "notes": "Tracked repository replay asset."
     },
     {

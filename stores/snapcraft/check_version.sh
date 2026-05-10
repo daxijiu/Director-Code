@@ -3,6 +3,13 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+. "${SCRIPT_DIR}/scripts/upgrade/dry-run-guard.sh"
+if dry_run_is_offline; then
+  echo "DRY_RUN=offline: skipping snapcraft version network/store checks."
+  exit 0
+fi
+
 export SHOULD_BUILD="no"
 export SHOULD_DEPLOY_TO_RELEASE="no"
 export SHOULD_DEPLOY_TO_STORE="no"

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "phase": "P1",
+  "batch": "script-artifact",
+  "status": "degraded",
+  "generatedAt": "2026-05-10T13:16:05.369Z",
+  "checks": {
+    "executableInventoryLoaded": "passed",
+    "referenceGuardCoverage": "blocked-recorded",
+    "dryRunCoverage": "passed",
+    "artifactsOutPrepared": "passed"
+  },
+  "summary": {
+    "executableAssets": 88,
+    "migratedOrStaticChecked": 77,
+    "blockedLegacyEntrypoints": 11
+  },
+  "blocked": [
+    {
+      "path": ".github/workflows/insider-linux.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-macos.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-spearhead.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-windows.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/lock.yml",
+      "scriptScope": "standalone-tool",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "scriptScope": "standalone-tool",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-linux.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-macos.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-spearhead.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-windows.yml",
+      "scriptScope": "artifact-producing",
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stale.yml",
+      "scriptScope": "standalone-tool",
+      "reason": "Workflow path migration is handled in Batch 6."
+    }
+  ]
+}

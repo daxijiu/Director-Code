@@ -1,0 +1,721 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "generatedAt": "2026-05-10T13:16:05.369Z",
+  "policy": {
+    "referenceGuardRequiredFor": [
+      "vscode-mutating",
+      "artifact-producing"
+    ],
+    "dryRunRequiredFor": [
+      "release-side-effect"
+    ],
+    "blockedLegacyEntrypointsAllowedOnlyWithReport": true
+  },
+  "entries": [
+    {
+      "path": ".github/dependabot.yml",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": ".github/workflows/insider-linux.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-macos.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-spearhead.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/insider-windows.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/lock.yml",
+      "scriptScope": "standalone-tool",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "scriptScope": "standalone-tool",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-linux.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-macos.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-spearhead.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stable-windows.yml",
+      "scriptScope": "artifact-producing",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": ".github/workflows/stale.yml",
+      "scriptScope": "standalone-tool",
+      "status": "blocked-workflow-migration",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Workflow path migration is handled in Batch 6."
+    },
+    {
+      "path": "build.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/alpine/package_reh.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/linux/appimage/build.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/linux/appimage/recipe.yml",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/deps.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/install_gh.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/install_nodejs.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/loong64/electron.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/loong64/ripgrep.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/package_bin.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/linux/package_reh.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/linux/ppc64le/electron.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/riscv64/electron.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/riscv64/ripgrep.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/verify_abi_requirements.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/linux/verify_cxx11_requirements.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build/windows/appx/build.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/windows/msi/build-updates-disabled.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/windows/msi/build.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/windows/package.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "build/windows/rtf/make.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "build_cli.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "check_cron_or_pr.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "check_tags.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/build.ps1",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/build.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "dev/build_docker.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/cli.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/merge-patches.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "dev/patch.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "dev/smoke-anthropic-oauth.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/smoke-gemini-header-auth.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/smoke-openai-codex-oauth.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/update_api.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "dev/update_patches.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "dev/verify-c5-build-scripts.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "font-size/.artifactrc.yml",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "font-size/generate-css.ts",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "get_pr.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "get_repo.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "icons/build_icons.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "prepare_assets.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "prepare_checksums.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "prepare_src.sh",
+      "scriptScope": "artifact-producing",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "prepare_vscode.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "release.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "scripts/upgrade/check-reference-drift.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/check-script-matrix.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/dry-run-guard.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/freeze-reference.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/generate-change-inventory.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/generate-script-matrix.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/generate-series.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/generate-vscodium-layer.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/materialize-vscode.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/materialize-vscode.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/reference-guard.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/reference-manifest-lib.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/safe-delete.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-all.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-change-inventory.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-json.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-profile.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-reference-manifest.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-report.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "scripts/upgrade/validate-series.mjs",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": true,
+      "dryRunGuard": true,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "stores/snapcraft/check_version.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "stores/snapcraft/insider/snap/snapcraft.yaml",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "stores/snapcraft/stable/snap/snapcraft.yaml",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "stores/winget/check_version.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "undo_telemetry.sh",
+      "scriptScope": "vscode-mutating",
+      "status": "migrated",
+      "referenceGuard": true,
+      "dryRunGuard": false,
+      "reason": "Entrypoint resolves and blocks frozen reference paths."
+    },
+    {
+      "path": "update_upstream.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "update_version.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "upload_sourcemaps.sh",
+      "scriptScope": "release-side-effect",
+      "status": "dry-run-blocked",
+      "referenceGuard": false,
+      "dryRunGuard": true,
+      "reason": "Release side effects exit early under DRY_RUN and refuse non-dry P1 execution."
+    },
+    {
+      "path": "utils.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    },
+    {
+      "path": "version.sh",
+      "scriptScope": "standalone-tool",
+      "status": "static-checked",
+      "referenceGuard": false,
+      "dryRunGuard": false,
+      "reason": "Standalone executable asset is syntax/static checked."
+    }
+  ]
+}

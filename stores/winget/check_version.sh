@@ -2,6 +2,13 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+. "${SCRIPT_DIR}/scripts/upgrade/dry-run-guard.sh"
+if dry_run_is_offline; then
+  echo "DRY_RUN=offline: skipping winget version network checks."
+  exit 0
+fi
+
 VERSIONS=$( curl --silent "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/v/${APP_IDENTIFIER//.//}" )
 
 if [[ "${VSCODE_QUALITY}" == "insider" ]]; then
