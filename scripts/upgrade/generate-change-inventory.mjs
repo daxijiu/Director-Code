@@ -164,6 +164,26 @@ function classifyPath(filePath) {
     };
   }
 
+  if (filePath === 'patches/replay/001-vscodium-layer.112.patch') {
+    return {
+      sourceClass: 'vscodium-derived',
+      disposition: 'replay-active',
+      equivalenceScope: 'p1-strict',
+      replaySet: 'replay-assets',
+      notes: 'Aggregate VSCodium 1.112.01907 materialized source transform generated from the clean upstream VSCodium tag.',
+    };
+  }
+
+  if (filePath === 'patches/replay/002-director-delta.112.patch') {
+    return {
+      sourceClass: 'director-owned',
+      disposition: 'replay-active',
+      equivalenceScope: 'p1-strict',
+      replaySet: 'replay-assets',
+      notes: 'Aggregate Director delta from the materialized VSCodium baseline to the frozen reference, excluding declared reference overlays.',
+    };
+  }
+
   if (filePath.startsWith('patches/')) {
     return {
       sourceClass: 'vscodium-derived',

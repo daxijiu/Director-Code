@@ -3,34 +3,47 @@
   "profile": "112-stable-win32-x64-client",
   "phase": "P1",
   "batch": "replay-equivalence",
-  "status": "degraded",
-  "generatedAt": "2026-05-10T13:11:31.318Z",
+  "status": "passed",
+  "generatedAt": "2026-05-11T02:46:03.389Z",
   "checks": {
     "patchSeriesValidation": "passed",
-    "overlayAllowlist": "captured",
+    "aggregateReplayPatches": "passed",
+    "referenceOverlayApplication": "passed",
     "productExpected": "captured",
-    "sourceEquivalence": "blocked-until-layer-application"
+    "sourceEquivalence": "passed"
   },
   "inputs": {
     "referenceManifest": "docs/upgrade/112-reference-manifest.json",
     "patchSeries": "patches/series.112.json",
-    "overlayAllowlist": "docs/upgrade/overlay-allowlist.112.json",
-    "productDelete": "docs/upgrade/product.delete.112.json",
-    "productExpected": "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json"
+    "vscodiumLayerPatch": "patches/replay/001-vscodium-layer.112.patch",
+    "directorDeltaPatch": "patches/replay/002-director-delta.112.patch",
+    "referenceOverlays": "docs/upgrade/reference-overlays.112.json"
   },
   "patchSeries": {
-    "count": 60,
-    "enabled": 57,
+    "count": 62,
+    "enabled": 59,
     "deferred": 1,
     "archived": 2,
-    "vscodiumLayer": 0,
-    "directorLayer": 60
+    "vscodiumLayer": 1,
+    "directorLayer": 61,
+    "aggregateReplay": 2
   },
-  "blockers": [
-    {
-      "id": "source-equivalence",
-      "status": "recorded",
-      "detail": "Strict source equivalence requires Layer 1 and Director delta application. Current materialize scaffold writes bootstrap checkpoints only; the blocker is carried forward while script/artifact/docs migration proceeds."
-    }
-  ]
+  "referenceOverlays": {
+    "manifest": "docs/upgrade/reference-overlays.112.json",
+    "restoredCount": 72,
+    "unavailableCount": 0
+  },
+  "sourceEquivalence": {
+    "status": "passed",
+    "referenceManifest": "docs/upgrade/112-reference-manifest.json",
+    "expectedFiles": 10039,
+    "checkedFiles": 10039,
+    "missingCount": 0,
+    "changedCount": 0,
+    "extraCount": 0,
+    "missing": [],
+    "changed": [],
+    "extra": []
+  },
+  "blockers": []
 }

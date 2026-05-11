@@ -13,6 +13,7 @@ docs/upgrade/**/*.json text eol=lf
 patches/**/*.patch text eol=lf
 patches/**/*.patch.no text eol=lf
 patches/**/*.patch.yet text eol=lf
+patches/replay/*.patch binary
 
 *.png binary
 *.bmp binary

@@ -1,0 +1,1454 @@
+{
+  "schemaVersion": 1,
+  "profile": "112-stable-win32-x64-client",
+  "generatedAt": "2026-05-11T02:37:39.537Z",
+  "policy": {
+    "source": "frozen local reference manifest",
+    "restoreOrder": "after director delta patch before equivalence",
+    "sources": [
+      "local frozen vscode/ reference when present",
+      "outer git commit blob when raw hash matches"
+    ]
+  },
+  "overlays": [
+    {
+      "path": "cli/vscode-openssl-prebuilt-0.0.11.tgz",
+      "size": 71332351,
+      "mode": "100644",
+      "rawSha256": "4268a3c44a197d1f9559a77b982eb9825c16293064e8d1439661e18738f33243",
+      "normalizedSha256": "4268a3c44a197d1f9559a77b982eb9825c16293064e8d1439661e18738f33243",
+      "reason": "large-reference-binary-excluded-from-director-delta-patch",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/cli/vscode-openssl-prebuilt-0.0.11.tgz"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/cli/vscode-openssl-prebuilt-0.0.11.tgz"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/platform/telemetry/common/1dsAppender.ts",
+      "size": 5831,
+      "mode": "100644",
+      "rawSha256": "8752cf4466a31e6235ffaba092927a7d0edfd6b2ae64b9eb0af47727f2ae5724",
+      "normalizedSha256": "8752cf4466a31e6235ffaba092927a7d0edfd6b2ae64b9eb0af47727f2ae5724",
+      "generatedNormalizedSha256": "8752cf4466a31e6235ffaba092927a7d0edfd6b2ae64b9eb0af47727f2ae5724",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/platform/telemetry/common/1dsAppender.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/platform/telemetry/common/1dsAppender.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
+      "size": 11647,
+      "mode": "100644",
+      "rawSha256": "6776a2ceca25886a10c7f380f38a6833ac51a6c182d695aca4958a1ce9c46cc3",
+      "normalizedSha256": "5b46c49a239f08ecea058edd5556669bc370f3d8c81006fcd5efa4a4ef37a588",
+      "generatedNormalizedSha256": "5b46c49a239f08ecea058edd5556669bc370f3d8c81006fcd5efa4a4ef37a588",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts",
+      "size": 15438,
+      "mode": "100644",
+      "rawSha256": "a30381e1c7c3da8c646bb0c72a32f069b53fa360a2eb6e3111a84ee955ecf732",
+      "normalizedSha256": "5693f4d620b73cd8dcd33355d9b4ee7b3724b965e92121aa1cf0f72a3b9f8515",
+      "generatedNormalizedSha256": "5693f4d620b73cd8dcd33355d9b4ee7b3724b965e92121aa1cf0f72a3b9f8515",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/auxiliaryModelSelection.ts",
+      "size": 2521,
+      "mode": "100644",
+      "rawSha256": "2c88fbf0cb81cc7e0c190ea3e50df13c507ad9f020d0e6a48d6c303c8083b235",
+      "normalizedSha256": "2c88fbf0cb81cc7e0c190ea3e50df13c507ad9f020d0e6a48d6c303c8083b235",
+      "generatedNormalizedSha256": "2c88fbf0cb81cc7e0c190ea3e50df13c507ad9f020d0e6a48d6c303c8083b235",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/auxiliaryModelSelection.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/auxiliaryModelSelection.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts",
+      "size": 17529,
+      "mode": "100644",
+      "rawSha256": "0627243298a3227ea5c514217e098043f0a3805d6e9fdd0e0f98cd468780d55f",
+      "normalizedSha256": "2dd00abfbac1fd3327f9582987d6267cca3996a68734b000a67041f9b556c687",
+      "generatedNormalizedSha256": "2dd00abfbac1fd3327f9582987d6267cca3996a68734b000a67041f9b556c687",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts",
+      "size": 15279,
+      "mode": "100644",
+      "rawSha256": "4a1f9d5e278a52cba6cf60b4a4625828f05cb1c753b00fd2367420948587573b",
+      "normalizedSha256": "088cc9f1336f80d642ea1c606abccd4cce6d7af791681256767251980e2e3cc8",
+      "generatedNormalizedSha256": "088cc9f1336f80d642ea1c606abccd4cce6d7af791681256767251980e2e3cc8",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts",
+      "size": 13478,
+      "mode": "100644",
+      "rawSha256": "0b50c360ec3cfde8e258a6523893473954f98763598f935ecc25c2c00d420d77",
+      "normalizedSha256": "01180b653f94f554574aeaf3272ab9c14237c588b18bacc1d741ff2e3a100f35",
+      "generatedNormalizedSha256": "01180b653f94f554574aeaf3272ab9c14237c588b18bacc1d741ff2e3a100f35",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/media/directorCodeSettings.css",
+      "size": 7379,
+      "mode": "100644",
+      "rawSha256": "9d9fbf286e9700d659d8be3bb6147c342ef9878e70321a9fc7f14b1f4739651e",
+      "normalizedSha256": "cb49bb6b8a81a28c5af8ad0c2c2a6359f172e3195179b9518841fb6ee974ec6a",
+      "generatedNormalizedSha256": "cb49bb6b8a81a28c5af8ad0c2c2a6359f172e3195179b9518841fb6ee974ec6a",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/media/directorCodeSettings.css"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/media/directorCodeSettings.css"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts",
+      "size": 12628,
+      "mode": "100644",
+      "rawSha256": "f115a2b19271fc8e859b12877539ebbb65eb8a88e2bd5765940df406c7cf2b89",
+      "normalizedSha256": "23e9026f0ed843e56e27f1984b622c1b49cebda5b600717dcf7acfea31488687",
+      "generatedNormalizedSha256": "23e9026f0ed843e56e27f1984b622c1b49cebda5b600717dcf7acfea31488687",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/oauthWidget.ts",
+      "size": 11842,
+      "mode": "100644",
+      "rawSha256": "d32293b4b73685ff83c964a60b58565e2166605f42dbbed325723ee9909f1918",
+      "normalizedSha256": "d32293b4b73685ff83c964a60b58565e2166605f42dbbed325723ee9909f1918",
+      "generatedNormalizedSha256": "d32293b4b73685ff83c964a60b58565e2166605f42dbbed325723ee9909f1918",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/oauthWidget.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/oauthWidget.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts",
+      "size": 6337,
+      "mode": "100644",
+      "rawSha256": "ac1fb123cb5c4ab1c749f75c620e9a9941816097914425a5f54cd16cbea517d3",
+      "normalizedSha256": "080c7439214e1b8f98ab5df016fe2517d9f0bf7175c49c1a269ad1f316c0d488",
+      "generatedNormalizedSha256": "080c7439214e1b8f98ab5df016fe2517d9f0bf7175c49c1a269ad1f316c0d488",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/providerSettingsWidget.ts",
+      "size": 21482,
+      "mode": "100644",
+      "rawSha256": "a934fe052e483da1e48c1ab9f79ac97ad4b691cdd412f6e5ac1b33dfcd5d261f",
+      "normalizedSha256": "338abc98611de8a7d2f75cb6c9c1575723df0da258daef2328d613d39fe6ddab",
+      "generatedNormalizedSha256": "338abc98611de8a7d2f75cb6c9c1575723df0da258daef2328d613d39fe6ddab",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/providerSettingsWidget.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/agentEngine/providerSettingsWidget.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts",
+      "size": 12826,
+      "mode": "100644",
+      "rawSha256": "4ee01e185b4a9be22a463caa45ebfb801b379b290ecf0bc8ab7b07ee1106a8db",
+      "normalizedSha256": "cd7fa9daad3905aaf0fcad88cf088f1b0ed3e8a2e9eb2a2db5b59f105346af2a",
+      "generatedNormalizedSha256": "cd7fa9daad3905aaf0fcad88cf088f1b0ed3e8a2e9eb2a2db5b59f105346af2a",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts",
+      "size": 64003,
+      "mode": "100644",
+      "rawSha256": "a8183c4a782a721ba5bcd377e7c48cf285922995ee5c2b71c754b10332d52daa",
+      "normalizedSha256": "bd1481901399c1e7766401500ef43e7380dbf9d2a11d156e10e35249bbe2a50e",
+      "generatedNormalizedSha256": "bd1481901399c1e7766401500ef43e7380dbf9d2a11d156e10e35249bbe2a50e",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts",
+      "size": 30061,
+      "mode": "100644",
+      "rawSha256": "0f0b722f3265f2e8e2cb322cb2f1c138b8099f7b7a8988e01ae2b05e39592d75",
+      "normalizedSha256": "5fca73349a8d2ed922832f40faf7b8bb8c8971b723ef77cda4ed8eee956b3ef3",
+      "generatedNormalizedSha256": "5fca73349a8d2ed922832f40faf7b8bb8c8971b723ef77cda4ed8eee956b3ef3",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts",
+      "size": 11115,
+      "mode": "100644",
+      "rawSha256": "d3eb70ef00a16cf11f723f6633821f4c84a7264de612e026da8a8adb4a98b8ef",
+      "normalizedSha256": "b22c94625daec19a974adfa44832821fcffbeb953b24f3e1cb39a22c5015b10f",
+      "generatedNormalizedSha256": "b22c94625daec19a974adfa44832821fcffbeb953b24f3e1cb39a22c5015b10f",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts",
+      "size": 26489,
+      "mode": "100644",
+      "rawSha256": "88e25a871e75db8cd74134685bd7008949278fcd001283a98bde4ef3d6ac7ead",
+      "normalizedSha256": "41e8c35a52714fbb1670cbff2362b71b93e5a7cbad189748fbb4f473ae712993",
+      "generatedNormalizedSha256": "41e8c35a52714fbb1670cbff2362b71b93e5a7cbad189748fbb4f473ae712993",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts",
+      "size": 6788,
+      "mode": "100644",
+      "rawSha256": "71124e0c40022a56a5660a03c4275a4964348b21023cde5c984a41a55777cc63",
+      "normalizedSha256": "f023149482e74f30bf0721e996e62e1b174a1623f49331578624f23ccf9e2b7b",
+      "generatedNormalizedSha256": "f023149482e74f30bf0721e996e62e1b174a1623f49331578624f23ccf9e2b7b",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts",
+      "size": 21067,
+      "mode": "100644",
+      "rawSha256": "5f9b0b9a78cf7ea546245cff6825c397a0fa5a7856edaf319ae67b15abe85a63",
+      "normalizedSha256": "06e3a9515883a9a112393f50204d297a307797526373bc51fdfe77910160431d",
+      "generatedNormalizedSha256": "06e3a9515883a9a112393f50204d297a307797526373bc51fdfe77910160431d",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts",
+      "size": 8402,
+      "mode": "100644",
+      "rawSha256": "2a6d682d0e1b69a6990809838c4ecabcd5e1c697144b1b763f06e8fca6b1fc0f",
+      "normalizedSha256": "2a6d682d0e1b69a6990809838c4ecabcd5e1c697144b1b763f06e8fca6b1fc0f",
+      "generatedNormalizedSha256": "2a6d682d0e1b69a6990809838c4ecabcd5e1c697144b1b763f06e8fca6b1fc0f",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/compact.ts",
+      "size": 12988,
+      "mode": "100644",
+      "rawSha256": "0a14890e89277d3ca800387b1fc0111637d4d9659e1fe9b9e7e43ff5a491dc7d",
+      "normalizedSha256": "3d5dc2abba506eb464f4d7c3a1b528dfdc45a05ee57b4e9ec5401daa122f17cd",
+      "generatedNormalizedSha256": "3d5dc2abba506eb464f4d7c3a1b528dfdc45a05ee57b4e9ec5401daa122f17cd",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts",
+      "size": 3620,
+      "mode": "100644",
+      "rawSha256": "b4662893d910ff14b511270bcc512d4551c99a5c9fd08e967fa1b2d0eb469b9c",
+      "normalizedSha256": "b4662893d910ff14b511270bcc512d4551c99a5c9fd08e967fa1b2d0eb469b9c",
+      "generatedNormalizedSha256": "b4662893d910ff14b511270bcc512d4551c99a5c9fd08e967fa1b2d0eb469b9c",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/geminiAuth.ts",
+      "size": 904,
+      "mode": "100644",
+      "rawSha256": "6c39d7522a49b723898ba4b3cc0cfe67f84e6a2c64c923bb083b687b88ee9b0d",
+      "normalizedSha256": "6c39d7522a49b723898ba4b3cc0cfe67f84e6a2c64c923bb083b687b88ee9b0d",
+      "generatedNormalizedSha256": "6c39d7522a49b723898ba4b3cc0cfe67f84e6a2c64c923bb083b687b88ee9b0d",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/geminiAuth.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/geminiAuth.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/modelCatalog.ts",
+      "size": 11936,
+      "mode": "100644",
+      "rawSha256": "986f89ac961449c6939de3a415aea33a02629a7961d7dcbf157c83d6d71bf413",
+      "normalizedSha256": "313e355407975b00c30d716d5bdb2677b7fbb8c50e15130d780135669565a5c3",
+      "generatedNormalizedSha256": "313e355407975b00c30d716d5bdb2677b7fbb8c50e15130d780135669565a5c3",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/modelCatalog.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/modelCatalog.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/modelResolver.ts",
+      "size": 18716,
+      "mode": "100644",
+      "rawSha256": "82be37f8224e53c114adf36a1667a92fe048e66b85f23c10f47d6e797380d725",
+      "normalizedSha256": "14f94c7cb64d2fc497348bb37dcd9e4e7e13a4c9ae6e1eb1ec6a9ff091aee8a3",
+      "generatedNormalizedSha256": "14f94c7cb64d2fc497348bb37dcd9e4e7e13a4c9ae6e1eb1ec6a9ff091aee8a3",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/modelResolver.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/modelResolver.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/oauthLoginController.ts",
+      "size": 7375,
+      "mode": "100644",
+      "rawSha256": "4bd333ee5d821bdd651b578d2b205e1c2b84754a79cd595ce5da15a889b5b471",
+      "normalizedSha256": "4bd333ee5d821bdd651b578d2b205e1c2b84754a79cd595ce5da15a889b5b471",
+      "generatedNormalizedSha256": "4bd333ee5d821bdd651b578d2b205e1c2b84754a79cd595ce5da15a889b5b471",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/oauthLoginController.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/oauthLoginController.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/oauthService.ts",
+      "size": 36462,
+      "mode": "100644",
+      "rawSha256": "b139cfebc63c483401b5139583c0a49515ed0410f1b0f467fab540a72fe842b3",
+      "normalizedSha256": "58b310ba47764b564d1c2633317c3eab62667bae7001045b7376b348d13e5593",
+      "generatedNormalizedSha256": "58b310ba47764b564d1c2633317c3eab62667bae7001045b7376b348d13e5593",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/oauthService.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/oauthService.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/abstractProvider.ts",
+      "size": 6916,
+      "mode": "100644",
+      "rawSha256": "3a58e7f978aaa67b3ac4a075c2c6ab76ea3858adcff5aa5259f765a45d66b6eb",
+      "normalizedSha256": "f9abaaea0c14cbaa0f7a1eab5d16e90352a05990896aeabb2115c6689e4c19eb",
+      "generatedNormalizedSha256": "f9abaaea0c14cbaa0f7a1eab5d16e90352a05990896aeabb2115c6689e4c19eb",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/abstractProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/abstractProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/anthropicProvider.ts",
+      "size": 8584,
+      "mode": "100644",
+      "rawSha256": "341708fae35d08e27e616c067e3fa19af56f56c3e24a98a23d427ea2d5ff195c",
+      "normalizedSha256": "cbea1743f0ed8b62d0dbb27a720eb9e402c95461ac33259560e6fef5b827fbed",
+      "generatedNormalizedSha256": "cbea1743f0ed8b62d0dbb27a720eb9e402c95461ac33259560e6fef5b827fbed",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/anthropicProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/anthropicProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/geminiProvider.ts",
+      "size": 12171,
+      "mode": "100644",
+      "rawSha256": "28548a06e5b090c4d40011c32ea82682051e7e8327c9f5a11571b9b87feaa714",
+      "normalizedSha256": "74eabf69d91df170faba0f0e8626dcf749eed7f4dc48c0b47c49e3597ac82caa",
+      "generatedNormalizedSha256": "74eabf69d91df170faba0f0e8626dcf749eed7f4dc48c0b47c49e3597ac82caa",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/geminiProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/geminiProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiCodexProvider.ts",
+      "size": 14778,
+      "mode": "100644",
+      "rawSha256": "1ef8b151f70930a80fc65918e1344cd4e621f8ec088d46a37c9df161930c4a6e",
+      "normalizedSha256": "1ef8b151f70930a80fc65918e1344cd4e621f8ec088d46a37c9df161930c4a6e",
+      "generatedNormalizedSha256": "1ef8b151f70930a80fc65918e1344cd4e621f8ec088d46a37c9df161930c4a6e",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiCodexProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiCodexProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiProvider.ts",
+      "size": 17820,
+      "mode": "100644",
+      "rawSha256": "7092b8f20d858d88117ab88556bf60ec82ce081e72fa57496b81cf3373275a29",
+      "normalizedSha256": "ee58368344f69cae845847ca9f9648934edfc6a11cc01cee03e95479464f0352",
+      "generatedNormalizedSha256": "ee58368344f69cae845847ca9f9648934edfc6a11cc01cee03e95479464f0352",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiProvider.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiProvider.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/providerFactory.ts",
+      "size": 2485,
+      "mode": "100644",
+      "rawSha256": "5cbe171df54b687ee6f1c3fefa2f4573ca6c0252dd627902d51dc7d3b4b4c8f3",
+      "normalizedSha256": "3dd7a8067bb5d17f9612753b4a48c2834f566f7a722ae59ae692c93750fae768",
+      "generatedNormalizedSha256": "3dd7a8067bb5d17f9612753b4a48c2834f566f7a722ae59ae692c93750fae768",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/providerFactory.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/providerFactory.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/providerTypes.ts",
+      "size": 6945,
+      "mode": "100644",
+      "rawSha256": "1c27cbb72cfb578c72ebc87a73d94139ca8ee69100be52fe083b1a824f63cc91",
+      "normalizedSha256": "beb78aff44d49fe7557ea46d05c184c12a37430d6766c5b0aa99820e5eb13577",
+      "generatedNormalizedSha256": "beb78aff44d49fe7557ea46d05c184c12a37430d6766c5b0aa99820e5eb13577",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/providerTypes.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/providers/providerTypes.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/settingsWriteQueue.ts",
+      "size": 1935,
+      "mode": "100644",
+      "rawSha256": "d1aca633818e18ff0e5dc2d339c6b76dd2cd4c5bdecf8334a130b41e0793dc18",
+      "normalizedSha256": "d1aca633818e18ff0e5dc2d339c6b76dd2cd4c5bdecf8334a130b41e0793dc18",
+      "generatedNormalizedSha256": "d1aca633818e18ff0e5dc2d339c6b76dd2cd4c5bdecf8334a130b41e0793dc18",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/settingsWriteQueue.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/settingsWriteQueue.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts",
+      "size": 4182,
+      "mode": "100644",
+      "rawSha256": "f561fa70fba9621a5dacb05046643d19c6cc73bba8ead75e1b86bd4186a58d3f",
+      "normalizedSha256": "acff7332e61a92aed4c1400767fba7590e23a760e0dbe98c0341fac9d722e0be",
+      "generatedNormalizedSha256": "acff7332e61a92aed4c1400767fba7590e23a760e0dbe98c0341fac9d722e0be",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/common/participants/chatAgents.ts",
+      "size": 30447,
+      "mode": "100644",
+      "rawSha256": "9ff02141fab7d6bb9199fea9d11bfaf19fb5af6931a85ee6917d71cfb16a53dd",
+      "normalizedSha256": "fb5e8ac5c2d628cbf8504d0acdd0b0ae512ec39e733eba695c55ce30aa797154",
+      "generatedNormalizedSha256": "fb5e8ac5c2d628cbf8504d0acdd0b0ae512ec39e733eba695c55ce30aa797154",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts",
+      "size": 9308,
+      "mode": "100644",
+      "rawSha256": "a8a71994435f9a44934ad7aaa0910f2a084d6680c7848ed5f1552bafe40d6356",
+      "normalizedSha256": "a8a71994435f9a44934ad7aaa0910f2a084d6680c7848ed5f1552bafe40d6356",
+      "generatedNormalizedSha256": "a8a71994435f9a44934ad7aaa0910f2a084d6680c7848ed5f1552bafe40d6356",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts",
+      "size": 192759,
+      "mode": "100644",
+      "rawSha256": "320ab2f9003e23cb5464406cd567d89fa624e2d5bed7cd32d1dd6be9a10af912",
+      "normalizedSha256": "df31e36aa28200d6bd68358302f5d7d5abd3f254f3a6737f57106e6a325eeb61",
+      "generatedNormalizedSha256": "df31e36aa28200d6bd68358302f5d7d5abd3f254f3a6737f57106e6a325eeb61",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts",
+      "size": 30396,
+      "mode": "100644",
+      "rawSha256": "0a50f65180aac7ab978ec129961f7a237eceab13f2d6e70119b403047d0a3d62",
+      "normalizedSha256": "5fa6ef762c5efc525f19a5aafae795a9b321437c44215b36547e4b4fdc7a14af",
+      "generatedNormalizedSha256": "5fa6ef762c5efc525f19a5aafae795a9b321437c44215b36547e4b4fdc7a14af",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts",
+      "size": 17325,
+      "mode": "100644",
+      "rawSha256": "aebfd5970867e299c35c1739be8cf6153d98f44d96384401d1149db3eef51e9f",
+      "normalizedSha256": "2d74549c01f8904f56926c704375df63e758dc6d26aee8bfeb565bc835a143b7",
+      "generatedNormalizedSha256": "2d74549c01f8904f56926c704375df63e758dc6d26aee8bfeb565bc835a143b7",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts",
+      "size": 9259,
+      "mode": "100644",
+      "rawSha256": "b3c65e9f81f66b1cbc2184ec905a3e499fd624b338253897aef09d7892c56e4f",
+      "normalizedSha256": "e55e243f95059f33ca4afa7f95f9dbf16ca7f9c9170c3821412bb9da3ca133d1",
+      "generatedNormalizedSha256": "e55e243f95059f33ca4afa7f95f9dbf16ca7f9c9170c3821412bb9da3ca133d1",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts",
+      "size": 9310,
+      "mode": "100644",
+      "rawSha256": "607bd5e4d87a6373cebd65cc1483733ca28b9714d4caee2add783b1419df1531",
+      "normalizedSha256": "fc32efcd838bb8c0cdd0121add005d7a20ffc82b69b5dd5e2446a750eaf8654f",
+      "generatedNormalizedSha256": "fc32efcd838bb8c0cdd0121add005d7a20ffc82b69b5dd5e2446a750eaf8654f",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts",
+      "size": 19079,
+      "mode": "100644",
+      "rawSha256": "95d9e6c9ed9c3acedd829d2e6eb713246618cd8a3e4fef8c512870ee8eda6bc8",
+      "normalizedSha256": "184f71e2f1328f9a43f35e9491c1613a28e8995969b98171e72391592e6cd00a",
+      "generatedNormalizedSha256": "184f71e2f1328f9a43f35e9491c1613a28e8995969b98171e72391592e6cd00a",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts",
+      "size": 28815,
+      "mode": "100644",
+      "rawSha256": "0bb9c18132a5ec42af2c8a448b9a48a31e00bba8f323c0ef43ea6bb3f96fc1a3",
+      "normalizedSha256": "05928dc48dc8cea4658a2e719f9213cca3066bf9b8b19abc9dbcb59c27b9b0c8",
+      "generatedNormalizedSha256": "05928dc48dc8cea4658a2e719f9213cca3066bf9b8b19abc9dbcb59c27b9b0c8",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts",
+      "size": 7893,
+      "mode": "100644",
+      "rawSha256": "aa8d619098808d6cb6b3ccc8aecfdebd55772472a234416c17bf257704280f65",
+      "normalizedSha256": "39dd5aa6b68d1796339903682e2e636ab4cf44712e54a107d7f99aa75eca7ed8",
+      "generatedNormalizedSha256": "39dd5aa6b68d1796339903682e2e636ab4cf44712e54a107d7f99aa75eca7ed8",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts",
+      "size": 11984,
+      "mode": "100644",
+      "rawSha256": "7e3fb8317cc2e2c32ebd8b94c0ef93ce352984be502dec8c977c934c3546269e",
+      "normalizedSha256": "7e3fb8317cc2e2c32ebd8b94c0ef93ce352984be502dec8c977c934c3546269e",
+      "generatedNormalizedSha256": "7e3fb8317cc2e2c32ebd8b94c0ef93ce352984be502dec8c977c934c3546269e",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts",
+      "size": 15919,
+      "mode": "100644",
+      "rawSha256": "2448aa480a324d6bb9cdabac407dfc3cd52c6d9d4d9cbb6e52036b3894bc47bf",
+      "normalizedSha256": "ead7245376758969da968f6a285216e509cbb26105686ebd6c23cffbc2c61a42",
+      "generatedNormalizedSha256": "ead7245376758969da968f6a285216e509cbb26105686ebd6c23cffbc2c61a42",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts",
+      "size": 9712,
+      "mode": "100644",
+      "rawSha256": "75e178cb760df9c37c5e9ae16e6d19f6738fb0afcac0449e4225cf5b3573cc16",
+      "normalizedSha256": "f20f9d9942a6e32c9714b293e7bdfb8bf3daae8b3f4f882c6f5e249d538053c6",
+      "generatedNormalizedSha256": "f20f9d9942a6e32c9714b293e7bdfb8bf3daae8b3f4f882c6f5e249d538053c6",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts",
+      "size": 10815,
+      "mode": "100644",
+      "rawSha256": "1bca74518e8d0d2ac02f71b1710a1e36e03745978dce62e1717237b7317ec7e4",
+      "normalizedSha256": "2807db186c57f05f86c3cd8a2264d7f200f57fa8589a243fd0268f5ead6810ae",
+      "generatedNormalizedSha256": "2807db186c57f05f86c3cd8a2264d7f200f57fa8589a243fd0268f5ead6810ae",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts",
+      "size": 30886,
+      "mode": "100644",
+      "rawSha256": "e4f29c2950660d6a61dcb2bf5bc3cf2cf4bffd53559e905e8289fd42694c6547",
+      "normalizedSha256": "a6132c2187f42ac3a32e67805c83ecbbf0836c2a667a08de39e3faea6e4313cf",
+      "generatedNormalizedSha256": "a6132c2187f42ac3a32e67805c83ecbbf0836c2a667a08de39e3faea6e4313cf",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts",
+      "size": 3738,
+      "mode": "100644",
+      "rawSha256": "195b3da2085fdd8a28574eac1d3d5f834f4e11bf4f9ca51f99efd40ccf4e5190",
+      "normalizedSha256": "195b3da2085fdd8a28574eac1d3d5f834f4e11bf4f9ca51f99efd40ccf4e5190",
+      "generatedNormalizedSha256": "195b3da2085fdd8a28574eac1d3d5f834f4e11bf4f9ca51f99efd40ccf4e5190",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts",
+      "size": 23961,
+      "mode": "100644",
+      "rawSha256": "2a8ae3b6a8a3e7ca8f8ad49c4b4acaa0c0e6588f50d1198b1af58d68ff5c10ab",
+      "normalizedSha256": "9905b29eee5210c517eabe3dd550e686cf24019df3e0b75bc9ab3964b4300119",
+      "generatedNormalizedSha256": "9905b29eee5210c517eabe3dd550e686cf24019df3e0b75bc9ab3964b4300119",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts",
+      "size": 10499,
+      "mode": "100644",
+      "rawSha256": "ba98238850a200a5cc8658426fd8bb6bd6c09c5d3bd0767bac2f2c7d3db52935",
+      "normalizedSha256": "751bdb367ab9648b73f62af738075515300020302839240ad0c725c4078a1412",
+      "generatedNormalizedSha256": "751bdb367ab9648b73f62af738075515300020302839240ad0c725c4078a1412",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts",
+      "size": 24732,
+      "mode": "100644",
+      "rawSha256": "d6032c76d06a1c112e70a2863722ef5d7a1e1590c477e439027c326215a21055",
+      "normalizedSha256": "0c090c5c40bad9999caf95ab38d242de347c2d049fe10b2ed27af7f9fbfa5dc8",
+      "generatedNormalizedSha256": "0c090c5c40bad9999caf95ab38d242de347c2d049fe10b2ed27af7f9fbfa5dc8",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts",
+      "size": 7306,
+      "mode": "100644",
+      "rawSha256": "588b6fa1c2cf9c8e96f9ce1cc4825cdd28f06cc4b7ade8cedeff5fe273f26298",
+      "normalizedSha256": "588b6fa1c2cf9c8e96f9ce1cc4825cdd28f06cc4b7ade8cedeff5fe273f26298",
+      "generatedNormalizedSha256": "588b6fa1c2cf9c8e96f9ce1cc4825cdd28f06cc4b7ade8cedeff5fe273f26298",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts",
+      "size": 42565,
+      "mode": "100644",
+      "rawSha256": "0084d7dc804ef638a84c03ec3dc57f2585acc9d1cdf890cd27c58b0ed066dc27",
+      "normalizedSha256": "8e3662ce79d50acb2e8041eb3cb760ecc609e35ebcee36363c99acbfc62bdeaa",
+      "generatedNormalizedSha256": "8e3662ce79d50acb2e8041eb3cb760ecc609e35ebcee36363c99acbfc62bdeaa",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts",
+      "size": 9681,
+      "mode": "100644",
+      "rawSha256": "60b6a2ea2a29b339a3ada378fecb6af4ad0467ec735a8c898684be25762c0eb1",
+      "normalizedSha256": "60b6a2ea2a29b339a3ada378fecb6af4ad0467ec735a8c898684be25762c0eb1",
+      "generatedNormalizedSha256": "60b6a2ea2a29b339a3ada378fecb6af4ad0467ec735a8c898684be25762c0eb1",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts",
+      "size": 30184,
+      "mode": "100644",
+      "rawSha256": "3cd95a160a7350aac235c9963948a55eaf143017cfc139526bb7fb5e579bfbea",
+      "normalizedSha256": "d60a85e3dc2b5467a037968398c9acbbecfaeb312c7e2ef57044c783e533f725",
+      "generatedNormalizedSha256": "d60a85e3dc2b5467a037968398c9acbbecfaeb312c7e2ef57044c783e533f725",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts",
+      "size": 9127,
+      "mode": "100644",
+      "rawSha256": "ad12bab1c7017db4a52c91ef32135de8f099f60a492b028d9cf460a8605bf05f",
+      "normalizedSha256": "eddf499a2319b66545f987d47673e07e63d37e6d2edb8926cd7cf05f31222d20",
+      "generatedNormalizedSha256": "eddf499a2319b66545f987d47673e07e63d37e6d2edb8926cd7cf05f31222d20",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts",
+      "size": 3509,
+      "mode": "100644",
+      "rawSha256": "5a076144ecd21a2e7473a4f455e16878f09884b43ec9a31374e8a8251565d3cc",
+      "normalizedSha256": "9b3e7e6484681a7a6b90d62b2063e4117bcfabc31230c110a9dab136c614f341",
+      "generatedNormalizedSha256": "9b3e7e6484681a7a6b90d62b2063e4117bcfabc31230c110a9dab136c614f341",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts",
+      "size": 7984,
+      "mode": "100644",
+      "rawSha256": "23d20009be53474b97cd82cfe1d42040a173cb94790100f9d051b1c3775ea409",
+      "normalizedSha256": "551ace07884acec62a1999149cff08b1d754b9e7cb7d84bcff5deef1d518b13f",
+      "generatedNormalizedSha256": "551ace07884acec62a1999149cff08b1d754b9e7cb7d84bcff5deef1d518b13f",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts",
+      "size": 9111,
+      "mode": "100644",
+      "rawSha256": "43542ec1b3b30f5961dd800f679d2aa5fa77efed89e781e0b15fb0c2d27551bd",
+      "normalizedSha256": "7aab7fbd4f3f18240ff80712d6e55a156717ba92f5474ba752bcc8137cb4d8e0",
+      "generatedNormalizedSha256": "7aab7fbd4f3f18240ff80712d6e55a156717ba92f5474ba752bcc8137cb4d8e0",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts",
+      "size": 5511,
+      "mode": "100644",
+      "rawSha256": "03651c38a9387a43814734e826f15c5ded33f58962402ebc71c7e3fdf8ebe579",
+      "normalizedSha256": "7bcf0dd491c2b5a4bb4f8508836b3ff0d073756c7dbeeb711de4fa3d4c5cd438",
+      "generatedNormalizedSha256": "7bcf0dd491c2b5a4bb4f8508836b3ff0d073756c7dbeeb711de4fa3d4c5cd438",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts",
+      "size": 3669,
+      "mode": "100644",
+      "rawSha256": "c35377a9a5d3bda5ee4eeb42f2681bded8c2a85e80b6344626bd8c2142bba558",
+      "normalizedSha256": "e971c04410193fa9b413d2222e2c453297d7c8368002cc509ef16dc08fa672ba",
+      "generatedNormalizedSha256": "e971c04410193fa9b413d2222e2c453297d7c8368002cc509ef16dc08fa672ba",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts",
+      "size": 17190,
+      "mode": "100644",
+      "rawSha256": "732aae0753c2146bdea1d7a86a9d85ef94339bac667b83227efcc8b0cd79e8b0",
+      "normalizedSha256": "1353011f4311c179063c756671d3b4e5f776a190dc80e681c92f7ba209e3b667",
+      "generatedNormalizedSha256": "1353011f4311c179063c756671d3b4e5f776a190dc80e681c92f7ba209e3b667",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts",
+      "size": 625,
+      "mode": "100644",
+      "rawSha256": "8cde123336cafcaa3a96148ce61ce211df3ece49052ac30f63254e744a77e1b2",
+      "normalizedSha256": "8cde123336cafcaa3a96148ce61ce211df3ece49052ac30f63254e744a77e1b2",
+      "generatedNormalizedSha256": "8cde123336cafcaa3a96148ce61ce211df3ece49052ac30f63254e744a77e1b2",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts",
+      "size": 1233,
+      "mode": "100644",
+      "rawSha256": "0310541134fb63da466171a759028d07af9e4f381e06716a27a62f558d3b4321",
+      "normalizedSha256": "0310541134fb63da466171a759028d07af9e4f381e06716a27a62f558d3b4321",
+      "generatedNormalizedSha256": "0310541134fb63da466171a759028d07af9e4f381e06716a27a62f558d3b4321",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts",
+      "size": 1185,
+      "mode": "100644",
+      "rawSha256": "d7ad6db3c1e62cdb8e4eb79577e549479d1677a7cb50ec86049e350bfd2bb8fc",
+      "normalizedSha256": "d7ad6db3c1e62cdb8e4eb79577e549479d1677a7cb50ec86049e350bfd2bb8fc",
+      "generatedNormalizedSha256": "d7ad6db3c1e62cdb8e4eb79577e549479d1677a7cb50ec86049e350bfd2bb8fc",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/monitoring/outputMonitor.ts",
+      "size": 48385,
+      "mode": "100644",
+      "rawSha256": "808c6b6768fec3acdd3bdcdc74da45e019181ec4005bbdc353caed43fc2b1c1c",
+      "normalizedSha256": "29890e2940779148969eabf3ea02abb7fa331a21fc15acf5bca0f173f29e758c",
+      "generatedNormalizedSha256": "29890e2940779148969eabf3ea02abb7fa331a21fc15acf5bca0f173f29e758c",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/monitoring/outputMonitor.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/monitoring/outputMonitor.ts"
+        }
+      ]
+    },
+    {
+      "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/outputMonitor.test.ts",
+      "size": 25246,
+      "mode": "100644",
+      "rawSha256": "0e2ed6eaa1916856d25a1ed1a659786cfdf0efce2fae41315113c033b8b79a81",
+      "normalizedSha256": "d4cd1bababf795709f40c33ae58b63038dc06011b9aa857904580aab831149d1",
+      "generatedNormalizedSha256": "d4cd1bababf795709f40c33ae58b63038dc06011b9aa857904580aab831149d1",
+      "reason": "line-ending-sensitive-reference-bytes",
+      "sources": [
+        {
+          "type": "local-reference",
+          "path": "vscode/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/outputMonitor.test.ts"
+        },
+        {
+          "type": "outer-commit",
+          "commit": "6ff8ee0581d938f458c2af0b6b902adc554db4fd",
+          "gitPath": "vscode/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/outputMonitor.test.ts"
+        }
+      ]
+    }
+  ]
+}

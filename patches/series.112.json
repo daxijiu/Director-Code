@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:11:31.318Z",
+  "generatedAt": "2026-05-11T02:40:45.826Z",
   "policy": {
     "source": "tracked patch-like files under patches/",
     "materializeRule": "materialize must consume this series, not glob patches/*.patch directly"
@@ -1717,6 +1717,50 @@
       ]
     },
     {
+      "path": "patches/replay/001-vscodium-layer.112.patch",
+      "sha256": "196e3e3e1e2347c57d91d5f1621547c1e3a60bfcc298892d50a6a285171a2eba",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "vscodium",
+      "stage": "aggregate-replay",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 49,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/002-director-delta.112.patch",
+      "sha256": "eaba9864ad8b320dc3ea70b86fbf3309055b66f07ec1de55fb8f628948568b78",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "aggregate-replay",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 50,
+      "placeholders": []
+    },
+    {
       "path": "patches/report-issue.patch",
       "sha256": "b68c08627682f07994d57b2a1eeb3cafee6093f410989091732cffb11fbfa923",
       "enabled": true,
@@ -1739,7 +1783,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 49,
+      "order": 51,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1775,7 +1819,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 50,
+      "order": 52,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1811,7 +1855,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 51,
+      "order": 53,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1847,7 +1891,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 52,
+      "order": 54,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1883,7 +1927,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 53,
+      "order": 55,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1919,7 +1963,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 54,
+      "order": 56,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1955,7 +1999,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 55,
+      "order": 57,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -1991,7 +2035,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 56,
+      "order": 58,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -2027,7 +2071,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 57,
+      "order": 59,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -2063,7 +2107,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 58,
+      "order": 60,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -2096,7 +2140,7 @@
       "targets": [
         "cli"
       ],
-      "order": 59,
+      "order": 61,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",
@@ -2132,7 +2176,7 @@
         "reh",
         "reh-web"
       ],
-      "order": 60,
+      "order": 62,
       "placeholders": [
         "!!APP_NAME!!",
         "!!APP_NAME_LC!!",

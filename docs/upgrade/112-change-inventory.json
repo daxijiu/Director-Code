@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
-  "generatedAt": "2026-05-10T13:32:46.770Z",
+  "generatedAt": "2026-05-11T02:44:54.618Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 462,
-    "assetCount": 462,
+    "trackedOrPendingNonVscodeCount": 465,
+    "assetCount": 465,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -149,6 +149,7 @@
       "docs/upgrade/overlay-allowlist.112.json",
       "docs/upgrade/product.delete.112.json",
       "docs/upgrade/profiles/112-stable-win32-x64-client.json",
+      "docs/upgrade/reference-overlays.112.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json",
@@ -239,6 +240,8 @@
       "patches/osx/fix-codesign.patch.no",
       "patches/osx/fix-emulated-urls.patch",
       "patches/remove-mangle.patch",
+      "patches/replay/001-vscodium-layer.112.patch",
+      "patches/replay/002-director-delta.112.patch",
       "patches/report-issue.patch",
       "patches/series.112.json",
       "patches/sourcemaps.patch",
@@ -609,7 +612,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "7e1148ec605af61011291c22ffe5fa44d9e89c540b527b67292135914fe56ca3",
+      "sha256": "368e1e2ae84f547974c1dfff0ed146ed4fa8e7aec4fb1ed6b3710e080e222dc9",
       "notes": "P1 replay control plane."
     },
     {
@@ -2209,6 +2212,18 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "docs/upgrade/reference-overlays.112.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "8962fc783ba289b86db4c0e70255db2cadb507f6c638e46cc3f3f911c3781cde",
+      "notes": "P1 replay control plane."
+    },
+    {
       "path": "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
       "assetKind": "doc",
       "sourceClass": "director-owned",
@@ -2229,7 +2244,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "852de913ab9c7999bdc5f32e24d55e9747ad88272dd165bd12318532a2d0d2e0",
+      "sha256": "6a0c5d931a46c82de9f2d83bb462050156d1e305620a4323b053f961827ce531",
       "notes": "P1 replay control plane."
     },
     {
@@ -2241,7 +2256,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "3a6450374fc61e9bd3f426444b257fe4e33b4c22c12a5937f62d9aab2adb257b",
+      "sha256": "78770dffd00aeaf1ab3dc4c02b9c2aa74213d85c64cd07e8ecd3a488de3d6545",
       "notes": "P1 replay control plane."
     },
     {
@@ -2253,7 +2268,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "03be0e1f25d08ec42ae7cfb98731503e1264f0e9e6f732d5561603a3fad49c13",
+      "sha256": "c8cb92116a1a11e520a4d2cfb9ddba9f7dcd78f8d6f2ded9036146d510d7cc0f",
       "notes": "P1 replay control plane."
     },
     {
@@ -2265,7 +2280,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "871e851b94a4d9082c23282207439d2c4639b4e9af30877eadfeccf89a96beb7",
+      "sha256": "c621717482f6200c32466999396274e800feab9482c736d7da09ae805f8aa0a6",
       "notes": "P1 replay control plane."
     },
     {
@@ -2289,7 +2304,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "3c486f6cacf28a3930623711e54d5cc5c8e2e3ae7657e344d50089143f4443c8",
+      "sha256": "9f9a29ecb5291d93f713dcb393135c16face837ad27696e4622da6f91b8858aa",
       "notes": "P1 replay control plane."
     },
     {
@@ -2385,7 +2400,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "0db03fcd33d6abaaf9f263f9bce3a942e619f01e179cf660375c1745a01847c4",
+      "sha256": "1ae5e7c0ea7f784a7ce786ec9e3470e16c7b16b01a9a8b34d069b629e0f5403a",
       "notes": "P1 replay control plane."
     },
     {
@@ -3294,6 +3309,30 @@
       "notes": "Patch-like replay asset; series ownership is validated in a later batch."
     },
     {
+      "path": "patches/replay/001-vscodium-layer.112.patch",
+      "assetKind": "patch",
+      "sourceClass": "vscodium-derived",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "196e3e3e1e2347c57d91d5f1621547c1e3a60bfcc298892d50a6a285171a2eba",
+      "notes": "Aggregate VSCodium 1.112.01907 materialized source transform generated from the clean upstream VSCodium tag."
+    },
+    {
+      "path": "patches/replay/002-director-delta.112.patch",
+      "assetKind": "patch",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "p1-strict",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "eaba9864ad8b320dc3ea70b86fbf3309055b66f07ec1de55fb8f628948568b78",
+      "notes": "Aggregate Director delta from the materialized VSCodium baseline to the frozen reference, excluding declared reference overlays."
+    },
+    {
       "path": "patches/report-issue.patch",
       "assetKind": "patch",
       "sourceClass": "vscodium-derived",
@@ -3314,7 +3353,7 @@
       "replaySet": "replay-assets",
       "executable": false,
       "mode": "100644",
-      "sha256": "f105044930c59e01af8ff2d1ee7fc9b18eddbc9646a1eb7e3a2a8c8432e4a043",
+      "sha256": "9f3ce5602cc44ac4ccc6451a8b60f82b223d09b00e6ba8676a7578564a9adc89",
       "notes": "Patch-like replay asset; series ownership is validated in a later batch."
     },
     {
@@ -3613,7 +3652,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "d66fc6ae807234d469a61e53b93e229aef5e7c85cc96280b66678862a83a6c1e",
+      "sha256": "4970dd69e1a3c2e33f33226e2fa9921942036c13987c75bc3d3b8b5fe3f3c795",
       "notes": "P1 replay control plane."
     },
     {
@@ -3639,7 +3678,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "0072575d370ba2cf7ed79861350109e154951ed1539d7aa8bac022bf97c1aa43",
+      "sha256": "4707d15c71d801073a6f245a6e33888b770e72d29990032b04ca69e2e1a92ce5",
       "notes": "P1 replay control plane."
     },
     {
@@ -3665,7 +3704,7 @@
       "executable": true,
       "scriptScope": "standalone-tool",
       "mode": "100644",
-      "sha256": "c60036d69106aed2194e56005144325df24df5c81613616d9a46e441b779ac63",
+      "sha256": "b11a2b9baaee9d4a62c40c03d4f026d6c453c1819655246c627ed353f9d5202d",
       "notes": "P1 replay control plane."
     },
     {

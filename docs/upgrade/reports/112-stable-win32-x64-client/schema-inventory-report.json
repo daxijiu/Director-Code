@@ -4,7 +4,7 @@
   "phase": "P1",
   "batch": "schema-inventory",
   "status": "passed",
-  "generatedAt": "2026-05-10T13:32:46.770Z",
+  "generatedAt": "2026-05-11T02:44:54.618Z",
   "checks": {
     "profileSchema": "passed",
     "referenceManifestSchema": "passed",
@@ -15,7 +15,7 @@
   },
   "inventory": {
     "path": "docs/upgrade/112-change-inventory.json",
-    "assetCount": 462,
+    "assetCount": 465,
     "executableAssetCount": 89
   }
 }
