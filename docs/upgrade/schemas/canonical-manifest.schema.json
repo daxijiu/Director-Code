@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "profile", "sourceRoot", "generatedAt", "treeHash", "caseInsensitivePathCollisions", "files"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "sourceRoot": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "treeHash": { "type": "string" },
+    "caseInsensitivePathCollisions": { "type": "array" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "mode", "type"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string" },
+          "mode": { "type": "integer" },
+          "type": { "enum": ["file", "symlink"] },
+          "linkTarget": { "type": "string" }
+        }
+      }
+    }
+  }
+}

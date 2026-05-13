@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "profile", "policy", "set"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "policy": { "enum": ["director-owned-keys-only"] },
+    "set": { "type": "object" }
+  }
+}

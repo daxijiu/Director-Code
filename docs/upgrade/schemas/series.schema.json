@@ -5,6 +5,28 @@
   "properties": {
     "schemaVersion": { "type": "integer" },
     "profile": { "type": "string" },
-    "patches": { "type": "array" }
+    "generatedAt": { "type": "string" },
+    "policy": { "type": "object" },
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "enabled", "status", "layer", "stage", "platforms", "arches", "qualities", "targets", "order", "placeholders"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "status": { "enum": ["enabled", "disabled", "deferred", "archived"] },
+          "layer": { "type": "string" },
+          "stage": { "type": "string" },
+          "platforms": { "type": "array" },
+          "arches": { "type": "array" },
+          "qualities": { "type": "array" },
+          "targets": { "type": "array" },
+          "order": { "type": "integer" },
+          "placeholders": { "type": "array" }
+        }
+      }
+    }
   }
 }

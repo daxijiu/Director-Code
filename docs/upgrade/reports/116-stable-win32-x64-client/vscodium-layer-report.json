@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "profile": "116-stable-win32-x64-client",
+  "phase": "P2",
+  "batch": "vscodium-layer",
+  "status": "passed",
+  "generatedAt": "2026-05-12T06:34:57.623Z",
+  "checks": {
+    "cleanVscodeCache": "passed",
+    "cleanVscodiumCache": "passed",
+    "sourceMutationReplay": "passed",
+    "temporaryFilesExcluded": "passed",
+    "patchGenerated": "passed"
+  },
+  "upstream": {
+    "remote": "https://github.com/VSCodium/vscodium.git",
+    "tag": "1.116.02821",
+    "commit": "f4d12efa852f25f6e055ac0b4c79f57a882af4e7",
+    "cachePath": ".cache/upstreams/vscodium/1.116.02821",
+    "cleanStatus": "clean"
+  },
+  "layerManifest": "docs/upgrade/vscodium-layer.116.json",
+  "patch": {
+    "status": "passed",
+    "path": "patches/replay/001-vscodium-layer.116.patch",
+    "size": 68808709,
+    "sha256": "0294b9caf124ff03d9745c8f1def9c7f71a26ebc6ba340a08012311a852722a7"
+  },
+  "transformCounts": {
+    "overlays": 2,
+    "patches": 43,
+    "productInputs": 1,
+    "sourceMutations": 8
+  },
+  "temporaryFiles": []
+}

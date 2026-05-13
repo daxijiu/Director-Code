@@ -4,8 +4,8 @@
   "generatedAt": "2026-05-11T03:03:51.891Z",
   "coverage": {
     "rule": "git ls-files --cached --others --exclude-standard excluding vscode/** must be present as replay assets",
-    "trackedOrPendingNonVscodeCount": 466,
-    "assetCount": 466,
+    "trackedOrPendingNonVscodeCount": 469,
+    "assetCount": 469,
     "unknownCount": 0,
     "unclassifiedCount": 0
   },
@@ -150,6 +150,7 @@
       "docs/upgrade/overlay-allowlist.112.json",
       "docs/upgrade/product.delete.112.json",
       "docs/upgrade/profiles/112-stable-win32-x64-client.json",
+      "docs/upgrade/profiles/116-stable-win32-x64-client.json",
       "docs/upgrade/reference-overlays.112.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
@@ -158,6 +159,7 @@
       "docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
       "docs/upgrade/reports/112-stable-win32-x64-client/workflow-docs-report.json",
+      "docs/upgrade/reports/116-stable-win32-x64-client/upgrade-estimator-report.json",
       "docs/upgrade/schemas/change-inventory.schema.json",
       "docs/upgrade/schemas/deps-source-mutation-allowlist.schema.json",
       "docs/upgrade/schemas/profile.schema.json",
@@ -267,6 +269,7 @@
       "scripts/upgrade/check-script-matrix.mjs",
       "scripts/upgrade/check-workflows.mjs",
       "scripts/upgrade/dry-run-guard.sh",
+      "scripts/upgrade/estimate-116-upgrade.mjs",
       "scripts/upgrade/freeze-reference.mjs",
       "scripts/upgrade/generate-change-inventory.mjs",
       "scripts/upgrade/generate-script-matrix.mjs",
@@ -2225,6 +2228,18 @@
       "notes": "P1 replay control plane."
     },
     {
+      "path": "docs/upgrade/profiles/116-stable-win32-x64-client.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "defer-non-p1",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "6de124baa60fa128f7571e960921d7ace7de2c5a48f95daba54c6efea242705d",
+      "notes": "P2 upgrade control plane for 112 to 116."
+    },
+    {
       "path": "docs/upgrade/reference-overlays.112.json",
       "assetKind": "doc",
       "sourceClass": "director-owned",
@@ -2319,6 +2334,18 @@
       "mode": "100644",
       "sha256": "40c9a8d619d8eec4823a770e690b9c3d1e5558743980a82995895731a4b02cfb",
       "notes": "P1 replay control plane."
+    },
+    {
+      "path": "docs/upgrade/reports/116-stable-win32-x64-client/upgrade-estimator-report.json",
+      "assetKind": "doc",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "defer-non-p1",
+      "replaySet": "replay-assets",
+      "executable": false,
+      "mode": "100644",
+      "sha256": "c382b4484838fbb3a44bfbda5605bd892f830e094a66d2fb780e8ce2023046dd",
+      "notes": "P2 112 to 116 dry-run estimator report."
     },
     {
       "path": "docs/upgrade/schemas/change-inventory.schema.json",
@@ -3641,6 +3668,19 @@
       "mode": "100644",
       "sha256": "5706d15585bad5b63e84f7242b1fad595abe544f455872eaa4c02857028b55a2",
       "notes": "P1 replay control plane."
+    },
+    {
+      "path": "scripts/upgrade/estimate-116-upgrade.mjs",
+      "assetKind": "script",
+      "sourceClass": "director-owned",
+      "disposition": "replay-active",
+      "equivalenceScope": "defer-non-p1",
+      "replaySet": "replay-assets",
+      "executable": true,
+      "scriptScope": "standalone-tool",
+      "mode": "100644",
+      "sha256": "bccd923c45fd933dda740cf67ce243da0ec63275fd96c19719a4dd980d16811a",
+      "notes": "P2 upgrade dry-run estimator."
     },
     {
       "path": "scripts/upgrade/freeze-reference.mjs",

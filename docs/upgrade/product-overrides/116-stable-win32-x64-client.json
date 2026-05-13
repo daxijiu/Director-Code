@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "profile": "116-stable-win32-x64-client",
+  "policy": "director-owned-keys-only",
+  "set": {
+    "nameShort": "Director-Code",
+    "nameLong": "Director-Code",
+    "applicationName": "director-code",
+    "dataFolderName": ".vscode-oss",
+    "linuxIconName": "director-code",
+    "serverApplicationName": "director-code-server",
+    "serverDataFolderName": ".director-code-server",
+    "darwinBundleIdentifier": "com.director-code",
+    "darwinProfileUUID": "47827DD9-4734-49A0-AF80-7E19B11495CC",
+    "darwinProfilePayloadUUID": "CF808BE7-53F3-46C6-A7E2-7EDB98A5E959",
+    "tunnelApplicationName": "director-code-tunnel",
+    "urlProtocol": "director-code",
+    "reportIssueUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+    "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
+    "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
+    "licenseUrl": "https://github.com/daxijiu/Director-Code/blob/master/LICENSE",
+    "serverLicenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+    "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/",
+    "win32AppUserModelId": "DirectorCode.DirectorCode",
+    "win32DirName": "Director-Code",
+    "win32MutexName": "directorcode",
+    "win32NameVersion": "Director-Code",
+    "win32RegValueName": "DirectorCode",
+    "win32ShellNameShort": "Director-Code",
+    "win32AppId": "{{763CBF88-25C6-4B10-952F-326AE657F16B}",
+    "win32x64AppId": "{{88DA3577-054F-4CA1-8122-7D820494CFFB}",
+    "win32arm64AppId": "{{67DEE444-3D04-4258-B92A-BC1F0FF2CAE4}",
+    "win32UserAppId": "{{0FD05EB4-651E-4E78-A062-515204B47A3A}",
+    "win32x64UserAppId": "{{2E1F05D1-C245-4562-81EE-28188DB6FD17}",
+    "win32arm64UserAppId": "{{57FD70A5-1B8D-4875-9F40-C5553F094828}",
+    "win32TunnelServiceMutex": "directorcode-tunnelservice",
+    "win32TunnelMutex": "directorcode-tunnel",
+    "win32ContextMenu": {
+      "x64": {
+        "clsid": "D910D5E6-B277-4F4A-BDC5-759A34EEE25D"
+      },
+      "arm64": {
+        "clsid": "4852FC55-4A84-4EA1-9C86-D53BE3DF83C0"
+      }
+    },
+    "defaultChatAgent": {
+      "extensionId": "director-code.agent",
+      "chatExtensionId": "",
+      "chatExtensionOutputId": "",
+      "chatExtensionOutputExtensionStateCommand": "",
+      "provider": {
+        "default": {
+          "id": "director-code",
+          "name": "Director Code"
+        },
+        "enterprise": {
+          "id": "",
+          "name": ""
+        },
+        "google": {
+          "id": "",
+          "name": ""
+        },
+        "apple": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "providerExtensionId": "",
+      "providerUriSetting": "",
+      "providerScopes": [],
+      "documentationUrl": "https://daxijiu.github.io/Director-Code/",
+      "skusDocumentationUrl": "https://github.com/daxijiu/Director-Code",
+      "publicCodeMatchesUrl": "",
+      "termsStatementUrl": "https://daxijiu.github.io/Director-Code/terms/",
+      "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/",
+      "manageSettingsUrl": "command:director-code.openSettings",
+      "managePlanUrl": "",
+      "completionsRefreshTokenCommand": "",
+      "chatRefreshTokenCommand": "",
+      "upgradePlanUrl": "",
+      "manageOverageUrl": "",
+      "signUpUrl": "",
+      "entitlementUrl": "",
+      "entitlementSignupLimitedUrl": "",
+      "tokenEntitlementUrl": "",
+      "mcpRegistryDataUrl": "",
+      "completionsAdvancedSetting": "",
+      "completionsEnablementSetting": "",
+      "nextEditSuggestionsSetting": "",
+      "completionsMenuCommand": "",
+      "chatQuotaExceededContext": "",
+      "completionsQuotaExceededContext": "",
+      "walkthroughCommand": "",
+      "generateCommitMessageCommand": "",
+      "resolveMergeConflictsCommand": ""
+    }
+  }
+}

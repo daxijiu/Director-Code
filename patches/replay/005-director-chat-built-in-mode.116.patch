@@ -1,0 +1,727 @@
+diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
+index b62a8a4314c18054ffa65259be2046968da9880c..49845e13dcc3bdc39817beeb27372c3433010e9f 100644
+--- a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
++++ b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
+@@ -1113,7 +1113,7 @@ export function registerChatActions() {
+ 
+ 		override async run(accessor: ServicesAccessor): Promise<void> {
+ 			const openerService = accessor.get(IOpenerService);
+-			openerService.open(URI.parse(defaultChat.manageSettingsUrl));
++			await openerService.open(URI.parse(defaultChat.manageSettingsUrl), { allowCommands: true });
+ 		}
+ 	});
+ 
+diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts b/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
+index d78a88982b2f068f1515080d0d4de4e5cfeaec2d..e6d7cf43437db8fa9f6689ccdf8ab6079feba8d5 100644
+--- a/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
++++ b/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
+@@ -13,6 +13,7 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../../pla
+ import { IDefaultChatAgent } from '../../../../../base/common/product.js';
+ import { IChatWidgetService } from '../chat.js';
+ import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ export class ChatGettingStartedContribution extends Disposable implements IWorkbenchContribution {
+ 	static readonly ID = 'workbench.contrib.chatGettingStarted';
+@@ -36,6 +37,11 @@ export class ChatGettingStartedContribution extends Disposable implements IWorkb
+ 			return;
+ 		}
+ 
++		// [Director-Code] skip: built-in agent
++		if (isDirectorCodeBuiltInMode(defaultChatAgent)) {
++			return;
++		}
++
+ 		this.registerListeners(defaultChatAgent);
+ 	}
+ 
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
+index a7d9b9666b254195dbb7b7fe5dca0d4f16fae2d2..cc3f5d2a9f018564190b09c4ed6555869034876b 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
+@@ -9,7 +9,9 @@ import { URI } from '../../../../../base/common/uri.js';
+ import { ThemeIcon } from '../../../../../base/common/themables.js';
+ import { foreground, listActiveSelectionForeground, registerColor, transparent } from '../../../../../platform/theme/common/colorRegistry.js';
+ import { getChatSessionType } from '../../common/model/chatUri.js';
++import product from '../../../../../platform/product/common/product.js';
+ import { IProductService } from '../../../../../platform/product/common/productService.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ export enum AgentSessionProviders {
+ 	Local = 'local',
+@@ -52,11 +54,12 @@ export function getAgentSessionProvider(sessionResource: URI | string): AgentSes
+ }
+ 
+ export function getAgentSessionProviderName(provider: AgentSessionTarget): string {
++	const builtIn = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ 	switch (provider) {
+ 		case AgentSessionProviders.Local:
+ 			return localize('chat.session.providerLabel.local', "Local");
+ 		case AgentSessionProviders.Background:
+-			return localize('chat.session.providerLabel.background', "Copilot CLI");
++			return builtIn ? localize('chat.session.providerLabel.background.dc', "Background CLI") : localize('chat.session.providerLabel.background', "Copilot CLI");
+ 		case AgentSessionProviders.Cloud:
+ 			return localize('chat.session.providerLabel.cloud', "Cloud");
+ 		case AgentSessionProviders.Claude:
+@@ -148,19 +151,28 @@ export function getAgentCanContinueIn(provider: AgentSessionTarget): boolean {
+ }
+ 
+ export function getAgentSessionProviderDescription(provider: AgentSessionTarget): string {
++	const builtIn = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ 	switch (provider) {
+ 		case AgentSessionProviders.Local:
+ 			return localize('chat.session.providerDescription.local', "Run tasks within VS Code chat. The agent iterates via chat and works interactively to implement changes on your main workspace.");
+ 		case AgentSessionProviders.Background:
+-			return localize('chat.session.providerDescription.background', "Delegate tasks to a background agent running locally on your machine. The agent iterates via chat and works asynchronously in a Git worktree to implement changes isolated from your main workspace using the GitHub Copilot CLI.");
++			return builtIn
++				? localize('chat.session.providerDescription.background.dc', "Delegate tasks to a background agent running locally on your machine. The agent works asynchronously in a Git worktree to implement changes isolated from your main workspace.")
++				: localize('chat.session.providerDescription.background', "Delegate tasks to a background agent running locally on your machine. The agent iterates via chat and works asynchronously in a Git worktree to implement changes isolated from your main workspace using the GitHub Copilot CLI.");
+ 		case AgentSessionProviders.Cloud:
+-			return localize('chat.session.providerDescription.cloud', "Delegate tasks to the GitHub Copilot coding agent. The agent iterates via chat and works asynchronously in the cloud to implement changes and pull requests as needed.");
++			return builtIn
++				? localize('chat.session.providerDescription.cloud.dc', "Delegate tasks to a cloud coding agent. The agent works asynchronously in the cloud to implement changes and pull requests as needed.")
++				: localize('chat.session.providerDescription.cloud', "Delegate tasks to the GitHub Copilot coding agent. The agent iterates via chat and works asynchronously in the cloud to implement changes and pull requests as needed.");
+ 		case AgentSessionProviders.Claude:
+-			return localize('chat.session.providerDescription.claude', "Delegate tasks to the Claude Agent SDK using the Claude models included in your GitHub Copilot subscription. The agent iterates via chat and works interactively to implement changes on your main workspace.");
++			return builtIn
++				? localize('chat.session.providerDescription.claude.dc', "Delegate tasks to the Claude Agent SDK. The agent iterates via chat and works interactively to implement changes on your main workspace.")
++				: localize('chat.session.providerDescription.claude', "Delegate tasks to the Claude Agent SDK using the Claude models included in your GitHub Copilot subscription. The agent iterates via chat and works interactively to implement changes on your main workspace.");
+ 		case AgentSessionProviders.Codex:
+ 			return localize('chat.session.providerDescription.codex', "Opens a new Codex session in the editor. Codex sessions can be managed from the chat sessions view.");
+ 		case AgentSessionProviders.Growth:
+-			return localize('chat.session.providerDescription.growth', "Learn about Copilot features.");
++			return builtIn
++				? localize('chat.session.providerDescription.growth.dc', "Learn about AI features.")
++				: localize('chat.session.providerDescription.growth', "Learn about Copilot features.");
+ 		case AgentSessionProviders.AgentHostCopilot:
+ 			return 'Run a Copilot SDK agent in a dedicated process.';
+ 		default:
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
+index 942db76b1acea1be29f84e659c79796c76c7da1b..fc5b054da91e1d923bbca482cd4aa4f4e2322eb8 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
+@@ -43,6 +43,8 @@ import { ChatConfiguration } from '../../../common/constants.js';
+ import { ChatEntitlement, IChatEntitlementService } from '../../../../../services/chat/common/chatEntitlementService.js';
+ import { IChatWidgetService } from '../../chat.js';
+ import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
++import product from '../../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
+ 
+ // Telemetry types
+ type AgentStatusClickAction =
+@@ -871,7 +873,9 @@ export class AgentTitleBarStatusWidget extends BaseActionViewItem {
+ 
+ 		const signInTitleBarEnabled = this.configurationService.getValue<boolean>(ChatConfiguration.SignInTitleBarEnabled);
+ 		if (chatSentiment.completed && !chatSentiment.disabled) {
+-			if (signedOut && !anonymous && !signInTitleBarEnabled) {
++			if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++				// Built-in mode keeps the default toggle action instead of sign-in or quota actions.
++			} else if (signedOut && !anonymous && !signInTitleBarEnabled) {
+ 				primaryActionId = CHAT_SETUP_ACTION_ID;
+ 				primaryActionTitle = localize('signInToChatSetup', "Sign in to use AI features...");
+ 				primaryActionIcon = Codicon.chatSparkleError;
+diff --git a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts b/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
+index e752209f42896da4ab7f3a188b4810a156a09f4a..acab49d7562fa387a83d8b45ea495721a93e41f0 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
+@@ -15,6 +15,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
+ import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
+ import { ChatMessageRole, ILanguageModelsService } from '../../common/languageModels.js';
+ import * as nls from '../../../../../nls.js';
++import { selectAuxiliaryLanguageModel } from '../agentEngine/auxiliaryModelSelection.js';
+ 
+ /**
+  * Simple diff info interface for explanation generation
+@@ -237,8 +238,8 @@ export class ChatEditingExplanationModelManager extends Disposable implements IC
+ 
+ 		try {
+ 			// Select a model for understanding all changes together
+-			const models = await this._languageModelsService.selectLanguageModels({ vendor: 'copilot', id: 'copilot-fast' });
+-			if (!models.length) {
++			const model = await selectAuxiliaryLanguageModel(this._languageModelsService);
++			if (!model) {
+ 				for (const fileData of fileChanges) {
+ 					this._updateUriStatePartial(fileData.uri, {
+ 						progress: 'error',
+@@ -282,7 +283,7 @@ Example response format:
+ [{"explanation": "Added null check to prevent crash"}, {"explanation": "Renamed variable for clarity"}]`;
+ 
+ 			const response = await this._languageModelsService.sendChatRequest(
+-				models[0],
++				model,
+ 				undefined,
+ 				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
+ 				{},
+diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
+index b1832fcb44f5d53a95d60d4762fae5caba7784a5..d1284c0c46ace0329367b6a9d72d9f49d9976496 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
+@@ -56,6 +56,7 @@ import { ChatSetupController } from './chatSetupController.js';
+ import { GrowthSessionController, registerGrowthSession } from './chatSetupGrowthSession.js';
+ import { AICodeActionsHelper, AINewSymbolNamesProvider, ChatCodeActionsProvider, SetupAgent } from './chatSetupProviders.js';
+ import { ChatSetup } from './chatSetupRunner.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ const defaultChat = {
+ 	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
+@@ -186,6 +187,10 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 	}
+ 
+ 	private registerGrowthSession(chatEntitlementService: ChatEntitlementService): void {
++		// [Director-Code] skip: built-in agent — growth session shows Copilot-branded content
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return;
++		}
+ 		const growthSessionDisposables = markAsSingleton(new MutableDisposable());
+ 
+ 		const updateGrowthSession = () => {
+@@ -252,6 +257,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 				await context.update({ hidden: false });
+ 				configurationService.updateValue(ChatConfiguration.AIDisabled, false);
+ 
++				if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++					await commandService.executeCommand('director-code.openSettings');
++					return true;
++				}
++
+ 				if (mode) {
+ 					const chatWidget = await widgetService.revealWidget();
+ 					chatWidget?.input.setChatMode(mode);
+@@ -621,6 +631,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 	}
+ 
+ 	private async checkExtensionInstallation(context: ChatEntitlementContext): Promise<void> {
++		// [Director-Code] skip: built-in agent — no extension to install, mark as installed
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			context.update({ installed: true, disabled: false, untrusted: false, disabledInWorkspace: false });
++			return;
++		}
+ 
+ 		// When developing extensions, await registration and then check
+ 		if (this.environmentService.isExtensionDevelopment) {
+@@ -771,6 +786,10 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
+ 	}
+ 
+ 	private async maybeEnableOrDisableExtension(state: EnablementState.EnabledGlobally | EnablementState.EnabledWorkspace | EnablementState.DisabledGlobally | EnablementState.DisabledWorkspace): Promise<void> {
++		// [Director-Code] skip: built-in agent
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return;
++		}
+ 		const defaultChatExtension = this.extensionsWorkbenchService.local.find(value => ExtensionIdentifier.equals(value.identifier.id, defaultChat.chatExtensionId));
+ 		if (!defaultChatExtension) {
+ 			return;
+diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
+index 27409c006345719ac84fdeb9a46339ca562cf76e..90027d1ac830e700a226ee793253224841087925 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
+@@ -31,6 +31,7 @@ import { ChatSetupAnonymous, ChatSetupStep, ChatSetupResultValue, InstallChatEve
+ import { IDefaultAccount } from '../../../../../base/common/defaultAccount.js';
+ import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
+ import { IProductService } from '../../../../../platform/product/common/productService.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ const defaultChat = {
+ 	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
+@@ -260,6 +261,10 @@ export class ChatSetupController extends Disposable {
+ 	}
+ 
+ 	private async doInstall(): Promise<void> {
++		// [Director-Code] skip: built-in agent
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return;
++		}
+ 		await this.extensionsWorkbenchService.install(defaultChat.chatExtensionId, {
+ 			enable: true,
+ 			isApplicationScoped: true, 	// install into all profiles
+diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
+index 1382c23832e5e3201494e076615c36d600e65417..33c9cf3d2021de7c28a2d36c5ae26824807f41eb 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
+@@ -20,6 +20,8 @@ import { IAgentSession } from '../agentSessions/agentSessionsModel.js';
+ import { ISessionOpenerParticipant, ISessionOpenOptions, sessionOpenerRegistry } from '../agentSessions/agentSessionsOpener.js';
+ import { IChatWidgetService } from '../chat.js';
+ import { CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../actions/chatActions.js';
++import product from '../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ /**
+  * Core-side growth session controller that shows a single "attention needed"
+@@ -143,6 +145,10 @@ export class GrowthSessionOpenerParticipant implements ISessionOpenerParticipant
+  * Returns a disposable that cleans up all registrations.
+  */
+ export function registerGrowthSession(chatSessionsService: IChatSessionsService, growthController: GrowthSessionController): IDisposable {
++	// [Director-Code] skip: built-in agent
++	if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++		return Disposable.None;
++	}
+ 	const disposables = new DisposableStore();
+ 
+ 	// Register as session item controller so it appears in the sessions view
+diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupProviders.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupProviders.ts
+index d7698d80c6a794b28d162388e27c73b3048c9f81..ae97797ee2e86edb4355b4c0e0a39b05adec3719 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupProviders.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupProviders.ts
+@@ -118,7 +118,7 @@ export class SetupAgent extends Disposable implements IChatAgentImplementation {
+ 			const disposables = new DisposableStore();
+ 
+ 			// Register VSCode agent
+-			const { disposable: vscodeDisposable } = SetupAgent.doRegisterAgent(instantiationService, chatAgentService, 'setup.vscode', 'vscode', false, localize2('vscodeAgentDescription', "Ask questions about VSCodium").value, ChatAgentLocation.Chat, ChatModeKind.Agent, context, controller);
++			const { disposable: vscodeDisposable } = SetupAgent.doRegisterAgent(instantiationService, chatAgentService, 'setup.vscode', 'vscode', false, localize2('vscodeAgentDescription', "Ask questions about Director-Code").value, ChatAgentLocation.Chat, ChatModeKind.Agent, context, controller);
+ 			disposables.add(vscodeDisposable);
+ 
+ 			// Register workspace agent
+@@ -135,8 +135,8 @@ export class SetupAgent extends Disposable implements IChatAgentImplementation {
+ 				source: ToolDataSource.Internal,
+ 				icon: Codicon.newFolder,
+ 				displayName: localize('setupToolDisplayName', "New Workspace"),
+-				modelDescription: 'Scaffold a new workspace in VSCodium',
+-				userDescription: localize('setupToolsDescription', "Scaffold a new workspace in VSCodium"),
++				modelDescription: 'Scaffold a new workspace in Director-Code',
++				userDescription: localize('setupToolsDescription', "Scaffold a new workspace in Director-Code"),
+ 				canBeReferencedInPrompt: true,
+ 				toolReferenceName: 'new',
+ 				when: ContextKeyExpr.true(),
+diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
+index a89af9806fd5e2ea5d773dbf66fadf94b574130e..fcf2646ac02d86823fe05971d8f86d0fcf771bec 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
+@@ -23,6 +23,7 @@ import { IKeybindingService } from '../../../../../platform/keybinding/common/ke
+ import { ILayoutService } from '../../../../../platform/layout/browser/layoutService.js';
+ import { ILogService } from '../../../../../platform/log/common/log.js';
+ import product from '../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ import { ITelemetryService, TelemetryLevel } from '../../../../../platform/telemetry/common/telemetry.js';
+ import { IWorkspaceTrustRequestService } from '../../../../../platform/workspace/common/workspaceTrust.js';
+ import { IWorkbenchLayoutService } from '../../../../services/layout/browser/layoutService.js';
+@@ -81,6 +82,10 @@ export class ChatSetup {
+ 	}
+ 
+ 	async run(options?: { disableChatViewReveal?: boolean; forceSignInDialog?: boolean; additionalScopes?: readonly string[]; forceAnonymous?: ChatSetupAnonymous; dialogIcon?: ThemeIcon; dialogTitle?: string; setupStrategy?: ChatSetupStrategy }): Promise<IChatSetupResult> {
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return { success: undefined, dialogSkipped: true };
++		}
++
+ 		if (this.pendingRun) {
+ 			return this.pendingRun;
+ 		}
+@@ -254,6 +259,10 @@ export class ChatSetup {
+ 	private createDialogFooter(disposables: DisposableStore, options?: { forceAnonymous?: ChatSetupAnonymous }): HTMLElement {
+ 		const element = $('.chat-setup-dialog-footer');
+ 
++		// [Director-Code] skip: built-in agent — no Copilot TOS footer
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return element;
++		}
+ 
+ 		let footer: string;
+ 		if (options?.forceAnonymous || this.telemetryService.telemetryLevel === TelemetryLevel.NONE) {
+diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
+index 26b1663cae59f56a82cbe0a693a38dbb5d037da1..ab75f57b0b3b600d52826c8965a5ebe32225e21c 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
+@@ -49,6 +49,7 @@ import { IViewsService } from '../../../../services/views/common/viewsService.js
+ import { ChatViewId } from '../chat.js';
+ import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
+ import { AgentSessionProviders } from '../agentSessions/agentSessions.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ const defaultChat = product.defaultChatAgent;
+ 
+@@ -189,7 +190,7 @@ export class ChatStatusDashboard extends DomWidget {
+ 				label: localize('quotaLabel', "Manage Chat"),
+ 				tooltip: localize('quotaTooltip', "Manage Chat"),
+ 				class: ThemeIcon.asClassName(Codicon.settings),
+-				run: () => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageSettingsUrl))),
++				run: () => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageSettingsUrl), { allowCommands: true })),
+ 			}));
+ 
+ 			const completionsQuotaIndicator = completionsQuota && (completionsQuota.total > 0 || completionsQuota.unlimited) ? this.createQuotaIndicator(this.element, this._store, completionsQuota, localize('completionsLabel', "Inline Suggestions"), false) : undefined;
+@@ -201,7 +202,8 @@ export class ChatStatusDashboard extends DomWidget {
+ 				this.element.appendChild($('div.description', undefined, localize('limitQuota', "Allowance resets {0}.", resetDateHasTime ? this.dateTimeFormatter.value.format(new Date(resetDate)) : this.dateFormatter.value.format(new Date(resetDate)))));
+ 			}
+ 
+-			if (this.chatEntitlementService.entitlement === ChatEntitlement.Free && (Number(chatQuota?.percentRemaining) <= 25 || Number(completionsQuota?.percentRemaining) <= 25)) {
++			// [Director-Code] skip: built-in agent — no Copilot upgrade button
++		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && this.chatEntitlementService.entitlement === ChatEntitlement.Free && (Number(chatQuota?.percentRemaining) <= 25 || Number(completionsQuota?.percentRemaining) <= 25)) {
+ 				const upgradeProButton = this._store.add(new Button(this.element, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate, secondary: this.canUseChat() /* use secondary color when chat can still be used */ }));
+ 				upgradeProButton.label = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
+ 				this._store.add(upgradeProButton.onDidClick(() => this.runCommandAndClose('workbench.action.chat.upgradePlan')));
+@@ -227,7 +229,7 @@ export class ChatStatusDashboard extends DomWidget {
+ 		}
+ 
+ 		// Anonymous Indicator
+-		else if (this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.completed) {
++		else if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.completed) {
+ 			addSeparator(localize('anonymousTitle', "Copilot Usage"));
+ 
+ 			this.createQuotaIndicator(this.element, this._store, localize('quotaLimited', "Limited"), localize('completionsLabel', "Inline Suggestions"), false);
+@@ -366,7 +368,8 @@ export class ChatStatusDashboard extends DomWidget {
+ 		}
+ 
+ 		// New to Chat / Signed out
+-		{
++		// [Director-Code] skip: built-in agent — no Copilot-branded setup/sign-in section
++		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
+ 			const newUser = isNewUser(this.chatEntitlementService);
+ 			const anonymousUser = this.chatEntitlementService.anonymous;
+ 			const disabled = this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted;
+@@ -530,7 +533,7 @@ export class ChatStatusDashboard extends DomWidget {
+ 			)
+ 		));
+ 
+-		if (supportsOverage && (this.chatEntitlementService.entitlement === ChatEntitlement.EDU || this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus)) {
++		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent) && supportsOverage && (this.chatEntitlementService.entitlement === ChatEntitlement.EDU || this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus)) {
+ 			const manageOverageButton = disposables.add(new Button(quotaIndicator, { ...defaultButtonStyles, secondary: true, hoverDelegate: nativeHoverDelegate }));
+ 			manageOverageButton.label = localize('enableAdditionalUsage', "Manage paid premium requests");
+ 			disposables.add(manageOverageButton.onDidClick(() => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageOverageUrl)))));
+diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
+index bbce59557f4030b4404280db311537d72f93aa4c..c5bc6e3311690b08056c58c7aa6a09d08972f60b 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
+@@ -23,6 +23,7 @@ import { isNewUser } from './chatStatus.js';
+ import product from '../../../../../platform/product/common/product.js';
+ import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
+ import { ChatConfiguration } from '../../common/constants.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ 
+ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribution {
+ 
+@@ -106,6 +107,37 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
+ 	}
+ 
+ 	private getEntryProps(): IStatusbarEntry {
++		// [Director-Code] skip: built-in agent — neutral status bar in built-in mode
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			let text = '$(sparkle)';
++			let ariaLabel = localize('dcAIStatus', "AI Status");
++			if (this.runningSessionsCount > 0) {
++				text = '$(loading~spin)';
++				ariaLabel = this.runningSessionsCount > 1
++					? localize('dcSessionsInProgress', "{0} agent sessions in progress", this.runningSessionsCount)
++					: localize('dcSessionInProgress', "1 agent session in progress");
++			}
++			return {
++				name: localize('dcStatusName', "AI Status"),
++				text,
++				ariaLabel,
++				command: ShowTooltipCommand,
++				showInAllWindows: true,
++				kind: undefined,
++				tooltip: {
++					element: (token: CancellationToken) => {
++						const store = new DisposableStore();
++						store.add(token.onCancellationRequested(() => store.dispose()));
++						const elem = ChatStatusDashboard.instantiateInContents(this.instantiationService, store, undefined);
++						store.add(disposableWindowInterval(mainWindow, () => {
++							if (!elem.isConnected) { store.dispose(); }
++						}, 2000));
++						return elem;
++					}
++				}
++			};
++		}
++
+ 		let text = '$(copilot)';
+ 		let ariaLabel = localize('chatStatusAria', "Copilot status");
+ 		let kind: StatusbarEntryKind | undefined;
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
+index 96db31bee112378dfff69ca6c5b713fca22def3d..8f6a40eb58c88776df69f7fe9cfebb2ba240b388 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
+@@ -21,6 +21,8 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
+ import { IChatErrorDetailsPart, IChatRendererContent, IChatResponseViewModel } from '../../../common/model/chatViewModel.js';
+ import { IChatWidgetService } from '../../chat.js';
+ import { IChatContentPart } from './chatContentParts.js';
++import product from '../../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
+ 
+ const $ = dom.$;
+ 
+@@ -63,15 +65,17 @@ export class ChatQuotaExceededPart extends Disposable implements IChatContentPar
+ 		dom.append(messageContainer, markdownContent.element);
+ 
+ 		let primaryButtonLabel: string | undefined;
+-		switch (chatEntitlementService.entitlement) {
+-			case ChatEntitlement.EDU:
+-			case ChatEntitlement.Pro:
+-			case ChatEntitlement.ProPlus:
+-				primaryButtonLabel = localize('enableAdditionalUsage', "Manage Paid Premium Requests");
+-				break;
+-			case ChatEntitlement.Free:
+-				primaryButtonLabel = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
+-				break;
++		if (!isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			switch (chatEntitlementService.entitlement) {
++				case ChatEntitlement.EDU:
++				case ChatEntitlement.Pro:
++				case ChatEntitlement.ProPlus:
++					primaryButtonLabel = localize('enableAdditionalUsage', "Manage Paid Premium Requests");
++					break;
++				case ChatEntitlement.Free:
++					primaryButtonLabel = localize('upgradeToCopilotPro', "Upgrade to GitHub Copilot Pro");
++					break;
++			}
+ 		}
+ 
+ 		let hasAddedWaitWarning = false;
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
+index 2a0ab1b86209286a97f22e4dc3cd0e14805871e4..cda71c29d03d3ea6e84463ff3068961521323ceb 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
+@@ -40,6 +40,7 @@ import { IChatCollapsibleIODataPart } from './chatToolInputOutputContentPart.js'
+ import { ChatThinkingExternalResourceWidget } from './chatThinkingExternalResourcesWidget.js';
+ import { LocalChatSessionUri, chatSessionResourceToId } from '../../../common/model/chatUri.js';
+ import { IEditSessionDiffStats } from '../../../common/editing/chatEditingService.js';
++import { selectAuxiliaryLanguageModel } from '../../agentEngine/auxiliaryModelSelection.js';
+ 
+ 
+ function extractTextFromPart(content: IChatThinkingPart): string {
+@@ -1086,8 +1087,8 @@ export class ChatThinkingContentPart extends ChatCollapsibleContentPart implemen
+ 		const timeout = setTimeout(() => cts.cancel(), 5000);
+ 
+ 		try {
+-			const models = await this.languageModelsService.selectLanguageModels({ vendor: 'copilot', id: 'copilot-fast' });
+-			if (!models.length) {
++			const model = await selectAuxiliaryLanguageModel(this.languageModelsService);
++			if (!model) {
+ 				this.setFallbackTitle();
+ 				return;
+ 			}
+@@ -1197,7 +1198,7 @@ ${this.hookCount > 0 ? `EXAMPLES WITH BLOCKED CONTENT (from hooks):
+ 			Content: ${context}`;
+ 
+ 			const response = await this.languageModelsService.sendChatRequest(
+-				models[0],
++				model,
+ 				undefined,
+ 				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
+ 				{},
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
+index 31d68e8873a70062e7a9fb5dbce39b562d48cd0c..00fc5134db950ba63a40d5cb58f01af017ceb58e 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
+@@ -44,6 +44,7 @@ import { ServiceCollection } from '../../../../../platform/instantiation/common/
+ import { ILogService } from '../../../../../platform/log/common/log.js';
+ import { bindContextKey } from '../../../../../platform/observable/common/platformObservableUtils.js';
+ import product from '../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
+ import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
+ import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
+@@ -1005,7 +1006,9 @@ export class ChatWidget extends Disposable implements IChatWidget {
+ 			if (!numItems) {
+ 				const defaultAgent = this.chatAgentService.getDefaultAgent(this.location, this.input.currentModeKind);
+ 				let additionalMessage: string | IMarkdownString | undefined;
+-				if (this.chatEntitlementService.anonymous && !this.chatEntitlementService.sentiment.completed) {
++				if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++					additionalMessage = defaultAgent?.metadata.additionalWelcomeMessage;
++				} else if (this.chatEntitlementService.anonymous && !this.chatEntitlementService.sentiment.completed) {
+ 					const providers = product.defaultChatAgent.provider;
+ 					additionalMessage = new MarkdownString(localize({ key: 'settings', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3}).", providers.default.name, providers.default.name, product.defaultChatAgent.termsStatementUrl, product.defaultChatAgent.privacyStatementUrl), { isTrusted: true });
+ 				} else {
+@@ -2650,7 +2653,8 @@ export class ChatWidget extends Disposable implements IChatWidget {
+ 		const lastElementVisible = this.listWidget.isScrolledToBottom;
+ 		const lastItem = this.listWidget.lastItem;
+ 
+-		const contentHeight = Math.max(0, height - inputHeight - chatSuggestNextWidgetHeight);
++		const chatListBottomPadding = 12;
++		const contentHeight = Math.max(0, height - inputHeight - chatSuggestNextWidgetHeight - chatListBottomPadding);
+ 		this.listWidget.layout(contentHeight, width);
+ 
+ 		this.welcomeMessageContainer.style.height = `${contentHeight}px`;
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
+index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..0cb545e5f01965d97caa35cfff90f03a239079be 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
+@@ -32,6 +32,7 @@ import * as semver from '../../../../../../base/common/semver/semver.js';
+ import { IModelPickerDelegate } from './modelPickerActionItem.js';
+ import { IUriIdentityService } from '../../../../../../platform/uriIdentity/common/uriIdentity.js';
+ import { IUpdateService, StateType } from '../../../../../../platform/update/common/update.js';
++import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
+ 
+ function isVersionAtLeast(current: string, required: string): boolean {
+ 	const currentSemver = semver.coerce(current);
+@@ -215,6 +216,7 @@ export function buildModelPickerItems(
+ 	showFeatured: boolean,
+ 	hoverPosition?: IHoverPositionOptions,
+ 	languageModelsService?: ILanguageModelsService,
++	neutralUnavailableModels: boolean = false,
+ ): IActionListItem<IActionWidgetDropdownAction>[] {
+ 	const items: IActionListItem<IActionWidgetDropdownAction>[] = [];
+ 	if (models.length === 0) {
+@@ -251,7 +253,10 @@ export function buildModelPickerItems(
+ 
+ 			const resolveModel = (id: string) => allModelsMap.get(id) ?? modelsByMetadataId.get(id);
+ 
+-			const getUnavailableReason = (entry: IModelControlEntry): 'upgrade' | 'update' | 'admin' => {
++			const getUnavailableReason = (entry: IModelControlEntry): 'upgrade' | 'update' | 'admin' | 'configure' => {
++				if (neutralUnavailableModels) {
++					return 'configure';
++				}
+ 				const isBusinessOrEnterpriseUser = chatEntitlementService.entitlement === ChatEntitlement.Business || chatEntitlementService.entitlement === ChatEntitlement.Enterprise;
+ 				if (!isBusinessOrEnterpriseUser) {
+ 					return 'upgrade';
+@@ -272,7 +277,7 @@ export function buildModelPickerItems(
+ 			// --- 2. Promoted section (selected + recently used + featured) ---
+ 			type PromotedItem =
+ 				| { kind: 'available'; model: ILanguageModelChatMetadataAndIdentifier }
+-				| { kind: 'unavailable'; id: string; entry: IModelControlEntry; reason: 'upgrade' | 'update' | 'admin' };
++				| { kind: 'unavailable'; id: string; entry: IModelControlEntry; reason: 'upgrade' | 'update' | 'admin' | 'configure' };
+ 
+ 			const promotedItems: PromotedItem[] = [];
+ 
+@@ -470,7 +475,7 @@ export function getModelPickerAccessibilityProvider() {
+ function createUnavailableModelItem(
+ 	id: string,
+ 	entry: IModelControlEntry,
+-	reason: 'upgrade' | 'update' | 'admin',
++	reason: 'upgrade' | 'update' | 'admin' | 'configure',
+ 	manageSettingsUrl: string | undefined,
+ 	updateStateType: StateType,
+ 	section?: string,
+@@ -482,6 +487,8 @@ function createUnavailableModelItem(
+ 		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Upgrade](command:workbench.action.chat.upgradePlan \" \")"), { isTrusted: true });
+ 	} else if (reason === 'update') {
+ 		description = localize('chat.modelPicker.updateDescription', "Update VS Code");
++	} else if (reason === 'configure') {
++		description = new MarkdownString(localize('chat.modelPicker.configureLink', "[Configure](command:director-code.openSettings \" \")"), { isTrusted: true });
+ 	} else {
+ 		description = manageSettingsUrl
+ 			? new MarkdownString(localize('chat.modelPicker.adminLink', "[Contact your admin]({0})", manageSettingsUrl), { isTrusted: true })
+@@ -494,6 +501,9 @@ function createUnavailableModelItem(
+ 		hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHover', "[Upgrade to GitHub Copilot Pro](command:workbench.action.chat.upgradePlan \" \") to use the best models."));
+ 	} else if (reason === 'update') {
+ 		hoverContent = getUpdateHoverContent(updateStateType);
++	} else if (reason === 'configure') {
++		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
++		hoverContent.appendMarkdown(localize('chat.modelPicker.configureHover', "This model is not available. [Configure Director Code](command:director-code.openSettings \" \") to update your provider, authentication, or model list."));
+ 	} else {
+ 		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
+ 		hoverContent.appendMarkdown(localize('chat.modelPicker.adminHover', "This model is not available. Contact your administrator to enable it."));
+@@ -683,6 +693,7 @@ export class ModelPickerWidget extends Disposable {
+ 			this._delegate.showFeatured(),
+ 			this._hoverPosition,
+ 			this._languageModelsService,
++			isDirectorCodeBuiltInMode(this._productService.defaultChatAgent),
+ 		);
+ 
+ 		const listOptions = {
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
+index cec2238e4ceb3768f12ef6c366d92a86c97d448c..5b8e93742dfb142ea24fc12113caa49f7ef0e14e 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
+@@ -17,6 +17,8 @@ import { ChatContextKeys } from '../../../common/actions/chatContextKeys.js';
+ import { CHAT_SETUP_ACTION_ID } from '../../actions/chatActions.js';
+ import { ChatInputPartWidgetsRegistry, IChatInputPartWidget } from './chatInputPartWidgets.js';
+ import './media/chatStatusWidget.css';
++import product from '../../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
+ 
+ const $ = dom.$;
+ 
+@@ -47,6 +49,11 @@ export class ChatStatusWidget extends Disposable implements IChatInputPartWidget
+ 	}
+ 
+ 	private initializeIfEnabled(): void {
++		// [Director-Code] skip: built-in agent — no Copilot quota CTA widget
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return;
++		}
++
+ 		const entitlement = this.chatEntitlementService.entitlement;
+ 		const isAnonymous = this.chatEntitlementService.anonymous;
+ 
+diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts b/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
+index 458b657d58b746b5218b35305569304f0541aa7d..ceb6b07dd70389442043d74a9ad67f1adbaecd8e 100644
+--- a/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
++++ b/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
+@@ -23,6 +23,7 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
+ import { MANAGE_CHAT_COMMAND_ID } from '../../../common/constants.js';
+ import { ILanguageModelChatMetadataAndIdentifier } from '../../../common/languageModels.js';
+ import { DEFAULT_MODEL_PICKER_CATEGORY } from '../../../common/widget/input/modelPickerWidget.js';
++import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
+ import { ChatInputPickerActionViewItem, IChatInputPickerOptions } from './chatInputPickerActionItem.js';
+ 
+ export interface IModelPickerDelegate {
+@@ -119,6 +120,10 @@ function getModelPickerActionBarActionProvider(commandService: ICommandService,
+ 				});
+ 			}
+ 
++			if (isDirectorCodeBuiltInMode(productService.defaultChatAgent)) {
++				return additionalActions;
++			}
++
+ 			// Add sign-in / upgrade option if entitlement is anonymous / free / new user
+ 			const isNewOrAnonymousUser = !chatEntitlementService.sentiment.completed ||
+ 				chatEntitlementService.entitlement === ChatEntitlement.Available ||
+diff --git a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
+index 9e5c9df96f38e4d8c4fbe1f07daf46992a448191..67f63e582347d8e7762cc1d79196500f29cd99d9 100644
+--- a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
++++ b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
+@@ -19,6 +19,7 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
+ import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
+ import { IMarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
+ import product from '../../../../../platform/product/common/product.js';
++import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
+ import { IQuickInputService, IQuickWidget } from '../../../../../platform/quickinput/common/quickInput.js';
+ import { editorBackground, inputBackground, quickInputBackground, quickInputForeground } from '../../../../../platform/theme/common/colorRegistry.js';
+ import { EDITOR_DRAG_AND_DROP_BACKGROUND } from '../../../../common/theme.js';
+@@ -263,6 +264,11 @@ class QuickChat extends Disposable {
+ 	}
+ 
+ 	private setupDisclaimer(parent: HTMLElement): void {
++		// [Director-Code] skip: built-in agent — no Copilot TOS disclaimer
++		if (isDirectorCodeBuiltInMode(product.defaultChatAgent)) {
++			return;
++		}
++
+ 		const disclaimerElement = dom.append(parent, dom.$('.disclaimer.hidden'));
+ 		const disposables = this._store.add(new DisposableStore());
+ 
+diff --git a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
+index c3158832160b387c88faa2ecd2944d486dfd26bc..c919e3da807a88240140c3d7c70d6cc6310a890e 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
+@@ -84,6 +84,7 @@ function callBuild(
+ 		anonymous?: boolean;
+ 		showUnavailableFeatured?: boolean;
+ 		showFeatured?: boolean;
++		neutralUnavailableModels?: boolean;
+ 	} = {},
+ ): IActionListItem<IActionWidgetDropdownAction>[] {
+ 	const onSelect = () => { };
+@@ -107,6 +108,7 @@ function callBuild(
+ 		opts.showFeatured ?? true,
+ 		undefined,
+ 		stubLanguageModelsService,
++		opts.neutralUnavailableModels ?? false,
+ 	);
+ }
+ 
+@@ -638,6 +640,26 @@ suite('buildModelPickerItems', () => {
+ 		assert.ok(disabledItems[1].description.value.includes('Upgrade'));
+ 	});
+ 
++	test('neutral unavailable models show configure description instead of upgrade', () => {
++		const auto = createAutoModel();
++		const items = callBuild([auto], {
++			recentModelIds: ['model-a'],
++			controlModels: {
++				'model-a': { label: 'Model A', featured: true, exists: false },
++			},
++			entitlement: ChatEntitlement.Free,
++			neutralUnavailableModels: true,
++		});
++
++		const disabledItem = getActionItems(items).find(a => a.disabled);
++		assert.ok(disabledItem);
++		assert.ok(disabledItem.description instanceof MarkdownString);
++		assert.ok(disabledItem.description.value.includes('Configure'));
++		assert.ok(!disabledItem.description.value.includes('Upgrade'));
++		assert.ok(disabledItem.hover?.content instanceof MarkdownString);
++		assert.ok(disabledItem.hover.content.value.includes('Configure Director Code'));
++	});
++
+ 	test('anonymous user model selection triggers onSelect normally', () => {
+ 		const auto = createAutoModel();
+ 		const modelA = createModel('gpt-4o', 'GPT-4o');

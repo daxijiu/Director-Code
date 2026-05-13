@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "profile": "116-stable-win32-x64-client",
+  "generatedAt": "2026-05-12T14:39:19.553Z",
+  "policy": {
+    "source": "profile replayInputs",
+    "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
+    "missingPlannedPatchRule": "planned Director semantic patches may be deferred until ported; enabled patches must exist and match sha256"
+  },
+  "patches": [
+    {
+      "path": "patches/replay/001-vscodium-layer.116.patch",
+      "sha256": "0294b9caf124ff03d9745c8f1def9c7f71a26ebc6ba340a08012311a852722a7",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "vscodium",
+      "stage": "aggregate-replay",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 1,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/002-director-branding.116.patch",
+      "sha256": "643751f5e0991e2e7f773a5c68a0277b80cd185469776fa74eb1618af1347687",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "branding",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 2,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/003-director-product-build-release.116.patch",
+      "sha256": "f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "product-build-release",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 3,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/004-director-agent-engine.116.patch",
+      "sha256": "dc3b5ba7479ab3775f985200c4f4ca4aef5015f3be4c1c1447bd13b5321b1f6e",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "agent-engine",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 4,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/005-director-chat-built-in-mode.116.patch",
+      "sha256": "e0eb569e91806aa5f88ada3ce0cdd51bea87af5384034b436f774594da724eb0",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "chat-built-in-mode",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 5,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/006-director-text-polish.116.patch",
+      "sha256": "9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "text-polish",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 6,
+      "placeholders": []
+    }
+  ]
+}

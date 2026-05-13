@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "activeProfile": "116-stable-win32-x64-client",
+  "profiles": [
+    {
+      "profile": "112-stable-win32-x64-client",
+      "path": "docs/upgrade/profiles/112-stable-win32-x64-client.json",
+      "validationMode": "legacy-reference"
+    },
+    {
+      "profile": "116-stable-win32-x64-client",
+      "path": "docs/upgrade/profiles/116-stable-win32-x64-client.json",
+      "validationMode": "canonical-replay"
+    }
+  ]
+}

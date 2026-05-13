@@ -1,12 +1,14 @@
 {
   "schemaVersion": 1,
   "profile": "112-stable-win32-x64-client",
+  "validationMode": "legacy-reference",
   "quality": "stable",
   "osName": "windows",
   "platform": "win32",
   "arch": "x64",
   "buildTarget": "client",
   "releaseVersion": "1.112.01907",
+  "directorVersion": "1.112.0",
   "BUILD_SOURCEVERSION": "7d2fbd4df8a934dc92e9552a608d600f990042df",
   "APP_NAME": "Director-Code",
   "BINARY_NAME": "director-code",
@@ -25,6 +27,14 @@
       "commit": "cb68d26217b4a707754faf2801a08410bec7bbee"
     }
   },
+  "replayInputs": {
+    "patchSeries": "patches/series.112.json",
+    "vscodiumLayerPatch": "patches/replay/001-vscodium-layer.112.patch",
+    "directorDeltaPatches": [
+      "patches/replay/002-director-delta.112.patch"
+    ],
+    "vscodiumLayerManifest": "docs/upgrade/vscodium-layer.112.json"
+  },
   "expectedPaths": {
     "product": "docs/upgrade/expected/112-stable-win32-x64-client/product.expected.json",
     "package": "docs/upgrade/expected/112-stable-win32-x64-client/package.expected.json",
@@ -32,6 +42,22 @@
     "announcementsBuiltin": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-builtin.expected.json",
     "announcementsExtra": "docs/upgrade/expected/112-stable-win32-x64-client/announcements-extra.expected.json"
   },
+  "reportPaths": {
+    "freeze": "docs/upgrade/reports/112-stable-win32-x64-client/freeze-report.json",
+    "materialize": "docs/upgrade/reports/112-stable-win32-x64-client/materialize-report.json",
+    "replayEquivalence": "docs/upgrade/reports/112-stable-win32-x64-client/replay-equivalence-report.json",
+    "schemaInventory": "docs/upgrade/reports/112-stable-win32-x64-client/schema-inventory-report.json",
+    "scriptArtifact": "docs/upgrade/reports/112-stable-win32-x64-client/script-artifact-report.json",
+    "vscodiumLayer": "docs/upgrade/reports/112-stable-win32-x64-client/vscodium-layer-report.json",
+    "workflowDocs": "docs/upgrade/reports/112-stable-win32-x64-client/workflow-docs-report.json"
+  },
+  "allowlistPaths": {
+    "depsSourceMutation": "docs/upgrade/deps-source-mutation-allowlist.112.json",
+    "overlay": "docs/upgrade/overlay-allowlist.112.json",
+    "productDelete": "docs/upgrade/product.delete.112.json",
+    "referenceOverlays": "docs/upgrade/reference-overlays.112.json"
+  },
+  "legacyReferenceManifestPath": "docs/upgrade/112-reference-manifest.json",
   "artifactPaths": {
     "generatedRoot": "vscode.generated",
     "directorSource": "vscode.generated/layers/director/vscode",

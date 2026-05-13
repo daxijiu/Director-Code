@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "profile": "116-stable-win32-x64-client",
+  "phase": "P2",
+  "batch": "layer",
+  "status": "passed",
+  "generatedAt": "2026-05-12T15:01:13.211Z",
+  "command": [
+    "--profile",
+    "docs/upgrade/profiles/116-stable-win32-x64-client.json",
+    "--target",
+    "vscode.generated",
+    "--up-to-layer",
+    "director",
+    "--force"
+  ],
+  "target": "vscode.generated",
+  "upToLayer": "director",
+  "upstreams": {
+    "vscode": {
+      "path": ".cache/upstreams/vscode/1.116.0",
+      "remote": "https://github.com/microsoft/vscode.git",
+      "tag": "1.116.0",
+      "commit": "560a9dba96f961efea7b1612916f89e5d5d4d679",
+      "cleanStatus": "clean",
+      "treeHash": "7e64d3fcda807e478d4be634060348fef9c419451a673b82b22517d5308d13e2"
+    },
+    "vscodium": {
+      "path": ".cache/upstreams/vscodium/1.116.02821",
+      "remote": "https://github.com/VSCodium/vscodium.git",
+      "tag": "1.116.02821",
+      "commit": "f4d12efa852f25f6e055ac0b4c79f57a882af4e7",
+      "cleanStatus": "clean",
+      "treeHash": "b1540537a9e38f555dfb5e5530fc68b82a1bcffc5ea4139e3ad6de0f9bf419ec"
+    }
+  },
+  "replayInputs": {
+    "canonicalManifest": "docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json",
+    "patchSeries": "patches/series.116.json",
+    "vscodiumLayerPatch": "patches/replay/001-vscodium-layer.116.patch",
+    "directorDeltaPatches": [
+      "patches/replay/002-director-branding.116.patch",
+      "patches/replay/003-director-product-build-release.116.patch",
+      "patches/replay/004-director-agent-engine.116.patch",
+      "patches/replay/005-director-chat-built-in-mode.116.patch",
+      "patches/replay/006-director-text-polish.116.patch"
+    ]
+  },
+  "applications": [
+    {
+      "layer": "vscodium",
+      "patch": "patches/replay/001-vscodium-layer.116.patch",
+      "size": 68808709,
+      "sha256": "0294b9caf124ff03d9745c8f1def9c7f71a26ebc6ba340a08012311a852722a7",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/002-director-branding.116.patch",
+      "size": 175179,
+      "sha256": "643751f5e0991e2e7f773a5c68a0277b80cd185469776fa74eb1618af1347687",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/003-director-product-build-release.116.patch",
+      "size": 17420,
+      "sha256": "f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/004-director-agent-engine.116.patch",
+      "size": 826159,
+      "sha256": "dc3b5ba7479ab3775f985200c4f4ca4aef5015f3be4c1c1447bd13b5321b1f6e",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/005-director-chat-built-in-mode.116.patch",
+      "size": 46617,
+      "sha256": "e0eb569e91806aa5f88ada3ce0cdd51bea87af5384034b436f774594da724eb0",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/006-director-text-polish.116.patch",
+      "size": 13099,
+      "sha256": "9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141",
+      "status": "passed"
+    }
+  ],
+  "referenceOverlays": {
+    "status": "not-applicable",
+    "overlays": []
+  },
+  "equivalence": {
+    "status": "not-applicable"
+  },
+  "checkpoints": [
+    {
+      "name": "vscode",
+      "path": "vscode.generated/layers/vscode/vscode",
+      "fileManifestHash": "7e64d3fcda807e478d4be634060348fef9c419451a673b82b22517d5308d13e2"
+    },
+    {
+      "name": "vscodium",
+      "path": "vscode.generated/layers/vscodium/vscode",
+      "fileManifestHash": "b0bbbde0cc09cb1e536522e610d51cf7a6861720fbe18f174ec1d10136b90992"
+    },
+    {
+      "name": "director",
+      "path": "vscode.generated/layers/director/vscode",
+      "fileManifestHash": "51549f00c391e0c5cec2af0e761ed6cd36c793966464554090869059552de44c"
+    }
+  ],
+  "checks": {
+    "targetPolicy": "passed",
+    "cleanVscodeMaterialized": "passed",
+    "cleanVscodiumCache": "passed",
+    "vscodiumTransformApplication": "passed",
+    "directorDeltaApplication": "passed",
+    "referenceOverlayApplication": "not-applicable",
+    "sourceEquivalence": "not-applicable",
+    "installDeps": "not-requested",
+    "buildArtifact": "not-requested"
+  },
+  "blockers": []
+}

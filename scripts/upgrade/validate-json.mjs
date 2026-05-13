@@ -46,7 +46,13 @@ function assertSupportedSchema(value, filePath, pointer = '$') {
 }
 
 function isSchemaObject(value) {
-  return Boolean(value && typeof value === 'object' && ('type' in value || 'required' in value || 'properties' in value || 'enum' in value || 'items' in value));
+  return Boolean(value && typeof value === 'object' && (
+    typeof value.type === 'string'
+    || Array.isArray(value.required)
+    || (value.properties && typeof value.properties === 'object' && !Array.isArray(value.properties))
+    || Array.isArray(value.enum)
+    || (value.items && typeof value.items === 'object' && !Array.isArray(value.items))
+  ));
 }
 
 function validate(schema, data, pointer, errors) {

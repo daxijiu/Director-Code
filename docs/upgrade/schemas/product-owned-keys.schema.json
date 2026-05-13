@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "profile", "keys"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "profile": { "type": "string" },
+    "keys": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,374 @@
+diff --git a/build/gulpfile.reh.ts b/build/gulpfile.reh.ts
+index 167a3a01dde146a325e206924545718866e6cce3..11f521d006a52845bc1f96bdb9c90f2f43510c55 100644
+--- a/build/gulpfile.reh.ts
++++ b/build/gulpfile.reh.ts
+@@ -326,7 +326,7 @@ function packageTask(type: string, platform: string, arch: string, sourceFolderN
+ 
+ 		let productJsonContents = '';
+ 		const productJsonStream = gulp.src(['product.json'], { base: '.' })
+-			.pipe(jsonEditor({ commit, date: readISODate(sourceFolderName), version, serverDownloadUrlTemplate: 'https://github.com/VSCodium/vscodium/releases/download/1.116.02821/vscodium-reh-${os}-${arch}-1.116.02821.tar.gz' }))
++			.pipe(jsonEditor({ commit, date: readISODate(sourceFolderName), version, serverDownloadUrlTemplate: 'https://github.com/daxijiu/Director-Code/releases/download/1.116.0/director-code-reh-${os}-${arch}-1.116.0.tar.gz' }))
+ 			.pipe(es.through(function (file) {
+ 				productJsonContents = file.contents.toString();
+ 				this.emit('data', file);
+diff --git a/build/gulpfile.vscode.ts b/build/gulpfile.vscode.ts
+index b07b6400e23152b89acada2f7aa458e647bd1acc..42cf30474d247d466deb20b5919554f73981bbc9 100644
+--- a/build/gulpfile.vscode.ts
++++ b/build/gulpfile.vscode.ts
+@@ -384,7 +384,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
+ 
+ 		let productJsonContents: string;
+ 		const productJsonStream = gulp.src(['product.json'], { base: '.' })
+-			.pipe(jsonEditor({ commit, date: readISODate(out), checksums, version, serverDownloadUrlTemplate: 'https://github.com/VSCodium/vscodium/releases/download/1.116.02821/vscodium-reh-${os}-${arch}-1.116.02821.tar.gz' }))
++			.pipe(jsonEditor({ commit, date: readISODate(out), checksums, version, serverDownloadUrlTemplate: 'https://github.com/daxijiu/Director-Code/releases/download/1.116.0/director-code-reh-${os}-${arch}-1.116.0.tar.gz' }))
+ 			.pipe(es.through(function (file) {
+ 				productJsonContents = file.contents.toString();
+ 				this.emit('data', file);
+diff --git a/build/gulpfile.vscode.win32.ts b/build/gulpfile.vscode.win32.ts
+index 517237212a5c33119c42aededb9f9e4c8f3642f5..de8645f133d8958b78b138a91e6465a488c9104c 100644
+--- a/build/gulpfile.vscode.win32.ts
++++ b/build/gulpfile.vscode.win32.ts
+@@ -23,10 +23,11 @@ const repoPath = path.dirname(import.meta.dirname);
+ const commit = getVersion(repoPath);
+ const buildPath = (arch: string) => path.join(path.dirname(repoPath), `VSCode-win32-${arch}`);
+ const setupDir = (arch: string, target: string) => path.join(repoPath, '.build', `win32-${arch}`, `${target}-setup`);
+-const innoSetupPath = path.join(path.dirname(path.dirname(require.resolve('innosetup'))), 'bin', 'ISCC.exe');
++const innoSetupBinPath = path.join(path.dirname(path.dirname(require.resolve('innosetup'))), 'bin');
++const innoSetupPath = path.join(innoSetupBinPath, 'ISCC.exe');
+ const signWin32Path = path.join(repoPath, 'build', 'azure-pipelines', 'common', 'sign-win32.ts');
+ 
+-function packageInnoSetup(iss: string, options: { definitions?: Record<string, unknown> }, cb: (err?: Error | null) => void) {
++function packageInnoSetup(iss: string, options: { definitions?: Record<string, unknown>; setupIconFile?: string }, cb: (err?: Error | null) => void) {
+ 	const definitions = options.definitions || {};
+ 
+ 	if (process.argv.some(arg => arg === '--debug-inno')) {
+@@ -48,7 +49,7 @@ function packageInnoSetup(iss: string, options: { definitions?: Record<string, u
+ 		`/sesrp=node ${signWin32Path} $f`
+ 	];
+ 
+-	cp.spawn(innoSetupPath, args, { stdio: ['ignore', 'inherit', 'inherit'] })
++	const run = (isccPath: string) => cp.spawn(isccPath, args, { stdio: ['ignore', 'inherit', 'inherit'] })
+ 		.on('error', cb)
+ 		.on('exit', code => {
+ 			if (code === 0) {
+@@ -57,6 +58,44 @@ function packageInnoSetup(iss: string, options: { definitions?: Record<string, u
+ 				cb(new Error(`InnoSetup returned exit code: ${code}`));
+ 			}
+ 		});
++
++	if (!options.setupIconFile) {
++		run(innoSetupPath);
++		return;
++	}
++
++	patchInnoSetupLoaderIcon(options.setupIconFile, definitions, (err, patchedInnoSetupPath) => {
++		if (err) {
++			cb(err);
++			return;
++		}
++		run(patchedInnoSetupPath!);
++	});
++}
++
++function patchInnoSetupLoaderIcon(icon: string, definitions: Record<string, unknown>, cb: (err: Error | null, isccPath?: string) => void): void {
++	const arch = typeof definitions['Arch'] === 'string' ? definitions['Arch'] : 'unknown';
++	const target = typeof definitions['InstallTarget'] === 'string' ? definitions['InstallTarget'] : 'default';
++	const patchedBinPath = path.join(repoPath, '.build', 'inno-setup-patched-bin', arch, target);
++
++	try {
++		fs.rmSync(patchedBinPath, { recursive: true, force: true });
++		fs.cpSync(innoSetupBinPath, patchedBinPath, { recursive: true });
++	} catch (err) {
++		cb(err as Error);
++		return;
++	}
++
++	// Inno's final SetupIconFile resource update can fail with ERROR_ACCESS_DENIED
++	// after the setup payload is attached. Patching the loader first preserves the
++	// installer icon without triggering that final resource update path.
++	rcedit(path.join(patchedBinPath, 'SetupLdr.e32'), { icon }, err => {
++		if (err) {
++			cb(err as Error);
++			return;
++		}
++		cb(null, path.join(patchedBinPath, 'ISCC.exe'));
++	});
+ }
+ 
+ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
+@@ -109,7 +148,8 @@ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
+ 			InstallTarget: target,
+ 			ProductJsonPath: productJsonPath,
+ 			VersionedResourcesFolder: versionedResourcesFolder,
+-			Quality: quality
++			Quality: quality,
++			SkipSetupIconFile: 'true'
+ 		};
+ 
+ 		const isInsiderOrExploration = quality === 'insider' || quality === 'exploration';
+@@ -139,7 +179,7 @@ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
+ 
+ 		fs.writeFileSync(productJsonPath, JSON.stringify(productJson, undefined, '\t'));
+ 
+-		packageInnoSetup(issPath, { definitions }, cb as (err?: Error | null) => void);
++		packageInnoSetup(issPath, { definitions, setupIconFile: path.join(repoPath, 'resources', 'win32', 'code.ico') }, cb as (err?: Error | null) => void);
+ 	};
+ }
+ 
+diff --git a/build/win32/code.iss b/build/win32/code.iss
+index 1213e50078e2860adc578bbd3d4416e52a49c9b6..54b0ff1e9caf02a9daedeeea4a31ba94d00b9e74 100644
+--- a/build/win32/code.iss
++++ b/build/win32/code.iss
+@@ -8,10 +8,10 @@
+ AppId={#AppId}
+ AppName={#NameLong}
+ AppVerName={#NameVersion}
+-AppPublisher=VSCodium
+-AppPublisherURL=https://vscodium.com/
+-AppSupportURL=https://vscodium.com/
+-AppUpdatesURL=https://vscodium.com/
++AppPublisher=Director-Code
++AppPublisherURL=https://github.com/daxijiu/Director-Code/
++AppSupportURL=https://github.com/daxijiu/Director-Code/
++AppUpdatesURL=https://github.com/daxijiu/Director-Code/
+ DefaultGroupName={#NameLong}
+ AllowNoIcons=yes
+ OutputDir={#OutputDir}
+@@ -22,7 +22,9 @@ AppMutex={code:GetAppMutex}
+ SetupMutex={code:GetSetupMutex}
+ WizardImageFile="{#RepoDir}\resources\win32\inno-big-100.bmp,{#RepoDir}\resources\win32\inno-big-125.bmp,{#RepoDir}\resources\win32\inno-big-150.bmp,{#RepoDir}\resources\win32\inno-big-175.bmp,{#RepoDir}\resources\win32\inno-big-200.bmp,{#RepoDir}\resources\win32\inno-big-225.bmp,{#RepoDir}\resources\win32\inno-big-250.bmp"
+ WizardSmallImageFile="{#RepoDir}\resources\win32\inno-small-100.bmp,{#RepoDir}\resources\win32\inno-small-125.bmp,{#RepoDir}\resources\win32\inno-small-150.bmp,{#RepoDir}\resources\win32\inno-small-175.bmp,{#RepoDir}\resources\win32\inno-small-200.bmp,{#RepoDir}\resources\win32\inno-small-225.bmp,{#RepoDir}\resources\win32\inno-small-250.bmp"
++#ifndef SkipSetupIconFile
+ SetupIconFile={#RepoDir}\resources\win32\code.ico
++#endif
+ UninstallDisplayIcon={app}\{#ExeBasename}.exe
+ ChangesEnvironment=true
+ ChangesAssociations=true
+@@ -1356,7 +1358,7 @@ begin
+ 
+   #if "user" == InstallTarget
+     if not WizardSilent() and IsAdmin() then begin
+-      if MsgBox('This User Installer is not meant to be run as an Administrator. If you would like to install VS Code for all users in this system, download the System Installer instead from https://vscodium.com. Are you sure you want to continue?', mbError, MB_OKCANCEL) = IDCANCEL then begin
++      if MsgBox('This User Installer is not meant to be run as an Administrator. If you would like to install VS Code for all users in this system, download the System Installer instead from https://github.com/daxijiu/Director-Code. Are you sure you want to continue?', mbError, MB_OKCANCEL) = IDCANCEL then begin
+         Result := False;
+       end;
+     end;
+diff --git a/package.json b/package.json
+index fa2a2324bda1a71f84132ec00c8c0dfd054d950f..40e45e6e30021d36da641142d0b306197deae56d 100644
+--- a/package.json
++++ b/package.json
+@@ -1,9 +1,9 @@
+ {
+   "name": "code-oss-dev",
+-  "version": "1.116.02821",
++  "version": "1.116.0",
+   "distro": "21295cb9c61fb628376d109be52cb7c6e5e396bd",
+   "author": {
+-    "name": "VSCodium"
++    "name": "Director-Code"
+   },
+   "license": "MIT",
+   "main": "./out/main.js",
+diff --git a/product.json b/product.json
+index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..05cffe7f67a92de9fd0f6efad7b112d63cf518dc 100644
+--- a/product.json
++++ b/product.json
+@@ -1,37 +1,37 @@
+ {
+-  "nameShort": "VSCodium",
+-  "nameLong": "VSCodium",
+-  "applicationName": "codium",
++  "nameShort": "Director-Code",
++  "nameLong": "Director-Code",
++  "applicationName": "director-code",
+   "dataFolderName": ".vscode-oss",
+-  "win32MutexName": "vscodium",
++  "win32MutexName": "directorcode",
+   "licenseName": "MIT",
+-  "licenseUrl": "https://github.com/VSCodium/vscodium/blob/master/LICENSE",
++  "licenseUrl": "https://github.com/daxijiu/Director-Code/blob/master/LICENSE",
+   "serverLicenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+   "serverGreeting": [],
+   "serverLicense": [],
+   "serverLicensePrompt": "",
+-  "serverApplicationName": "codium-server",
+-  "serverDataFolderName": ".vscodium-server",
+-  "tunnelApplicationName": "codium-tunnel",
+-  "win32DirName": "VSCodium",
+-  "win32NameVersion": "VSCodium",
+-  "win32RegValueName": "VSCodium",
++  "serverApplicationName": "director-code-server",
++  "serverDataFolderName": ".director-code-server",
++  "tunnelApplicationName": "director-code-tunnel",
++  "win32DirName": "Director-Code",
++  "win32NameVersion": "Director-Code",
++  "win32RegValueName": "DirectorCode",
+   "win32x64AppId": "{{88DA3577-054F-4CA1-8122-7D820494CFFB}",
+   "win32arm64AppId": "{{67DEE444-3D04-4258-B92A-BC1F0FF2CAE4}",
+   "win32x64UserAppId": "{{2E1F05D1-C245-4562-81EE-28188DB6FD17}",
+   "win32arm64UserAppId": "{{57FD70A5-1B8D-4875-9F40-C5553F094828}",
+-  "win32AppUserModelId": "VSCodium.VSCodium",
+-  "win32ShellNameShort": "VSCodium",
+-  "win32TunnelServiceMutex": "vscodium-tunnelservice",
+-  "win32TunnelMutex": "vscodium-tunnel",
+-  "darwinBundleIdentifier": "com.vscodium",
++  "win32AppUserModelId": "DirectorCode.DirectorCode",
++  "win32ShellNameShort": "Director-Code",
++  "win32TunnelServiceMutex": "directorcode-tunnelservice",
++  "win32TunnelMutex": "directorcode-tunnel",
++  "darwinBundleIdentifier": "com.director-code",
+   "darwinProfileUUID": "47827DD9-4734-49A0-AF80-7E19B11495CC",
+   "darwinProfilePayloadUUID": "CF808BE7-53F3-46C6-A7E2-7EDB98A5E959",
+-  "linuxIconName": "vscodium",
++  "linuxIconName": "director-code",
+   "licenseFileName": "LICENSE.txt",
+-  "reportIssueUrl": "https://github.com/VSCodium/vscodium/issues/new",
++  "reportIssueUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+   "nodejsRepository": "https://nodejs.org",
+-  "urlProtocol": "vscodium",
++  "urlProtocol": "director-code",
+   "webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+   "builtInExtensions": [
+     {
+@@ -84,69 +84,56 @@
+     }
+   ],
+   "defaultChatAgent": {
+-    "extensionId": "GitHub.copilot",
+-    "chatExtensionId": "GitHub.copilot-chat",
+-    "chatExtensionOutputId": "GitHub.copilot-chat.GitHub Copilot Chat.log",
+-    "chatExtensionOutputExtensionStateCommand": "github.copilot.debug.extensionState",
+-    "documentationUrl": "https://aka.ms/github-copilot-overview",
+-    "termsStatementUrl": "https://aka.ms/github-copilot-terms-statement",
+-    "privacyStatementUrl": "https://aka.ms/github-copilot-privacy-statement",
+-    "skusDocumentationUrl": "https://aka.ms/github-copilot-plans",
+-    "publicCodeMatchesUrl": "https://aka.ms/github-copilot-match-public-code",
+-    "manageSettingsUrl": "https://aka.ms/github-copilot-settings",
+-    "managePlanUrl": "https://aka.ms/github-copilot-manage-plan",
+-    "manageOverageUrl": "https://aka.ms/github-copilot-manage-overage",
+-    "upgradePlanUrl": "https://aka.ms/github-copilot-upgrade-plan",
+-    "signUpUrl": "https://aka.ms/github-sign-up",
++    "extensionId": "director-code.agent",
++    "chatExtensionId": "",
++    "chatExtensionOutputId": "",
++    "chatExtensionOutputExtensionStateCommand": "",
+     "provider": {
+       "default": {
+-        "id": "github",
+-        "name": "GitHub"
++        "id": "director-code",
++        "name": "Director Code"
+       },
+       "enterprise": {
+-        "id": "github-enterprise",
+-        "name": "GHE"
++        "id": "",
++        "name": ""
+       },
+       "google": {
+-        "id": "google",
+-        "name": "Google"
++        "id": "",
++        "name": ""
+       },
+       "apple": {
+-        "id": "apple",
+-        "name": "Apple"
++        "id": "",
++        "name": ""
+       }
+     },
+-    "providerExtensionId": "vscode.github-authentication",
+-    "providerUriSetting": "github-enterprise.uri",
+-    "providerScopes": [
+-      [
+-        "read:user",
+-        "user:email",
+-        "repo",
+-        "workflow"
+-      ],
+-      [
+-        "user:email"
+-      ],
+-      [
+-        "read:user"
+-      ]
+-    ],
+-    "entitlementUrl": "https://api.github.com/copilot_internal/user",
+-    "entitlementSignupLimitedUrl": "https://api.github.com/copilot_internal/subscribe_limited_user",
+-    "chatQuotaExceededContext": "github.copilot.chat.quotaExceeded",
+-    "completionsQuotaExceededContext": "github.copilot.completions.quotaExceeded",
+-    "walkthroughCommand": "github.copilot.open.walkthrough",
+-    "completionsMenuCommand": "github.copilot.toggleStatusMenu",
+-    "completionsRefreshTokenCommand": "github.copilot.signIn",
+-    "chatRefreshTokenCommand": "github.copilot.refreshToken",
+-    "generateCommitMessageCommand": "github.copilot.git.generateCommitMessage",
+-    "resolveMergeConflictsCommand": "github.copilot.git.resolveMergeConflicts",
+-    "completionsAdvancedSetting": "github.copilot.advanced",
+-    "completionsEnablementSetting": "github.copilot.enable",
+-    "nextEditSuggestionsSetting": "github.copilot.nextEditSuggestions.enabled",
+-    "tokenEntitlementUrl": "https://api.github.com/copilot_internal/v2/token",
+-    "mcpRegistryDataUrl": "https://api.github.com/copilot/mcp_registry"
++    "providerExtensionId": "",
++    "providerUriSetting": "",
++    "providerScopes": [],
++    "documentationUrl": "https://daxijiu.github.io/Director-Code/",
++    "skusDocumentationUrl": "https://github.com/daxijiu/Director-Code",
++    "publicCodeMatchesUrl": "",
++    "termsStatementUrl": "https://daxijiu.github.io/Director-Code/terms/",
++    "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/",
++    "manageSettingsUrl": "command:director-code.openSettings",
++    "managePlanUrl": "",
++    "completionsRefreshTokenCommand": "",
++    "chatRefreshTokenCommand": "",
++    "upgradePlanUrl": "",
++    "manageOverageUrl": "",
++    "signUpUrl": "",
++    "entitlementUrl": "",
++    "entitlementSignupLimitedUrl": "",
++    "tokenEntitlementUrl": "",
++    "mcpRegistryDataUrl": "",
++    "completionsAdvancedSetting": "",
++    "completionsEnablementSetting": "",
++    "nextEditSuggestionsSetting": "",
++    "completionsMenuCommand": "",
++    "chatQuotaExceededContext": "",
++    "completionsQuotaExceededContext": "",
++    "walkthroughCommand": "",
++    "generateCommitMessageCommand": "",
++    "resolveMergeConflictsCommand": ""
+   },
+   "trustedExtensionAuthAccess": {
+     "github": [
+@@ -297,8 +284,8 @@
+   "requestFeatureUrl": "https://go.microsoft.com/fwlink/?LinkID=533482",
+   "tipsAndTricksUrl": "https://go.microsoft.com/fwlink/?linkid=852118",
+   "twitterUrl": "https://go.microsoft.com/fwlink/?LinkID=533687",
+-  "updateUrl": "https://raw.githubusercontent.com/VSCodium/versions/refs/heads/master",
+-  "downloadUrl": "https://github.com/VSCodium/vscodium/releases",
++  "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
++  "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
+   "quality": "stable",
+   "win32AppId": "{{763CBF88-25C6-4B10-952F-326AE657F16B}",
+   "win32UserAppId": "{{0FD05EB4-651E-4E78-A062-515204B47A3A}",
+@@ -945,5 +932,6 @@
+     "gruntfuggly.todo-tree": {
+       "default": false
+     }
+-  }
++  },
++  "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/"
+ }
+diff --git a/resources/server/manifest.json b/resources/server/manifest.json
+index 952b125df6268dd2a14aa962dd6cdafbe8dc53d6..635ed851237a78f3b2b63ee1dbdb8315e4fc4fb6 100644
+--- a/resources/server/manifest.json
++++ b/resources/server/manifest.json
+@@ -1,6 +1,6 @@
+ {
+-  "name": "VSCodium",
+-  "short_name": "VSCodium",
++  "name": "Director-Code",
++  "short_name": "Director-Code",
+   "start_url": "/",
+   "lang": "en-US",
+   "display": "standalone",

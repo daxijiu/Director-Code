@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "profile": "116-stable-win32-x64-client",
+  "phase": "P2",
+  "batch": "expected-contracts",
+  "status": "passed",
+  "generatedAt": "2026-05-13T15:48:19.814Z",
+  "mode": "validate",
+  "checks": {
+    "product": "passed",
+    "package": "passed",
+    "serverManifest": "passed",
+    "announcementsBuiltin": "passed",
+    "announcementsExtra": "passed"
+  },
+  "contracts": [
+    {
+      "key": "product",
+      "source": "vscode.generated/layers/director/vscode/product.json",
+      "expected": "docs/upgrade/expected/116-stable-win32-x64-client/product.expected.json",
+      "status": "passed",
+      "sourceSha": "95ba25d531df9d3140ac6a450158df827add39c3d75c65784cde4a288ef0797a",
+      "expectedSha": "95ba25d531df9d3140ac6a450158df827add39c3d75c65784cde4a288ef0797a"
+    },
+    {
+      "key": "package",
+      "source": "vscode.generated/layers/director/vscode/package.json",
+      "expected": "docs/upgrade/expected/116-stable-win32-x64-client/package.expected.json",
+      "status": "passed",
+      "sourceSha": "afc8e222d7e079409be5802980f08576fa7f5bcb8fb06041f27e56f9b8143ed7",
+      "expectedSha": "afc8e222d7e079409be5802980f08576fa7f5bcb8fb06041f27e56f9b8143ed7"
+    },
+    {
+      "key": "serverManifest",
+      "source": "vscode.generated/layers/director/vscode/resources/server/manifest.json",
+      "expected": "docs/upgrade/expected/116-stable-win32-x64-client/server-manifest.expected.json",
+      "status": "passed",
+      "sourceSha": "ab1e56adf9cfc9c4c8b967b067812b0c00fde739d44632daa0ed8a194937f083",
+      "expectedSha": "ab1e56adf9cfc9c4c8b967b067812b0c00fde739d44632daa0ed8a194937f083"
+    },
+    {
+      "key": "announcementsBuiltin",
+      "source": ".cache/upstreams/vscodium/1.116.02821/announcements-builtin.json",
+      "expected": "docs/upgrade/expected/116-stable-win32-x64-client/announcements-builtin.expected.json",
+      "status": "passed",
+      "sourceSha": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865",
+      "expectedSha": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865"
+    },
+    {
+      "key": "announcementsExtra",
+      "source": ".cache/upstreams/vscodium/1.116.02821/announcements-extra.json",
+      "expected": "docs/upgrade/expected/116-stable-win32-x64-client/announcements-extra.expected.json",
+      "status": "passed",
+      "sourceSha": "a3f3d618744b5a4bb5e25ff52ae49906d4d4cdf6d0e623db432f4ac36725f534",
+      "expectedSha": "a3f3d618744b5a4bb5e25ff52ae49906d4d4cdf6d0e623db432f4ac36725f534"
+    }
+  ],
+  "failures": []
+}

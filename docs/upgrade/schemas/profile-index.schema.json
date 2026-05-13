@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "type": "object",
+  "required": ["schemaVersion", "activeProfile", "profiles"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "activeProfile": { "type": "string" },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["profile", "path", "validationMode"],
+        "properties": {
+          "profile": { "type": "string" },
+          "path": { "type": "string" },
+          "validationMode": { "enum": ["legacy-reference", "canonical-replay"] }
+        }
+      }
+    }
+  }
+}

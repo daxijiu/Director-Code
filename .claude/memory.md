@@ -1,13 +1,36 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-13 当前最高优先级记忆
+
+- 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`。
+- 当前主线已进入 116 replay/P2 工作：从 VS Code `1.116.0` + VSCodium `1.116.02821` 生成 Director Code 116，并在此基础上继续修复 runtime、chat modes、tools 和 packaging。
+- 112 物理参考验证已经完成。116 及后续升级不会再有物理参考目录，正确性来源是 replay、expected contracts、targeted tests、compile/build smoke 和用户 packaged-build 手动验证。
+- 最重要的源码规则：`vscode.generated/layers/director/vscode` 只是 materialized 调试/验证工作区，可以临时直接改；任何要保留的 Director 修改最终必须落到 `patches/replay/*.116.patch`、`patches/series.116.json`、active profile、expected/report/manifest 或 generator classification 中。不能只改生成后的源码树就算完成。
+- 当前 116 profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`。
+- 当前 repeatable build 入口: `scripts/build-director-116.ps1` 和 `scripts/build-director-116.cmd`。`-SkipReplay` 只用于快速调试，不可作为 release candidate 验收路径。
+- 当前 116 patch stages:
+  - `001-vscodium-layer.116.patch`: VSCodium aggregate layer。
+  - `002-director-branding.116.patch`: 品牌/资源/文本/产品体验漂移。
+  - `003-director-product-build-release.116.patch`: product/package/server manifest、gulp、Windows installer、release/build wiring。
+  - `004-director-agent-engine.116.patch`: Director agent harness、model/tool bridge、agent engine、language-model/tool service integration、MCP agent paths。
+  - `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI。
+  - `006-director-text-polish.116.patch`: 小范围文本/prompt polish。
+- 计划中的新增 stages：`007-director-tool-layer.116.patch`、`008-director-chat-editing.116.patch`，必要时 `009-director-edit-tools.116.patch`。
+- 116 空白 Workbench 修复已经 replay 化：根因是 `defaultChatAgent.provider` 覆盖不完整，VS Code 116 启动读 `provider.enterprise.id`；修复保留完整 provider object shape，落在 `003-director-product-build-release.116.patch`、expected product JSON 和 `validate-product-overrides.mjs`。后续 product/default-agent 修改必须保留这个 contract。
+- Director settings 入口要并入 VS Code 116 的 Agent Customizations 界面，计划文件是 `docs/upgrade/116-agent-customizations-director-settings-plan.md`。
+- 当前大优化计划是 `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`：覆盖 Mermaid runtime、inline chat、Ask/Edit/Agent mode routing、Chat Editing UI、工具层复刻、GitHub v1 read-only repo context。
+- GitHub tooling 本轮只承诺 Director 自有只读 repo context/search，不承诺 Copilot remote-index 等价。成熟 Git/GitHub 工具后续单独迭代。
+- `create_directory` 是本轮必须实现的 edit tool；如果 VS Code 116 原生 Chat Editing UI 不能表达目录创建，允许 Director-owned accept/reject transaction，但必须可 review/reject。
+
 ## 项目基本信息
 - **项目名**: Director-Code（开源 VS Code fork）
-- **状态**: Phase 1 + 1.5 + 1.5+ 的代码与测试基线已基本完成；当前主线任务仍是 **Phase 1 收口修复**（以 `docs/director-code-remediation-plan-v2.md` 为执行基线），重点包括 OAuth 接入闭环、产品元数据去 Copilot 化、标准 Chat 与 Agent 通路统一。**未达到 Phase 1 对外发布门槛前，不视为可直接进入 Phase 2 默认开启 / 对外发布阶段**
+- **状态**: Phase 1 + 1.5 + 1.5+ 的代码与测试基线已形成历史基础；当前 checkout 的工作重心是 **P2/116 replay upgrade 与 116 runtime/chat/tool 优化**。旧 `docs/director-code-remediation-plan-v2.md` 仍是 Phase 1 收口历史上下文，但当前执行以 116 replay 文档和当前计划为准。
 - **目标**: 替换内置 Copilot AI Agent，支持用户自配 LLM + OAuth 登录
-- **工作目录**: `/e/Projects/Director-Code/`
-- **源码目录**: `/e/Projects/Director-Code/vscode/`
+- **当前工作目录**: `E:\Projects\Director-Code-batch\Director-Code-112-check`
+- **当前 active workspace**: `vscode.generated/layers/director/vscode`，仅作生成后调试/验证工作区
+- **canonical source**: 116 replay control plane，包括 profile、series、`patches/replay/*.116.patch`、expected/reports/manifests 和 `scripts/upgrade/`
 - **测试**: 479+ 个全部通过（A 批次新增测试后 486+，B1-2 后 432 个 agentEngine 测试全通过）
-- **Git**: master 分支，已推送到 `github.com/daxijiu/Director-Code`
+- **Git**: 每次工作必须以实际 `git status --short` 和当前分支为准，不要从旧记忆推断分支状态
 
 ## Phase 1 收口修复进度（Batch A 完成 2026-04-30）
 
@@ -40,7 +63,17 @@
 
 ## 权威文档位置
 
-**实施计划（唯一权威）**: `.cursor/` 目录
+当前 116/P2 执行优先看 `docs/upgrade/` 下的 replay 与修复计划：
+
+| 文档 | 内容 |
+|------|------|
+| `docs/upgrade/116-upgrade-maintainable-replay-plan.md` | 116 可维护 replay 升级计划、post-implementation findings、build entry point |
+| `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` | Mermaid runtime、inline chat、Ask/Edit/Agent routing、Chat Editing UI、工具层优化计划 |
+| `docs/upgrade/116-agent-customizations-director-settings-plan.md` | 将 Director settings 入口接入 VS Code 116 Agent Customizations 的计划 |
+| `docs/upgrade/112-replay-baseline-handoff.md` | 112 replay baseline 历史交接与验证方式 |
+
+`.cursor/` 文档是 Phase 1/ACP/CLI 的历史和后续路线背景，不再是当前 116 replay upgrade 的唯一执行权威：
+
 | 文档 | 内容 |
 |------|------|
 | `.cursor/plan-01-roadmap.md` | 总体路线图、架构设计、选型总表、里程碑 |
@@ -48,11 +81,8 @@
 | `.cursor/plan-03-provider-settings.md` | Provider 与设置：双层架构、流式 Provider、密钥管理 |
 | `.cursor/plan-04-phase2-acp.md` | Phase 2 ACP：协议层设计、参考 MCP+vscode-acp |
 | `.cursor/plan-05-phase3-cli.md` | Phase 3 CLI：适配器框架、输出解析、外部编辑集成 |
-| `.cursor/copilot-chat-extension-analysis.md` | Copilot Chat 源码分析 |
 
-**补充文档**: `.claude/docs/plan-component-selection.md` — 组件选型矩阵
-
-## 实施路线
+## 历史实施路线
 
 ```
 Phase 1: Agent 核心 + Provider 替换 ✅ 完成 (Week 1-10, 358 测试)

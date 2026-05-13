@@ -5,23 +5,17 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { getWorkspaceRoot, run, runMaybe, toPosix, writeJson } from './reference-manifest-lib.mjs';
 
-const PROFILE_ID = '112-stable-win32-x64-client';
-const REPORT_DIR = `artifacts/generated/${PROFILE_ID}`;
-const COMMITTED_REPORT_DIR = `docs/upgrade/reports/${PROFILE_ID}`;
-const REFERENCE_MANIFEST = 'docs/upgrade/112-reference-manifest.json';
-const PATCH_SERIES = 'patches/series.112.json';
-const VSCODIUM_LAYER_PATCH = 'patches/replay/001-vscodium-layer.112.patch';
-const DIRECTOR_DELTA_PATCH = 'patches/replay/002-director-delta.112.patch';
-const REFERENCE_OVERLAYS = 'docs/upgrade/reference-overlays.112.json';
+const PROFILE_INDEX = 'docs/upgrade/profiles/index.json';
 
 function main() {
   const root = getWorkspaceRoot();
   const args = parseArgs(process.argv.slice(2));
-  const profilePath = args.profile || 'docs/upgrade/profiles/112-stable-win32-x64-client.json';
+  const profilePath = resolveProfilePath(root, args.profile);
   const profile = JSON.parse(fs.readFileSync(path.join(root, profilePath), 'utf8'));
+  const replay = replayConfig(profile);
   const target = args.target || 'vscode.generated';
 
-  validateArgs(profile, target, args);
+  validateArgs(profile, replay, target, args);
   if (args.freshCache) {
     freshCache(root);
   }
@@ -43,7 +37,7 @@ function main() {
   if (['vscodium', 'director'].includes(args.upToLayer)) {
     const vscodiumLayer = path.join(root, target, 'layers', 'vscodium', 'vscode');
     copyTree(vscodeLayer, vscodiumLayer);
-    applications.push(applyReplayPatch(root, vscodiumLayer, VSCODIUM_LAYER_PATCH, 'vscodium'));
+    applications.push(applyReplayPatch(root, replay, vscodiumLayer, replay.vscodiumLayerPatch, 'vscodium'));
     checkpoints.push(checkpoint(root, 'vscodium', vscodiumLayer));
   }
 
@@ -51,30 +45,33 @@ function main() {
     const directorLayer = path.join(root, target, 'layers', 'director', 'vscode');
     const vscodiumLayer = path.join(root, target, 'layers', 'vscodium', 'vscode');
     copyTree(vscodiumLayer, directorLayer);
-    applications.push(applyReplayPatch(root, directorLayer, DIRECTOR_DELTA_PATCH, 'director'));
-    overlayResult = restoreReferenceOverlays(root, directorLayer, args.verifyReference);
+    for (const patch of replay.directorDeltaPatches) {
+      applications.push(applyReplayPatch(root, replay, directorLayer, patch, 'director'));
+    }
+    overlayResult = restoreReferenceOverlays(root, replay, directorLayer, args.verifyReference);
     checkpoints.push(checkpoint(root, 'director', directorLayer));
-    equivalence = compareReferenceEquivalence(root, directorLayer);
+    equivalence = compareReferenceEquivalence(root, replay, directorLayer);
   }
 
   const report = {
     schemaVersion: 1,
-    profile: PROFILE_ID,
-    phase: 'P1',
+    profile: profile.profile,
+    phase: replay.phase,
     batch: 'layer',
-    status: reportStatus(args, equivalence, overlayResult),
+    status: reportStatus(args, replay, equivalence, overlayResult),
     generatedAt: new Date().toISOString(),
     command: process.argv.slice(2),
     target,
     upToLayer: args.upToLayer,
     upstreams,
-    replayInputs: {
-      referenceManifest: REFERENCE_MANIFEST,
-      patchSeries: PATCH_SERIES,
-      vscodiumLayerPatch: VSCODIUM_LAYER_PATCH,
-      directorDeltaPatch: DIRECTOR_DELTA_PATCH,
-      referenceOverlays: REFERENCE_OVERLAYS,
-    },
+    replayInputs: compactObject({
+      referenceManifest: replay.referenceManifest,
+      canonicalManifest: replay.canonicalManifest,
+      patchSeries: replay.patchSeries,
+      vscodiumLayerPatch: replay.vscodiumLayerPatch,
+      directorDeltaPatches: replay.directorDeltaPatches,
+      referenceOverlays: replay.referenceOverlays,
+    }),
     applications,
     referenceOverlays: overlayResult,
     equivalence,
@@ -87,18 +84,18 @@ function main() {
       directorDeltaApplication: args.upToLayer === 'director' ? 'passed' : 'not-requested',
       referenceOverlayApplication: args.upToLayer === 'director' ? overlayResult.status : 'not-requested',
       sourceEquivalence: args.upToLayer === 'director' ? equivalence.status : 'not-requested',
-      installDeps: args.installDeps ? 'blocked-until-p1-build-batch' : 'not-requested',
-      buildArtifact: args.buildArtifact ? 'blocked-until-p1-build-batch' : 'not-requested',
+      installDeps: args.installDeps ? 'blocked-until-build-batch' : 'not-requested',
+      buildArtifact: args.buildArtifact ? 'blocked-until-build-batch' : 'not-requested',
     },
-    blockers: materializeBlockers(args, overlayResult, equivalence),
+    blockers: materializeBlockers(args, replay, overlayResult, equivalence),
   };
 
-  writeJson(path.join(root, REPORT_DIR, 'materialize-report.json'), report);
-  writeJson(path.join(root, COMMITTED_REPORT_DIR, 'materialize-report.json'), report);
-  if (args.upToLayer === 'director') {
-    writeReplayEquivalenceReport(root, report);
+  writeJson(path.join(root, replay.reportDir, 'materialize-report.json'), report);
+  writeJson(path.join(root, replay.committedReportDir, 'materialize-report.json'), report);
+  if (args.upToLayer === 'director' && replay.validationMode === 'legacy-reference') {
+    writeReplayEquivalenceReport(root, replay, report);
   }
-  console.log(`materialize report: ${REPORT_DIR}/materialize-report.json`);
+  console.log(`materialize report: ${replay.reportDir}/materialize-report.json`);
 
   if (args.verifyReference) {
     const result = runMaybe('node', ['scripts/upgrade/check-reference-drift.mjs'], { cwd: root });
@@ -129,9 +126,65 @@ function parseArgs(argv) {
   return out;
 }
 
-function validateArgs(profile, target, args) {
-  if (profile.profile !== PROFILE_ID) {
-    throw new Error(`P1 only supports profile ${PROFILE_ID}`);
+function resolveProfilePath(root, requestedProfile) {
+  const indexPath = path.join(root, PROFILE_INDEX);
+  if (!fs.existsSync(indexPath)) {
+    if (requestedProfile) {
+      return requestedProfile;
+    }
+    throw new Error(`Missing profile index: ${PROFILE_INDEX}`);
+  }
+
+  const profileIndex = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+  const profileId = requestedProfile || profileIndex.activeProfile;
+  const entry = (profileIndex.profiles || []).find((candidate) => candidate.profile === profileId || candidate.path === profileId);
+  if (entry) {
+    return entry.path;
+  }
+  if (requestedProfile && fs.existsSync(path.join(root, requestedProfile))) {
+    return requestedProfile;
+  }
+  throw new Error(`Profile not found in ${PROFILE_INDEX}: ${profileId}`);
+}
+
+function replayConfig(profile) {
+  const validationMode = profile.validationMode || 'legacy-reference';
+  return {
+    profileId: profile.profile,
+    validationMode,
+    phase: validationMode === 'legacy-reference' ? 'P1' : 'P2',
+    reportDir: profile.artifactPaths?.generatedReports || `artifacts/generated/${profile.profile}`,
+    committedReportDir: profile.artifactPaths?.committedReports || `docs/upgrade/reports/${profile.profile}`,
+    referenceManifest: profile.legacyReferenceManifestPath,
+    canonicalManifest: profile.canonicalManifestPath,
+    patchSeries: profile.replayInputs?.patchSeries,
+    vscodiumLayerPatch: profile.replayInputs?.vscodiumLayerPatch,
+    directorDeltaPatches: profile.replayInputs?.directorDeltaPatches || [],
+    referenceOverlays: profile.allowlistPaths?.referenceOverlays,
+  };
+}
+
+function validateArgs(profile, replay, target, args) {
+  if (!profile.profile) {
+    throw new Error('Profile is missing profile id');
+  }
+  if (!['legacy-reference', 'canonical-replay'].includes(replay.validationMode)) {
+    throw new Error(`Unsupported profile validationMode: ${replay.validationMode}`);
+  }
+  if (!replay.patchSeries) {
+    throw new Error(`Profile ${profile.profile} is missing replayInputs.patchSeries`);
+  }
+  if (['vscodium', 'director'].includes(args.upToLayer) && !replay.vscodiumLayerPatch) {
+    throw new Error(`Profile ${profile.profile} is missing replayInputs.vscodiumLayerPatch`);
+  }
+  if (args.upToLayer === 'director' && replay.directorDeltaPatches.length === 0) {
+    throw new Error(`Profile ${profile.profile} is missing replayInputs.directorDeltaPatches`);
+  }
+  if (args.verifyReference && replay.validationMode !== 'legacy-reference') {
+    throw new Error('--verify-reference is only valid for legacy-reference profiles');
+  }
+  if (replay.validationMode === 'legacy-reference' && (!replay.referenceManifest || !replay.referenceOverlays)) {
+    throw new Error(`Profile ${profile.profile} must declare legacyReferenceManifestPath and allowlistPaths.referenceOverlays`);
   }
   if (target !== 'vscode.generated') {
     if (args.force && !args.allowNondefaultTargetForce) {
@@ -141,6 +194,10 @@ function validateArgs(profile, target, args) {
   if (!['vscode', 'vscodium', 'director'].includes(args.upToLayer)) {
     throw new Error(`Unsupported --up-to-layer: ${args.upToLayer}`);
   }
+}
+
+function compactObject(value) {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
 }
 
 function freshCache(root) {
@@ -197,13 +254,13 @@ function materializeCleanLayer(source, destination) {
   copyTree(source, destination);
 }
 
-function applyReplayPatch(root, layerPath, patchRelative, expectedLayer) {
-  const seriesEntry = findSeriesEntry(root, patchRelative);
+function applyReplayPatch(root, replay, layerPath, patchRelative, expectedLayer) {
+  const seriesEntry = findSeriesEntry(root, replay, patchRelative);
   if (seriesEntry.layer !== expectedLayer) {
     throw new Error(`${patchRelative} is recorded as layer=${seriesEntry.layer}, expected ${expectedLayer}`);
   }
   if (seriesEntry.status !== 'enabled') {
-    throw new Error(`${patchRelative} must be enabled in ${PATCH_SERIES}`);
+    throw new Error(`${patchRelative} must be enabled in ${replay.patchSeries}`);
   }
 
   const patchPath = path.join(root, patchRelative);
@@ -228,24 +285,28 @@ function applyReplayPatch(root, layerPath, patchRelative, expectedLayer) {
   };
 }
 
-function findSeriesEntry(root, patchRelative) {
-  const seriesPath = path.join(root, PATCH_SERIES);
+function findSeriesEntry(root, replay, patchRelative) {
+  const seriesPath = path.join(root, replay.patchSeries);
   if (!fs.existsSync(seriesPath)) {
-    throw new Error(`Missing patch series: ${PATCH_SERIES}`);
+    throw new Error(`Missing patch series: ${replay.patchSeries}`);
   }
   const series = JSON.parse(fs.readFileSync(seriesPath, 'utf8'));
   const entry = series.patches.find((candidate) => candidate.path === patchRelative);
   if (!entry) {
-    throw new Error(`${patchRelative} is not recorded in ${PATCH_SERIES}`);
+    throw new Error(`${patchRelative} is not recorded in ${replay.patchSeries}`);
   }
   return entry;
 }
 
-function restoreReferenceOverlays(root, layerPath, verifyReference) {
-  const overlaysPath = path.join(root, REFERENCE_OVERLAYS);
+function restoreReferenceOverlays(root, replay, layerPath, verifyReference) {
+  if (replay.validationMode !== 'legacy-reference') {
+    return { status: 'not-applicable', overlays: [] };
+  }
+
+  const overlaysPath = path.join(root, replay.referenceOverlays);
   if (!fs.existsSync(overlaysPath)) {
     if (verifyReference) {
-      throw new Error(`Missing reference overlay manifest: ${REFERENCE_OVERLAYS}`);
+      throw new Error(`Missing reference overlay manifest: ${replay.referenceOverlays}`);
     }
     return { status: 'reference-overlays-unavailable', overlays: [] };
   }
@@ -283,7 +344,7 @@ function restoreReferenceOverlays(root, layerPath, verifyReference) {
 
   return {
     status: unavailable.length === 0 ? 'passed' : 'reference-overlays-unavailable',
-    manifest: REFERENCE_OVERLAYS,
+    manifest: replay.referenceOverlays,
     restoredCount: restored.length,
     unavailableCount: unavailable.length,
     overlays: restored,
@@ -314,8 +375,12 @@ function readReferenceOverlay(root, overlay) {
   return undefined;
 }
 
-function compareReferenceEquivalence(root, layerPath) {
-  const manifestPath = path.join(root, REFERENCE_MANIFEST);
+function compareReferenceEquivalence(root, replay, layerPath) {
+  if (replay.validationMode !== 'legacy-reference') {
+    return { status: 'not-applicable' };
+  }
+
+  const manifestPath = path.join(root, replay.referenceManifest);
   if (!fs.existsSync(manifestPath)) {
     return { status: 'reference-manifest-unavailable' };
   }
@@ -353,7 +418,7 @@ function compareReferenceEquivalence(root, layerPath) {
 
   return {
     status: missing.length === 0 && changed.length === 0 && extra.length === 0 ? 'passed' : 'failed',
-    referenceManifest: REFERENCE_MANIFEST,
+    referenceManifest: replay.referenceManifest,
     expectedFiles: expected.size,
     checkedFiles: actual.length,
     missingCount: missing.length,
@@ -365,8 +430,11 @@ function compareReferenceEquivalence(root, layerPath) {
   };
 }
 
-function reportStatus(args, equivalence, overlayResult) {
+function reportStatus(args, replay, equivalence, overlayResult) {
   if (args.upToLayer !== 'director') {
+    return 'passed';
+  }
+  if (replay.validationMode === 'canonical-replay') {
     return 'passed';
   }
   if (equivalence.status === 'passed' && overlayResult.status === 'passed') {
@@ -375,14 +443,17 @@ function reportStatus(args, equivalence, overlayResult) {
   return args.verifyReference ? 'failed' : 'degraded';
 }
 
-function materializeBlockers(args, overlayResult, equivalence) {
+function materializeBlockers(args, replay, overlayResult, equivalence) {
   const blockers = [];
   if (args.installDeps || args.buildArtifact) {
     blockers.push({
       id: 'deps-build-artifact-stage',
       status: 'recorded',
-      detail: 'P1 source replay is now materialized. Dependency installation and artifact build remain gated to the later P1 build/artifact batch and are not executed by this source-equivalence batch.',
+      detail: `${replay.phase} source replay is now materialized. Dependency installation and artifact build remain gated to the later build/artifact batch and are not executed by this source replay batch.`,
     });
+  }
+  if (replay.validationMode !== 'legacy-reference') {
+    return blockers;
   }
   if (args.upToLayer === 'director' && overlayResult.status !== 'passed') {
     blockers.push({
@@ -401,20 +472,20 @@ function materializeBlockers(args, overlayResult, equivalence) {
   return blockers;
 }
 
-function writeReplayEquivalenceReport(root, materializeReport) {
-  const series = JSON.parse(fs.readFileSync(path.join(root, PATCH_SERIES), 'utf8'));
+function writeReplayEquivalenceReport(root, replay, materializeReport) {
+  const series = JSON.parse(fs.readFileSync(path.join(root, replay.patchSeries), 'utf8'));
   const patches = series.patches || [];
-  writeJson(path.join(root, COMMITTED_REPORT_DIR, 'replay-equivalence-report.json'), {
+  writeJson(path.join(root, replay.committedReportDir, 'replay-equivalence-report.json'), {
     schemaVersion: 1,
-    profile: PROFILE_ID,
-    phase: 'P1',
+    profile: replay.profileId,
+    phase: replay.phase,
     batch: 'replay-equivalence',
     status: materializeReport.status,
     generatedAt: materializeReport.generatedAt,
     checks: {
       patchSeriesValidation: 'passed',
-      aggregateReplayPatches: patches.some((entry) => entry.path === VSCODIUM_LAYER_PATCH)
-        && patches.some((entry) => entry.path === DIRECTOR_DELTA_PATCH) ? 'passed' : 'failed',
+      aggregateReplayPatches: patches.some((entry) => entry.path === replay.vscodiumLayerPatch)
+        && replay.directorDeltaPatches.every((patch) => patches.some((entry) => entry.path === patch)) ? 'passed' : 'failed',
       referenceOverlayApplication: materializeReport.referenceOverlays.status,
       productExpected: 'captured',
       sourceEquivalence: materializeReport.equivalence.status,
@@ -430,7 +501,7 @@ function writeReplayEquivalenceReport(root, materializeReport) {
       aggregateReplay: patches.filter((entry) => entry.path.startsWith('patches/replay/')).length,
     },
     referenceOverlays: {
-      manifest: REFERENCE_OVERLAYS,
+      manifest: replay.referenceOverlays,
       restoredCount: materializeReport.referenceOverlays.restoredCount,
       unavailableCount: materializeReport.referenceOverlays.unavailableCount,
     },
