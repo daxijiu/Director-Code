@@ -1,5 +1,19 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer Phase 1 inventory completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 1 Baseline And Surface Inventory completed.
+- New report: `docs/upgrade/reports/116-stable-win32-x64-client/director-surface-inventory.md`.
+- The report records the current 116 baseline, accepted tool strategy report, package regression installer hashes, untracked `artifacts/` summary-only inventory, replay patch inventory, current Director-owned logic under chat paths, current upstream chat/agent hook files, and `directorCode/` replay stage mapping.
+- Current upstream chat/agent hook files that need careful Phase 2 handling include `chat.contribution.ts`, `languageModelToolsService.ts`, `chatAgents.ts`, chat setup/status/model picker files, Agent Customizations bridge files, and prompt validator wording.
+- Phase 1 validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- No code/replay patch changes were made in Phase 1. `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 2 Director Module Extraction. Start by moving Director-owned agent harness/provider/BYOK/message normalization/progress/mode/settings/editing-adapter code toward `src/vs/workbench/contrib/directorCode/` in small groups while keeping upstream chat files as thin hooks.
+
 ## 2026-05-14 latest memory: thin-layer plan hardening accepted
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan remains `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
