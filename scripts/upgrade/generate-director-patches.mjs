@@ -218,10 +218,12 @@ function isAgentEngine(filePath) {
 }
 
 function isChatBuiltInMode(filePath) {
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/aiCustomization/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatSetup/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatStatus/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   return [
+    'src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatActions.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts',
     'src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts',

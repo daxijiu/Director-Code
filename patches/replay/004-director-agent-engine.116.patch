@@ -19,10 +19,10 @@ index 5cec86ba5414063a9029bbc3ca8f89a4c6d4d023..9d8eaaffee4c1655f29653ed2b561f96
  			? ToolDataSource.Internal
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..09f9a584334b726d39204badde5bfd8189cb1c93
+index 0000000000000000000000000000000000000000..07f6cd6f78ca25253b0133060b3446400ad1f0bd
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,275 @@
+@@ -0,0 +1,276 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -224,6 +224,7 @@ index 0000000000000000000000000000000000000000..09f9a584334b726d39204badde5bfd81
 +const AGENT_ID = 'director-code';
 +const EXTENSION_ID = new ExtensionIdentifier('director-code.agent');
 +const VENDOR = 'director-code';
++const DIRECTOR_CODE_PROVIDER_DESCRIPTOR = { vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: OPEN_SETTINGS_COMMAND_ID, when: undefined };
 +
 +class DirectorCodeAgentContribution extends Disposable implements IWorkbenchContribution {
 +	static readonly ID = 'workbench.contrib.directorCodeAgent';
@@ -276,13 +277,13 @@ index 0000000000000000000000000000000000000000..09f9a584334b726d39204badde5bfd81
 +		// Step 1: Register vendor descriptor (required before registerLanguageModelProvider)
 +		// The _vendors Map must contain our vendor or registerLanguageModelProvider throws.
 +		languageModelsService.deltaLanguageModelChatProviderDescriptors(
-+			[{ vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: undefined, when: undefined }],
++			[DIRECTOR_CODE_PROVIDER_DESCRIPTOR],
 +			[],
 +		);
 +		this._register(toDisposable(() => {
 +			languageModelsService.deltaLanguageModelChatProviderDescriptors(
 +				[],
-+				[{ vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: undefined, when: undefined }],
++				[DIRECTOR_CODE_PROVIDER_DESCRIPTOR],
 +			);
 +		}));
 +

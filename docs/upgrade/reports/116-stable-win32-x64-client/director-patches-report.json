@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-12T14:37:02.509Z",
+  "generatedAt": "2026-05-13T16:02:46.233Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 210,
+  "changedFileCount": 214,
   "patches": [
     {
       "stage": "branding",
@@ -226,8 +226,8 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts"
       ],
       "fileCount": 74,
-      "size": 826159,
-      "sha256": "dc3b5ba7479ab3775f985200c4f4ca4aef5015f3be4c1c1447bd13b5321b1f6e"
+      "size": 826164,
+      "sha256": "d445cd5f0f5bcffd8d27a050c73ff872bba54dd80d183e11e33cdf88bc765e21"
     },
     {
       "stage": "chat-built-in-mode",
@@ -237,6 +237,9 @@
         "src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts",
+        "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts",
+        "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts",
+        "src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css",
         "src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts",
         "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts",
         "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts",
@@ -252,11 +255,12 @@
         "src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts",
         "src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts",
         "src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts",
+        "src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts",
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
       ],
-      "fileCount": 20,
-      "size": 46617,
-      "sha256": "e0eb569e91806aa5f88ada3ce0cdd51bea87af5384034b436f774594da724eb0"
+      "fileCount": 24,
+      "size": 58621,
+      "sha256": "4eb9db4e3a2141f7a5e15e0f37b390567277bb0c69ff80d6d2c3c2bc59433fd3"
     },
     {
       "stage": "text-polish",

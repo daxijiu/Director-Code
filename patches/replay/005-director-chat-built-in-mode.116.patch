@@ -120,6 +120,237 @@ index 942db76b1acea1be29f84e659c79796c76c7da1b..fc5b054da91e1d923bbca482cd4aa4f4
  				primaryActionId = CHAT_SETUP_ACTION_ID;
  				primaryActionTitle = localize('signInToChatSetup', "Sign in to use AI features...");
  				primaryActionIcon = Codicon.chatSparkleError;
+diff --git a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts
+index 720e380f8c55b5eb650ad4e084491c12325c1235..76aef559e95b42a90c3e5d2370f526a3dba7dbec 100644
+--- a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts
++++ b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts
+@@ -89,6 +89,7 @@ import { AICustomizationWelcomePage } from './aiCustomizationWelcomePage.js';
+ import { IViewsService } from '../../../../services/views/common/viewsService.js';
+ 
+ const $ = DOM.$;
++const DIRECTOR_CODE_OPEN_SETTINGS_COMMAND_ID = 'director-code.openSettings';
+ 
+ //#region Telemetry
+ 
+@@ -271,7 +272,9 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 	private mcpContentContainer: HTMLElement | undefined;
+ 	private pluginContentContainer: HTMLElement | undefined;
+ 	private modelsContentContainer: HTMLElement | undefined;
++	private directorCodeContentContainer: HTMLElement | undefined;
+ 	private modelsFooterElement: HTMLElement | undefined;
++	private directorCodeSettingsButton: HTMLButtonElement | undefined;
+ 
+ 	// Embedded editor state
+ 	private editorContentContainer: HTMLElement | undefined;
+@@ -380,6 +383,7 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 			[AICustomizationManagementSection.Hooks]: { label: localize('hooks', "Hooks"), icon: hookIcon, description: localize('hooksDesc', "Configure automated actions triggered by events like saving files or running tasks.") },
+ 			[AICustomizationManagementSection.McpServers]: { label: localize('mcpServers', "MCP Servers"), icon: Codicon.server, description: localize('mcpServersDesc', "Connect external tool servers that extend AI capabilities with custom tools and data sources.") },
+ 			[AICustomizationManagementSection.Plugins]: { label: localize('plugins', "Plugins"), icon: pluginIcon, description: localize('pluginsDesc', "Install and manage agent plugins that add additional tools, skills, and integrations.") },
++			[AICustomizationManagementSection.DirectorCode]: { label: localize('directorCodeSection', "Director Code"), icon: Codicon.settingsGear, description: localize('directorCodeSectionDesc', "Configure Director Code provider, authentication, and model runtime settings.") },
+ 			[AICustomizationManagementSection.Models]: { label: localize('models', "Models"), icon: Codicon.vm, description: localize('modelsDesc', "Configure and manage language models available for use.") },
+ 		};
+ 		for (const id of this.workspaceService.managementSections) {
+@@ -834,6 +838,12 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 			}));
+ 		}
+ 
++		// Container for Director Code settings bridge
++		if (hasSections.has(AICustomizationManagementSection.DirectorCode)) {
++			this.directorCodeContentContainer = DOM.append(contentInner, $('.director-code-customization-container'));
++			this.createDirectorCodeContent(this.directorCodeContentContainer);
++		}
++
+ 		// Container for MCP content
+ 		if (hasSections.has(AICustomizationManagementSection.McpServers)) {
+ 			this.mcpContentContainer = DOM.append(contentInner, $('.mcp-content-container'));
+@@ -918,6 +928,39 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 		}
+ 	}
+ 
++	private createDirectorCodeContent(parent: HTMLElement): void {
++		const panel = DOM.append(parent, $('.director-code-customization-panel'));
++		const header = DOM.append(panel, $('.director-code-customization-header'));
++		const icon = DOM.append(header, $('.director-code-customization-icon'));
++		icon.classList.add(...ThemeIcon.asClassNameArray(Codicon.settingsGear));
++		const heading = DOM.append(header, $('.director-code-customization-heading'));
++		const title = DOM.append(heading, $('h2.director-code-customization-title'));
++		title.textContent = localize('directorCodeSettingsTitle', "Director Code");
++		const description = DOM.append(heading, $('p.director-code-customization-description'));
++		description.textContent = localize('directorCodeSettingsDescription', "Provider, authentication, and model runtime settings.");
++
++		const settings = DOM.append(panel, $('.director-code-customization-settings'));
++		for (const label of [
++			localize('directorCodeProviderLabel', "Provider"),
++			localize('directorCodeAuthenticationLabel', "Authentication"),
++			localize('directorCodeModelRuntimeLabel', "Model runtime"),
++		]) {
++			const item = DOM.append(settings, $('.director-code-customization-setting'));
++			item.textContent = label;
++		}
++
++		const actionRow = DOM.append(panel, $('.director-code-customization-actions'));
++		const button = DOM.append(actionRow, $('button.director-code-customization-open-button')) as HTMLButtonElement;
++		this.directorCodeSettingsButton = button;
++		button.type = 'button';
++		DOM.append(button, $('span.codicon.codicon-settings-gear'));
++		const buttonLabel = DOM.append(button, $('span'));
++		buttonLabel.textContent = localize('openDirectorCodeSettings', "Open Director Code Settings");
++		this.editorDisposables.add(DOM.addDisposableListener(button, 'click', () => {
++			this.commandService.executeCommand(DIRECTOR_CODE_OPEN_SETTINGS_COMMAND_ID);
++		}));
++	}
++
+ 	private isPromptsSection(section: AICustomizationManagementSection | undefined): section is AICustomizationManagementSection {
+ 		return section === AICustomizationManagementSection.Agents ||
+ 			section === AICustomizationManagementSection.Skills ||
+@@ -1073,6 +1116,7 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 		const isWelcome = this.selectedSection === undefined;
+ 		const isPromptsSection = this.selectedSection !== undefined && this.isPromptsSection(this.selectedSection);
+ 		const isModelsSection = this.selectedSection === AICustomizationManagementSection.Models;
++		const isDirectorCodeSection = this.selectedSection === AICustomizationManagementSection.DirectorCode;
+ 		const isMcpSection = this.selectedSection === AICustomizationManagementSection.McpServers;
+ 		const isPluginsSection = this.selectedSection === AICustomizationManagementSection.Plugins;
+ 
+@@ -1085,6 +1129,9 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 		if (this.modelsContentContainer) {
+ 			this.modelsContentContainer.style.display = !isEditorMode && !isDetailMode && isModelsSection ? '' : 'none';
+ 		}
++		if (this.directorCodeContentContainer) {
++			this.directorCodeContentContainer.style.display = !isEditorMode && !isDetailMode && isDirectorCodeSection ? '' : 'none';
++		}
+ 		if (this.mcpContentContainer) {
+ 			this.mcpContentContainer.style.display = !isEditorMode && !isDetailMode && isMcpSection ? '' : 'none';
+ 		}
+@@ -1380,6 +1427,8 @@ export class AICustomizationManagementEditor extends EditorPane {
+ 			this.pluginListWidget?.focusSearch();
+ 		} else if (this.selectedSection === AICustomizationManagementSection.Models) {
+ 			this.modelsWidget?.focusSearch();
++		} else if (this.selectedSection === AICustomizationManagementSection.DirectorCode) {
++			this.directorCodeSettingsButton?.focus();
+ 		} else {
+ 			this.listWidget?.focusSearch();
+ 		}
+diff --git a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts
+index 4b0c29c92a85695ecd25e2c03b1ccd6434fe71de..86afb091445ce96b885facc138659922e346083f 100644
+--- a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts
++++ b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts
+@@ -56,6 +56,7 @@ class AICustomizationWorkspaceService implements IAICustomizationWorkspaceServic
+ 		AICustomizationManagementSection.Hooks,
+ 		AICustomizationManagementSection.McpServers,
+ 		AICustomizationManagementSection.Plugins,
++		AICustomizationManagementSection.DirectorCode,
+ 	];
+ 
+ 	getStorageSourceFilter(type: PromptsType): IStorageSourceFilter {
+diff --git a/src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css b/src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css
+index 4517c4e41451c28f13d88bf301ecc84587f0c7b0..dda4d2ee691b74b6e01ceeb129bb5c23758dfa4c 100644
+--- a/src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css
++++ b/src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css
+@@ -653,12 +653,104 @@
+ .ai-customization-management-editor .prompts-content-container,
+ .ai-customization-management-editor .mcp-content-container,
+ .ai-customization-management-editor .plugin-content-container,
++.ai-customization-management-editor .director-code-customization-container,
+ .ai-customization-management-editor .models-content-container {
+ 	height: 100%;
+ 	display: flex;
+ 	flex-direction: column;
+ }
+ 
++/* Director Code settings bridge */
++.ai-customization-management-editor .director-code-customization-container {
++	overflow: auto;
++}
++
++.ai-customization-management-editor .director-code-customization-panel {
++	box-sizing: border-box;
++	max-width: 640px;
++	padding: 20px 14px;
++}
++
++.ai-customization-management-editor .director-code-customization-header {
++	display: flex;
++	align-items: flex-start;
++	gap: 12px;
++	margin-bottom: 16px;
++}
++
++.ai-customization-management-editor .director-code-customization-icon {
++	flex-shrink: 0;
++	width: 28px;
++	height: 28px;
++	display: flex;
++	align-items: center;
++	justify-content: center;
++	font-size: 18px;
++	color: var(--vscode-icon-foreground);
++}
++
++.ai-customization-management-editor .director-code-customization-heading {
++	min-width: 0;
++}
++
++.ai-customization-management-editor .director-code-customization-title {
++	margin: 0;
++	font-size: 18px;
++	font-weight: 600;
++	line-height: 24px;
++}
++
++.ai-customization-management-editor .director-code-customization-description {
++	margin: 4px 0 0 0;
++	color: var(--vscode-descriptionForeground);
++	font-size: 13px;
++	line-height: 18px;
++}
++
++.ai-customization-management-editor .director-code-customization-settings {
++	display: flex;
++	flex-wrap: wrap;
++	gap: 8px;
++	margin: 0 0 18px 40px;
++}
++
++.ai-customization-management-editor .director-code-customization-setting {
++	color: var(--vscode-descriptionForeground);
++	background: var(--vscode-toolbar-hoverBackground);
++	border-radius: 4px;
++	font-size: 12px;
++	line-height: 18px;
++	padding: 2px 8px;
++}
++
++.ai-customization-management-editor .director-code-customization-actions {
++	margin-left: 40px;
++}
++
++.ai-customization-management-editor .director-code-customization-open-button {
++	display: inline-flex;
++	align-items: center;
++	gap: 6px;
++	border: 0;
++	border-radius: 4px;
++	padding: 5px 12px;
++	color: var(--vscode-button-foreground);
++	background: var(--vscode-button-background);
++	font: inherit;
++	font-size: 13px;
++	line-height: 20px;
++	cursor: pointer;
++}
++
++.ai-customization-management-editor .director-code-customization-open-button:hover {
++	background: var(--vscode-button-hoverBackground);
++}
++
++.ai-customization-management-editor .director-code-customization-open-button:focus-visible {
++	outline: 1px solid var(--vscode-focusBorder);
++	outline-offset: 2px;
++}
++
+ /* Embedded MCP server detail view */
+ .ai-customization-management-editor .mcp-detail-container {
+ 	height: 100%;
 diff --git a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts b/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
 index e752209f42896da4ab7f3a188b4810a156a09f4a..acab49d7562fa387a83d8b45ea495721a93e41f0 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
@@ -677,6 +908,18 @@ index 9e5c9df96f38e4d8c4fbe1f07daf46992a448191..67f63e582347d8e7762cc1d79196500f
 +
  		const disclaimerElement = dom.append(parent, dom.$('.disclaimer.hidden'));
  		const disposables = this._store.add(new DisposableStore());
+ 
+diff --git a/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts b/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts
+index 715d629ab08d11c1978164d0fb91cd207c093ce8..b301d4f22a115031cf622964398dfe675d8ed668 100644
+--- a/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts
++++ b/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts
+@@ -35,6 +35,7 @@ export const AICustomizationManagementSection = {
+ 	Hooks: 'hooks',
+ 	McpServers: 'mcpServers',
+ 	Plugins: 'plugins',
++	DirectorCode: 'directorCode',
+ 	Models: 'models',
+ } as const;
  
 diff --git a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
 index c3158832160b387c88faa2ecd2944d486dfd26bc..c919e3da807a88240140c3d7c70d6cc6310a890e 100644

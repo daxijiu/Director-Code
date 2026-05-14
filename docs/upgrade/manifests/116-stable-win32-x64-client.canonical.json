@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-12T14:38:53.038Z",
-  "treeHash": "d7378b632be6d65174ba92b0c5105bcf728c7bc5fcd0f3c46a3e0ba065cd76b5",
+  "generatedAt": "2026-05-13T16:02:56.033Z",
+  "treeHash": "3e71e6eb350e9fdb3beeafe0238ed59b5769f2b21f4acac5caf42d17a2c840f7",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39686,7 +39686,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "45e62d43f12cb3dd43eca5b2b5d28480733916ab231a52e03135421d26bbfa86",
+      "sha256": "372b725443d8802f7704b6de78886c91d8f92627db73f870c0ea80253c8bd521",
       "mode": 33206,
       "type": "file"
     },
@@ -40064,7 +40064,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts",
-      "sha256": "9b03ceb31042cc74a05bf91ed4c296cbf7d2607f0ff803eab33cddf8104f4e6c",
+      "sha256": "5d39f3a44f2fff2d7f919e530caf70b6941daa551d119f027be169406e39803c",
       "mode": 33206,
       "type": "file"
     },
@@ -40094,7 +40094,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts",
-      "sha256": "1b75d471f3ee12f2af034aef346255ab99e2ccf6bfc688976af709f7eba89179",
+      "sha256": "329a9a3cc527457f0da8c02ba067d678e68d383ff1321d292abfdf17e47fd1ef",
       "mode": 33206,
       "type": "file"
     },
@@ -40124,7 +40124,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css",
-      "sha256": "e807daf4129026592d62be2f215882ef52d0dc185d04c91a2c7f6802b9df2884",
+      "sha256": "c7066d411dee1ecb5ecca0b11c44dfdcd10e18d5658f1fb69b821ba1345107d5",
       "mode": 33206,
       "type": "file"
     },
@@ -42014,7 +42014,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts",
-      "sha256": "2cfd24f5d68ce98296802d7a523b05be02850bfe382d03df6a7c1cdde0c2daf7",
+      "sha256": "d15ce6ce662089fffa3170ac9b8dca45277601f4bb39b636f2e8e368a63c46ac",
       "mode": 33206,
       "type": "file"
     },
