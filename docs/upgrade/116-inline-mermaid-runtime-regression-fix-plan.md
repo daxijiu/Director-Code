@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, and Phase 3 Chat Editing contract are implemented, replay-landed, and validated. Phase 4 reviewable edit tools are next after Phase 3 push.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, Phase 3 Chat Editing contract, and Phase 4 reviewable edit tools are implemented, replay-landed, and validated. Phase 5 Ask/Edit/Inline mode routing is next after Phase 4 push.
 
 Execution decisions added on 2026-05-13:
 
@@ -36,7 +36,11 @@ Execution progress added on 2026-05-14:
 - Phase 3 binds reviewable panel edits by `chatSessionResource` and `chatRequestId`, rejects missing request ids instead of falling back to the last request, emits explanation/codeblock/textEdit start-progress-done response parts, and returns compact model-loop edit results.
 - Phase 3 validation coverage is `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`; it verifies explicit request binding, no last-request fallback, workspace target rejection, internal-only probe behavior, and compact result formatting.
 - The Phase 3 contract report is `docs/upgrade/reports/116-stable-win32-x64-client/chat-editing-contract-report.md`. It documents the VS Code 116 `textEdit` to `textEditGroup` path, the directory-creation review transaction plan, and the EditorInline prerequisite note.
-- Next implementation wave starts at Phase 4 reviewable edit tools after Phase 3 push.
+- Phase 4 reviewable edit tools are implemented in `patches/replay/009-director-edit-tools.116.patch`. New model-facing tools are `apply_patch`, `create_file`, `create_directory`, `replace_string_in_file`, and `multi_replace_string_in_file`.
+- Phase 4 text/file tools use the Phase 3 `DirectorChatEditingAdapter` and emit reviewable `textEdit` progress; `create_directory` uses Director-owned pending transactions and accept/reject command buttons, creating the folder only after accept.
+- Phase 4 registry policy exposes edit tools only in Edit and Agent. Ask and Inline still have no model-callable mutation tools.
+- Phase 4 validation coverage is `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`; it verifies reviewable replace progress, patch hunk application, duplicate create-file rejection, overlapping multi-replace rejection, and directory creation no-op-before-accept behavior.
+- Next implementation wave starts at Phase 5 Ask/Edit/Inline mode routing after Phase 4 push.
 
 ## Summary
 

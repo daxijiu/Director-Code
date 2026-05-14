@@ -260,6 +260,7 @@ function isChatEditing(filePath) {
 function isEditTools(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editTools/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editTools/')) return true;
+  if (filePath === 'src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts') return true;
   return false;
 }
 

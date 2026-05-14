@@ -1,0 +1,1095 @@
+diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6294f5bd8afd33f8deadeb7496d39eb85c91510d
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
+@@ -0,0 +1,61 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { Disposable } from '../../../../../../base/common/lifecycle.js';
++import { CommandsRegistry } from '../../../../../../platform/commands/common/commands.js';
++import { IFileService } from '../../../../../../platform/files/common/files.js';
++import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
++import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../../../common/contributions.js';
++import {
++	acceptDirectorDirectoryCreationTransaction,
++	DirectorAcceptDirectoryCreationCommandId,
++	DirectorApplyPatchTool,
++	DirectorApplyPatchToolData,
++	DirectorCreateDirectoryTool,
++	DirectorCreateDirectoryToolData,
++	DirectorCreateFileTool,
++	DirectorCreateFileToolData,
++	DirectorEditToolData,
++	DirectorMultiReplaceStringInFileTool,
++	DirectorMultiReplaceStringInFileToolData,
++	DirectorRejectDirectoryCreationCommandId,
++	DirectorReplaceStringInFileTool,
++	DirectorReplaceStringInFileToolData,
++	rejectDirectorDirectoryCreationTransaction,
++} from '../../../common/agentEngine/editTools/directorEditTools.js';
++import { ILanguageModelToolsService, IToolData, IToolImpl } from '../../../common/tools/languageModelToolsService.js';
++
++export class DirectorEditToolsContribution extends Disposable implements IWorkbenchContribution {
++	static readonly ID = 'workbench.contrib.directorEditTools';
++
++	constructor(
++		@ILanguageModelToolsService toolsService: ILanguageModelToolsService,
++		@IInstantiationService instantiationService: IInstantiationService,
++	) {
++		super();
++
++		this.registerEditTool(toolsService, DirectorApplyPatchToolData, instantiationService.createInstance(DirectorApplyPatchTool));
++		this.registerEditTool(toolsService, DirectorCreateFileToolData, instantiationService.createInstance(DirectorCreateFileTool));
++		this.registerEditTool(toolsService, DirectorCreateDirectoryToolData, instantiationService.createInstance(DirectorCreateDirectoryTool));
++		this.registerEditTool(toolsService, DirectorReplaceStringInFileToolData, instantiationService.createInstance(DirectorReplaceStringInFileTool));
++		this.registerEditTool(toolsService, DirectorMultiReplaceStringInFileToolData, instantiationService.createInstance(DirectorMultiReplaceStringInFileTool));
++	}
++
++	private registerEditTool(toolsService: ILanguageModelToolsService, toolData: IToolData, tool: IToolImpl): void {
++		this._register(toolsService.registerTool(toolData, tool));
++	}
++}
++
++CommandsRegistry.registerCommand(DirectorAcceptDirectoryCreationCommandId, async (accessor, transactionId: string) => {
++	return acceptDirectorDirectoryCreationTransaction(accessor.get(IFileService), transactionId);
++});
++
++CommandsRegistry.registerCommand(DirectorRejectDirectoryCreationCommandId, async (_accessor, transactionId: string) => {
++	return rejectDirectorDirectoryCreationTransaction(transactionId);
++});
++
++registerWorkbenchContribution2(DirectorEditToolsContribution.ID, DirectorEditToolsContribution, WorkbenchPhase.AfterRestored);
++
++export { DirectorEditToolData };
+diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaedb9300428
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
+@@ -0,0 +1,810 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { DeferredPromise, raceCancellation } from '../../../../../../base/common/async.js';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { generateUuid } from '../../../../../../base/common/uuid.js';
++import { IRange } from '../../../../../../editor/common/core/range.js';
++import { TextEdit } from '../../../../../../editor/common/languages.js';
++import { IFileService } from '../../../../../../platform/files/common/files.js';
++import { IWorkspaceContextService } from '../../../../../../platform/workspace/common/workspace.js';
++import { detectEncodingFromBuffer } from '../../../../../services/textfile/common/encoding.js';
++import { IChatService } from '../../chatService/chatService.js';
++import { CountTokensCallback, IToolData, IToolImpl, IToolInvocation, IToolResult, ToolDataSource, ToolProgress } from '../../tools/languageModelToolsService.js';
++import { DirectorChatEditingAdapter, DirectorPanelChatEditBinding, formatDirectorChatEditToolResult } from '../editing/directorChatEditingAdapter.js';
++
++export const DirectorApplyPatchToolId = 'director_apply_patch';
++export const DirectorCreateFileToolId = 'director_create_file';
++export const DirectorCreateDirectoryToolId = 'director_create_directory';
++export const DirectorReplaceStringInFileToolId = 'director_replace_string_in_file';
++export const DirectorMultiReplaceStringInFileToolId = 'director_multi_replace_string_in_file';
++
++export const DirectorAcceptDirectoryCreationCommandId = 'director.chatEditing.acceptDirectoryCreation';
++export const DirectorRejectDirectoryCreationCommandId = 'director.chatEditing.rejectDirectoryCreation';
++
++const DEFAULT_MAX_TEXT_BYTES = 1_000_000;
++
++type ToolParams = Record<string, unknown>;
++
++export const DirectorApplyPatchToolData: IToolData = {
++	id: DirectorApplyPatchToolId,
++	toolReferenceName: 'apply_patch',
++	displayName: 'Apply Patch',
++	userDescription: 'Apply a reviewable workspace patch.',
++	modelDescription: 'Apply a unified diff patch to files in the current workspace. The edits are streamed through the Chat Editing review UI and are not silently written.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		properties: {
++			patch: { type: 'string', description: 'Unified diff patch text.' },
++			diff: { type: 'string', description: 'Alias for patch.' },
++			path: { type: 'string', description: 'Optional workspace-relative path for a bare unified hunk without file headers.' },
++		},
++		required: ['patch']
++	}
++};
++
++export const DirectorCreateFileToolData: IToolData = {
++	id: DirectorCreateFileToolId,
++	toolReferenceName: 'create_file',
++	displayName: 'Create File',
++	userDescription: 'Create a file through Chat Editing review.',
++	modelDescription: 'Create a new workspace file by streaming a reviewable Chat Editing diff. Existing files are rejected unless overwrite is explicitly true.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		properties: {
++			path: { type: 'string', description: 'Workspace-relative file path to create.' },
++			content: { type: 'string', description: 'Initial text content.' },
++			overwrite: { type: 'boolean', description: 'Set true to replace an existing file through the review UI.' },
++		},
++		required: ['path', 'content']
++	}
++};
++
++export const DirectorCreateDirectoryToolData: IToolData = {
++	id: DirectorCreateDirectoryToolId,
++	toolReferenceName: 'create_directory',
++	displayName: 'Create Directory',
++	userDescription: 'Create a directory after explicit chat review.',
++	modelDescription: 'Create a workspace directory using Director-owned accept/reject review. The directory is not created until the user accepts the operation.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		properties: {
++			path: { type: 'string', description: 'Workspace-relative directory path to create.' },
++		},
++		required: ['path']
++	}
++};
++
++export const DirectorReplaceStringInFileToolData: IToolData = {
++	id: DirectorReplaceStringInFileToolId,
++	toolReferenceName: 'replace_string_in_file',
++	displayName: 'Replace String In File',
++	userDescription: 'Replace text in a file through Chat Editing review.',
++	modelDescription: 'Replace an exact string in a workspace text file. If the old string appears more than once, set replaceAll true or use a more specific string. Edits are reviewable.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		properties: {
++			path: { type: 'string', description: 'Workspace-relative file path.' },
++			oldString: { type: 'string', description: 'Exact text to replace.' },
++			newString: { type: 'string', description: 'Replacement text.' },
++			replaceAll: { type: 'boolean', description: 'Replace every non-overlapping match. Defaults to false.' },
++		},
++		required: ['path', 'oldString', 'newString']
++	}
++};
++
++export const DirectorMultiReplaceStringInFileToolData: IToolData = {
++	id: DirectorMultiReplaceStringInFileToolId,
++	toolReferenceName: 'multi_replace_string_in_file',
++	displayName: 'Multi Replace String In File',
++	userDescription: 'Replace multiple strings in a file through Chat Editing review.',
++	modelDescription: 'Replace multiple exact strings in one workspace text file. Replacements must be non-overlapping. Edits are reviewable.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		properties: {
++			path: { type: 'string', description: 'Workspace-relative file path.' },
++			replacements: {
++				type: 'array',
++				description: 'Replacement operations.',
++				items: {
++					type: 'object',
++					properties: {
++						oldString: { type: 'string' },
++						newString: { type: 'string' },
++						replaceAll: { type: 'boolean' },
++					},
++					required: ['oldString', 'newString']
++				}
++			},
++		},
++		required: ['path', 'replacements']
++	}
++};
++
++export const DirectorEditToolData = [
++	DirectorApplyPatchToolData,
++	DirectorCreateFileToolData,
++	DirectorCreateDirectoryToolData,
++	DirectorReplaceStringInFileToolData,
++	DirectorMultiReplaceStringInFileToolData,
++] as const;
++
++type DirectoryCreationOutcome =
++	| { readonly status: 'accepted'; readonly path: string }
++	| { readonly status: 'rejected'; readonly path: string }
++	| { readonly status: 'cancelled'; readonly path: string }
++	| { readonly status: 'error'; readonly path: string; readonly message: string };
++
++interface DirectoryCreationTransaction {
++	readonly id: string;
++	readonly uri: URI;
++	readonly relativePath: string;
++	readonly deferred: DeferredPromise<DirectoryCreationOutcome>;
++}
++
++const directoryCreationTransactions = new Map<string, DirectoryCreationTransaction>();
++
++export function getPendingDirectorDirectoryCreationTransaction(id: string): DirectoryCreationTransaction | undefined {
++	return directoryCreationTransactions.get(id);
++}
++
++export function createDirectorDirectoryCreationTransaction(uri: URI, relativePath: string): DirectoryCreationTransaction {
++	const transaction = {
++		id: generateUuid(),
++		uri,
++		relativePath,
++		deferred: new DeferredPromise<DirectoryCreationOutcome>(),
++	};
++	directoryCreationTransactions.set(transaction.id, transaction);
++	return transaction;
++}
++
++export async function acceptDirectorDirectoryCreationTransaction(fileService: IFileService, transactionId: string): Promise<DirectoryCreationOutcome> {
++	const transaction = directoryCreationTransactions.get(transactionId);
++	if (!transaction) {
++		return { status: 'error', path: '', message: 'Directory creation transaction was not found.' };
++	}
++
++	try {
++		if (await fileService.exists(transaction.uri)) {
++			const outcome: DirectoryCreationOutcome = { status: 'error', path: transaction.relativePath, message: 'Target path already exists.' };
++			await transaction.deferred.complete(outcome);
++			return outcome;
++		}
++
++		await fileService.createFolder(transaction.uri);
++		const outcome: DirectoryCreationOutcome = { status: 'accepted', path: transaction.relativePath };
++		await transaction.deferred.complete(outcome);
++		return outcome;
++	} catch (error) {
++		const message = error instanceof Error ? error.message : String(error);
++		const outcome: DirectoryCreationOutcome = { status: 'error', path: transaction.relativePath, message };
++		await transaction.deferred.complete(outcome);
++		return outcome;
++	} finally {
++		directoryCreationTransactions.delete(transactionId);
++	}
++}
++
++export async function rejectDirectorDirectoryCreationTransaction(transactionId: string): Promise<DirectoryCreationOutcome> {
++	const transaction = directoryCreationTransactions.get(transactionId);
++	if (!transaction) {
++		return { status: 'error', path: '', message: 'Directory creation transaction was not found.' };
++	}
++
++	const outcome: DirectoryCreationOutcome = { status: 'rejected', path: transaction.relativePath };
++	await transaction.deferred.complete(outcome);
++	directoryCreationTransactions.delete(transactionId);
++	return outcome;
++}
++
++abstract class DirectorEditToolBase implements IToolImpl {
++	protected readonly adapter: DirectorChatEditingAdapter;
++
++	constructor(
++		protected readonly fileService: IFileService,
++		chatService: IChatService,
++		workspaceContextService: IWorkspaceContextService,
++	) {
++		this.adapter = new DirectorChatEditingAdapter(chatService, workspaceContextService);
++	}
++
++	abstract invoke(invocation: IToolInvocation, countTokens: CountTokensCallback, progress: ToolProgress, token: CancellationToken): Promise<IToolResult>;
++
++	protected binding(invocation: IToolInvocation): (DirectorPanelChatEditBinding & { readonly ok: true }) | { readonly ok: false; readonly reason: string } {
++		if (!invocation.context?.sessionResource) {
++			return { ok: false, reason: 'Missing chat session resource for reviewable edit.' };
++		}
++		if (!invocation.chatRequestId) {
++			return { ok: false, reason: 'Missing chatRequestId for reviewable edit.' };
++		}
++		return {
++			ok: true,
++			chatSessionResource: invocation.context.sessionResource,
++			chatRequestId: invocation.chatRequestId,
++		};
++	}
++
++	protected async readWorkspaceText(path: string, token: CancellationToken): Promise<{ readonly ok: true; readonly uri: URI; readonly relativePath: string; readonly text: string } | { readonly ok: false; readonly reason: string }> {
++		const target = this.adapter.resolveWorkspaceTarget({ path });
++		if (!target.ok) {
++			return target;
++		}
++
++		const content = await this.fileService.readFile(target.uri, undefined, token);
++		if (content.value.byteLength > DEFAULT_MAX_TEXT_BYTES) {
++			return { ok: false, reason: `File is too large for reviewable text editing: ${target.relativePath}` };
++		}
++
++		const detected = detectEncodingFromBuffer({ buffer: content.value, bytesRead: content.value.byteLength });
++		if (detected.seemsBinary) {
++			return { ok: false, reason: `Binary files are not supported by reviewable edit tools: ${target.relativePath}` };
++		}
++
++		return { ok: true, uri: target.uri, relativePath: target.relativePath, text: content.value.toString() };
++	}
++
++	protected async emitSingleFileEdits(invocation: IToolInvocation, path: string, explanation: string, edits: readonly TextEdit[], token: CancellationToken): Promise<IToolResult> {
++		const binding = this.binding(invocation);
++		if (!binding.ok) {
++			return textResult(formatDirectorChatEditToolResult(binding));
++		}
++
++		const result = await this.adapter.emitSingleFileTextEdit({
++			...binding,
++			path,
++			explanation,
++			edits,
++		}, token);
++		return textResult(formatDirectorChatEditToolResult(result));
++	}
++}
++
++export class DirectorReplaceStringInFileTool extends DirectorEditToolBase {
++	constructor(
++		@IFileService fileService: IFileService,
++		@IChatService chatService: IChatService,
++		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
++	) {
++		super(fileService, chatService, workspaceContextService);
++	}
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const params = invocation.parameters as ToolParams;
++		const path = stringParam(params, 'path');
++		const oldString = stringParam(params, 'oldString');
++		const newString = stringParam(params, 'newString') ?? '';
++		if (!path || !oldString) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path and oldString are required.' }));
++		}
++
++		const read = await this.readWorkspaceText(path, token);
++		if (!read.ok) {
++			return textResult(formatDirectorChatEditToolResult(read));
++		}
++
++		const matches = findOccurrences(read.text, oldString);
++		if (matches.length === 0) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `oldString was not found in ${read.relativePath}.` }));
++		}
++
++		const replaceAll = booleanParam(params, 'replaceAll') === true;
++		if (matches.length > 1 && !replaceAll) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `oldString matched ${matches.length} times in ${read.relativePath}; set replaceAll true or provide a more specific string.` }));
++		}
++
++		const selected = replaceAll ? matches : matches.slice(0, 1);
++		const edits = selected.map(offset => ({
++			range: rangeFromOffsets(read.text, offset, offset + oldString.length),
++			text: newString,
++		}));
++
++		return this.emitSingleFileEdits(invocation, path, `Replace text in ${read.relativePath}`, edits, token);
++	}
++}
++
++export class DirectorMultiReplaceStringInFileTool extends DirectorEditToolBase {
++	constructor(
++		@IFileService fileService: IFileService,
++		@IChatService chatService: IChatService,
++		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
++	) {
++		super(fileService, chatService, workspaceContextService);
++	}
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const params = invocation.parameters as ToolParams;
++		const path = stringParam(params, 'path');
++		const replacements = Array.isArray(params.replacements) ? params.replacements as ToolParams[] : undefined;
++		if (!path || !replacements?.length) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path and at least one replacement are required.' }));
++		}
++
++		const read = await this.readWorkspaceText(path, token);
++		if (!read.ok) {
++			return textResult(formatDirectorChatEditToolResult(read));
++		}
++
++		const edits: Array<{ range: IRange; text: string; start: number; end: number }> = [];
++		for (const replacement of replacements) {
++			const oldString = stringParam(replacement, 'oldString');
++			const newString = stringParam(replacement, 'newString') ?? '';
++			if (!oldString) {
++				return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'Each replacement requires oldString.' }));
++			}
++
++			const matches = findOccurrences(read.text, oldString);
++			if (matches.length === 0) {
++				return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `oldString was not found in ${read.relativePath}: ${oldString}` }));
++			}
++
++			const replaceAll = booleanParam(replacement, 'replaceAll') === true;
++			if (matches.length > 1 && !replaceAll) {
++				return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `oldString matched ${matches.length} times in ${read.relativePath}; set replaceAll true or provide a more specific string.` }));
++			}
++
++			for (const start of replaceAll ? matches : matches.slice(0, 1)) {
++				const end = start + oldString.length;
++				edits.push({ start, end, range: rangeFromOffsets(read.text, start, end), text: newString });
++			}
++		}
++
++		const overlap = firstOverlap(edits);
++		if (overlap) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `Replacement ranges overlap in ${read.relativePath}.` }));
++		}
++
++		return this.emitSingleFileEdits(invocation, path, `Replace ${edits.length} text ranges in ${read.relativePath}`, edits, token);
++	}
++}
++
++export class DirectorCreateFileTool extends DirectorEditToolBase {
++	constructor(
++		@IFileService fileService: IFileService,
++		@IChatService chatService: IChatService,
++		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
++	) {
++		super(fileService, chatService, workspaceContextService);
++	}
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const params = invocation.parameters as ToolParams;
++		const path = stringParam(params, 'path');
++		const content = stringParam(params, 'content') ?? '';
++		if (!path) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path is required.' }));
++		}
++		if (content.length > DEFAULT_MAX_TEXT_BYTES) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'File content is too large for create_file.' }));
++		}
++
++		const target = this.adapter.resolveWorkspaceTarget({ path });
++		if (!target.ok) {
++			return textResult(formatDirectorChatEditToolResult(target));
++		}
++
++		const overwrite = booleanParam(params, 'overwrite') === true;
++		if (!overwrite && await this.fileService.exists(target.uri)) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `Target file already exists: ${target.relativePath}` }));
++		}
++
++		return this.emitSingleFileEdits(invocation, path, `Create file ${target.relativePath}`, [{ range: emptyStartRange(), text: content }], token);
++	}
++}
++
++export class DirectorApplyPatchTool extends DirectorEditToolBase {
++	constructor(
++		@IFileService fileService: IFileService,
++		@IChatService chatService: IChatService,
++		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
++	) {
++		super(fileService, chatService, workspaceContextService);
++	}
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const params = invocation.parameters as ToolParams;
++		const patchText = stringParam(params, 'patch') ?? stringParam(params, 'diff');
++		if (!patchText) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'patch is required.' }));
++		}
++
++		const parsed = parseUnifiedPatch(patchText, stringParam(params, 'path'));
++		if (!parsed.ok) {
++			return textResult(formatDirectorChatEditToolResult(parsed));
++		}
++
++		const planned: Array<{ path: string; relativePath: string; edits: readonly TextEdit[] }> = [];
++		for (const filePatch of parsed.files) {
++			const target = this.adapter.resolveWorkspaceTarget({ path: filePatch.path });
++			if (!target.ok) {
++				return textResult(formatDirectorChatEditToolResult(target));
++			}
++
++			if (filePatch.isDeletion) {
++				return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `File deletion is not supported by apply_patch v1: ${target.relativePath}` }));
++			}
++
++			if (filePatch.isNewFile) {
++				if (await this.fileService.exists(target.uri)) {
++					return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `Patch creates a file that already exists: ${target.relativePath}` }));
++				}
++				planned.push({ path: filePatch.path, relativePath: target.relativePath, edits: [{ range: emptyStartRange(), text: textForNewFilePatch(filePatch) }] });
++				continue;
++			}
++
++			const read = await this.readWorkspaceText(filePatch.path, token);
++			if (!read.ok) {
++				return textResult(formatDirectorChatEditToolResult(read));
++			}
++
++			const edits = textEditsForPatch(read.text, filePatch);
++			if (!edits.ok) {
++				return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `${read.relativePath}: ${edits.reason}` }));
++			}
++
++			planned.push({ path: filePatch.path, relativePath: read.relativePath, edits: edits.edits });
++		}
++
++		const results = [];
++		for (const entry of planned) {
++			const binding = this.binding(invocation);
++			if (!binding.ok) {
++				return textResult(formatDirectorChatEditToolResult(binding));
++			}
++			const result = await this.adapter.emitSingleFileTextEdit({
++				...binding,
++				path: entry.path,
++				explanation: `Apply patch to ${entry.relativePath}`,
++				edits: entry.edits,
++			}, token);
++			if (!result.ok) {
++				return textResult(formatDirectorChatEditToolResult(result));
++			}
++			results.push(`${result.relativePath}: ${result.editCount} edit(s)`);
++		}
++
++		return textResult(`edit_result: success\nfiles: ${results.length}\n${results.join('\n')}\nreview: Chat Editing UI`);
++	}
++}
++
++export class DirectorCreateDirectoryTool extends DirectorEditToolBase {
++	constructor(
++		@IFileService fileService: IFileService,
++		@IChatService chatService: IChatService,
++		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
++	) {
++		super(fileService, chatService, workspaceContextService);
++	}
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const params = invocation.parameters as ToolParams;
++		const path = stringParam(params, 'path');
++		if (!path) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path is required.' }));
++		}
++
++		const binding = this.binding(invocation);
++		if (!binding.ok) {
++			return textResult(formatDirectorChatEditToolResult(binding));
++		}
++
++		const target = this.adapter.resolveWorkspaceTarget({ path });
++		if (!target.ok) {
++			return textResult(formatDirectorChatEditToolResult(target));
++		}
++		if (await this.fileService.exists(target.uri)) {
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: `Target path already exists: ${target.relativePath}` }));
++		}
++
++		const transaction = createDirectorDirectoryCreationTransaction(target.uri, target.relativePath);
++		const review = await this.adapter.emitDirectoryCreationReview({
++			...binding,
++			path,
++			transactionId: transaction.id,
++			acceptCommandId: DirectorAcceptDirectoryCreationCommandId,
++			rejectCommandId: DirectorRejectDirectoryCreationCommandId,
++		}, token);
++		if (!review.ok) {
++			await rejectDirectorDirectoryCreationTransaction(transaction.id);
++			return textResult(formatDirectorChatEditToolResult(review));
++		}
++
++		const outcome = await raceCancellation(transaction.deferred.p, token, { status: 'cancelled', path: target.relativePath } satisfies DirectoryCreationOutcome);
++		if (outcome.status === 'accepted') {
++			return textResult(`edit_result: success\npath: ${outcome.path}\nreview: directory creation accepted`);
++		}
++		if (outcome.status === 'rejected') {
++			return textResult(`edit_result: rejected\npath: ${outcome.path}`);
++		}
++		if (outcome.status === 'cancelled') {
++			await rejectDirectorDirectoryCreationTransaction(transaction.id);
++			return textResult(`edit_result: cancelled\npath: ${outcome.path}`);
++		}
++		return textResult(formatDirectorChatEditToolResult({ ok: false, reason: outcome.message }));
++	}
++}
++
++function textResult(value: string): IToolResult {
++	return { content: [{ kind: 'text', value }] };
++}
++
++function stringParam(params: ToolParams, key: string): string | undefined {
++	const value = params[key];
++	return typeof value === 'string' ? value : undefined;
++}
++
++function booleanParam(params: ToolParams, key: string): boolean | undefined {
++	return typeof params[key] === 'boolean' ? params[key] as boolean : undefined;
++}
++
++function findOccurrences(text: string, needle: string): number[] {
++	const out: number[] = [];
++	let offset = 0;
++	while (offset <= text.length) {
++		const index = text.indexOf(needle, offset);
++		if (index === -1) {
++			break;
++		}
++		out.push(index);
++		offset = index + Math.max(needle.length, 1);
++	}
++	return out;
++}
++
++function firstOverlap(edits: readonly { readonly start: number; readonly end: number }[]): boolean {
++	const sorted = [...edits].sort((left, right) => left.start - right.start || left.end - right.end);
++	for (let index = 1; index < sorted.length; index++) {
++		if (sorted[index].start < sorted[index - 1].end) {
++			return true;
++		}
++	}
++	return false;
++}
++
++function emptyStartRange(): IRange {
++	return {
++		startLineNumber: 1,
++		startColumn: 1,
++		endLineNumber: 1,
++		endColumn: 1,
++	};
++}
++
++function rangeFromOffsets(text: string, start: number, end: number): IRange {
++	const startPosition = positionAt(text, start);
++	const endPosition = positionAt(text, end);
++	return {
++		startLineNumber: startPosition.lineNumber,
++		startColumn: startPosition.column,
++		endLineNumber: endPosition.lineNumber,
++		endColumn: endPosition.column,
++	};
++}
++
++function positionAt(text: string, offset: number): { readonly lineNumber: number; readonly column: number } {
++	const lineStarts = computeLineStarts(text);
++	let low = 0;
++	let high = lineStarts.length;
++	while (low < high) {
++		const mid = Math.floor((low + high) / 2);
++		if (lineStarts[mid] > offset) {
++			high = mid;
++		} else {
++			low = mid + 1;
++		}
++	}
++	const lineIndex = Math.max(0, low - 1);
++	return {
++		lineNumber: lineIndex + 1,
++		column: offset - lineStarts[lineIndex] + 1,
++	};
++}
++
++function computeLineStarts(text: string): number[] {
++	const starts = [0];
++	for (let index = 0; index < text.length; index++) {
++		if (text.charCodeAt(index) === 10) {
++			starts.push(index + 1);
++		}
++	}
++	return starts;
++}
++
++interface ParsedPatchLine {
++	readonly kind: 'context' | 'add' | 'remove';
++	readonly text: string;
++}
++
++interface ParsedPatchHunk {
++	readonly oldStart: number;
++	readonly oldLength: number;
++	readonly lines: readonly ParsedPatchLine[];
++}
++
++interface ParsedPatchFile {
++	readonly path: string;
++	readonly isNewFile: boolean;
++	readonly isDeletion: boolean;
++	readonly hunks: readonly ParsedPatchHunk[];
++}
++
++function parseUnifiedPatch(patchText: string, fallbackPath: string | undefined): { readonly ok: true; readonly files: readonly ParsedPatchFile[] } | { readonly ok: false; readonly reason: string } {
++	const lines = patchText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
++	const files: ParsedPatchFile[] = [];
++	let oldPath: string | undefined;
++	let newPath: string | undefined;
++	let current: { path: string; isNewFile: boolean; isDeletion: boolean; hunks: ParsedPatchHunk[] } | undefined;
++
++	function ensureCurrent(): typeof current {
++		const path = newPath && newPath !== '/dev/null' ? newPath : fallbackPath;
++		if (!current) {
++			if (!path) {
++				return undefined;
++			}
++			current = {
++				path,
++				isNewFile: oldPath === '/dev/null',
++				isDeletion: newPath === '/dev/null',
++				hunks: [],
++			};
++		}
++		return current;
++	}
++
++	for (let index = 0; index < lines.length; index++) {
++		const line = lines[index];
++		if (line.startsWith('diff --git ')) {
++			if (current) {
++				files.push(current);
++			}
++			current = undefined;
++			oldPath = undefined;
++			newPath = undefined;
++			continue;
++		}
++		if (line.startsWith('--- ')) {
++			oldPath = cleanPatchPath(line.slice(4));
++			continue;
++		}
++		if (line.startsWith('+++ ')) {
++			newPath = cleanPatchPath(line.slice(4));
++			current = undefined;
++			continue;
++		}
++		if (!line.startsWith('@@ ')) {
++			continue;
++		}
++
++		const header = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
++		if (!header) {
++			return { ok: false, reason: `Unsupported unified diff hunk header: ${line}` };
++		}
++
++		const file = ensureCurrent();
++		if (!file) {
++			return { ok: false, reason: 'Patch hunk is missing a target path.' };
++		}
++
++		const hunkLines: ParsedPatchLine[] = [];
++		index++;
++		for (; index < lines.length; index++) {
++			const hunkLine = lines[index];
++			if (hunkLine.startsWith('diff --git ') || hunkLine.startsWith('--- ') || hunkLine.startsWith('@@ ')) {
++				index--;
++				break;
++			}
++			if (hunkLine.startsWith('\\ No newline')) {
++				continue;
++			}
++			if (hunkLine.startsWith('+')) {
++				hunkLines.push({ kind: 'add', text: hunkLine.slice(1) });
++			} else if (hunkLine.startsWith('-')) {
++				hunkLines.push({ kind: 'remove', text: hunkLine.slice(1) });
++			} else if (hunkLine.startsWith(' ')) {
++				hunkLines.push({ kind: 'context', text: hunkLine.slice(1) });
++			} else if (hunkLine === '') {
++				break;
++			} else {
++				return { ok: false, reason: `Unsupported unified diff line: ${hunkLine}` };
++			}
++		}
++
++		file.hunks.push({
++			oldStart: Number(header[1]),
++			oldLength: header[2] === undefined ? 1 : Number(header[2]),
++			lines: hunkLines,
++		});
++	}
++
++	if (current) {
++		files.push(current);
++	}
++
++	if (!files.length) {
++		return { ok: false, reason: 'Patch did not contain any supported file hunks.' };
++	}
++
++	return { ok: true, files };
++}
++
++function cleanPatchPath(raw: string): string {
++	const path = raw.trim().split(/\s+/)[0].replace(/^"|"$/g, '');
++	if (path === '/dev/null') {
++		return path;
++	}
++	return path.replace(/^[ab]\//, '');
++}
++
++function textForNewFilePatch(filePatch: ParsedPatchFile): string {
++	const eol = '\n';
++	const lines: string[] = [];
++	for (const hunk of filePatch.hunks) {
++		lines.push(...hunk.lines.filter(line => line.kind !== 'remove').map(line => line.text));
++	}
++	return lines.length ? `${lines.join(eol)}${eol}` : '';
++}
++
++function textEditsForPatch(text: string, filePatch: ParsedPatchFile): { readonly ok: true; readonly edits: readonly TextEdit[] } | { readonly ok: false; readonly reason: string } {
++	const eol = text.includes('\r\n') ? '\r\n' : '\n';
++	const edits: Array<TextEdit & { readonly start: number; readonly end: number }> = [];
++	for (const hunk of filePatch.hunks) {
++		const oldLines = hunk.lines.filter(line => line.kind !== 'add').map(line => line.text);
++		const newLines = hunk.lines.filter(line => line.kind !== 'remove').map(line => line.text);
++		const startLine = hunk.oldLength === 0 ? hunk.oldStart + 1 : hunk.oldStart;
++		const startOffset = offsetAtLine(text, startLine);
++		const endOffset = hunk.oldLength === 0 ? startOffset : offsetAtLine(text, hunk.oldStart + hunk.oldLength);
++		const actual = text.slice(startOffset, endOffset).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
++		const expected = oldLines.join('\n');
++		if (actual !== expected && actual !== `${expected}\n`) {
++			return { ok: false, reason: `Patch hunk does not match the current file at line ${hunk.oldStart}.` };
++		}
++		const textEndsWithNewLine = actual.endsWith('\n') || hunk.oldLength === 0;
++		const replacement = newLines.length ? `${newLines.join(eol)}${textEndsWithNewLine ? eol : ''}` : '';
++		edits.push({
++			start: startOffset,
++			end: endOffset,
++			range: rangeFromOffsets(text, startOffset, endOffset),
++			text: replacement,
++		});
++	}
++
++	if (firstOverlap(edits)) {
++		return { ok: false, reason: 'Patch hunks overlap.' };
++	}
++
++	return { ok: true, edits };
++}
++
++function offsetAtLine(text: string, lineNumber: number): number {
++	if (lineNumber <= 1) {
++		return 0;
++	}
++	const starts = computeLineStarts(text);
++	if (lineNumber > starts.length) {
++		return text.length;
++	}
++	return starts[lineNumber - 1];
++}
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546a7b857e4
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
+@@ -0,0 +1,206 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { VSBuffer } from '../../../../../../base/common/buffer.js';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { IFileContent, IFileService, IFileStatWithMetadata } from '../../../../../../platform/files/common/files.js';
++import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
++import {
++	acceptDirectorDirectoryCreationTransaction,
++	DirectorApplyPatchTool,
++	DirectorCreateDirectoryTool,
++	DirectorCreateFileTool,
++	DirectorReplaceStringInFileTool,
++	DirectorMultiReplaceStringInFileTool,
++} from '../../../common/agentEngine/editTools/directorEditTools.js';
++import { IChatProgress, IChatService } from '../../../common/chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../../common/model/chatModel.js';
++import { IToolInvocation, IToolResult } from '../../../common/tools/languageModelToolsService.js';
++
++suite('Director Edit Tools', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	const root = URI.file('/workspace');
++	const folder = { uri: root, name: 'workspace', index: 0 } as IWorkspaceFolder;
++	const sessionResource = URI.parse('vscode-chat://director-test/session');
++
++	function workspaceService(): IWorkspaceContextService {
++		return {
++			getWorkspace: () => ({ id: 'test', folders: [folder] }),
++			getWorkspaceFolder: (resource: URI) => resource.path.startsWith(root.path) ? folder : null,
++		} as unknown as IWorkspaceContextService;
++	}
++
++	function invocation(parameters: Record<string, unknown>): IToolInvocation {
++		return {
++			callId: 'call',
++			toolId: 'tool',
++			parameters,
++			context: { sessionResource },
++			chatRequestId: 'target-request',
++		};
++	}
++
++	function textOf(result: IToolResult): string {
++		const part = result.content[0];
++		assert.strictEqual(part.kind, 'text');
++		return part.value;
++	}
++
++	function modelAndCalls() {
++		const calls: Array<{ requestId: string; progress: IChatProgress }> = [];
++		const request = { id: 'target-request' } as IChatRequestModel;
++		const model = {
++			getRequests: () => [request],
++			startEditingSession: () => undefined,
++			acceptResponseProgress: (target: IChatRequestModel, progress: IChatProgress) => calls.push({ requestId: target.id, progress }),
++			sessionResource,
++		} as unknown as IChatModel & { acceptResponseProgress(target: IChatRequestModel, progress: IChatProgress): void };
++		const chatService = {
++			getSession: (resource: URI) => resource.toString() === sessionResource.toString() ? model : undefined,
++		} as unknown as IChatService;
++		return { chatService, calls };
++	}
++
++	function fileService(initialFiles: Record<string, string> = {}) {
++		const files = new Map<string, string>();
++		const folders = new Set<string>();
++		for (const [path, content] of Object.entries(initialFiles)) {
++			files.set(URI.joinPath(root, path).toString(), content);
++		}
++
++		const service = {
++			exists: async (resource: URI) => files.has(resource.toString()) || folders.has(resource.toString()),
++			readFile: async (resource: URI): Promise<IFileContent> => {
++				const value = files.get(resource.toString());
++				if (value === undefined) {
++					throw new Error(`File not found: ${resource.toString()}`);
++				}
++				const buffer = VSBuffer.fromString(value);
++				return {
++					resource,
++					name: resource.path.split('/').pop() ?? 'file',
++					value: buffer,
++					mtime: 1,
++					ctime: 1,
++					etag: '1',
++					size: buffer.byteLength,
++					readonly: false,
++					locked: false,
++					executable: false,
++				};
++			},
++			createFolder: async (resource: URI): Promise<IFileStatWithMetadata> => {
++				folders.add(resource.toString());
++				return {
++					resource,
++					name: resource.path.split('/').pop() ?? 'folder',
++					isFile: false,
++					isDirectory: true,
++					isSymbolicLink: false,
++					mtime: 1,
++					ctime: 1,
++					etag: '1',
++					size: 0,
++					readonly: false,
++					locked: false,
++					executable: false,
++					children: undefined,
++				};
++			},
++			_folders: folders,
++		} as unknown as IFileService & { readonly _folders: Set<string> };
++		return service;
++	}
++
++	test('replace_string_in_file emits reviewable text edit progress', async () => {
++		const fakeFiles = fileService({ 'src/a.ts': 'const a = 1;\n' });
++		const fakeChat = modelAndCalls();
++		const tool = new DirectorReplaceStringInFileTool(fakeFiles, fakeChat.chatService, workspaceService());
++
++		const result = await tool.invoke(invocation({ path: 'src/a.ts', oldString: '1', newString: '2' }), async () => 0, undefined as any, CancellationToken.None);
++
++		assert.match(textOf(result), /edit_result: success/);
++		assert.deepStrictEqual(fakeChat.calls.map(call => call.progress.kind), ['markdownContent', 'codeblockUri', 'textEdit', 'textEdit', 'textEdit']);
++		const editProgress = fakeChat.calls[3].progress;
++		assert.strictEqual(editProgress.kind, 'textEdit');
++		assert.strictEqual(editProgress.edits[0].text, '2');
++	});
++
++	test('multi_replace_string_in_file rejects overlapping replacements', async () => {
++		const fakeFiles = fileService({ 'src/a.ts': 'abc\n' });
++		const fakeChat = modelAndCalls();
++		const tool = new DirectorMultiReplaceStringInFileTool(fakeFiles, fakeChat.chatService, workspaceService());
++
++		const result = await tool.invoke(invocation({
++			path: 'src/a.ts',
++			replacements: [
++				{ oldString: 'ab', newString: 'x' },
++				{ oldString: 'bc', newString: 'y' },
++			],
++		}), async () => 0, undefined as any, CancellationToken.None);
++
++		assert.match(textOf(result), /overlap/);
++		assert.strictEqual(fakeChat.calls.length, 0);
++	});
++
++	test('create_file rejects duplicate files before emitting progress', async () => {
++		const fakeFiles = fileService({ 'src/a.ts': 'old' });
++		const fakeChat = modelAndCalls();
++		const tool = new DirectorCreateFileTool(fakeFiles, fakeChat.chatService, workspaceService());
++
++		const result = await tool.invoke(invocation({ path: 'src/a.ts', content: 'new' }), async () => 0, undefined as any, CancellationToken.None);
++
++		assert.match(textOf(result), /already exists/);
++		assert.strictEqual(fakeChat.calls.length, 0);
++	});
++
++	test('apply_patch emits reviewable edits for a unified diff', async () => {
++		const fakeFiles = fileService({ 'src/a.ts': 'const a = 1;\n' });
++		const fakeChat = modelAndCalls();
++		const tool = new DirectorApplyPatchTool(fakeFiles, fakeChat.chatService, workspaceService());
++		const patch = [
++			'--- a/src/a.ts',
++			'+++ b/src/a.ts',
++			'@@ -1,1 +1,1 @@',
++			'-const a = 1;',
++			'+const a = 2;',
++		].join('\n');
++
++		const result = await tool.invoke(invocation({ patch }), async () => 0, undefined as any, CancellationToken.None);
++
++		assert.match(textOf(result), /edit_result: success/);
++		const editProgress = fakeChat.calls[3].progress;
++		assert.strictEqual(editProgress.kind, 'textEdit');
++		assert.strictEqual(editProgress.edits[0].text, 'const a = 2;\n');
++	});
++
++	test('create_directory waits for accept before creating the folder', async () => {
++		const fakeFiles = fileService();
++		const fakeChat = modelAndCalls();
++		const tool = new DirectorCreateDirectoryTool(fakeFiles, fakeChat.chatService, workspaceService());
++		const resultPromise = tool.invoke(invocation({ path: 'src/new-dir' }), async () => 0, undefined as any, CancellationToken.None);
++
++		await Promise.resolve();
++		await Promise.resolve();
++
++		assert.strictEqual(fakeFiles._folders.size, 0);
++		const commandProgress = fakeChat.calls.find(call => call.progress.kind === 'command')?.progress;
++		assert.ok(commandProgress);
++		assert.strictEqual(commandProgress.kind, 'command');
++		const transactionId = commandProgress.command.arguments?.[0] as string;
++		assert.ok(transactionId);
++
++		await acceptDirectorDirectoryCreationTransaction(fakeFiles, transactionId);
++		const result = await resultPromise;
++
++		assert.match(textOf(result), /edit_result: success/);
++		assert.strictEqual(fakeFiles._folders.has(URI.joinPath(root, 'src/new-dir').toString()), true);
++	});
++});

@@ -2,13 +2,13 @@
 
 Profile: `116-stable-win32-x64-client`
 
-Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate
+Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 4 reviewable edit tools gate
 
 This report is intentionally stable and sanitized. It contains no API keys, tokens, user paths, volatile timestamps, or machine-local runtime state.
 
 ## Source
 
-The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled.
+The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
 
 The runtime-effective lists for Ask/Edit/Agent/Inline are revalidated later after Phase 5 mode routing is wired. Phase 1 verifies the registry-computed lists and makes the Director Agent path consume those lists.
 
@@ -33,15 +33,20 @@ Ask excludes edit, create/delete, terminal, task, shell, workspace mutation, and
 
 ### Edit
 
-Read/search context only until the Phase 3/4 reviewable edit contract exists:
+Read/search context plus reviewable edit tools:
 
+- `apply_patch`
+- `create_directory`
+- `create_file`
 - `file_search`
 - `get_changed_files`
 - `get_errors`
 - `github_repo`
 - `grep_search`
 - `list_dir`
+- `multi_replace_string_in_file`
 - `read_file`
+- `replace_string_in_file`
 - `usages`
 - `view_image`
 
@@ -50,9 +55,12 @@ Read/search context only until the Phase 3/4 reviewable edit contract exists:
 Existing Agent behavior preserved through reviewed registry entries:
 
 - `askQuestions`
+- `apply_patch`
 - `artifactRules`
 - `artifacts`
 - `createAndRunTask`
+- `create_directory`
+- `create_file`
 - `file_search`
 - `get_changed_files`
 - `get_errors`
@@ -62,7 +70,9 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `grep_search`
 - `killTerminal`
 - `list_dir`
+- `multi_replace_string_in_file`
 - `read_file`
+- `replace_string_in_file`
 - `runInTerminal`
 - `runSubagent`
 - `runTask`
@@ -104,6 +114,11 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `director_get_changed_files` | `get_changed_files` | `get_changed_files` | read | Ask, Edit, Agent | keep | Director-owned SCM reader backed by VS Code SCM resource groups. Returns controlled unavailable text if no SCM provider exists. |
 | `director_view_image` | `view_image` | `view_image` | read | Ask, Edit, Agent | keep | Director-owned image inspection. Returns metadata and an image data part where the bridge/model can consume it, with textual fallback. |
 | `director_github_repo` | `github_repo` | `github_repo` | read | Ask, Edit, Agent | keep | Director-owned minimal GitHub repo context. Infers sanitized GitHub remotes or accepts owner/repo; remote indexed search and PR/issue mutation are not supported in v1. |
+| `director_apply_patch` | `apply_patch` | `apply_patch` | write | Edit, Agent | keep | Director-owned unified diff application. Emits reviewable `textEdit` progress and returns controlled patch-conflict errors. |
+| `director_create_file` | `create_file` | `create_file` | write | Edit, Agent | keep | Director-owned file creation. Rejects duplicate files unless overwrite is explicit and emits reviewable `textEdit` progress. |
+| `director_create_directory` | `create_directory` | `create_directory` | write | Edit, Agent | keep | Director-owned directory creation review transaction. Emits accept/reject chat commands and does not create the folder until accept. |
+| `director_replace_string_in_file` | `replace_string_in_file` | `replace_string_in_file` | write | Edit, Agent | keep | Director-owned exact string replacement. Rejects ambiguous matches unless replaceAll is explicit and emits reviewable `textEdit` progress. |
+| `director_multi_replace_string_in_file` | `multi_replace_string_in_file` | `multi_replace_string_in_file` | write | Edit, Agent | keep | Director-owned multi-string replacement. Rejects overlapping replacements and emits reviewable `textEdit` progress. |
 | `run_in_terminal` | `runInTerminal` | `runInTerminal` | execute | Agent | keep | Terminal execution remains Agent-only. |
 | `send_to_terminal` | `sendToTerminal` | `sendToTerminal` | execute | Agent | keep | Terminal input routing remains Agent-only. |
 | `get_terminal_output` | `getTerminalOutput` | `getTerminalOutput` | read | Agent | keep | Terminal context remains Agent-only for Ask v1. |
@@ -130,12 +145,15 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 - Central registry: `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts`
 - Read-only tools: `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts`
 - Read-only tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts`
+- Chat Editing adapter: `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`
+- Reviewable edit tools: `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts`
+- Reviewable edit tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`
 - Agent definitions and invocation mapping consume registry-filtered tools in `src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts`
 - Director Agent requests pass the Agent mode policy explicitly in `src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts`
-- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` and `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`
+- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`, and `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
 
-## Phase 1-2 Validation
+## Phase 1-4 Validation
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
-- `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`
+- `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`

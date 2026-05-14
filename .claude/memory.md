@@ -1,5 +1,47 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 最新记忆：116 reviewable edit tools Phase 4 已完成
+
+- 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
+- `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` 的 Phase 4 Reviewable Edit Tools gate 已完成、replay-land、clean replay 验证通过。
+- Phase 4 新增 replay stage：`patches/replay/009-director-edit-tools.116.patch`；active profile、`patches/series.116.json`、canonical manifest、director patch report 和 generator classification 已同步。
+- Phase 4 同时更新了既有 replay stages：
+  - `004-director-agent-engine.116.patch`：新增 edit tools contribution import hook。
+  - `007-director-tool-layer.116.patch`：registry 允许 reviewable edit tools 在 Edit/Agent，Ask/Inline 仍禁用；registry 测试补齐。
+  - `008-director-chat-editing.116.patch`：`DirectorChatEditingAdapter` 增加可复用 workspace target 解析和 directory review command progress。
+- 新增 Director-owned model-facing tools：
+  - `apply_patch`
+  - `create_file`
+  - `create_directory`
+  - `replace_string_in_file`
+  - `multi_replace_string_in_file`
+- 核心实现：
+  - `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts`
+  - `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`
+  - `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
+- 行为边界：
+  - 所有文本/文件编辑工具都通过 Phase 3 `DirectorChatEditingAdapter.emitSingleFileTextEdit()` 发 reviewable `textEdit` start/progress/done，不直接写文件。
+  - `apply_patch` v1 支持保守 unified diff hunks，hunk 不匹配返回 controlled error，v1 不支持 delete。
+  - `create_file` 默认拒绝重复文件，除非显式 `overwrite: true`。
+  - `replace_string_in_file` 默认要求唯一匹配；多重匹配需要 `replaceAll: true`。
+  - `multi_replace_string_in_file` 拒绝重叠 replacement ranges。
+  - `create_directory` 走 Director-owned pending transaction + accept/reject chat command buttons；accept 前不调用 `mkdir`，reject/cancel 不修改文件系统。
+- Phase 4 报告：
+  - `docs/upgrade/reports/116-stable-win32-x64-client/edit-tools-report.md`
+  - `docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md` 已更新 Phase 1-4 allowlists 和 migration table。
+- Phase 4 已通过验证：
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - clean replay 后第一次 `npm ci` 因 Windows native rebuild 文件锁失败；清理残留 `node-gyp` / `MSBuild` / compiler 进程后重试通过。
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - targeted tests：`directorToolRegistry.test.ts` + `directorReadOnlyTools.test.ts` + `directorChatEditingAdapter.test.ts` + `directorEditTools.test.ts`，共 `25 passing`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- 下一波从 Phase 5 Ask/Edit/Inline mode gate 开始：Ask/Edit/Agent runtime routing、Inline 非 tool 编辑协议、Director settings / Agent Customizations 入口收口。Inline 仍不得暴露 model-callable edit tools。
+- `artifacts/` 仍是未跟踪构建/验证产物，不要默认提交；`node_modules` 不要提交。
+
 ## 2026-05-14 最新记忆：116 Chat Editing contract Phase 3 已完成
 
 - 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。

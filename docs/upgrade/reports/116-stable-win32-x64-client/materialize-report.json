@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-14T08:53:02.386Z",
+  "generatedAt": "2026-05-14T09:18:37.800Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/116-stable-win32-x64-client.json",
@@ -45,7 +45,8 @@
       "patches/replay/005-director-chat-built-in-mode.116.patch",
       "patches/replay/006-director-text-polish.116.patch",
       "patches/replay/007-director-tool-layer.116.patch",
-      "patches/replay/008-director-chat-editing.116.patch"
+      "patches/replay/008-director-chat-editing.116.patch",
+      "patches/replay/009-director-edit-tools.116.patch"
     ]
   },
   "applications": [
@@ -73,8 +74,8 @@
     {
       "layer": "director",
       "patch": "patches/replay/004-director-agent-engine.116.patch",
-      "size": 841470,
-      "sha256": "dccb66793b68ed2f76f3e0c3e646b0d95a553bd71b56682ec646eb3479ad81fa",
+      "size": 841527,
+      "sha256": "198435ee58ca2402e9587c5a2c2c66f0ecf6ec02c2db0900367a216aeda50017",
       "status": "passed"
     },
     {
@@ -94,15 +95,22 @@
     {
       "layer": "director",
       "patch": "patches/replay/007-director-tool-layer.116.patch",
-      "size": 63124,
-      "sha256": "8c0ed1d78d479574419848c9976452c2b6a6b631a1ac323e646d03a3125836e7",
+      "size": 65861,
+      "sha256": "4e13b07bea8dcfdbbbae84b9dd9a2a834b4dd6dee7a3bcf1e95b713dc468469f",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/008-director-chat-editing.116.patch",
-      "size": 15377,
-      "sha256": "33fde407196bc15c8415582561bb94669c135a21c5a964a0079dc4dfb0305926",
+      "size": 17229,
+      "sha256": "f189da76e493643a4fcb426881f7879500614a2abfd96369a32391e52b342f44",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/009-director-edit-tools.116.patch",
+      "size": 45100,
+      "sha256": "204d375342ad7d439f0813d65df8f5fcb936af9a05356710f7f326e00549eb29",
       "status": "passed"
     }
   ],
@@ -127,7 +135,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "c7ffbd470c91759ce8ae2935f401b3234411b0fcfb8c5888781a47de4bd90ca0"
+      "fileManifestHash": "5949a0bc3b76d060d816e2bf019c1bb3de36a5d07d7d4e376a621758823cb957"
     }
   ],
   "checks": {

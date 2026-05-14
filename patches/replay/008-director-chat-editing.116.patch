@@ -1,9 +1,9 @@
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99df60ca13
+index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601d71de17b
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,298 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -32,6 +32,15 @@ index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99
 +	readonly edits: readonly TextEdit[];
 +}
 +
++export interface DirectorDirectoryCreationReviewRequest extends DirectorPanelChatEditBinding {
++	readonly targetUri?: URI;
++	readonly path?: string;
++	readonly explanation?: string;
++	readonly transactionId: string;
++	readonly acceptCommandId: string;
++	readonly rejectCommandId: string;
++}
++
 +export type DirectorChatEditResult =
 +	| {
 +		readonly ok: true;
@@ -58,10 +67,11 @@ index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99
 +	readonly request: IChatRequestModel;
 +}
 +
-+interface DirectorResolvedTarget {
++export interface DirectorResolvedWorkspaceTarget {
 +	readonly ok: true;
 +	readonly uri: URI;
 +	readonly workspaceFolder: IWorkspaceFolder;
++	readonly relativePath: string;
 +}
 +
 +export function formatDirectorChatEditToolResult(result: DirectorChatEditResult): string {
@@ -152,9 +162,57 @@ index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99
 +			ok: true,
 +			requestId: request.chatRequestId,
 +			uri: target.uri,
-+			relativePath: relativePath(target.workspaceFolder.uri, target.uri) || '.',
++			relativePath: target.relativePath,
 +			editCount: edits.length,
 +			emittedParts
++		};
++	}
++
++	async emitDirectoryCreationReview(request: DirectorDirectoryCreationReviewRequest, token: CancellationToken): Promise<DirectorChatEditResult> {
++		if (token.isCancellationRequested) {
++			return { ok: false, reason: 'Directory creation review was cancelled before it could start.' };
++		}
++
++		const binding = this.resolvePanelBinding(request);
++		if (!binding.ok) {
++			return binding;
++		}
++
++		const target = this.resolveWorkspaceTarget(request);
++		if (!target.ok) {
++			return target;
++		}
++
++		const explanation = request.explanation?.trim() || `Create directory ${target.relativePath}`;
++		try {
++			this.emit(binding, {
++				kind: 'markdownContent',
++				content: new MarkdownString(`\n${explanation}\n\nPending directory creation: \`${target.relativePath}\`\n`)
++			});
++			this.emit(binding, {
++				kind: 'command',
++				command: {
++					id: request.acceptCommandId,
++					title: 'Accept Directory Creation',
++					arguments: [request.transactionId]
++				},
++				additionalCommands: [{
++					id: request.rejectCommandId,
++					title: 'Reject Directory Creation',
++					arguments: [request.transactionId]
++				}]
++			});
++		} catch (error) {
++			return { ok: false, reason: `Could not emit directory creation review: ${getErrorMessage(error)}` };
++		}
++
++		return {
++			ok: true,
++			requestId: request.chatRequestId,
++			uri: target.uri,
++			relativePath: target.relativePath,
++			editCount: 0,
++			emittedParts: ['markdownContent', 'command']
 +		};
 +	}
 +
@@ -184,7 +242,7 @@ index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99
 +		return { ok: true, model, request };
 +	}
 +
-+	private resolveWorkspaceTarget(request: DirectorSingleFileTextEditRequest): DirectorResolvedTarget | DirectorChatEditFailure {
++	resolveWorkspaceTarget(request: { readonly targetUri?: URI; readonly path?: string }): DirectorResolvedWorkspaceTarget | DirectorChatEditFailure {
 +		const uri = request.targetUri ?? this.uriFromPath(request.path);
 +		if (!uri) {
 +			return { ok: false, reason: 'Missing edit target path or URI.' };
@@ -196,7 +254,7 @@ index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99
 +			return { ok: false, reason: 'Edit target is outside the current workspace.' };
 +		}
 +
-+		return { ok: true, uri, workspaceFolder };
++		return { ok: true, uri, workspaceFolder, relativePath: relativePath(workspaceFolder.uri, uri) || '.' };
 +	}
 +
 +	private uriFromPath(path: string | undefined): URI | undefined {
