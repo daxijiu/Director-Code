@@ -12,14 +12,14 @@ index b62a8a4314c18054ffa65259be2046968da9880c..49845e13dcc3bdc39817beeb27372c34
  	});
  
 diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts b/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
-index d78a88982b2f068f1515080d0d4de4e5cfeaec2d..e6d7cf43437db8fa9f6689ccdf8ab6079feba8d5 100644
+index d78a88982b2f068f1515080d0d4de4e5cfeaec2d..638cf54ee7eea467a654e30d2af2fa09143539ad 100644
 --- a/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
 +++ b/src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts
 @@ -13,6 +13,7 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../../pla
  import { IDefaultChatAgent } from '../../../../../base/common/product.js';
  import { IChatWidgetService } from '../chat.js';
  import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  export class ChatGettingStartedContribution extends Disposable implements IWorkbenchContribution {
  	static readonly ID = 'workbench.contrib.chatGettingStarted';
@@ -36,7 +36,7 @@ index d78a88982b2f068f1515080d0d4de4e5cfeaec2d..e6d7cf43437db8fa9f6689ccdf8ab607
  	}
  
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
-index a7d9b9666b254195dbb7b7fe5dca0d4f16fae2d2..cc3f5d2a9f018564190b09c4ed6555869034876b 100644
+index a7d9b9666b254195dbb7b7fe5dca0d4f16fae2d2..89d4ba30c5a437c95e05ae0e6df296f16e3ffa25 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
 +++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts
 @@ -9,7 +9,9 @@ import { URI } from '../../../../../base/common/uri.js';
@@ -45,7 +45,7 @@ index a7d9b9666b254195dbb7b7fe5dca0d4f16fae2d2..cc3f5d2a9f018564190b09c4ed655586
  import { getChatSessionType } from '../../common/model/chatUri.js';
 +import product from '../../../../../platform/product/common/product.js';
  import { IProductService } from '../../../../../platform/product/common/productService.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  export enum AgentSessionProviders {
  	Local = 'local',
@@ -97,7 +97,7 @@ index a7d9b9666b254195dbb7b7fe5dca0d4f16fae2d2..cc3f5d2a9f018564190b09c4ed655586
  			return 'Run a Copilot SDK agent in a dedicated process.';
  		default:
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
-index 942db76b1acea1be29f84e659c79796c76c7da1b..fc5b054da91e1d923bbca482cd4aa4f4e2322eb8 100644
+index 942db76b1acea1be29f84e659c79796c76c7da1b..fdb4952a1658c4f2bd51e7d7babfa5be47df16ed 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
 +++ b/src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts
 @@ -43,6 +43,8 @@ import { ChatConfiguration } from '../../../common/constants.js';
@@ -105,7 +105,7 @@ index 942db76b1acea1be29f84e659c79796c76c7da1b..fc5b054da91e1d923bbca482cd4aa4f4
  import { IChatWidgetService } from '../../chat.js';
  import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 +import product from '../../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  // Telemetry types
  type AgentStatusClickAction =
@@ -384,14 +384,14 @@ index e752209f42896da4ab7f3a188b4810a156a09f4a..acab49d7562fa387a83d8b45ea495721
  				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
  				{},
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
-index b1832fcb44f5d53a95d60d4762fae5caba7784a5..d1284c0c46ace0329367b6a9d72d9f49d9976496 100644
+index b1832fcb44f5d53a95d60d4762fae5caba7784a5..15761e68e3f8ab52276db5210972151fcb7a3a6c 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
 @@ -56,6 +56,7 @@ import { ChatSetupController } from './chatSetupController.js';
  import { GrowthSessionController, registerGrowthSession } from './chatSetupGrowthSession.js';
  import { AICodeActionsHelper, AINewSymbolNamesProvider, ChatCodeActionsProvider, SetupAgent } from './chatSetupProviders.js';
  import { ChatSetup } from './chatSetupRunner.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const defaultChat = {
  	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
@@ -442,14 +442,14 @@ index b1832fcb44f5d53a95d60d4762fae5caba7784a5..d1284c0c46ace0329367b6a9d72d9f49
  		if (!defaultChatExtension) {
  			return;
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
-index 27409c006345719ac84fdeb9a46339ca562cf76e..90027d1ac830e700a226ee793253224841087925 100644
+index 27409c006345719ac84fdeb9a46339ca562cf76e..2cf9a562b2c9cb0b5df9c033fdca4e70de97d8ab 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
 @@ -31,6 +31,7 @@ import { ChatSetupAnonymous, ChatSetupStep, ChatSetupResultValue, InstallChatEve
  import { IDefaultAccount } from '../../../../../base/common/defaultAccount.js';
  import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
  import { IProductService } from '../../../../../platform/product/common/productService.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const defaultChat = {
  	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
@@ -465,7 +465,7 @@ index 27409c006345719ac84fdeb9a46339ca562cf76e..90027d1ac830e700a226ee7932532248
  			enable: true,
  			isApplicationScoped: true, 	// install into all profiles
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
-index 1382c23832e5e3201494e076615c36d600e65417..33c9cf3d2021de7c28a2d36c5ae26824807f41eb 100644
+index 1382c23832e5e3201494e076615c36d600e65417..8f20f62fc0895b51c38cf3e07db1b295ccd6ac9f 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts
 @@ -20,6 +20,8 @@ import { IAgentSession } from '../agentSessions/agentSessionsModel.js';
@@ -473,7 +473,7 @@ index 1382c23832e5e3201494e076615c36d600e65417..33c9cf3d2021de7c28a2d36c5ae26824
  import { IChatWidgetService } from '../chat.js';
  import { CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../actions/chatActions.js';
 +import product from '../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  /**
   * Core-side growth session controller that shows a single "attention needed"
@@ -513,14 +513,14 @@ index d7698d80c6a794b28d162388e27c73b3048c9f81..ae97797ee2e86edb4355b4c0e0a39b05
  				toolReferenceName: 'new',
  				when: ContextKeyExpr.true(),
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
-index a89af9806fd5e2ea5d773dbf66fadf94b574130e..fcf2646ac02d86823fe05971d8f86d0fcf771bec 100644
+index a89af9806fd5e2ea5d773dbf66fadf94b574130e..6a08d27973067fb1ef3517bc28062982661d72be 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts
 @@ -23,6 +23,7 @@ import { IKeybindingService } from '../../../../../platform/keybinding/common/ke
  import { ILayoutService } from '../../../../../platform/layout/browser/layoutService.js';
  import { ILogService } from '../../../../../platform/log/common/log.js';
  import product from '../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  import { ITelemetryService, TelemetryLevel } from '../../../../../platform/telemetry/common/telemetry.js';
  import { IWorkspaceTrustRequestService } from '../../../../../platform/workspace/common/workspaceTrust.js';
  import { IWorkbenchLayoutService } from '../../../../services/layout/browser/layoutService.js';
@@ -547,14 +547,14 @@ index a89af9806fd5e2ea5d773dbf66fadf94b574130e..fcf2646ac02d86823fe05971d8f86d0f
  		let footer: string;
  		if (options?.forceAnonymous || this.telemetryService.telemetryLevel === TelemetryLevel.NONE) {
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
-index 26b1663cae59f56a82cbe0a693a38dbb5d037da1..ab75f57b0b3b600d52826c8965a5ebe32225e21c 100644
+index 26b1663cae59f56a82cbe0a693a38dbb5d037da1..e8df3ee336cf274ade101a723b21d0f114cd5088 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 @@ -49,6 +49,7 @@ import { IViewsService } from '../../../../services/views/common/viewsService.js
  import { ChatViewId } from '../chat.js';
  import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
  import { AgentSessionProviders } from '../agentSessions/agentSessions.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const defaultChat = product.defaultChatAgent;
  
@@ -606,14 +606,14 @@ index 26b1663cae59f56a82cbe0a693a38dbb5d037da1..ab75f57b0b3b600d52826c8965a5ebe3
  			manageOverageButton.label = localize('enableAdditionalUsage', "Manage paid premium requests");
  			disposables.add(manageOverageButton.onDidClick(() => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageOverageUrl)))));
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
-index bbce59557f4030b4404280db311537d72f93aa4c..c5bc6e3311690b08056c58c7aa6a09d08972f60b 100644
+index bbce59557f4030b4404280db311537d72f93aa4c..26c90293bf7a92195820940ecde948386b3e9636 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
 @@ -23,6 +23,7 @@ import { isNewUser } from './chatStatus.js';
  import product from '../../../../../platform/product/common/product.js';
  import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
  import { ChatConfiguration } from '../../common/constants.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribution {
  
@@ -656,7 +656,7 @@ index bbce59557f4030b4404280db311537d72f93aa4c..c5bc6e3311690b08056c58c7aa6a09d0
  		let ariaLabel = localize('chatStatusAria', "Copilot status");
  		let kind: StatusbarEntryKind | undefined;
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
-index 96db31bee112378dfff69ca6c5b713fca22def3d..8f6a40eb58c88776df69f7fe9cfebb2ba240b388 100644
+index 96db31bee112378dfff69ca6c5b713fca22def3d..1f8ed6ca469f3f2051d058ff6a7354356e4cd4c7 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts
 @@ -21,6 +21,8 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
@@ -664,7 +664,7 @@ index 96db31bee112378dfff69ca6c5b713fca22def3d..8f6a40eb58c88776df69f7fe9cfebb2b
  import { IChatWidgetService } from '../../chat.js';
  import { IChatContentPart } from './chatContentParts.js';
 +import product from '../../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const $ = dom.$;
  
@@ -728,14 +728,14 @@ index 2a0ab1b86209286a97f22e4dc3cd0e14805871e4..cda71c29d03d3ea6e84463ff30689615
  				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
  				{},
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
-index 31d68e8873a70062e7a9fb5dbce39b562d48cd0c..00fc5134db950ba63a40d5cb58f01af017ceb58e 100644
+index 31d68e8873a70062e7a9fb5dbce39b562d48cd0c..dfe449921cbe8e3fdf41c27c1a8ae5f7c5e4cab8 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
 @@ -44,6 +44,7 @@ import { ServiceCollection } from '../../../../../platform/instantiation/common/
  import { ILogService } from '../../../../../platform/log/common/log.js';
  import { bindContextKey } from '../../../../../platform/observable/common/platformObservableUtils.js';
  import product from '../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
  import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
  import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
@@ -761,14 +761,14 @@ index 31d68e8873a70062e7a9fb5dbce39b562d48cd0c..00fc5134db950ba63a40d5cb58f01af0
  
  		this.welcomeMessageContainer.style.height = `${contentHeight}px`;
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
-index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..0cb545e5f01965d97caa35cfff90f03a239079be 100644
+index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..0f99089a543a352c55ddce2653fce6cc015f3f5a 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 @@ -32,6 +32,7 @@ import * as semver from '../../../../../../base/common/semver/semver.js';
  import { IModelPickerDelegate } from './modelPickerActionItem.js';
  import { IUriIdentityService } from '../../../../../../platform/uriIdentity/common/uriIdentity.js';
  import { IUpdateService, StateType } from '../../../../../../platform/update/common/update.js';
-+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  function isVersionAtLeast(current: string, required: string): boolean {
  	const currentSemver = semver.coerce(current);
@@ -838,7 +838,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..0cb545e5f01965d97caa35cfff90f03a
  
  		const listOptions = {
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
-index cec2238e4ceb3768f12ef6c366d92a86c97d448c..5b8e93742dfb142ea24fc12113caa49f7ef0e14e 100644
+index cec2238e4ceb3768f12ef6c366d92a86c97d448c..aaf10b3ec1a0d90e599f9ecb167aba34ca648d80 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts
 @@ -17,6 +17,8 @@ import { ChatContextKeys } from '../../../common/actions/chatContextKeys.js';
@@ -846,7 +846,7 @@ index cec2238e4ceb3768f12ef6c366d92a86c97d448c..5b8e93742dfb142ea24fc12113caa49f
  import { ChatInputPartWidgetsRegistry, IChatInputPartWidget } from './chatInputPartWidgets.js';
  import './media/chatStatusWidget.css';
 +import product from '../../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const $ = dom.$;
  
@@ -863,14 +863,14 @@ index cec2238e4ceb3768f12ef6c366d92a86c97d448c..5b8e93742dfb142ea24fc12113caa49f
  		const isAnonymous = this.chatEntitlementService.anonymous;
  
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts b/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
-index 458b657d58b746b5218b35305569304f0541aa7d..ceb6b07dd70389442043d74a9ad67f1adbaecd8e 100644
+index 458b657d58b746b5218b35305569304f0541aa7d..abbfc5ec91a344baed7bc4d549fc628a0f5680a8 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts
 @@ -23,6 +23,7 @@ import { ChatEntitlement, IChatEntitlementService } from '../../../../../service
  import { MANAGE_CHAT_COMMAND_ID } from '../../../common/constants.js';
  import { ILanguageModelChatMetadataAndIdentifier } from '../../../common/languageModels.js';
  import { DEFAULT_MODEL_PICKER_CATEGORY } from '../../../common/widget/input/modelPickerWidget.js';
-+import { isDirectorCodeBuiltInMode } from '../../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../../directorCode/common/agentEngine/builtInModeUtil.js';
  import { ChatInputPickerActionViewItem, IChatInputPickerOptions } from './chatInputPickerActionItem.js';
  
  export interface IModelPickerDelegate {
@@ -886,14 +886,14 @@ index 458b657d58b746b5218b35305569304f0541aa7d..ceb6b07dd70389442043d74a9ad67f1a
  			const isNewOrAnonymousUser = !chatEntitlementService.sentiment.completed ||
  				chatEntitlementService.entitlement === ChatEntitlement.Available ||
 diff --git a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
-index 9e5c9df96f38e4d8c4fbe1f07daf46992a448191..67f63e582347d8e7762cc1d79196500f29cd99d9 100644
+index 9e5c9df96f38e4d8c4fbe1f07daf46992a448191..5697d6c1749debe32a38032afd09a36a3716b0d1 100644
 --- a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
 @@ -19,6 +19,7 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
  import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
  import { IMarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
  import product from '../../../../../platform/product/common/product.js';
-+import { isDirectorCodeBuiltInMode } from '../../common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
  import { IQuickInputService, IQuickWidget } from '../../../../../platform/quickinput/common/quickInput.js';
  import { editorBackground, inputBackground, quickInputBackground, quickInputForeground } from '../../../../../platform/theme/common/colorRegistry.js';
  import { EDITOR_DRAG_AND_DROP_BACKGROUND } from '../../../../common/theme.js';

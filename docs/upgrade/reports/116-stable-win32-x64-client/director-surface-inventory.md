@@ -4,7 +4,7 @@ Date: 2026-05-14
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 2 module extraction wave 2
+Status: Phase 2 module extraction wave 3
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -14,6 +14,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 - Baseline commit when this wave started: `e290c012 Clarify thin-layer plan gates`
 - Phase 2 wave 1 started after commit: `22792213 Add thin-layer surface inventory`
 - Phase 2 wave 2 started after commit: `454b4f0d Move agent engine types into directorCode`
+- Phase 2 wave 3 started after commit: `9da34b04 Move provider auth modules into directorCode`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -70,10 +71,10 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 
 | Stage | Patch | Files | Bytes | SHA-256 | Surface classification |
 | --- | --- | ---: | ---: | --- | --- |
-| `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 175179 | `643751f5e0991e2e7f773a5c68a0277b80cd185469776fa74eb1618af1347687` | `declarative product config` plus user-visible text/resource replacement. |
+| `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 175187 | `1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909` | `declarative product config` plus user-visible text/resource replacement. |
 | `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 17420 | `f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1` | `declarative product config`. |
-| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 80 | 859738 | `d4ab790a551db2e5451e9f07807e15a2ee9f516de38d52412b39f5865bbf761c` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
-| `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58621 | `4eb9db4e3a2141f7a5e15e0f37b390567277bb0c69ff80d6d2c3c2bc59433fd3` | Mix of `declarative product config` and `must-touch upstream hook`. |
+| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 80 | 859925 | `1fb1a841e1df73b432b1ecf0883dc56f5874e514cd75cb2d3e0ab6bb69338a1e` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
+| `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58861 | `4605402f4188cc51baf683f367e36ecd375faa395eca6d7e098d85a3288df817` | Mix of `declarative product config` and `must-touch upstream hook`. |
 | `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 3 | 13099 | `9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141` | `declarative product config` / user-visible text polish. |
 | `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 65900 | `ab9b8d4395a20e1ba5c5d718c2b90d827b761be207ce706abf2155d2de53e400` | `Director-owned logic`. |
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21221 | `1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9` | `Director-owned logic`. |
@@ -88,9 +89,10 @@ These files are Director business logic and should move to `src/vs/workbench/con
 | Current path group | Stage | Planned semantic stage | Notes |
 | --- | --- | --- | --- |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Agent contribution, Director Agent registration, settings UI, widgets, message normalization, progress bridge, tool bridge, and provider UI. |
-| `src/vs/workbench/contrib/chat/common/agentEngine/*` except moved files listed below | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Remaining chat-path common code: agent loop, compact/token helpers, retry, mode routing, and built-in mode utility. These should continue moving in coherent groups. |
+| `src/vs/workbench/contrib/chat/common/agentEngine/{directorReadOnlyTools,directorToolRegistry}.ts` and edit/editing subdirs | `007`, `008`, `009` | Same semantic stage as implementation | Remaining chat-path common code is now tool/edit-layer implementation and registry code. Phase 3/4 own its next migration/cutover decisions. |
 | `src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 1 moved the shared Agent Engine protocol/types out of the upstream chat tree. Phase 2 wave 2 removed its temporary back-reference to chat-path provider types. |
 | `src/vs/workbench/contrib/directorCode/common/agentEngine/{apiKeyService,authStateService,fetchUtils,geminiAuth,modelCatalog,modelResolver,oauthLoginController,oauthService,settingsWriteQueue}.ts` and `providers/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 2 moved the provider/BYOK/OAuth/model resolver/settings group into Director-owned common code. Browser, common, and tests now import this group through `directorCode/common/agentEngine`. |
+| `src/vs/workbench/contrib/directorCode/common/agentEngine/{agentEngine,builtInModeUtil,compact,directorChatModeRouting,retry,tokens}.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 3 moved the remaining Agent loop/runtime helpers into Director-owned common code. `directorChatModeRouting` explicitly imports upstream chat mode/request types and the still chat-path `directorToolRegistry` hook. |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read-only tool contribution. Phase 3 owns further facade/name cutover. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read/search/context implementations. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director registry, mode allowlist, backing classification, and confirmation policy. |
@@ -159,7 +161,8 @@ No final `010` stage is allowed in the canonical replay series.
 
 - Phase 2 wave 1 completed: `agentEngineTypes.ts` now lives under `src/vs/workbench/contrib/directorCode/common/agentEngine/`, and all Agent Engine/browser/test imports were updated to the new path.
 - Phase 2 wave 2 completed: provider/BYOK/OAuth/model resolver/settings code now lives under `src/vs/workbench/contrib/directorCode/common/agentEngine/`, including `providers/*`.
-- The largest upgrade-risk surface is currently the Director-owned `agentEngine` tree living under `src/vs/workbench/contrib/chat/`.
+- Phase 2 wave 3 completed: Agent loop/runtime helpers now live under `src/vs/workbench/contrib/directorCode/common/agentEngine/`; the patch changed `002`, `004`, and `005` because `builtInModeUtil` is imported by branding and chat built-in-mode files.
+- The largest remaining upgrade-risk surface is currently the Director-owned browser Agent UI/contribution tree living under `src/vs/workbench/contrib/chat/browser/agentEngine/`.
 - Phase 2 should move Director-owned logic to `src/vs/workbench/contrib/directorCode/` in small groups and leave only import/registration/bridge hooks in upstream chat files.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
 - Phase 3 owns tool implementation moves that also require model-facing name cutover, including `createFile` and `createDirectory`.

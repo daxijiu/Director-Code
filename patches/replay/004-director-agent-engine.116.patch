@@ -1045,7 +1045,7 @@ index 0000000000000000000000000000000000000000..b1f85fb88cdf9fa3c12570c911372c9b
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e13fa5b245ab1b94253b0653f93b6f9d7020f9ab
+index 0000000000000000000000000000000000000000..5784e9b665013b83665e3fdae22c2956a4a495db
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 @@ -0,0 +1,653 @@
@@ -1071,7 +1071,7 @@ index 0000000000000000000000000000000000000000..e13fa5b245ab1b94253b0653f93b6f9d
 +import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 +import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 +import { ITextModelService } from '../../../../../editor/common/services/resolverService.js';
-+import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
++import { AgentEngine } from '../../../directorCode/common/agentEngine/agentEngine.js';
 +import type { AgentEngineConfig } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { providerToApiType, type ProviderName } from '../../../directorCode/common/agentEngine/apiKeyService.js';
 +import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../../directorCode/common/agentEngine/authStateService.js';
@@ -1080,8 +1080,8 @@ index 0000000000000000000000000000000000000000..e13fa5b245ab1b94253b0653f93b6f9d
 +import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../../directorCode/common/agentEngine/modelCatalog.js';
 +import { IModelResolverService, normalizeModelResolverBaseURL } from '../../../directorCode/common/agentEngine/modelResolver.js';
-+import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../common/agentEngine/compact.js';
-+import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../common/agentEngine/directorChatModeRouting.js';
++import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../../directorCode/common/agentEngine/compact.js';
++import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../../directorCode/common/agentEngine/directorChatModeRouting.js';
 +import { DirectorChatEditingAdapter, parseDirectorInlineReplacement } from '../../common/agentEngine/editing/directorChatEditingAdapter.js';
 +import type {
 +	IChatAgentImplementation,
@@ -1704,7 +1704,7 @@ index 0000000000000000000000000000000000000000..e13fa5b245ab1b94253b0653f93b6f9d
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..05a9ae4ab6bac18214a22aaf3d1c2ff5c67dd8a7
+index 0000000000000000000000000000000000000000..9f3af0115910b2e7b444e4087feeefa5567416a5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts
 @@ -0,0 +1,420 @@
@@ -1742,7 +1742,7 @@ index 0000000000000000000000000000000000000000..05a9ae4ab6bac18214a22aaf3d1c2ff5
 +} from '../../common/languageModels.js';
 +import { AsyncIterableSource } from '../../../../../base/common/async.js';
 +import { createProvider } from '../../../directorCode/common/agentEngine/providers/providerFactory.js';
-+import { estimateTokens } from '../../common/agentEngine/tokens.js';
++import { estimateTokens } from '../../../directorCode/common/agentEngine/tokens.js';
 +import { ChatAgentLocation } from '../../common/constants.js';
 +import { providerToApiType, type ProviderName } from '../../../directorCode/common/agentEngine/apiKeyService.js';
 +import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../../directorCode/common/agentEngine/authStateService.js';
@@ -4341,7 +4341,7 @@ index 0000000000000000000000000000000000000000..eb37687af012cf523011ee62a29ba718
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ea14c210403803fe200c79fe49b58140e83601f
+index 0000000000000000000000000000000000000000..6fa27d1db455a23b4b4f5239bc82353c54224cc2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
 @@ -0,0 +1,227 @@
@@ -4363,7 +4363,7 @@ index 0000000000000000000000000000000000000000..0ea14c210403803fe200c79fe49b5814
 +import { CancellationError, isCancellationError } from '../../../../../base/common/errors.js';
 +import { IDisposable } from '../../../../../base/common/lifecycle.js';
 +import { URI } from '../../../../../base/common/uri.js';
-+import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
++import type { IToolExecutor } from '../../../directorCode/common/agentEngine/agentEngine.js';
 +import type { AgentToolDefinition } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { DirectorToolMode, getDirectorToolAllowlist } from '../../common/agentEngine/directorToolRegistry.js';
 +import type {
@@ -4663,1559 +4663,6 @@ index 1a4a5f55ae81744961d24b4af28879cf14813b1a..ef9e52f5f61f2ef05a7de783aa0b398e
  			if (isAutoApproveLevel(request?.modeInfo?.permissionLevel) || this._isSessionLiveAutoApproveLevel(chatSessionResource)) {
  				if (!(toolIdsThatCannotBeAutoApproved.has(toolId) && getChatSessionType(chatSessionResource) !== localChatSessionType)) {
  					return { type: ToolConfirmKind.ConfirmationNotNeeded, reason: 'auto-approve-all' };
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..e2ce4c5d433fe743f94a1d42139c310cc5b6dacb
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts
-@@ -0,0 +1,788 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * AgentEngine - Core agentic loop
-+ *
-+ * Manages the full conversation lifecycle:
-+ * 1. Take user prompt
-+ * 2. Build system prompt with context
-+ * 3. Call LLM API with tools (via provider abstraction)
-+ * 4. Stream response
-+ * 5. Execute tool calls (concurrent for read-only, serial for mutations)
-+ * 6. Send results back, repeat until done
-+ * 7. Auto-compact when context exceeds threshold
-+ * 8. Retry with exponential backoff on transient errors
-+ *
-+ * Ported from open-agent-sdk-typescript/src/engine.ts
-+ * Adapted for VS Code integration: uses AgentEvent instead of SDKMessage,
-+ * delegates tool execution to ToolBridge, generates UUIDs via VS Code API.
-+ */
-+
-+import { generateUuid } from '../../../../../base/common/uuid.js';
-+import type {
-+	AgentEngineConfig,
-+	AgentEvent,
-+	AgentToolDefinition,
-+	AutoCompactState,
-+	MutableMessageParam,
-+	ToolResult,
-+	ToolUseBlock,
-+} from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
-+import type {
-+	CreateMessageResponse,
-+	LLMProvider,
-+	NormalizedMessageParam,
-+	NormalizedTool,
-+	NormalizedResponseBlock,
-+	TokenUsage,
-+	CreateMessageParams,
-+} from '../../../directorCode/common/agentEngine/providers/providerTypes.js';
-+import { estimateCost } from './tokens.js';
-+import {
-+	shouldAutoCompact,
-+	compactConversation,
-+	microCompactMessages,
-+	createAutoCompactState,
-+} from './compact.js';
-+import { withRetry, isPromptTooLongError } from './retry.js';
-+
-+// ============================================================================
-+// Tool format conversion
-+// ============================================================================
-+
-+function toProviderTool(tool: AgentToolDefinition): NormalizedTool {
-+	return {
-+		name: tool.name,
-+		description: tool.description,
-+		input_schema: tool.inputSchema,
-+	};
-+}
-+
-+// [Director-Code] A3: resolve tool index for multi-tool streaming aggregation
-+function resolveToolIndex(event: { index?: number }, pendingTools: Map<number, unknown>): number {
-+	if (typeof event.index === 'number') {
-+		return event.index;
-+	}
-+	if (pendingTools.size <= 1) {
-+		return pendingTools.size === 0 ? 0 : [...pendingTools.keys()][0];
-+	}
-+	throw new Error('Missing tool index in multi-tool response');
-+}
-+
-+// ============================================================================
-+// System Prompt Builder
-+// ============================================================================
-+
-+function buildSystemPrompt(config: AgentEngineConfig): string {
-+	if (config.systemPrompt) {
-+		const base = config.systemPrompt;
-+		return config.appendSystemPrompt
-+			? base + '\n\n' + config.appendSystemPrompt
-+			: base;
-+	}
-+
-+	const parts: string[] = [];
-+
-+	parts.push(
-+		'You are an expert AI coding assistant with access to tools. Your goal is to help the user accomplish their coding tasks efficiently and correctly.',
-+		'',
-+		'## Guidelines',
-+		'- Use tools proactively when they would help you understand the codebase or accomplish the task.',
-+		'- Read files before modifying them to understand the existing code.',
-+		'- Explain your reasoning briefly before taking actions.',
-+		'- If a tool call fails, analyze the error and try a different approach.',
-+		'- When writing code, follow the existing code style and conventions in the project.',
-+		'- Be concise in your responses — focus on what matters.',
-+	);
-+
-+	// Working directory
-+	parts.push(`\n## Working Directory\n${config.cwd}`);
-+
-+	// List available tools
-+	if (config.tools.length > 0) {
-+		parts.push('\n## Available Tools\n');
-+		for (const tool of config.tools) {
-+			parts.push(`- **${tool.name}**: ${tool.description}`);
-+		}
-+	}
-+
-+	if (config.appendSystemPrompt) {
-+		parts.push('\n' + config.appendSystemPrompt);
-+	}
-+
-+	return parts.join('\n');
-+}
-+
-+// ============================================================================
-+// AgentEngine
-+// ============================================================================
-+
-+export interface IToolExecutor {
-+	/**
-+	 * Execute a tool by name with given input.
-+	 * Returns the tool result as a string.
-+	 */
-+	invokeTool(name: string, input: unknown): Promise<string>;
-+
-+	/**
-+	 * Check if a tool is read-only (can run concurrently).
-+	 */
-+	isReadOnlyTool(name: string): boolean;
-+}
-+
-+export class AgentEngine {
-+	private readonly provider: LLMProvider;
-+	private messages: MutableMessageParam[] = [];
-+	private totalUsage: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } = { input_tokens: 0, output_tokens: 0 };
-+	private totalCost = 0;
-+	private turnCount = 0;
-+	private compactState: AutoCompactState;
-+	private readonly sessionId: string;
-+	private apiTimeMs = 0;
-+	private _jsonRetryCount: Map<string, number> | undefined; // [Director-Code] A3: per-tool JSON retry tracking
-+
-+	constructor(
-+		private readonly config: AgentEngineConfig,
-+		private readonly toolExecutor?: IToolExecutor,
-+		initialMessages?: readonly NormalizedMessageParam[],
-+	) {
-+		this.provider = config.provider;
-+		this.compactState = createAutoCompactState();
-+		this.sessionId = generateUuid();
-+
-+		// Pre-populate conversation history (e.g., from previous chat turns)
-+		if (initialMessages && initialMessages.length > 0) {
-+			this.messages = initialMessages.map(m => ({ role: m.role, content: m.content } as MutableMessageParam));
-+		}
-+	}
-+
-+	/**
-+	 * Submit a user message and run the agentic loop.
-+	 * Yields AgentEvent as the agent works.
-+	 */
-+	async *submitMessage(userMessage: string): AsyncGenerator<AgentEvent> {
-+		// Add user message
-+		this.messages.push({ role: 'user', content: userMessage });
-+
-+		// Build tool definitions for provider
-+		const tools = this.config.tools.map(toProviderTool);
-+
-+		// Build system prompt
-+		const systemPrompt = buildSystemPrompt(this.config);
-+
-+		// Emit init system message
-+		yield {
-+			type: 'system',
-+			subtype: 'init',
-+			model: this.config.model,
-+			tools: this.config.tools.map(t => t.name),
-+		};
-+
-+		// Agentic loop
-+		let turnsRemaining = this.config.maxTurns;
-+		let budgetExceeded = false;
-+		let maxOutputRecoveryAttempts = 0;
-+		const MAX_OUTPUT_RECOVERY = 3;
-+
-+		// [Director-Code] A2: track last complete checkpoint for cancellation cleanup
-+		let lastCompleteTurnEnd = this.messages.length;
-+
-+		try {
-+		while (turnsRemaining > 0) {
-+			if (this.config.abortSignal?.aborted) { break; }
-+
-+			// Check budget
-+			if (this.config.maxBudgetUsd && this.totalCost >= this.config.maxBudgetUsd) {
-+				budgetExceeded = true;
-+				break;
-+			}
-+
-+			// Auto-compact if context is too large
-+			if (shouldAutoCompact(this.messages as any[], this.config.model, this.compactState, this.config.maxInputTokens)) {
-+				if (this.config.hookRegistry) {
-+					await this.config.hookRegistry.execute('PreCompact', { toolName: 'compact' });
-+				}
-+				try {
-+					const result = await compactConversation(
-+						this.provider,
-+						this.config.model,
-+						this.messages as any[],
-+						this.compactState,
-+						{
-+							compactModel: this.config.compactModel,
-+							unavailableKey: this.config.compactModelUnavailableKey,
-+							abortSignal: this.config.abortSignal,
-+						},
-+					);
-+					this.messages = result.compactedMessages as MutableMessageParam[];
-+					this.compactState = result.state;
-+
-+					if (result.summary) {
-+						yield { type: 'system', subtype: 'compact_boundary', message: 'Conversation compacted' };
-+
-+						if (this.config.hookRegistry) {
-+							await this.config.hookRegistry.execute('PostCompact', { toolName: 'compact' });
-+						}
-+					}
-+				} catch {
-+					// Continue with uncompacted messages
-+				}
-+			}
-+
-+			// Micro-compact: truncate large tool results
-+			const apiMessages = microCompactMessages(this.messages as any[]) as NormalizedMessageParam[];
-+
-+			this.turnCount++;
-+			turnsRemaining--;
-+
-+			// Make API call — streaming first, blocking fallback on retry
-+			let response: CreateMessageResponse;
-+			const apiStart = performance.now();
-+			const requestParams: CreateMessageParams = {
-+				model: this.config.model,
-+				maxTokens: this.config.maxTokens,
-+				system: systemPrompt,
-+				messages: apiMessages,
-+				tools: tools.length > 0 ? tools : undefined,
-+				thinking:
-+					this.config.thinking?.type === 'enabled' && this.config.thinking.budget_tokens
-+						? { type: 'enabled', budget_tokens: this.config.thinking.budget_tokens }
-+						: undefined,
-+				abortSignal: this.config.abortSignal, // [Director-Code] A2: pass signal to provider fetch
-+			};
-+
-+			let streamingUsed = false;
-+			let textDeltaEmitted = false;
-+			let responseContentForHistory: NormalizedResponseBlock[] | undefined;
-+			try {
-+				if (this.provider.createMessageStream) {
-+					// [Director-Code] A3: streaming path with index-based multi-tool aggregation
-+					streamingUsed = true;
-+					const contentBlocks: NormalizedResponseBlock[] = [];
-+					const historyThinkingParts: string[] = [];
-+					let currentTextBlock: { type: 'text'; text: string } | undefined;
-+					const pendingTools = new Map<number, { id: string; name: string; input: string }>();
-+					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
-+					let streamStopReason = 'end_turn';
-+
-+					for await (const event of this.provider.createMessageStream(requestParams)) {
-+						if (this.config.abortSignal?.aborted) { break; }
-+
-+						switch (event.type) {
-+							case 'text':
-+								if (!currentTextBlock) {
-+									currentTextBlock = { type: 'text', text: '' };
-+								}
-+								currentTextBlock.text += event.text;
-+								if (event.text) {
-+									textDeltaEmitted = true;
-+								}
-+								yield { type: 'text_delta', text: event.text } as AgentEvent;
-+								break;
-+
-+							case 'thinking':
-+								if (this.shouldPreserveThinkingInHistory()) {
-+									historyThinkingParts.push(event.thinking);
-+								}
-+								yield { type: 'thinking_delta', thinking: event.thinking } as AgentEvent;
-+								break;
-+
-+							case 'tool_use_start': {
-+								if (currentTextBlock) {
-+									contentBlocks.push(currentTextBlock);
-+									currentTextBlock = undefined;
-+								}
-+								const idx = resolveToolIndex(event, pendingTools);
-+								pendingTools.set(idx, { id: event.id, name: event.name, input: '' });
-+								break;
-+							}
-+
-+							case 'tool_input_delta': {
-+								const idx = resolveToolIndex(event, pendingTools);
-+								const tool = pendingTools.get(idx);
-+								if (tool) { tool.input += event.json; }
-+								break;
-+							}
-+
-+							case 'tool_call_delta': {
-+								const idx = resolveToolIndex(event, pendingTools);
-+								const tool = pendingTools.get(idx) ?? { id: '', name: '', input: '' };
-+								if (event.id && !tool.id) { tool.id = event.id; }
-+								if (event.name && !tool.name) { tool.name = event.name; }
-+								if (event.arguments) { tool.input += event.arguments; }
-+								pendingTools.set(idx, tool);
-+								break;
-+							}
-+
-+							case 'message_complete':
-+								streamUsage = event.usage;
-+								streamStopReason = event.stopReason;
-+								break;
-+						}
-+					}
-+
-+					// Finalize remaining blocks
-+					if (currentTextBlock) { contentBlocks.push(currentTextBlock); }
-+					for (const [, tool] of pendingTools) {
-+						contentBlocks.push(this.finalizeToolBlock(tool));
-+					}
-+
-+					responseContentForHistory = this.contentForHistory(
-+						historyThinkingParts.length > 0
-+							? [{ type: 'thinking', thinking: historyThinkingParts.join('') }, ...contentBlocks]
-+							: contentBlocks,
-+					);
-+					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
-+				} else {
-+					// Non-streaming fallback
-+					response = await withRetry(
-+						async () => this.provider.createMessage(requestParams),
-+						undefined,
-+						this.config.abortSignal,
-+					);
-+				}
-+			} catch (err: any) {
-+				// On streaming error, try non-streaming retry
-+				if (streamingUsed) {
-+					try {
-+						response = await withRetry(
-+							async () => this.provider.createMessage(requestParams),
-+							undefined,
-+							this.config.abortSignal,
-+						);
-+					} catch (retryErr: any) {
-+						// Handle prompt-too-long by compacting
-+						if (isPromptTooLongError(retryErr) && !this.compactState.compacted) {
-+							try {
-+								const result = await compactConversation(
-+									this.provider,
-+									this.config.model,
-+									this.messages as any[],
-+									this.compactState,
-+									{
-+										compactModel: this.config.compactModel,
-+										unavailableKey: this.config.compactModelUnavailableKey,
-+										abortSignal: this.config.abortSignal,
-+									},
-+								);
-+								this.messages = result.compactedMessages as MutableMessageParam[];
-+								this.compactState = result.state;
-+								turnsRemaining++;
-+								this.turnCount--;
-+								continue;
-+							} catch { /* Can't compact */ }
-+						}
-+
-+						yield {
-+							type: 'result',
-+							subtype: 'error',
-+							usage: this.totalUsage,
-+							cost: this.totalCost,
-+							numTurns: this.turnCount,
-+							error: retryErr.message || String(retryErr),
-+						};
-+						return;
-+					}
-+				} else {
-+					// Handle prompt-too-long by compacting
-+					if (isPromptTooLongError(err) && !this.compactState.compacted) {
-+						try {
-+							const result = await compactConversation(
-+								this.provider,
-+								this.config.model,
-+								this.messages as any[],
-+								this.compactState,
-+								{
-+									compactModel: this.config.compactModel,
-+									unavailableKey: this.config.compactModelUnavailableKey,
-+									abortSignal: this.config.abortSignal,
-+								},
-+							);
-+							this.messages = result.compactedMessages as MutableMessageParam[];
-+							this.compactState = result.state;
-+							turnsRemaining++;
-+							this.turnCount--;
-+							continue;
-+						} catch { /* Can't compact */ }
-+					}
-+
-+					yield {
-+						type: 'result',
-+						subtype: 'error',
-+						usage: this.totalUsage,
-+						cost: this.totalCost,
-+						numTurns: this.turnCount,
-+						error: err.message || String(err),
-+					};
-+					return;
-+				}
-+			}
-+
-+			// Track API timing
-+			this.apiTimeMs += performance.now() - apiStart;
-+
-+			// Track usage
-+			this.trackUsage(response.usage);
-+			const historyContent = responseContentForHistory ?? this.contentForHistory(response.content);
-+
-+			// Yield assistant message for UI display. Streaming thinking has already
-+			// been emitted as thinking_delta; history-only thinking stays out of this.
-+			yield {
-+				type: 'assistant',
-+				message: {
-+					role: 'assistant',
-+					content: response.content as any,
-+				},
-+				renderText: !textDeltaEmitted,
-+			};
-+
-+			// [Director-Code] A3: improved max_tokens handling — distinguish tool truncation from text continuation
-+			if (response.stopReason === 'max_tokens' && maxOutputRecoveryAttempts < MAX_OUTPUT_RECOVERY) {
-+				const hasIncompleteTool = response.content.some((b: any) => b.type === 'tool_use' && b._jsonParseError);
-+				maxOutputRecoveryAttempts++;
-+				if (hasIncompleteTool) {
-+					const cleanContent = historyContent.filter((b: any) => !(b.type === 'tool_use' && b._jsonParseError));
-+					this.messages.push({ role: 'assistant', content: cleanContent as any });
-+					this.messages.push({ role: 'user', content: 'Your previous response was truncated in the middle of a tool call JSON. Please re-output the complete tool call(s).' });
-+				} else {
-+					this.messages.push({ role: 'user', content: 'Please continue from where you left off.' });
-+				}
-+				continue;
-+			}
-+
-+			// Check for tool use
-+			const toolUseBlocks = response.content.filter(
-+				(block): block is ToolUseBlock => block.type === 'tool_use',
-+			);
-+
-+			// [Director-Code] A3: JSON parse error → tool_result is_error for model retry
-+			const MAX_JSON_RETRIES = 2;
-+			const jsonErrorBlocks = toolUseBlocks.filter((b: any) => b._jsonParseError);
-+			if (jsonErrorBlocks.length > 0) {
-+				const retryKey = jsonErrorBlocks.map(b => b.name).sort().join(',');
-+				this._jsonRetryCount = this._jsonRetryCount || new Map<string, number>();
-+				const count = this._jsonRetryCount.get(retryKey) || 0;
-+
-+				if (count < MAX_JSON_RETRIES) {
-+					this._jsonRetryCount.set(retryKey, count + 1);
-+					const errorResults = jsonErrorBlocks.map((b: any) => ({
-+						type: 'tool_result' as const,
-+						tool_use_id: b.id,
-+						content: `JSON parse error in tool call '${b.name}': ${b._jsonParseError}. Please retry with valid JSON.`,
-+						is_error: true,
-+					}));
-+					this.messages.push({ role: 'assistant', content: historyContent as any });
-+					this.messages.push({ role: 'user', content: errorResults });
-+					continue;
-+				}
-+				// Exhausted retries — skip these tools and continue
-+				const skipResults = jsonErrorBlocks.map((b: any) => ({
-+					type: 'tool_result' as const,
-+					tool_use_id: b.id,
-+					content: `Tool '${b.name}' failed after ${MAX_JSON_RETRIES + 1} attempts due to invalid JSON. Skip this tool and continue.`,
-+					is_error: true,
-+				}));
-+				this.messages.push({ role: 'assistant', content: historyContent as any });
-+				this.messages.push({ role: 'user', content: skipResults });
-+				continue;
-+			}
-+
-+			if (toolUseBlocks.length === 0) {
-+				// No tool calls — add assistant message and exit loop
-+				this.messages.push({ role: 'assistant', content: historyContent as any });
-+				break;
-+			}
-+
-+			// Reset max_output recovery counter and JSON retry counter on successful tool use
-+			maxOutputRecoveryAttempts = 0;
-+			this._jsonRetryCount = undefined;
-+
-+			// Yield tool_use events so the UI shows "Using tool: X" before execution
-+			for (const block of toolUseBlocks) {
-+				yield {
-+					type: 'tool_use',
-+					id: block.id,
-+					name: block.name,
-+					input: block.input,
-+				} as AgentEvent;
-+			}
-+
-+			// Execute tools (concurrent read-only, serial mutations) with order preservation
-+			const toolResults = await this.executeTools(toolUseBlocks);
-+
-+			// Yield tool results
-+			for (const result of toolResults) {
-+				yield {
-+					type: 'tool_result',
-+					tool_use_id: result.tool_use_id,
-+					tool_name: result.tool_name || '',
-+					content: typeof result.content === 'string' ? result.content : JSON.stringify(result.content),
-+					is_error: result.is_error,
-+				};
-+			}
-+
-+			// Add assistant message to conversation
-+			this.messages.push({ role: 'assistant', content: historyContent as any });
-+
-+			// Add tool results to conversation
-+			this.messages.push({
-+				role: 'user',
-+				content: toolResults.map((r) => ({
-+					type: 'tool_result' as const,
-+					tool_use_id: r.tool_use_id,
-+					content: typeof r.content === 'string' ? r.content : JSON.stringify(r.content),
-+					is_error: r.is_error,
-+				})),
-+			});
-+
-+			// [Director-Code] A2: advance checkpoint after complete tool round-trip
-+			if (!this.config.abortSignal?.aborted) {
-+				lastCompleteTurnEnd = this.messages.length;
-+			}
-+
-+			// After tool execution, always continue the loop so the LLM
-+			// can see the tool results and decide what to do next.
-+		}
-+		} finally {
-+			// [Director-Code] A2: on cancellation, truncate incomplete history to last checkpoint
-+			if (this.config.abortSignal?.aborted && this.messages.length > lastCompleteTurnEnd) {
-+				this.messages.length = lastCompleteTurnEnd;
-+			}
-+		}
-+
-+		// Yield final result
-+		const endSubtype = this.config.abortSignal?.aborted
-+			? 'cancelled'
-+			: budgetExceeded
-+				? 'error_max_budget_usd'
-+				: turnsRemaining <= 0
-+					? 'error_max_turns'
-+					: 'success';
-+
-+		yield {
-+			type: 'result',
-+			subtype: endSubtype as any,
-+			usage: this.totalUsage,
-+			cost: this.totalCost,
-+			numTurns: this.turnCount,
-+		};
-+	}
-+
-+	// ========================================================================
-+	// Streaming Helpers
-+	// ========================================================================
-+
-+	// [Director-Code] A3: JSON parse error now tagged for downstream retry logic
-+	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedResponseBlock {
-+		let parsedInput: any = {};
-+		let parseError: string | undefined;
-+		try {
-+			if (tool.input) { parsedInput = JSON.parse(tool.input); }
-+		} catch (err: any) {
-+			parseError = err.message || 'Invalid JSON';
-+			parsedInput = {};
-+		}
-+		const block: any = {
-+			type: 'tool_use',
-+			id: tool.id,
-+			name: tool.name,
-+			input: parsedInput,
-+		};
-+		if (parseError) {
-+			block._jsonParseError = parseError;
-+			block._rawInput = tool.input;
-+		}
-+		return block;
-+	}
-+
-+	private shouldPreserveThinkingInHistory(): boolean {
-+		return this.provider.apiType === 'openai-completions';
-+	}
-+
-+	private contentForHistory(content: readonly NormalizedResponseBlock[]): NormalizedResponseBlock[] {
-+		if (this.shouldPreserveThinkingInHistory()) {
-+			return [...content];
-+		}
-+		return content.filter(block => block.type !== 'thinking');
-+	}
-+
-+	// ========================================================================
-+	// Tool Execution
-+	// ========================================================================
-+
-+	private async executeTools(
-+		toolUseBlocks: ToolUseBlock[],
-+	): Promise<(ToolResult & { tool_name?: string })[]> {
-+		if (!this.toolExecutor) {
-+			// No tool executor — return errors for all tools
-+			return toolUseBlocks.map((block) => ({
-+				type: 'tool_result' as const,
-+				tool_use_id: block.id,
-+				content: `Error: No tool executor configured for "${block.name}"`,
-+				is_error: true,
-+				tool_name: block.name,
-+			}));
-+		}
-+
-+		const MAX_CONCURRENCY = 10;
-+
-+		// [Director-Code] A3: slot-based order preservation — results written back to original positions
-+		const results = new Array<ToolResult & { tool_name?: string }>(toolUseBlocks.length);
-+
-+		// Partition into read-only (concurrent) and mutation (serial), preserving original indices
-+		const readOnlyIndices: number[] = [];
-+		const mutationIndices: number[] = [];
-+
-+		for (let i = 0; i < toolUseBlocks.length; i++) {
-+			if (this.toolExecutor.isReadOnlyTool(toolUseBlocks[i].name)) {
-+				readOnlyIndices.push(i);
-+			} else {
-+				mutationIndices.push(i);
-+			}
-+		}
-+
-+		// Execute read-only tools concurrently (batched), write back to original slots
-+		for (let i = 0; i < readOnlyIndices.length; i += MAX_CONCURRENCY) {
-+			const batchIndices = readOnlyIndices.slice(i, i + MAX_CONCURRENCY);
-+			const batchResults = await Promise.all(
-+				batchIndices.map((idx) => this.executeSingleTool(toolUseBlocks[idx])),
-+			);
-+			for (let j = 0; j < batchIndices.length; j++) {
-+				results[batchIndices[j]] = batchResults[j];
-+			}
-+		}
-+
-+		// Execute mutation tools sequentially, write back to original slots
-+		for (const idx of mutationIndices) {
-+			results[idx] = await this.executeSingleTool(toolUseBlocks[idx]);
-+		}
-+
-+		return results;
-+	}
-+
-+	private async executeSingleTool(
-+		block: ToolUseBlock,
-+	): Promise<ToolResult & { tool_name?: string }> {
-+		// Check permissions via hook
-+		if (this.config.hookRegistry) {
-+			try {
-+				const hookResults = await this.config.hookRegistry.execute('PreToolUse', {
-+					toolName: block.name,
-+					toolInput: block.input,
-+				});
-+				if (hookResults.some((r: any) => r.behavior === 'deny')) {
-+					return {
-+						type: 'tool_result',
-+						tool_use_id: block.id,
-+						content: `Permission denied for tool "${block.name}"`,
-+						is_error: true,
-+						tool_name: block.name,
-+					};
-+				}
-+			} catch {
-+				// Hook errors are non-fatal
-+			}
-+		}
-+
-+		// Check permissions via canUseTool
-+		if (this.config.canUseTool) {
-+			try {
-+				const permission = await this.config.canUseTool(block.name, block.input);
-+				if (permission.behavior === 'deny') {
-+					return {
-+						type: 'tool_result',
-+						tool_use_id: block.id,
-+						content: permission.message || `Permission denied for tool "${block.name}"`,
-+						is_error: true,
-+						tool_name: block.name,
-+					};
-+				}
-+			} catch (err: any) {
-+				return {
-+					type: 'tool_result',
-+					tool_use_id: block.id,
-+					content: `Permission check error: ${err.message}`,
-+					is_error: true,
-+					tool_name: block.name,
-+				};
-+			}
-+		}
-+
-+		// Execute via ToolExecutor
-+		try {
-+			const result = await this.toolExecutor!.invokeTool(block.name, block.input);
-+
-+			// Hook: PostToolUse
-+			if (this.config.hookRegistry) {
-+				await this.config.hookRegistry.execute('PostToolUse', {
-+					toolName: block.name,
-+					toolInput: block.input,
-+				}).catch(() => { /* non-fatal */ });
-+			}
-+
-+			return {
-+				type: 'tool_result',
-+				tool_use_id: block.id,
-+				content: result,
-+				tool_name: block.name,
-+			};
-+		} catch (err: any) {
-+			// Hook: PostToolUseFailure
-+			if (this.config.hookRegistry) {
-+				await this.config.hookRegistry.execute('PostToolUseFailure', {
-+					toolName: block.name,
-+					toolInput: block.input,
-+				}).catch(() => { /* non-fatal */ });
-+			}
-+
-+			return {
-+				type: 'tool_result',
-+				tool_use_id: block.id,
-+				content: `Tool execution error: ${err.message}`,
-+				is_error: true,
-+				tool_name: block.name,
-+			};
-+		}
-+	}
-+
-+	// ========================================================================
-+	// Usage Tracking
-+	// ========================================================================
-+
-+	private trackUsage(usage: TokenUsage): void {
-+		this.totalUsage.input_tokens += usage.input_tokens;
-+		this.totalUsage.output_tokens += usage.output_tokens;
-+		if (usage.cache_creation_input_tokens) {
-+			this.totalUsage.cache_creation_input_tokens =
-+				(this.totalUsage.cache_creation_input_tokens || 0) + usage.cache_creation_input_tokens;
-+		}
-+		if (usage.cache_read_input_tokens) {
-+			this.totalUsage.cache_read_input_tokens =
-+				(this.totalUsage.cache_read_input_tokens || 0) + usage.cache_read_input_tokens;
-+		}
-+		this.totalCost += estimateCost(this.config.model, usage);
-+	}
-+
-+	// ========================================================================
-+	// State Accessors
-+	// ========================================================================
-+
-+	getMessages(): NormalizedMessageParam[] {
-+		return [...this.messages];
-+	}
-+
-+	getUsage(): TokenUsage {
-+		return { ...this.totalUsage };
-+	}
-+
-+	getCost(): number {
-+		return this.totalCost;
-+	}
-+
-+	getSessionId(): string {
-+		return this.sessionId;
-+	}
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts b/src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..82c92062ad90104b4131abdef4d3be407b9395ee
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts
-@@ -0,0 +1,10 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+// [Director-Code] B4: shared helper for built-in mode detection
-+export function isDirectorCodeBuiltInMode(defaultChatAgent: { chatExtensionId?: string; extensionId?: string } | undefined): boolean {
-+	if (!defaultChatAgent) { return false; }
-+	return defaultChatAgent.chatExtensionId === '' || defaultChatAgent.extensionId === 'director-code.agent';
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts b/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..19f4269190305c912b0005950a5134ebc60c0011
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts
-@@ -0,0 +1,364 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * Context Compression / Auto-Compaction
-+ *
-+ * Summarizes long conversation histories when context window fills up.
-+ * Three-tier system:
-+ * 1. Auto-compact: triggered when tokens exceed threshold
-+ * 2. Micro-compact: truncates large tool results per-request
-+ * 3. LLM-based summarization: replaces history with summary
-+ *
-+ * Ported from open-agent-sdk-typescript/src/utils/compact.ts
-+ */
-+
-+import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type LLMProvider, type NormalizedMessageParam } from '../../../directorCode/common/agentEngine/providers/providerTypes.js';
-+import type { AutoCompactState } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
-+import { estimateMessagesTokens, getAutoCompactThreshold, AUTOCOMPACT_BUFFER_TOKENS } from './tokens.js';
-+import { getCompactRank, getProviderDefaultCompactModel, type IModelEntry } from '../../../directorCode/common/agentEngine/modelCatalog.js';
-+import type { ProviderName } from '../../../directorCode/common/agentEngine/apiKeyService.js';
-+
-+export const MIN_COMPACT_THRESHOLD = 8_000;
-+
-+const compactModelUnavailable = new Set<string>();
-+
-+export interface CompactModelResolution {
-+	readonly model: string;
-+	readonly unavailableKey?: string;
-+	readonly source: 'configured' | 'provider-default' | 'main';
-+}
-+
-+export interface CompactModelSelectionOptions {
-+	readonly provider: ProviderName;
-+	readonly authVariant: AuthVariantName;
-+	readonly mainModel: string;
-+	readonly configuredCompactModel?: string;
-+	readonly availableModels?: readonly (IModelEntry & { readonly apiType?: string; readonly compactRank?: number })[];
-+	readonly availabilityKeyForModel?: (modelId: string) => string | undefined;
-+}
-+
-+export interface CompactConversationOptions {
-+	readonly compactModel?: string;
-+	readonly unavailableKey?: string;
-+	readonly abortSignal?: AbortSignal;
-+}
-+
-+export function createCompactModelAvailabilityKey(
-+	provider: ProviderName,
-+	normalizedBaseURL: string | undefined,
-+	authIdentityKey: string | undefined,
-+	authVariant: AuthVariantName,
-+	compactModelId: string,
-+): string {
-+	return `${provider}:${normalizedBaseURL || 'default'}:${authIdentityKey || 'no-key'}:${authVariant}:${compactModelId}`;
-+}
-+
-+export function isCompactModelUnavailable(key: string | undefined): boolean {
-+	return !!key && compactModelUnavailable.has(key);
-+}
-+
-+export function markCompactModelUnavailable(key: string | undefined): void {
-+	if (key) {
-+		compactModelUnavailable.add(key);
-+	}
-+}
-+
-+export function clearCompactModelUnavailableForTests(): void {
-+	compactModelUnavailable.clear();
-+}
-+
-+export function resolveCompactModel(options: CompactModelSelectionOptions): CompactModelResolution {
-+	const availableModels = options.availableModels ?? [];
-+	const availableById = new Map(availableModels.map(model => [model.id, model]));
-+	const keyFor = (modelId: string) => options.availabilityKeyForModel?.(modelId);
-+	const isAvailable = (modelId: string): boolean => {
-+		if (modelId === options.mainModel) {
-+			return true;
-+		}
-+		const key = keyFor(modelId);
-+		return availableById.has(modelId) && !isCompactModelUnavailable(key);
-+	};
-+	const useCandidate = (modelId: string, source: CompactModelResolution['source']): CompactModelResolution | undefined => {
-+		if (!modelId) {
-+			return undefined;
-+		}
-+		if (isAvailable(modelId)) {
-+			return { model: modelId, unavailableKey: keyFor(modelId), source };
-+		}
-+		return undefined;
-+	};
-+
-+	const configuredCompactModel = options.configuredCompactModel?.trim();
-+	if (configuredCompactModel) {
-+		const configured = useCandidate(configuredCompactModel, 'configured');
-+		if (configured) {
-+			return configured;
-+		}
-+		console.warn(`[AgentEngine] Compact model "${configuredCompactModel}" is not available for provider "${options.provider}" (${options.authVariant}); falling back.`);
-+	}
-+
-+	if (options.provider === 'openai' && options.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
-+		const codexCandidate = availableModels
-+			.filter(model => model.apiType === 'openai-codex')
-+			.filter(model => !isCompactModelUnavailable(keyFor(model.id)))
-+			.sort((a, b) => getCompactRank(a) - getCompactRank(b) || a.id.localeCompare(b.id))[0];
-+		if (codexCandidate) {
-+			return { model: codexCandidate.id, unavailableKey: keyFor(codexCandidate.id), source: 'provider-default' };
-+		}
-+		return { model: options.mainModel, source: 'main' };
-+	}
-+
-+	const providerDefault = getProviderDefaultCompactModel(options.provider, options.authVariant);
-+	const providerDefaultResolution = providerDefault ? useCandidate(providerDefault, 'provider-default') : undefined;
-+	if (providerDefaultResolution) {
-+		return providerDefaultResolution;
-+	}
-+
-+	return { model: options.mainModel, source: 'main' };
-+}
-+
-+// --------------------------------------------------------------------------
-+// Auto-Compact State
-+// --------------------------------------------------------------------------
-+
-+export function createAutoCompactState(): AutoCompactState {
-+	return {
-+		compacted: false,
-+		turnCounter: 0,
-+		consecutiveFailures: 0,
-+	};
-+}
-+
-+// --------------------------------------------------------------------------
-+// Should Auto-Compact
-+// --------------------------------------------------------------------------
-+
-+export function shouldAutoCompact(
-+	messages: any[],
-+	model: string,
-+	state: AutoCompactState,
-+	maxInputTokensOverride?: number,
-+): boolean {
-+	if (state.consecutiveFailures >= 3) { return false; }
-+
-+	const estimatedTokens = estimateMessagesTokens(messages);
-+	const threshold = maxInputTokensOverride
-+		? maxInputTokensOverride - AUTOCOMPACT_BUFFER_TOKENS
-+		: getAutoCompactThreshold(model);
-+
-+	return estimatedTokens >= Math.max(MIN_COMPACT_THRESHOLD, threshold);
-+}
-+
-+// --------------------------------------------------------------------------
-+// LLM-Based Compaction
-+// --------------------------------------------------------------------------
-+
-+export async function compactConversation(
-+	provider: LLMProvider,
-+	model: string,
-+	messages: any[],
-+	state: AutoCompactState,
-+	options: CompactConversationOptions = {},
-+): Promise<{
-+	compactedMessages: NormalizedMessageParam[];
-+	summary: string;
-+	state: AutoCompactState;
-+	usedModel: string;
-+}> {
-+	const compactModel = options.compactModel && !isCompactModelUnavailable(options.unavailableKey)
-+		? options.compactModel
-+		: model;
-+	try {
-+		// Strip images before compacting to save tokens
-+		const strippedMessages = stripImagesFromMessages(messages);
-+
-+		// Build compaction prompt
-+		const compactionPrompt = buildCompactionPrompt(strippedMessages);
-+
-+		const response = await provider.createMessage({
-+			model: compactModel,
-+			maxTokens: 8192,
-+			system: 'You are a conversation summarizer. Create a detailed summary of the conversation that preserves all important context, decisions made, files modified, tool outputs, and current state. The summary should allow the conversation to continue seamlessly.',
-+			messages: [
-+				{
-+					role: 'user',
-+					content: compactionPrompt,
-+				},
-+			],
-+			abortSignal: options.abortSignal,
-+		});
-+
-+		const summary = response.content
-+			.filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-+			.map((b) => b.text)
-+			.join('\n');
-+
-+		// [Director-Code] A3: compact success requires non-trivial output AND actual token reduction
-+		if (summary.length < 10) {
-+			console.warn('[AgentEngine] compact returned near-empty summary, keeping original messages');
-+			return {
-+				compactedMessages: messages,
-+				summary: '',
-+				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
-+				usedModel: compactModel,
-+			};
-+		}
-+
-+		const originalTokens = estimateMessagesTokens(messages);
-+		const compactedContent = `[Previous conversation summary]\n\n${summary}\n\n[End of summary - conversation continues below]`;
-+		const compactedTokens = estimateMessagesTokens([
-+			{ role: 'user', content: compactedContent },
-+			{ role: 'assistant', content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.' },
-+		]);
-+		if (compactedTokens >= originalTokens * 0.9) {
-+			console.warn(`[AgentEngine] compact did not reduce tokens sufficiently (${compactedTokens} >= ${Math.floor(originalTokens * 0.9)}), keeping original`);
-+			return {
-+				compactedMessages: messages,
-+				summary: '',
-+				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
-+				usedModel: compactModel,
-+			};
-+		}
-+
-+		const compactedMessages: NormalizedMessageParam[] = [
-+			{ role: 'user', content: compactedContent },
-+			{
-+				role: 'assistant',
-+				content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.',
-+			},
-+		];
-+
-+		return {
-+			compactedMessages,
-+			summary,
-+			state: {
-+				compacted: true,
-+				turnCounter: state.turnCounter,
-+				consecutiveFailures: 0,
-+			},
-+			usedModel: compactModel,
-+		};
-+	} catch (err: any) {
-+		if (err?.status === 403 || err?.status === 404) {
-+			markCompactModelUnavailable(options.unavailableKey);
-+		}
-+		return {
-+			compactedMessages: messages,
-+			summary: '',
-+			state: {
-+				...state,
-+				consecutiveFailures: state.consecutiveFailures + 1,
-+			},
-+			usedModel: compactModel,
-+		};
-+	}
-+}
-+
-+// --------------------------------------------------------------------------
-+// Micro-Compact
-+// --------------------------------------------------------------------------
-+
-+export function microCompactMessages(
-+	messages: any[],
-+	maxToolResultChars: number = 50000,
-+): any[] {
-+	return messages.map((msg: any) => {
-+		if (typeof msg.content === 'string') { return msg; }
-+		if (!Array.isArray(msg.content)) { return msg; }
-+
-+		const content = (msg.content as any[]).map((block: any) => {
-+			if (block.type === 'tool_result' && typeof block.content === 'string') {
-+				const binaryPlaceholder = getBinaryToolResultPlaceholder(block.content);
-+				if (binaryPlaceholder) {
-+					return {
-+						...block,
-+						content: binaryPlaceholder,
-+					};
-+				}
-+				if (block.content.length > maxToolResultChars) {
-+					return {
-+						...block,
-+						content:
-+							block.content.slice(0, maxToolResultChars / 2) +
-+							'\n...(truncated)...\n' +
-+							block.content.slice(-maxToolResultChars / 2),
-+					};
-+				}
-+			}
-+			return block;
-+		});
-+
-+		return { ...msg, content };
-+	});
-+}
-+
-+function getBinaryToolResultPlaceholder(content: string): string | undefined {
-+	const trimmed = content.trim();
-+	if (!trimmed) {
-+		return undefined;
-+	}
-+	if (/^data:[^;\s]+;base64,[A-Za-z0-9+/_=-]{256,}$/i.test(trimmed)) {
-+		return `[Large binary tool result omitted: data URI, ${content.length} chars]`;
-+	}
-+	const hasBase64AlphabetSignal = /[A-Z0-9+/_=-]/.test(trimmed);
-+	const isPlainLowercaseRun = /^[a-z]+$/.test(trimmed);
-+	const isSingleRepeatedChar = new Set(trimmed).size === 1;
-+	if (trimmed.length >= 4096 && /^[A-Za-z0-9+/_=-]+$/.test(trimmed) && trimmed.length % 4 === 0 && hasBase64AlphabetSignal && !isPlainLowercaseRun && !isSingleRepeatedChar) {
-+		return `[Large binary tool result omitted: base64 payload, ${content.length} chars]`;
-+	}
-+	const controlChars = content.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)?.length ?? 0;
-+	if (controlChars >= 8 || controlChars / Math.max(1, content.length) > 0.01) {
-+		return `[Large binary tool result omitted: binary payload, ${content.length} chars]`;
-+	}
-+	return undefined;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Internal Helpers
-+// --------------------------------------------------------------------------
-+
-+function stripImagesFromMessages(messages: any[]): any[] {
-+	return messages.map((msg: any) => {
-+		if (typeof msg.content === 'string') { return msg; }
-+
-+		const filtered = (msg.content as any[]).filter((block: any) => {
-+			return block.type !== 'image';
-+		});
-+
-+		return { ...msg, content: filtered.length > 0 ? filtered : '[content removed for compaction]' };
-+	});
-+}
-+
-+function buildCompactionPrompt(messages: any[]): string {
-+	const parts: string[] = ['Please summarize this conversation:\n'];
-+
-+	for (const msg of messages) {
-+		const role = msg.role === 'user' ? 'User' : 'Assistant';
-+
-+		if (typeof msg.content === 'string') {
-+			parts.push(`${role}: ${msg.content.slice(0, 5000)}`);
-+		} else if (Array.isArray(msg.content)) {
-+			const texts: string[] = [];
-+			for (const block of msg.content as any[]) {
-+				if (block.type === 'text') {
-+					texts.push(block.text.slice(0, 3000));
-+				} else if (block.type === 'tool_use') {
-+					texts.push(`[Tool: ${block.name}]`);
-+				} else if (block.type === 'tool_result') {
-+					const content = typeof block.content === 'string'
-+						? block.content.slice(0, 1000)
-+						: '[tool result]';
-+					texts.push(`[Tool Result: ${content}]`);
-+				}
-+			}
-+			if (texts.length > 0) {
-+				parts.push(`${role}: ${texts.join('\n')}`);
-+			}
-+		}
-+	}
-+
-+	return parts.join('\n\n');
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..4ec3d75af255ae8aa3725cd95ba473da3830d300
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts
-@@ -0,0 +1,71 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+import { ChatAgentLocation, ChatModeKind } from '../constants.js';
-+import type { IChatLocationData } from '../chatService/chatService.js';
-+import { DirectorToolMode } from './directorToolRegistry.js';
-+
-+export interface DirectorChatModeRoutingInput {
-+	readonly location: ChatAgentLocation;
-+	readonly locationData?: IChatLocationData;
-+	readonly modeKind?: ChatModeKind;
-+}
-+
-+export function getDirectorToolModeForRequest(input: DirectorChatModeRoutingInput): DirectorToolMode {
-+	if (input.location === ChatAgentLocation.EditorInline || input.locationData?.type === ChatAgentLocation.EditorInline) {
-+		return DirectorToolMode.Inline;
-+	}
-+
-+	switch (input.modeKind) {
-+		case ChatModeKind.Ask:
-+			return DirectorToolMode.Ask;
-+		case ChatModeKind.Edit:
-+			return DirectorToolMode.Edit;
-+		case ChatModeKind.Agent:
-+		default:
-+			return DirectorToolMode.Agent;
-+	}
-+}
-+
-+export function getDirectorModeMaxTurns(configuredMaxTurns: number, mode: DirectorToolMode): number {
-+	switch (mode) {
-+		case DirectorToolMode.Ask:
-+			return Math.max(1, Math.min(configuredMaxTurns, 6));
-+		case DirectorToolMode.Inline:
-+			return 1;
-+		default:
-+			return configuredMaxTurns;
-+	}
-+}
-+
-+export function getDirectorModeSystemPrompt(mode: DirectorToolMode): string | undefined {
-+	switch (mode) {
-+		case DirectorToolMode.Ask:
-+			return [
-+				'You are Director Code in Ask mode.',
-+				'Answer programming and workspace questions clearly and concisely.',
-+				'You may use only read-only context tools when they help answer the question.',
-+				'Do not edit files, run terminal commands, create tasks, or mutate workspace state.',
-+				'Use provided attachments, current editor context, custom instructions, and chat history when relevant.',
-+			].join('\n');
-+		case DirectorToolMode.Edit:
-+			return [
-+				'You are Director Code in Edit mode.',
-+				'Focus on producing reviewable workspace edits for the user request.',
-+				'Read relevant context first, then use only Director reviewable edit tools for file changes.',
-+				'Do not use terminal or task execution. Keep edits conservative and explain the result briefly.',
-+			].join('\n');
-+		case DirectorToolMode.Inline:
-+			return [
-+				'You are Director Code in inline editor mode.',
-+				'Return only the exact replacement text for the selected range or cursor insertion.',
-+				'Do not include explanations, markdown prose, file names, or tool calls.',
-+				'If the replacement is multiple lines, a single fenced code block containing only the replacement is allowed.',
-+			].join('\n');
-+		case DirectorToolMode.Agent:
-+		default:
-+			return undefined;
-+	}
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/retry.ts b/src/vs/workbench/contrib/chat/common/agentEngine/retry.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..08e661622f7a7d80e34c01953cbbd690165229eb
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/retry.ts
-@@ -0,0 +1,154 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * Retry Logic with Exponential Backoff
-+ *
-+ * Handles API retries for rate limits, overloaded servers,
-+ * and transient failures.
-+ *
-+ * Ported from open-agent-sdk-typescript/src/utils/retry.ts
-+ */
-+
-+// [Director-Code] A2: sleep that can be cancelled by AbortSignal
-+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
-+	if (signal?.aborted) {
-+		return Promise.reject(new Error('Aborted'));
-+	}
-+	return new Promise<void>((resolve, reject) => {
-+		const timer = setTimeout(resolve, ms);
-+		if (signal) {
-+			const onAbort = () => {
-+				clearTimeout(timer);
-+				reject(new Error('Aborted'));
-+			};
-+			signal.addEventListener('abort', onAbort, { once: true });
-+		}
-+	});
-+}
-+
-+// --------------------------------------------------------------------------
-+// Configuration
-+// --------------------------------------------------------------------------
-+
-+export interface RetryConfig {
-+	readonly maxRetries: number;
-+	readonly baseDelayMs: number;
-+	readonly maxDelayMs: number;
-+	readonly retryableStatusCodes: readonly number[];
-+}
-+
-+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
-+	maxRetries: 3,
-+	baseDelayMs: 2000,
-+	maxDelayMs: 30000,
-+	retryableStatusCodes: [429, 500, 502, 503, 529],
-+};
-+
-+// --------------------------------------------------------------------------
-+// Error Classification
-+// --------------------------------------------------------------------------
-+
-+export function isRetryableError(err: any, config: RetryConfig = DEFAULT_RETRY_CONFIG): boolean {
-+	if (err?.status && config.retryableStatusCodes.includes(err.status)) {
-+		return true;
-+	}
-+	// Network errors
-+	if (err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNREFUSED') {
-+		return true;
-+	}
-+	// API overloaded
-+	if (err?.error?.type === 'overloaded_error') {
-+		return true;
-+	}
-+	return false;
-+}
-+
-+export function isPromptTooLongError(err: any): boolean {
-+	if (err?.status === 400) {
-+		const message = err?.error?.error?.message || err?.message || '';
-+		return message.includes('prompt is too long') ||
-+			message.includes('max_tokens') ||
-+			message.includes('context length');
-+	}
-+	return false;
-+}
-+
-+export function isAuthError(err: any): boolean {
-+	return err?.status === 401 || err?.status === 403;
-+}
-+
-+export function isRateLimitError(err: any): boolean {
-+	return err?.status === 429;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Retry Delay
-+// --------------------------------------------------------------------------
-+
-+export function getRetryDelay(attempt: number, config: RetryConfig = DEFAULT_RETRY_CONFIG): number {
-+	const delay = config.baseDelayMs * Math.pow(2, attempt);
-+	// Add jitter (±25%)
-+	const jitter = delay * 0.25 * (Math.random() * 2 - 1);
-+	return Math.min(delay + jitter, config.maxDelayMs);
-+}
-+
-+// --------------------------------------------------------------------------
-+// Retry Execution
-+// --------------------------------------------------------------------------
-+
-+export async function withRetry<T>(
-+	fn: () => Promise<T>,
-+	config: RetryConfig = DEFAULT_RETRY_CONFIG,
-+	abortSignal?: AbortSignal,
-+): Promise<T> {
-+	let lastError: any;
-+
-+	for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-+		if (abortSignal?.aborted) {
-+			throw new Error('Aborted');
-+		}
-+
-+		try {
-+			return await fn();
-+		} catch (err: any) {
-+			lastError = err;
-+
-+			if (!isRetryableError(err, config)) {
-+				throw err;
-+			}
-+
-+			if (attempt === config.maxRetries) {
-+				throw err;
-+			}
-+
-+			// [Director-Code] A2: cancellable sleep during retry backoff
-+			const delay = getRetryDelay(attempt, config);
-+			await abortableSleep(delay, abortSignal);
-+		}
-+	}
-+
-+	throw lastError;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Error Formatting
-+// --------------------------------------------------------------------------
-+
-+export function formatApiError(err: any): string {
-+	if (isAuthError(err)) {
-+		return 'Authentication failed. Check your API key.';
-+	}
-+	if (isRateLimitError(err)) {
-+		return 'Rate limit exceeded. Please retry after a short wait.';
-+	}
-+	if (err?.status === 529) {
-+		return 'API overloaded. Please retry later.';
-+	}
-+	if (isPromptTooLongError(err)) {
-+		return 'Prompt too long. Auto-compacting conversation...';
-+	}
-+	return `API error: ${err.message || err}`;
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts b/src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..c3f4bb4bfdeae587ebe7c2d5bd8d5333fd93186d
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts
-@@ -0,0 +1,130 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * Token Estimation & Cost Tracking
-+ *
-+ * Provides rough UTF-8 byte-based token estimation and model cost tracking.
-+ *
-+ * Ported from open-agent-sdk-typescript/src/utils/tokens.ts
-+ */
-+
-+import type { TokenUsage } from '../../../directorCode/common/agentEngine/providers/providerTypes.js';
-+import {
-+	FALLBACK_MODEL_PRICING,
-+	MODEL_CATALOG,
-+	OPENAI_CODEX_MODEL_CATALOG,
-+	getKnownContextWindowSize,
-+	getModelPricing,
-+} from '../../../directorCode/common/agentEngine/modelCatalog.js';
-+
-+// --------------------------------------------------------------------------
-+// Token Estimation
-+// --------------------------------------------------------------------------
-+
-+/**
-+ * Rough token estimation: ~3.5 UTF-8 bytes per token.
-+ */
-+export function estimateTokens(text: string): number {
-+	if (!text) {
-+		return 0;
-+	}
-+	return Math.ceil(new TextEncoder().encode(text).length / 3.5);
-+}
-+
-+/**
-+ * Estimate tokens for a message array.
-+ */
-+export function estimateMessagesTokens(
-+	messages: Array<{ role: string; content: any }>,
-+): number {
-+	let total = 0;
-+	for (const msg of messages) {
-+		if (typeof msg.content === 'string') {
-+			total += estimateTokens(msg.content);
-+		} else if (Array.isArray(msg.content)) {
-+			for (const block of msg.content) {
-+				if ('text' in block && typeof block.text === 'string') {
-+					total += estimateTokens(block.text);
-+				} else if ('content' in block && typeof block.content === 'string') {
-+					total += estimateTokens(block.content);
-+				} else {
-+					// tool_use, image, etc - rough estimate
-+					total += estimateTokens(JSON.stringify(block));
-+				}
-+			}
-+		}
-+	}
-+	return total;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Context Window Sizes
-+// --------------------------------------------------------------------------
-+
-+export function getContextWindowSize(model: string): number {
-+	const normalized = model.toLowerCase();
-+
-+	// Anthropic
-+	if (normalized.includes('opus-4') && normalized.includes('1m')) { return 1_000_000; }
-+
-+	const known = getKnownContextWindowSize(model);
-+	if (known) {
-+		return known;
-+	}
-+
-+	if (normalized.includes('claude')) { return 200_000; }
-+
-+	// OpenAI
-+	if (normalized.includes('gpt-4-1')) { return 1_000_000; }
-+	if (normalized.includes('gpt-3.5')) { return 16_385; }
-+	if (normalized.includes('o1')) { return 200_000; }
-+	if (normalized.includes('o3')) { return 200_000; }
-+	if (normalized.includes('o4')) { return 200_000; }
-+	if (normalized.includes('gpt-4') || normalized.includes('gpt-5') || normalized.includes('chatgpt-')) { return 128_000; }
-+
-+	// DeepSeek
-+	if (normalized.includes('deepseek')) { return 128_000; }
-+
-+	// Gemini
-+	if (normalized.includes('gemini')) { return 1_000_000; }
-+
-+	// Default
-+	return 200_000;
-+}
-+
-+/**
-+ * Auto-compact buffer: trigger compaction when within this many tokens of the limit.
-+ */
-+export const AUTOCOMPACT_BUFFER_TOKENS = 13_000;
-+
-+export function getAutoCompactThreshold(model: string): number {
-+	return getContextWindowSize(model) - AUTOCOMPACT_BUFFER_TOKENS;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Model Pricing (USD per token)
-+// --------------------------------------------------------------------------
-+
-+export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-+	...Object.fromEntries(
-+		[...MODEL_CATALOG, ...OPENAI_CODEX_MODEL_CATALOG]
-+			.filter(model => !!model.pricing)
-+			.map(model => [model.id, model.pricing!]),
-+	),
-+};
-+
-+// --------------------------------------------------------------------------
-+// Cost Estimation
-+// --------------------------------------------------------------------------
-+
-+export function estimateCost(
-+	model: string,
-+	usage: TokenUsage,
-+): number {
-+	const pricing = getModelPricing(model) ?? FALLBACK_MODEL_PRICING;
-+
-+	return usage.input_tokens * pricing.input + usage.output_tokens * pricing.output;
-+}
 diff --git a/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts b/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts
 index 302ccc33a8cfaad86e701961839893a7bf20ba61..b3c8541cc50c4f08ef93db6c622ae9ff12d401e2 100644
 --- a/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts
@@ -7101,7 +5548,7 @@ index 0000000000000000000000000000000000000000..65bb9c720979665bbdfa648061c8243f
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..573cf6c5fb1c88f1539bfef03d4965445de3fcba
+index 0000000000000000000000000000000000000000..22d4d7debec86171caa3105886d4812f93afd0b2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 @@ -0,0 +1,275 @@
@@ -7133,19 +5580,19 @@ index 0000000000000000000000000000000000000000..573cf6c5fb1c88f1539bfef03d496544
 +	NormalizedMessageParam,
 +} from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import { createProvider } from '../../../../directorCode/common/agentEngine/providers/providerFactory.js';
-+import { estimateTokens, estimateCost, getContextWindowSize } from '../../../common/agentEngine/tokens.js';
++import { estimateTokens, estimateCost, getContextWindowSize } from '../../../../directorCode/common/agentEngine/tokens.js';
 +import {
 +	shouldAutoCompact,
 +	microCompactMessages,
 +	createAutoCompactState,
-+} from '../../../common/agentEngine/compact.js';
++} from '../../../../directorCode/common/agentEngine/compact.js';
 +import {
 +	isRetryableError,
 +	isAuthError,
 +	isPromptTooLongError,
 +	getRetryDelay,
 +	formatApiError,
-+} from '../../../common/agentEngine/retry.js';
++} from '../../../../directorCode/common/agentEngine/retry.js';
 +
 +suite("AgentEngine - Core Logic", () => {
 +
@@ -9316,7 +7763,7 @@ index 0000000000000000000000000000000000000000..c0c64cc30e14bce972a6197b34ac9e87
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..fdfbceb2b1b51f2a59d4b79bfc34685846be4fc6
+index 0000000000000000000000000000000000000000..2323a0f32acac0f5268ab3e22c5d29d4dce5755e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 @@ -0,0 +1,435 @@
@@ -9338,7 +7785,7 @@ index 0000000000000000000000000000000000000000..fdfbceb2b1b51f2a59d4b79bfc346858
 +	microCompactMessages,
 +	resolveCompactModel,
 +	shouldAutoCompact,
-+} from '../../../common/agentEngine/compact.js';
++} from '../../../../directorCode/common/agentEngine/compact.js';
 +import type { LLMProvider, CreateMessageParams, CreateMessageResponse } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import type { AutoCompactState } from '../../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
@@ -10009,7 +8456,7 @@ index 0000000000000000000000000000000000000000..6f8c6ea17c6517c6a2096a7d034856de
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..2c5e637ee725dbd00b25309617196a44f810ca22
+index 0000000000000000000000000000000000000000..d3f39bc40136cafa5756e678add912db4503edd5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 @@ -0,0 +1,50 @@
@@ -10024,7 +8471,7 @@ index 0000000000000000000000000000000000000000..2c5e637ee725dbd00b25309617196a44
 +import { Selection } from '../../../../../../editor/common/core/selection.js';
 +import { ChatAgentLocation, ChatModeKind } from '../../../common/constants.js';
 +import { DirectorToolMode } from '../../../common/agentEngine/directorToolRegistry.js';
-+import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../../common/agentEngine/directorChatModeRouting.js';
++import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../../../directorCode/common/agentEngine/directorChatModeRouting.js';
 +
 +suite('Director Chat Mode Routing', () => {
 +
@@ -10065,7 +8512,7 @@ index 0000000000000000000000000000000000000000..2c5e637ee725dbd00b25309617196a44
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..185316b477eeaf111590e6b1040d85d22a767fe0
+index 0000000000000000000000000000000000000000..5da4dcf30ab2b19e97321df68f67e9e83c8897a8
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
 @@ -0,0 +1,291 @@
@@ -10104,7 +8551,7 @@ index 0000000000000000000000000000000000000000..185316b477eeaf111590e6b1040d85d2
 +import type { ProviderName } from '../../../../directorCode/common/agentEngine/apiKeyService.js';
 +import { createProvider } from '../../../../directorCode/common/agentEngine/providers/providerFactory.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
-+import { estimateTokens } from '../../../common/agentEngine/tokens.js';
++import { estimateTokens } from '../../../../directorCode/common/agentEngine/tokens.js';
 +
 +class TestAuthStateService implements IAuthStateService {
 +	declare readonly _serviceBrand: undefined;
@@ -10362,7 +8809,7 @@ index 0000000000000000000000000000000000000000..185316b477eeaf111590e6b1040d85d2
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..960669b7566903787ca8a72871a77b120bb73096
+index 0000000000000000000000000000000000000000..4a281a32b45999276cc282cf1eafc050c5692e21
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 @@ -0,0 +1,777 @@
@@ -10402,9 +8849,9 @@ index 0000000000000000000000000000000000000000..960669b7566903787ca8a72871a77b12
 +} from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import { agentEventToProgress } from '../../../browser/agentEngine/progressBridge.js';
 +import { requestToUserMessage, historyToNormalizedMessages } from '../../../browser/agentEngine/messageNormalization.js';
-+import { estimateCost, estimateTokens, getContextWindowSize } from '../../../common/agentEngine/tokens.js';
-+import { shouldAutoCompact, microCompactMessages, createAutoCompactState } from '../../../common/agentEngine/compact.js';
-+import { isRetryableError, isPromptTooLongError, formatApiError } from '../../../common/agentEngine/retry.js';
++import { estimateCost, estimateTokens, getContextWindowSize } from '../../../../directorCode/common/agentEngine/tokens.js';
++import { shouldAutoCompact, microCompactMessages, createAutoCompactState } from '../../../../directorCode/common/agentEngine/compact.js';
++import { isRetryableError, isPromptTooLongError, formatApiError } from '../../../../directorCode/common/agentEngine/retry.js';
 +import { createProvider } from '../../../../directorCode/common/agentEngine/providers/providerFactory.js';
 +
 +// ============================================================================
@@ -11145,7 +9592,7 @@ index 0000000000000000000000000000000000000000..960669b7566903787ca8a72871a77b12
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..1c327e8b83c0ea20a741a7640a83abd0a4d49d75
+index 0000000000000000000000000000000000000000..2e8b0f597d112a876f92d84c5f4e9cc9f10d9d67
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts
 @@ -0,0 +1,252 @@
@@ -11174,7 +9621,7 @@ index 0000000000000000000000000000000000000000..1c327e8b83c0ea20a741a7640a83abd0
 +} from '../../../../directorCode/common/agentEngine/apiKeyService.js';
 +import { createProvider } from '../../../../directorCode/common/agentEngine/providers/providerFactory.js';
 +import type { ApiType } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
-+import { isRetryableError, isAuthError, isRateLimitError, formatApiError } from '../../../common/agentEngine/retry.js';
++import { isRetryableError, isAuthError, isRateLimitError, formatApiError } from '../../../../directorCode/common/agentEngine/retry.js';
 +import type { ISecretStorageService, ISecretStorageProvider } from '../../../../../../platform/secrets/common/secrets.js';
 +
 +// ============================================================================
@@ -16050,7 +14497,7 @@ index 0000000000000000000000000000000000000000..18ab3bbec5b8d52738a992416c7f4c92
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..2cbfe71e1189398663d2c6ddc746c549415dd203
+index 0000000000000000000000000000000000000000..2b25abdbf59177502a2522d9ca5224bde83ab7c2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts
 @@ -0,0 +1,255 @@
@@ -16070,8 +14517,8 @@ index 0000000000000000000000000000000000000000..2cbfe71e1189398663d2c6ddc746c549
 +	isRateLimitError,
 +	isRetryableError,
 +	withRetry,
-+} from '../../../common/agentEngine/retry.js';
-+import type { RetryConfig } from '../../../common/agentEngine/retry.js';
++} from '../../../../directorCode/common/agentEngine/retry.js';
++import type { RetryConfig } from '../../../../directorCode/common/agentEngine/retry.js';
 +
 +suite('AgentEngine - Retry', () => {
 +
@@ -16311,7 +14758,7 @@ index 0000000000000000000000000000000000000000..2cbfe71e1189398663d2c6ddc746c549
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..417c95a923ba5c0434b38b25793b9a336eeb95bc
+index 0000000000000000000000000000000000000000..4e359d9a57432a332b383861f8aa12eed4479a00
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts
 @@ -0,0 +1,241 @@
@@ -16330,7 +14777,7 @@ index 0000000000000000000000000000000000000000..417c95a923ba5c0434b38b25793b9a33
 +	getAutoCompactThreshold,
 +	getContextWindowSize,
 +	MODEL_PRICING,
-+} from '../../../common/agentEngine/tokens.js';
++} from '../../../../directorCode/common/agentEngine/tokens.js';
 +
 +suite('AgentEngine - Tokens', () => {
 +
@@ -16591,6 +15038,800 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
 +		});
 +	});
  });
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..55ee18b44e70102235550226531beca18698d53a
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts
+@@ -0,0 +1,788 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++/**
++ * AgentEngine - Core agentic loop
++ *
++ * Manages the full conversation lifecycle:
++ * 1. Take user prompt
++ * 2. Build system prompt with context
++ * 3. Call LLM API with tools (via provider abstraction)
++ * 4. Stream response
++ * 5. Execute tool calls (concurrent for read-only, serial for mutations)
++ * 6. Send results back, repeat until done
++ * 7. Auto-compact when context exceeds threshold
++ * 8. Retry with exponential backoff on transient errors
++ *
++ * Ported from open-agent-sdk-typescript/src/engine.ts
++ * Adapted for VS Code integration: uses AgentEvent instead of SDKMessage,
++ * delegates tool execution to ToolBridge, generates UUIDs via VS Code API.
++ */
++
++import { generateUuid } from '../../../../../base/common/uuid.js';
++import type {
++	AgentEngineConfig,
++	AgentEvent,
++	AgentToolDefinition,
++	AutoCompactState,
++	MutableMessageParam,
++	ToolResult,
++	ToolUseBlock,
++} from './agentEngineTypes.js';
++import type {
++	CreateMessageResponse,
++	LLMProvider,
++	NormalizedMessageParam,
++	NormalizedTool,
++	NormalizedResponseBlock,
++	TokenUsage,
++	CreateMessageParams,
++} from './providers/providerTypes.js';
++import { estimateCost } from './tokens.js';
++import {
++	shouldAutoCompact,
++	compactConversation,
++	microCompactMessages,
++	createAutoCompactState,
++} from './compact.js';
++import { withRetry, isPromptTooLongError } from './retry.js';
++
++// ============================================================================
++// Tool format conversion
++// ============================================================================
++
++function toProviderTool(tool: AgentToolDefinition): NormalizedTool {
++	return {
++		name: tool.name,
++		description: tool.description,
++		input_schema: tool.inputSchema,
++	};
++}
++
++// [Director-Code] A3: resolve tool index for multi-tool streaming aggregation
++function resolveToolIndex(event: { index?: number }, pendingTools: Map<number, unknown>): number {
++	if (typeof event.index === 'number') {
++		return event.index;
++	}
++	if (pendingTools.size <= 1) {
++		return pendingTools.size === 0 ? 0 : [...pendingTools.keys()][0];
++	}
++	throw new Error('Missing tool index in multi-tool response');
++}
++
++// ============================================================================
++// System Prompt Builder
++// ============================================================================
++
++function buildSystemPrompt(config: AgentEngineConfig): string {
++	if (config.systemPrompt) {
++		const base = config.systemPrompt;
++		return config.appendSystemPrompt
++			? base + '\n\n' + config.appendSystemPrompt
++			: base;
++	}
++
++	const parts: string[] = [];
++
++	parts.push(
++		'You are an expert AI coding assistant with access to tools. Your goal is to help the user accomplish their coding tasks efficiently and correctly.',
++		'',
++		'## Guidelines',
++		'- Use tools proactively when they would help you understand the codebase or accomplish the task.',
++		'- Read files before modifying them to understand the existing code.',
++		'- Explain your reasoning briefly before taking actions.',
++		'- If a tool call fails, analyze the error and try a different approach.',
++		'- When writing code, follow the existing code style and conventions in the project.',
++		'- Be concise in your responses — focus on what matters.',
++	);
++
++	// Working directory
++	parts.push(`\n## Working Directory\n${config.cwd}`);
++
++	// List available tools
++	if (config.tools.length > 0) {
++		parts.push('\n## Available Tools\n');
++		for (const tool of config.tools) {
++			parts.push(`- **${tool.name}**: ${tool.description}`);
++		}
++	}
++
++	if (config.appendSystemPrompt) {
++		parts.push('\n' + config.appendSystemPrompt);
++	}
++
++	return parts.join('\n');
++}
++
++// ============================================================================
++// AgentEngine
++// ============================================================================
++
++export interface IToolExecutor {
++	/**
++	 * Execute a tool by name with given input.
++	 * Returns the tool result as a string.
++	 */
++	invokeTool(name: string, input: unknown): Promise<string>;
++
++	/**
++	 * Check if a tool is read-only (can run concurrently).
++	 */
++	isReadOnlyTool(name: string): boolean;
++}
++
++export class AgentEngine {
++	private readonly provider: LLMProvider;
++	private messages: MutableMessageParam[] = [];
++	private totalUsage: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } = { input_tokens: 0, output_tokens: 0 };
++	private totalCost = 0;
++	private turnCount = 0;
++	private compactState: AutoCompactState;
++	private readonly sessionId: string;
++	private apiTimeMs = 0;
++	private _jsonRetryCount: Map<string, number> | undefined; // [Director-Code] A3: per-tool JSON retry tracking
++
++	constructor(
++		private readonly config: AgentEngineConfig,
++		private readonly toolExecutor?: IToolExecutor,
++		initialMessages?: readonly NormalizedMessageParam[],
++	) {
++		this.provider = config.provider;
++		this.compactState = createAutoCompactState();
++		this.sessionId = generateUuid();
++
++		// Pre-populate conversation history (e.g., from previous chat turns)
++		if (initialMessages && initialMessages.length > 0) {
++			this.messages = initialMessages.map(m => ({ role: m.role, content: m.content } as MutableMessageParam));
++		}
++	}
++
++	/**
++	 * Submit a user message and run the agentic loop.
++	 * Yields AgentEvent as the agent works.
++	 */
++	async *submitMessage(userMessage: string): AsyncGenerator<AgentEvent> {
++		// Add user message
++		this.messages.push({ role: 'user', content: userMessage });
++
++		// Build tool definitions for provider
++		const tools = this.config.tools.map(toProviderTool);
++
++		// Build system prompt
++		const systemPrompt = buildSystemPrompt(this.config);
++
++		// Emit init system message
++		yield {
++			type: 'system',
++			subtype: 'init',
++			model: this.config.model,
++			tools: this.config.tools.map(t => t.name),
++		};
++
++		// Agentic loop
++		let turnsRemaining = this.config.maxTurns;
++		let budgetExceeded = false;
++		let maxOutputRecoveryAttempts = 0;
++		const MAX_OUTPUT_RECOVERY = 3;
++
++		// [Director-Code] A2: track last complete checkpoint for cancellation cleanup
++		let lastCompleteTurnEnd = this.messages.length;
++
++		try {
++		while (turnsRemaining > 0) {
++			if (this.config.abortSignal?.aborted) { break; }
++
++			// Check budget
++			if (this.config.maxBudgetUsd && this.totalCost >= this.config.maxBudgetUsd) {
++				budgetExceeded = true;
++				break;
++			}
++
++			// Auto-compact if context is too large
++			if (shouldAutoCompact(this.messages as any[], this.config.model, this.compactState, this.config.maxInputTokens)) {
++				if (this.config.hookRegistry) {
++					await this.config.hookRegistry.execute('PreCompact', { toolName: 'compact' });
++				}
++				try {
++					const result = await compactConversation(
++						this.provider,
++						this.config.model,
++						this.messages as any[],
++						this.compactState,
++						{
++							compactModel: this.config.compactModel,
++							unavailableKey: this.config.compactModelUnavailableKey,
++							abortSignal: this.config.abortSignal,
++						},
++					);
++					this.messages = result.compactedMessages as MutableMessageParam[];
++					this.compactState = result.state;
++
++					if (result.summary) {
++						yield { type: 'system', subtype: 'compact_boundary', message: 'Conversation compacted' };
++
++						if (this.config.hookRegistry) {
++							await this.config.hookRegistry.execute('PostCompact', { toolName: 'compact' });
++						}
++					}
++				} catch {
++					// Continue with uncompacted messages
++				}
++			}
++
++			// Micro-compact: truncate large tool results
++			const apiMessages = microCompactMessages(this.messages as any[]) as NormalizedMessageParam[];
++
++			this.turnCount++;
++			turnsRemaining--;
++
++			// Make API call — streaming first, blocking fallback on retry
++			let response: CreateMessageResponse;
++			const apiStart = performance.now();
++			const requestParams: CreateMessageParams = {
++				model: this.config.model,
++				maxTokens: this.config.maxTokens,
++				system: systemPrompt,
++				messages: apiMessages,
++				tools: tools.length > 0 ? tools : undefined,
++				thinking:
++					this.config.thinking?.type === 'enabled' && this.config.thinking.budget_tokens
++						? { type: 'enabled', budget_tokens: this.config.thinking.budget_tokens }
++						: undefined,
++				abortSignal: this.config.abortSignal, // [Director-Code] A2: pass signal to provider fetch
++			};
++
++			let streamingUsed = false;
++			let textDeltaEmitted = false;
++			let responseContentForHistory: NormalizedResponseBlock[] | undefined;
++			try {
++				if (this.provider.createMessageStream) {
++					// [Director-Code] A3: streaming path with index-based multi-tool aggregation
++					streamingUsed = true;
++					const contentBlocks: NormalizedResponseBlock[] = [];
++					const historyThinkingParts: string[] = [];
++					let currentTextBlock: { type: 'text'; text: string } | undefined;
++					const pendingTools = new Map<number, { id: string; name: string; input: string }>();
++					let streamUsage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
++					let streamStopReason = 'end_turn';
++
++					for await (const event of this.provider.createMessageStream(requestParams)) {
++						if (this.config.abortSignal?.aborted) { break; }
++
++						switch (event.type) {
++							case 'text':
++								if (!currentTextBlock) {
++									currentTextBlock = { type: 'text', text: '' };
++								}
++								currentTextBlock.text += event.text;
++								if (event.text) {
++									textDeltaEmitted = true;
++								}
++								yield { type: 'text_delta', text: event.text } as AgentEvent;
++								break;
++
++							case 'thinking':
++								if (this.shouldPreserveThinkingInHistory()) {
++									historyThinkingParts.push(event.thinking);
++								}
++								yield { type: 'thinking_delta', thinking: event.thinking } as AgentEvent;
++								break;
++
++							case 'tool_use_start': {
++								if (currentTextBlock) {
++									contentBlocks.push(currentTextBlock);
++									currentTextBlock = undefined;
++								}
++								const idx = resolveToolIndex(event, pendingTools);
++								pendingTools.set(idx, { id: event.id, name: event.name, input: '' });
++								break;
++							}
++
++							case 'tool_input_delta': {
++								const idx = resolveToolIndex(event, pendingTools);
++								const tool = pendingTools.get(idx);
++								if (tool) { tool.input += event.json; }
++								break;
++							}
++
++							case 'tool_call_delta': {
++								const idx = resolveToolIndex(event, pendingTools);
++								const tool = pendingTools.get(idx) ?? { id: '', name: '', input: '' };
++								if (event.id && !tool.id) { tool.id = event.id; }
++								if (event.name && !tool.name) { tool.name = event.name; }
++								if (event.arguments) { tool.input += event.arguments; }
++								pendingTools.set(idx, tool);
++								break;
++							}
++
++							case 'message_complete':
++								streamUsage = event.usage;
++								streamStopReason = event.stopReason;
++								break;
++						}
++					}
++
++					// Finalize remaining blocks
++					if (currentTextBlock) { contentBlocks.push(currentTextBlock); }
++					for (const [, tool] of pendingTools) {
++						contentBlocks.push(this.finalizeToolBlock(tool));
++					}
++
++					responseContentForHistory = this.contentForHistory(
++						historyThinkingParts.length > 0
++							? [{ type: 'thinking', thinking: historyThinkingParts.join('') }, ...contentBlocks]
++							: contentBlocks,
++					);
++					response = { content: contentBlocks, stopReason: streamStopReason, usage: streamUsage };
++				} else {
++					// Non-streaming fallback
++					response = await withRetry(
++						async () => this.provider.createMessage(requestParams),
++						undefined,
++						this.config.abortSignal,
++					);
++				}
++			} catch (err: any) {
++				// On streaming error, try non-streaming retry
++				if (streamingUsed) {
++					try {
++						response = await withRetry(
++							async () => this.provider.createMessage(requestParams),
++							undefined,
++							this.config.abortSignal,
++						);
++					} catch (retryErr: any) {
++						// Handle prompt-too-long by compacting
++						if (isPromptTooLongError(retryErr) && !this.compactState.compacted) {
++							try {
++								const result = await compactConversation(
++									this.provider,
++									this.config.model,
++									this.messages as any[],
++									this.compactState,
++									{
++										compactModel: this.config.compactModel,
++										unavailableKey: this.config.compactModelUnavailableKey,
++										abortSignal: this.config.abortSignal,
++									},
++								);
++								this.messages = result.compactedMessages as MutableMessageParam[];
++								this.compactState = result.state;
++								turnsRemaining++;
++								this.turnCount--;
++								continue;
++							} catch { /* Can't compact */ }
++						}
++
++						yield {
++							type: 'result',
++							subtype: 'error',
++							usage: this.totalUsage,
++							cost: this.totalCost,
++							numTurns: this.turnCount,
++							error: retryErr.message || String(retryErr),
++						};
++						return;
++					}
++				} else {
++					// Handle prompt-too-long by compacting
++					if (isPromptTooLongError(err) && !this.compactState.compacted) {
++						try {
++							const result = await compactConversation(
++								this.provider,
++								this.config.model,
++								this.messages as any[],
++								this.compactState,
++								{
++									compactModel: this.config.compactModel,
++									unavailableKey: this.config.compactModelUnavailableKey,
++									abortSignal: this.config.abortSignal,
++								},
++							);
++							this.messages = result.compactedMessages as MutableMessageParam[];
++							this.compactState = result.state;
++							turnsRemaining++;
++							this.turnCount--;
++							continue;
++						} catch { /* Can't compact */ }
++					}
++
++					yield {
++						type: 'result',
++						subtype: 'error',
++						usage: this.totalUsage,
++						cost: this.totalCost,
++						numTurns: this.turnCount,
++						error: err.message || String(err),
++					};
++					return;
++				}
++			}
++
++			// Track API timing
++			this.apiTimeMs += performance.now() - apiStart;
++
++			// Track usage
++			this.trackUsage(response.usage);
++			const historyContent = responseContentForHistory ?? this.contentForHistory(response.content);
++
++			// Yield assistant message for UI display. Streaming thinking has already
++			// been emitted as thinking_delta; history-only thinking stays out of this.
++			yield {
++				type: 'assistant',
++				message: {
++					role: 'assistant',
++					content: response.content as any,
++				},
++				renderText: !textDeltaEmitted,
++			};
++
++			// [Director-Code] A3: improved max_tokens handling — distinguish tool truncation from text continuation
++			if (response.stopReason === 'max_tokens' && maxOutputRecoveryAttempts < MAX_OUTPUT_RECOVERY) {
++				const hasIncompleteTool = response.content.some((b: any) => b.type === 'tool_use' && b._jsonParseError);
++				maxOutputRecoveryAttempts++;
++				if (hasIncompleteTool) {
++					const cleanContent = historyContent.filter((b: any) => !(b.type === 'tool_use' && b._jsonParseError));
++					this.messages.push({ role: 'assistant', content: cleanContent as any });
++					this.messages.push({ role: 'user', content: 'Your previous response was truncated in the middle of a tool call JSON. Please re-output the complete tool call(s).' });
++				} else {
++					this.messages.push({ role: 'user', content: 'Please continue from where you left off.' });
++				}
++				continue;
++			}
++
++			// Check for tool use
++			const toolUseBlocks = response.content.filter(
++				(block): block is ToolUseBlock => block.type === 'tool_use',
++			);
++
++			// [Director-Code] A3: JSON parse error → tool_result is_error for model retry
++			const MAX_JSON_RETRIES = 2;
++			const jsonErrorBlocks = toolUseBlocks.filter((b: any) => b._jsonParseError);
++			if (jsonErrorBlocks.length > 0) {
++				const retryKey = jsonErrorBlocks.map(b => b.name).sort().join(',');
++				this._jsonRetryCount = this._jsonRetryCount || new Map<string, number>();
++				const count = this._jsonRetryCount.get(retryKey) || 0;
++
++				if (count < MAX_JSON_RETRIES) {
++					this._jsonRetryCount.set(retryKey, count + 1);
++					const errorResults = jsonErrorBlocks.map((b: any) => ({
++						type: 'tool_result' as const,
++						tool_use_id: b.id,
++						content: `JSON parse error in tool call '${b.name}': ${b._jsonParseError}. Please retry with valid JSON.`,
++						is_error: true,
++					}));
++					this.messages.push({ role: 'assistant', content: historyContent as any });
++					this.messages.push({ role: 'user', content: errorResults });
++					continue;
++				}
++				// Exhausted retries — skip these tools and continue
++				const skipResults = jsonErrorBlocks.map((b: any) => ({
++					type: 'tool_result' as const,
++					tool_use_id: b.id,
++					content: `Tool '${b.name}' failed after ${MAX_JSON_RETRIES + 1} attempts due to invalid JSON. Skip this tool and continue.`,
++					is_error: true,
++				}));
++				this.messages.push({ role: 'assistant', content: historyContent as any });
++				this.messages.push({ role: 'user', content: skipResults });
++				continue;
++			}
++
++			if (toolUseBlocks.length === 0) {
++				// No tool calls — add assistant message and exit loop
++				this.messages.push({ role: 'assistant', content: historyContent as any });
++				break;
++			}
++
++			// Reset max_output recovery counter and JSON retry counter on successful tool use
++			maxOutputRecoveryAttempts = 0;
++			this._jsonRetryCount = undefined;
++
++			// Yield tool_use events so the UI shows "Using tool: X" before execution
++			for (const block of toolUseBlocks) {
++				yield {
++					type: 'tool_use',
++					id: block.id,
++					name: block.name,
++					input: block.input,
++				} as AgentEvent;
++			}
++
++			// Execute tools (concurrent read-only, serial mutations) with order preservation
++			const toolResults = await this.executeTools(toolUseBlocks);
++
++			// Yield tool results
++			for (const result of toolResults) {
++				yield {
++					type: 'tool_result',
++					tool_use_id: result.tool_use_id,
++					tool_name: result.tool_name || '',
++					content: typeof result.content === 'string' ? result.content : JSON.stringify(result.content),
++					is_error: result.is_error,
++				};
++			}
++
++			// Add assistant message to conversation
++			this.messages.push({ role: 'assistant', content: historyContent as any });
++
++			// Add tool results to conversation
++			this.messages.push({
++				role: 'user',
++				content: toolResults.map((r) => ({
++					type: 'tool_result' as const,
++					tool_use_id: r.tool_use_id,
++					content: typeof r.content === 'string' ? r.content : JSON.stringify(r.content),
++					is_error: r.is_error,
++				})),
++			});
++
++			// [Director-Code] A2: advance checkpoint after complete tool round-trip
++			if (!this.config.abortSignal?.aborted) {
++				lastCompleteTurnEnd = this.messages.length;
++			}
++
++			// After tool execution, always continue the loop so the LLM
++			// can see the tool results and decide what to do next.
++		}
++		} finally {
++			// [Director-Code] A2: on cancellation, truncate incomplete history to last checkpoint
++			if (this.config.abortSignal?.aborted && this.messages.length > lastCompleteTurnEnd) {
++				this.messages.length = lastCompleteTurnEnd;
++			}
++		}
++
++		// Yield final result
++		const endSubtype = this.config.abortSignal?.aborted
++			? 'cancelled'
++			: budgetExceeded
++				? 'error_max_budget_usd'
++				: turnsRemaining <= 0
++					? 'error_max_turns'
++					: 'success';
++
++		yield {
++			type: 'result',
++			subtype: endSubtype as any,
++			usage: this.totalUsage,
++			cost: this.totalCost,
++			numTurns: this.turnCount,
++		};
++	}
++
++	// ========================================================================
++	// Streaming Helpers
++	// ========================================================================
++
++	// [Director-Code] A3: JSON parse error now tagged for downstream retry logic
++	private finalizeToolBlock(tool: { id: string; name: string; input: string }): NormalizedResponseBlock {
++		let parsedInput: any = {};
++		let parseError: string | undefined;
++		try {
++			if (tool.input) { parsedInput = JSON.parse(tool.input); }
++		} catch (err: any) {
++			parseError = err.message || 'Invalid JSON';
++			parsedInput = {};
++		}
++		const block: any = {
++			type: 'tool_use',
++			id: tool.id,
++			name: tool.name,
++			input: parsedInput,
++		};
++		if (parseError) {
++			block._jsonParseError = parseError;
++			block._rawInput = tool.input;
++		}
++		return block;
++	}
++
++	private shouldPreserveThinkingInHistory(): boolean {
++		return this.provider.apiType === 'openai-completions';
++	}
++
++	private contentForHistory(content: readonly NormalizedResponseBlock[]): NormalizedResponseBlock[] {
++		if (this.shouldPreserveThinkingInHistory()) {
++			return [...content];
++		}
++		return content.filter(block => block.type !== 'thinking');
++	}
++
++	// ========================================================================
++	// Tool Execution
++	// ========================================================================
++
++	private async executeTools(
++		toolUseBlocks: ToolUseBlock[],
++	): Promise<(ToolResult & { tool_name?: string })[]> {
++		if (!this.toolExecutor) {
++			// No tool executor — return errors for all tools
++			return toolUseBlocks.map((block) => ({
++				type: 'tool_result' as const,
++				tool_use_id: block.id,
++				content: `Error: No tool executor configured for "${block.name}"`,
++				is_error: true,
++				tool_name: block.name,
++			}));
++		}
++
++		const MAX_CONCURRENCY = 10;
++
++		// [Director-Code] A3: slot-based order preservation — results written back to original positions
++		const results = new Array<ToolResult & { tool_name?: string }>(toolUseBlocks.length);
++
++		// Partition into read-only (concurrent) and mutation (serial), preserving original indices
++		const readOnlyIndices: number[] = [];
++		const mutationIndices: number[] = [];
++
++		for (let i = 0; i < toolUseBlocks.length; i++) {
++			if (this.toolExecutor.isReadOnlyTool(toolUseBlocks[i].name)) {
++				readOnlyIndices.push(i);
++			} else {
++				mutationIndices.push(i);
++			}
++		}
++
++		// Execute read-only tools concurrently (batched), write back to original slots
++		for (let i = 0; i < readOnlyIndices.length; i += MAX_CONCURRENCY) {
++			const batchIndices = readOnlyIndices.slice(i, i + MAX_CONCURRENCY);
++			const batchResults = await Promise.all(
++				batchIndices.map((idx) => this.executeSingleTool(toolUseBlocks[idx])),
++			);
++			for (let j = 0; j < batchIndices.length; j++) {
++				results[batchIndices[j]] = batchResults[j];
++			}
++		}
++
++		// Execute mutation tools sequentially, write back to original slots
++		for (const idx of mutationIndices) {
++			results[idx] = await this.executeSingleTool(toolUseBlocks[idx]);
++		}
++
++		return results;
++	}
++
++	private async executeSingleTool(
++		block: ToolUseBlock,
++	): Promise<ToolResult & { tool_name?: string }> {
++		// Check permissions via hook
++		if (this.config.hookRegistry) {
++			try {
++				const hookResults = await this.config.hookRegistry.execute('PreToolUse', {
++					toolName: block.name,
++					toolInput: block.input,
++				});
++				if (hookResults.some((r: any) => r.behavior === 'deny')) {
++					return {
++						type: 'tool_result',
++						tool_use_id: block.id,
++						content: `Permission denied for tool "${block.name}"`,
++						is_error: true,
++						tool_name: block.name,
++					};
++				}
++			} catch {
++				// Hook errors are non-fatal
++			}
++		}
++
++		// Check permissions via canUseTool
++		if (this.config.canUseTool) {
++			try {
++				const permission = await this.config.canUseTool(block.name, block.input);
++				if (permission.behavior === 'deny') {
++					return {
++						type: 'tool_result',
++						tool_use_id: block.id,
++						content: permission.message || `Permission denied for tool "${block.name}"`,
++						is_error: true,
++						tool_name: block.name,
++					};
++				}
++			} catch (err: any) {
++				return {
++					type: 'tool_result',
++					tool_use_id: block.id,
++					content: `Permission check error: ${err.message}`,
++					is_error: true,
++					tool_name: block.name,
++				};
++			}
++		}
++
++		// Execute via ToolExecutor
++		try {
++			const result = await this.toolExecutor!.invokeTool(block.name, block.input);
++
++			// Hook: PostToolUse
++			if (this.config.hookRegistry) {
++				await this.config.hookRegistry.execute('PostToolUse', {
++					toolName: block.name,
++					toolInput: block.input,
++				}).catch(() => { /* non-fatal */ });
++			}
++
++			return {
++				type: 'tool_result',
++				tool_use_id: block.id,
++				content: result,
++				tool_name: block.name,
++			};
++		} catch (err: any) {
++			// Hook: PostToolUseFailure
++			if (this.config.hookRegistry) {
++				await this.config.hookRegistry.execute('PostToolUseFailure', {
++					toolName: block.name,
++					toolInput: block.input,
++				}).catch(() => { /* non-fatal */ });
++			}
++
++			return {
++				type: 'tool_result',
++				tool_use_id: block.id,
++				content: `Tool execution error: ${err.message}`,
++				is_error: true,
++				tool_name: block.name,
++			};
++		}
++	}
++
++	// ========================================================================
++	// Usage Tracking
++	// ========================================================================
++
++	private trackUsage(usage: TokenUsage): void {
++		this.totalUsage.input_tokens += usage.input_tokens;
++		this.totalUsage.output_tokens += usage.output_tokens;
++		if (usage.cache_creation_input_tokens) {
++			this.totalUsage.cache_creation_input_tokens =
++				(this.totalUsage.cache_creation_input_tokens || 0) + usage.cache_creation_input_tokens;
++		}
++		if (usage.cache_read_input_tokens) {
++			this.totalUsage.cache_read_input_tokens =
++				(this.totalUsage.cache_read_input_tokens || 0) + usage.cache_read_input_tokens;
++		}
++		this.totalCost += estimateCost(this.config.model, usage);
++	}
++
++	// ========================================================================
++	// State Accessors
++	// ========================================================================
++
++	getMessages(): NormalizedMessageParam[] {
++		return [...this.messages];
++	}
++
++	getUsage(): TokenUsage {
++		return { ...this.totalUsage };
++	}
++
++	getCost(): number {
++		return this.totalCost;
++	}
++
++	getSessionId(): string {
++		return this.sessionId;
++	}
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..a627f34fb47309fd5218096f5c758e125c5289ed
@@ -17622,6 +16863,469 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +			identityKey: `missing:${provider}:${authVariant}`,
 +			metadata: { reason },
 +		};
++	}
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..82c92062ad90104b4131abdef4d3be407b9395ee
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts
+@@ -0,0 +1,10 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++// [Director-Code] B4: shared helper for built-in mode detection
++export function isDirectorCodeBuiltInMode(defaultChatAgent: { chatExtensionId?: string; extensionId?: string } | undefined): boolean {
++	if (!defaultChatAgent) { return false; }
++	return defaultChatAgent.chatExtensionId === '' || defaultChatAgent.extensionId === 'director-code.agent';
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a09986f99a
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts
+@@ -0,0 +1,364 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++/**
++ * Context Compression / Auto-Compaction
++ *
++ * Summarizes long conversation histories when context window fills up.
++ * Three-tier system:
++ * 1. Auto-compact: triggered when tokens exceed threshold
++ * 2. Micro-compact: truncates large tool results per-request
++ * 3. LLM-based summarization: replaces history with summary
++ *
++ * Ported from open-agent-sdk-typescript/src/utils/compact.ts
++ */
++
++import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type LLMProvider, type NormalizedMessageParam } from './providers/providerTypes.js';
++import type { AutoCompactState } from './agentEngineTypes.js';
++import { estimateMessagesTokens, getAutoCompactThreshold, AUTOCOMPACT_BUFFER_TOKENS } from './tokens.js';
++import { getCompactRank, getProviderDefaultCompactModel, type IModelEntry } from './modelCatalog.js';
++import type { ProviderName } from './apiKeyService.js';
++
++export const MIN_COMPACT_THRESHOLD = 8_000;
++
++const compactModelUnavailable = new Set<string>();
++
++export interface CompactModelResolution {
++	readonly model: string;
++	readonly unavailableKey?: string;
++	readonly source: 'configured' | 'provider-default' | 'main';
++}
++
++export interface CompactModelSelectionOptions {
++	readonly provider: ProviderName;
++	readonly authVariant: AuthVariantName;
++	readonly mainModel: string;
++	readonly configuredCompactModel?: string;
++	readonly availableModels?: readonly (IModelEntry & { readonly apiType?: string; readonly compactRank?: number })[];
++	readonly availabilityKeyForModel?: (modelId: string) => string | undefined;
++}
++
++export interface CompactConversationOptions {
++	readonly compactModel?: string;
++	readonly unavailableKey?: string;
++	readonly abortSignal?: AbortSignal;
++}
++
++export function createCompactModelAvailabilityKey(
++	provider: ProviderName,
++	normalizedBaseURL: string | undefined,
++	authIdentityKey: string | undefined,
++	authVariant: AuthVariantName,
++	compactModelId: string,
++): string {
++	return `${provider}:${normalizedBaseURL || 'default'}:${authIdentityKey || 'no-key'}:${authVariant}:${compactModelId}`;
++}
++
++export function isCompactModelUnavailable(key: string | undefined): boolean {
++	return !!key && compactModelUnavailable.has(key);
++}
++
++export function markCompactModelUnavailable(key: string | undefined): void {
++	if (key) {
++		compactModelUnavailable.add(key);
++	}
++}
++
++export function clearCompactModelUnavailableForTests(): void {
++	compactModelUnavailable.clear();
++}
++
++export function resolveCompactModel(options: CompactModelSelectionOptions): CompactModelResolution {
++	const availableModels = options.availableModels ?? [];
++	const availableById = new Map(availableModels.map(model => [model.id, model]));
++	const keyFor = (modelId: string) => options.availabilityKeyForModel?.(modelId);
++	const isAvailable = (modelId: string): boolean => {
++		if (modelId === options.mainModel) {
++			return true;
++		}
++		const key = keyFor(modelId);
++		return availableById.has(modelId) && !isCompactModelUnavailable(key);
++	};
++	const useCandidate = (modelId: string, source: CompactModelResolution['source']): CompactModelResolution | undefined => {
++		if (!modelId) {
++			return undefined;
++		}
++		if (isAvailable(modelId)) {
++			return { model: modelId, unavailableKey: keyFor(modelId), source };
++		}
++		return undefined;
++	};
++
++	const configuredCompactModel = options.configuredCompactModel?.trim();
++	if (configuredCompactModel) {
++		const configured = useCandidate(configuredCompactModel, 'configured');
++		if (configured) {
++			return configured;
++		}
++		console.warn(`[AgentEngine] Compact model "${configuredCompactModel}" is not available for provider "${options.provider}" (${options.authVariant}); falling back.`);
++	}
++
++	if (options.provider === 'openai' && options.authVariant === OPENAI_CODEX_AUTH_VARIANT) {
++		const codexCandidate = availableModels
++			.filter(model => model.apiType === 'openai-codex')
++			.filter(model => !isCompactModelUnavailable(keyFor(model.id)))
++			.sort((a, b) => getCompactRank(a) - getCompactRank(b) || a.id.localeCompare(b.id))[0];
++		if (codexCandidate) {
++			return { model: codexCandidate.id, unavailableKey: keyFor(codexCandidate.id), source: 'provider-default' };
++		}
++		return { model: options.mainModel, source: 'main' };
++	}
++
++	const providerDefault = getProviderDefaultCompactModel(options.provider, options.authVariant);
++	const providerDefaultResolution = providerDefault ? useCandidate(providerDefault, 'provider-default') : undefined;
++	if (providerDefaultResolution) {
++		return providerDefaultResolution;
++	}
++
++	return { model: options.mainModel, source: 'main' };
++}
++
++// --------------------------------------------------------------------------
++// Auto-Compact State
++// --------------------------------------------------------------------------
++
++export function createAutoCompactState(): AutoCompactState {
++	return {
++		compacted: false,
++		turnCounter: 0,
++		consecutiveFailures: 0,
++	};
++}
++
++// --------------------------------------------------------------------------
++// Should Auto-Compact
++// --------------------------------------------------------------------------
++
++export function shouldAutoCompact(
++	messages: any[],
++	model: string,
++	state: AutoCompactState,
++	maxInputTokensOverride?: number,
++): boolean {
++	if (state.consecutiveFailures >= 3) { return false; }
++
++	const estimatedTokens = estimateMessagesTokens(messages);
++	const threshold = maxInputTokensOverride
++		? maxInputTokensOverride - AUTOCOMPACT_BUFFER_TOKENS
++		: getAutoCompactThreshold(model);
++
++	return estimatedTokens >= Math.max(MIN_COMPACT_THRESHOLD, threshold);
++}
++
++// --------------------------------------------------------------------------
++// LLM-Based Compaction
++// --------------------------------------------------------------------------
++
++export async function compactConversation(
++	provider: LLMProvider,
++	model: string,
++	messages: any[],
++	state: AutoCompactState,
++	options: CompactConversationOptions = {},
++): Promise<{
++	compactedMessages: NormalizedMessageParam[];
++	summary: string;
++	state: AutoCompactState;
++	usedModel: string;
++}> {
++	const compactModel = options.compactModel && !isCompactModelUnavailable(options.unavailableKey)
++		? options.compactModel
++		: model;
++	try {
++		// Strip images before compacting to save tokens
++		const strippedMessages = stripImagesFromMessages(messages);
++
++		// Build compaction prompt
++		const compactionPrompt = buildCompactionPrompt(strippedMessages);
++
++		const response = await provider.createMessage({
++			model: compactModel,
++			maxTokens: 8192,
++			system: 'You are a conversation summarizer. Create a detailed summary of the conversation that preserves all important context, decisions made, files modified, tool outputs, and current state. The summary should allow the conversation to continue seamlessly.',
++			messages: [
++				{
++					role: 'user',
++					content: compactionPrompt,
++				},
++			],
++			abortSignal: options.abortSignal,
++		});
++
++		const summary = response.content
++			.filter((b): b is { type: 'text'; text: string } => b.type === 'text')
++			.map((b) => b.text)
++			.join('\n');
++
++		// [Director-Code] A3: compact success requires non-trivial output AND actual token reduction
++		if (summary.length < 10) {
++			console.warn('[AgentEngine] compact returned near-empty summary, keeping original messages');
++			return {
++				compactedMessages: messages,
++				summary: '',
++				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
++				usedModel: compactModel,
++			};
++		}
++
++		const originalTokens = estimateMessagesTokens(messages);
++		const compactedContent = `[Previous conversation summary]\n\n${summary}\n\n[End of summary - conversation continues below]`;
++		const compactedTokens = estimateMessagesTokens([
++			{ role: 'user', content: compactedContent },
++			{ role: 'assistant', content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.' },
++		]);
++		if (compactedTokens >= originalTokens * 0.9) {
++			console.warn(`[AgentEngine] compact did not reduce tokens sufficiently (${compactedTokens} >= ${Math.floor(originalTokens * 0.9)}), keeping original`);
++			return {
++				compactedMessages: messages,
++				summary: '',
++				state: { ...state, consecutiveFailures: state.consecutiveFailures + 1 },
++				usedModel: compactModel,
++			};
++		}
++
++		const compactedMessages: NormalizedMessageParam[] = [
++			{ role: 'user', content: compactedContent },
++			{
++				role: 'assistant',
++				content: 'I understand the context from the previous conversation. I\'ll continue from where we left off.',
++			},
++		];
++
++		return {
++			compactedMessages,
++			summary,
++			state: {
++				compacted: true,
++				turnCounter: state.turnCounter,
++				consecutiveFailures: 0,
++			},
++			usedModel: compactModel,
++		};
++	} catch (err: any) {
++		if (err?.status === 403 || err?.status === 404) {
++			markCompactModelUnavailable(options.unavailableKey);
++		}
++		return {
++			compactedMessages: messages,
++			summary: '',
++			state: {
++				...state,
++				consecutiveFailures: state.consecutiveFailures + 1,
++			},
++			usedModel: compactModel,
++		};
++	}
++}
++
++// --------------------------------------------------------------------------
++// Micro-Compact
++// --------------------------------------------------------------------------
++
++export function microCompactMessages(
++	messages: any[],
++	maxToolResultChars: number = 50000,
++): any[] {
++	return messages.map((msg: any) => {
++		if (typeof msg.content === 'string') { return msg; }
++		if (!Array.isArray(msg.content)) { return msg; }
++
++		const content = (msg.content as any[]).map((block: any) => {
++			if (block.type === 'tool_result' && typeof block.content === 'string') {
++				const binaryPlaceholder = getBinaryToolResultPlaceholder(block.content);
++				if (binaryPlaceholder) {
++					return {
++						...block,
++						content: binaryPlaceholder,
++					};
++				}
++				if (block.content.length > maxToolResultChars) {
++					return {
++						...block,
++						content:
++							block.content.slice(0, maxToolResultChars / 2) +
++							'\n...(truncated)...\n' +
++							block.content.slice(-maxToolResultChars / 2),
++					};
++				}
++			}
++			return block;
++		});
++
++		return { ...msg, content };
++	});
++}
++
++function getBinaryToolResultPlaceholder(content: string): string | undefined {
++	const trimmed = content.trim();
++	if (!trimmed) {
++		return undefined;
++	}
++	if (/^data:[^;\s]+;base64,[A-Za-z0-9+/_=-]{256,}$/i.test(trimmed)) {
++		return `[Large binary tool result omitted: data URI, ${content.length} chars]`;
++	}
++	const hasBase64AlphabetSignal = /[A-Z0-9+/_=-]/.test(trimmed);
++	const isPlainLowercaseRun = /^[a-z]+$/.test(trimmed);
++	const isSingleRepeatedChar = new Set(trimmed).size === 1;
++	if (trimmed.length >= 4096 && /^[A-Za-z0-9+/_=-]+$/.test(trimmed) && trimmed.length % 4 === 0 && hasBase64AlphabetSignal && !isPlainLowercaseRun && !isSingleRepeatedChar) {
++		return `[Large binary tool result omitted: base64 payload, ${content.length} chars]`;
++	}
++	const controlChars = content.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)?.length ?? 0;
++	if (controlChars >= 8 || controlChars / Math.max(1, content.length) > 0.01) {
++		return `[Large binary tool result omitted: binary payload, ${content.length} chars]`;
++	}
++	return undefined;
++}
++
++// --------------------------------------------------------------------------
++// Internal Helpers
++// --------------------------------------------------------------------------
++
++function stripImagesFromMessages(messages: any[]): any[] {
++	return messages.map((msg: any) => {
++		if (typeof msg.content === 'string') { return msg; }
++
++		const filtered = (msg.content as any[]).filter((block: any) => {
++			return block.type !== 'image';
++		});
++
++		return { ...msg, content: filtered.length > 0 ? filtered : '[content removed for compaction]' };
++	});
++}
++
++function buildCompactionPrompt(messages: any[]): string {
++	const parts: string[] = ['Please summarize this conversation:\n'];
++
++	for (const msg of messages) {
++		const role = msg.role === 'user' ? 'User' : 'Assistant';
++
++		if (typeof msg.content === 'string') {
++			parts.push(`${role}: ${msg.content.slice(0, 5000)}`);
++		} else if (Array.isArray(msg.content)) {
++			const texts: string[] = [];
++			for (const block of msg.content as any[]) {
++				if (block.type === 'text') {
++					texts.push(block.text.slice(0, 3000));
++				} else if (block.type === 'tool_use') {
++					texts.push(`[Tool: ${block.name}]`);
++				} else if (block.type === 'tool_result') {
++					const content = typeof block.content === 'string'
++						? block.content.slice(0, 1000)
++						: '[tool result]';
++					texts.push(`[Tool Result: ${content}]`);
++				}
++			}
++			if (texts.length > 0) {
++				parts.push(`${role}: ${texts.join('\n')}`);
++			}
++		}
++	}
++
++	return parts.join('\n\n');
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..79fd40984eb7e07d5e8462faff46bf49964c4376
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
+@@ -0,0 +1,71 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { ChatAgentLocation, ChatModeKind } from '../../../chat/common/constants.js';
++import type { IChatLocationData } from '../../../chat/common/chatService/chatService.js';
++import { DirectorToolMode } from '../../../chat/common/agentEngine/directorToolRegistry.js';
++
++export interface DirectorChatModeRoutingInput {
++	readonly location: ChatAgentLocation;
++	readonly locationData?: IChatLocationData;
++	readonly modeKind?: ChatModeKind;
++}
++
++export function getDirectorToolModeForRequest(input: DirectorChatModeRoutingInput): DirectorToolMode {
++	if (input.location === ChatAgentLocation.EditorInline || input.locationData?.type === ChatAgentLocation.EditorInline) {
++		return DirectorToolMode.Inline;
++	}
++
++	switch (input.modeKind) {
++		case ChatModeKind.Ask:
++			return DirectorToolMode.Ask;
++		case ChatModeKind.Edit:
++			return DirectorToolMode.Edit;
++		case ChatModeKind.Agent:
++		default:
++			return DirectorToolMode.Agent;
++	}
++}
++
++export function getDirectorModeMaxTurns(configuredMaxTurns: number, mode: DirectorToolMode): number {
++	switch (mode) {
++		case DirectorToolMode.Ask:
++			return Math.max(1, Math.min(configuredMaxTurns, 6));
++		case DirectorToolMode.Inline:
++			return 1;
++		default:
++			return configuredMaxTurns;
++	}
++}
++
++export function getDirectorModeSystemPrompt(mode: DirectorToolMode): string | undefined {
++	switch (mode) {
++		case DirectorToolMode.Ask:
++			return [
++				'You are Director Code in Ask mode.',
++				'Answer programming and workspace questions clearly and concisely.',
++				'You may use only read-only context tools when they help answer the question.',
++				'Do not edit files, run terminal commands, create tasks, or mutate workspace state.',
++				'Use provided attachments, current editor context, custom instructions, and chat history when relevant.',
++			].join('\n');
++		case DirectorToolMode.Edit:
++			return [
++				'You are Director Code in Edit mode.',
++				'Focus on producing reviewable workspace edits for the user request.',
++				'Read relevant context first, then use only Director reviewable edit tools for file changes.',
++				'Do not use terminal or task execution. Keep edits conservative and explain the result briefly.',
++			].join('\n');
++		case DirectorToolMode.Inline:
++			return [
++				'You are Director Code in inline editor mode.',
++				'Return only the exact replacement text for the selected range or cursor insertion.',
++				'Do not include explanations, markdown prose, file names, or tool calls.',
++				'If the replacement is multiple lines, a single fenced code block containing only the replacement is allowed.',
++			].join('\n');
++		case DirectorToolMode.Agent:
++		default:
++			return undefined;
 +	}
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts
@@ -22267,6 +21971,166 @@ index 0000000000000000000000000000000000000000..60be3123ba9838ace928898f1f080c07
 +	/** Send a message and stream the response (used for main request path). */
 +	createMessageStream?(params: CreateMessageParams): AsyncGenerator<StreamEvent>;
 +}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..08e661622f7a7d80e34c01953cbbd690165229eb
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts
+@@ -0,0 +1,154 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++/**
++ * Retry Logic with Exponential Backoff
++ *
++ * Handles API retries for rate limits, overloaded servers,
++ * and transient failures.
++ *
++ * Ported from open-agent-sdk-typescript/src/utils/retry.ts
++ */
++
++// [Director-Code] A2: sleep that can be cancelled by AbortSignal
++function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
++	if (signal?.aborted) {
++		return Promise.reject(new Error('Aborted'));
++	}
++	return new Promise<void>((resolve, reject) => {
++		const timer = setTimeout(resolve, ms);
++		if (signal) {
++			const onAbort = () => {
++				clearTimeout(timer);
++				reject(new Error('Aborted'));
++			};
++			signal.addEventListener('abort', onAbort, { once: true });
++		}
++	});
++}
++
++// --------------------------------------------------------------------------
++// Configuration
++// --------------------------------------------------------------------------
++
++export interface RetryConfig {
++	readonly maxRetries: number;
++	readonly baseDelayMs: number;
++	readonly maxDelayMs: number;
++	readonly retryableStatusCodes: readonly number[];
++}
++
++export const DEFAULT_RETRY_CONFIG: RetryConfig = {
++	maxRetries: 3,
++	baseDelayMs: 2000,
++	maxDelayMs: 30000,
++	retryableStatusCodes: [429, 500, 502, 503, 529],
++};
++
++// --------------------------------------------------------------------------
++// Error Classification
++// --------------------------------------------------------------------------
++
++export function isRetryableError(err: any, config: RetryConfig = DEFAULT_RETRY_CONFIG): boolean {
++	if (err?.status && config.retryableStatusCodes.includes(err.status)) {
++		return true;
++	}
++	// Network errors
++	if (err?.code === 'ECONNRESET' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNREFUSED') {
++		return true;
++	}
++	// API overloaded
++	if (err?.error?.type === 'overloaded_error') {
++		return true;
++	}
++	return false;
++}
++
++export function isPromptTooLongError(err: any): boolean {
++	if (err?.status === 400) {
++		const message = err?.error?.error?.message || err?.message || '';
++		return message.includes('prompt is too long') ||
++			message.includes('max_tokens') ||
++			message.includes('context length');
++	}
++	return false;
++}
++
++export function isAuthError(err: any): boolean {
++	return err?.status === 401 || err?.status === 403;
++}
++
++export function isRateLimitError(err: any): boolean {
++	return err?.status === 429;
++}
++
++// --------------------------------------------------------------------------
++// Retry Delay
++// --------------------------------------------------------------------------
++
++export function getRetryDelay(attempt: number, config: RetryConfig = DEFAULT_RETRY_CONFIG): number {
++	const delay = config.baseDelayMs * Math.pow(2, attempt);
++	// Add jitter (±25%)
++	const jitter = delay * 0.25 * (Math.random() * 2 - 1);
++	return Math.min(delay + jitter, config.maxDelayMs);
++}
++
++// --------------------------------------------------------------------------
++// Retry Execution
++// --------------------------------------------------------------------------
++
++export async function withRetry<T>(
++	fn: () => Promise<T>,
++	config: RetryConfig = DEFAULT_RETRY_CONFIG,
++	abortSignal?: AbortSignal,
++): Promise<T> {
++	let lastError: any;
++
++	for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
++		if (abortSignal?.aborted) {
++			throw new Error('Aborted');
++		}
++
++		try {
++			return await fn();
++		} catch (err: any) {
++			lastError = err;
++
++			if (!isRetryableError(err, config)) {
++				throw err;
++			}
++
++			if (attempt === config.maxRetries) {
++				throw err;
++			}
++
++			// [Director-Code] A2: cancellable sleep during retry backoff
++			const delay = getRetryDelay(attempt, config);
++			await abortableSleep(delay, abortSignal);
++		}
++	}
++
++	throw lastError;
++}
++
++// --------------------------------------------------------------------------
++// Error Formatting
++// --------------------------------------------------------------------------
++
++export function formatApiError(err: any): string {
++	if (isAuthError(err)) {
++		return 'Authentication failed. Check your API key.';
++	}
++	if (isRateLimitError(err)) {
++		return 'Rate limit exceeded. Please retry after a short wait.';
++	}
++	if (err?.status === 529) {
++		return 'API overloaded. Please retry later.';
++	}
++	if (isPromptTooLongError(err)) {
++		return 'Prompt too long. Auto-compacting conversation...';
++	}
++	return `API error: ${err.message || err}`;
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..67bb9573ad1a2c999e85e6f9383a048038154f18
@@ -22348,6 +22212,142 @@ index 0000000000000000000000000000000000000000..67bb9573ad1a2c999e85e6f9383a0480
 +			await this.write(key, value);
 +		}
 +	}
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0a88d6819b9d68b7803b898bec408be8f2cff047
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts
+@@ -0,0 +1,130 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++/**
++ * Token Estimation & Cost Tracking
++ *
++ * Provides rough UTF-8 byte-based token estimation and model cost tracking.
++ *
++ * Ported from open-agent-sdk-typescript/src/utils/tokens.ts
++ */
++
++import type { TokenUsage } from './providers/providerTypes.js';
++import {
++	FALLBACK_MODEL_PRICING,
++	MODEL_CATALOG,
++	OPENAI_CODEX_MODEL_CATALOG,
++	getKnownContextWindowSize,
++	getModelPricing,
++} from './modelCatalog.js';
++
++// --------------------------------------------------------------------------
++// Token Estimation
++// --------------------------------------------------------------------------
++
++/**
++ * Rough token estimation: ~3.5 UTF-8 bytes per token.
++ */
++export function estimateTokens(text: string): number {
++	if (!text) {
++		return 0;
++	}
++	return Math.ceil(new TextEncoder().encode(text).length / 3.5);
++}
++
++/**
++ * Estimate tokens for a message array.
++ */
++export function estimateMessagesTokens(
++	messages: Array<{ role: string; content: any }>,
++): number {
++	let total = 0;
++	for (const msg of messages) {
++		if (typeof msg.content === 'string') {
++			total += estimateTokens(msg.content);
++		} else if (Array.isArray(msg.content)) {
++			for (const block of msg.content) {
++				if ('text' in block && typeof block.text === 'string') {
++					total += estimateTokens(block.text);
++				} else if ('content' in block && typeof block.content === 'string') {
++					total += estimateTokens(block.content);
++				} else {
++					// tool_use, image, etc - rough estimate
++					total += estimateTokens(JSON.stringify(block));
++				}
++			}
++		}
++	}
++	return total;
++}
++
++// --------------------------------------------------------------------------
++// Context Window Sizes
++// --------------------------------------------------------------------------
++
++export function getContextWindowSize(model: string): number {
++	const normalized = model.toLowerCase();
++
++	// Anthropic
++	if (normalized.includes('opus-4') && normalized.includes('1m')) { return 1_000_000; }
++
++	const known = getKnownContextWindowSize(model);
++	if (known) {
++		return known;
++	}
++
++	if (normalized.includes('claude')) { return 200_000; }
++
++	// OpenAI
++	if (normalized.includes('gpt-4-1')) { return 1_000_000; }
++	if (normalized.includes('gpt-3.5')) { return 16_385; }
++	if (normalized.includes('o1')) { return 200_000; }
++	if (normalized.includes('o3')) { return 200_000; }
++	if (normalized.includes('o4')) { return 200_000; }
++	if (normalized.includes('gpt-4') || normalized.includes('gpt-5') || normalized.includes('chatgpt-')) { return 128_000; }
++
++	// DeepSeek
++	if (normalized.includes('deepseek')) { return 128_000; }
++
++	// Gemini
++	if (normalized.includes('gemini')) { return 1_000_000; }
++
++	// Default
++	return 200_000;
++}
++
++/**
++ * Auto-compact buffer: trigger compaction when within this many tokens of the limit.
++ */
++export const AUTOCOMPACT_BUFFER_TOKENS = 13_000;
++
++export function getAutoCompactThreshold(model: string): number {
++	return getContextWindowSize(model) - AUTOCOMPACT_BUFFER_TOKENS;
++}
++
++// --------------------------------------------------------------------------
++// Model Pricing (USD per token)
++// --------------------------------------------------------------------------
++
++export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
++	...Object.fromEntries(
++		[...MODEL_CATALOG, ...OPENAI_CODEX_MODEL_CATALOG]
++			.filter(model => !!model.pricing)
++			.map(model => [model.id, model.pricing!]),
++	),
++};
++
++// --------------------------------------------------------------------------
++// Cost Estimation
++// --------------------------------------------------------------------------
++
++export function estimateCost(
++	model: string,
++	usage: TokenUsage,
++): number {
++	const pricing = getModelPricing(model) ?? FALLBACK_MODEL_PRICING;
++
++	return usage.input_tokens * pricing.input + usage.output_tokens * pricing.output;
 +}
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
 index ea735f845e95276e50cdc8451eb02635af8bb099..94ad664182a5f8072975d00632b8f63a37eaa79e 100644

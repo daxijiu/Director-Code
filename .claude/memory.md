@@ -1,5 +1,23 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer Phase 2 wave 3 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 2 module extraction wave 3 completed: Agent loop/runtime common code moved from `src/vs/workbench/contrib/chat/common/agentEngine/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/`.
+- Moved files: `agentEngine.ts`, `builtInModeUtil.ts`, `compact.ts`, `directorChatModeRouting.ts`, `retry.ts`, and `tokens.ts`.
+- `src/vs/workbench/contrib/chat/common/agentEngine/` now only retains read-only tool registry/implementation plus edit/editing subdirs. `directorChatModeRouting.ts` intentionally imports upstream chat mode/request types and the still chat-path `directorToolRegistry` hook.
+- Replay assets updated: `patches/replay/002-director-branding.116.patch`, `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/005-director-chat-built-in-mode.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`, then `npm run compile-check-ts-native`, `npm run compile`, targeted common runtime node tests passed with `172 passing`, `errorHandling.test.ts` passed separately with `20 passing` after a transient timeout in the combined run, and `chatModelPicker` browser test passed with `41 passing`.
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: move remaining `src/vs/workbench/contrib/chat/browser/agentEngine/` browser Agent contribution/UI files into `src/vs/workbench/contrib/directorCode/browser/agentEngine/`, leaving `chat.contribution.ts` as the thin registration hook and keeping tool/edit files for Phase 3/4.
+
 ## 2026-05-14 latest memory: thin-layer Phase 2 wave 2 completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

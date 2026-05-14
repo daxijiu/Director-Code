@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T16:08:02.010Z",
+  "generatedAt": "2026-05-14T16:22:28.275Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -127,8 +127,8 @@
         "src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts"
       ],
       "fileCount": 106,
-      "size": 175179,
-      "sha256": "643751f5e0991e2e7f773a5c68a0277b80cd185469776fa74eb1618af1347687"
+      "size": 175187,
+      "sha256": "1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909"
     },
     {
       "stage": "product-build-release",
@@ -168,12 +168,6 @@
         "src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts",
         "src/vs/workbench/contrib/chat/browser/chat.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/compact.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/retry.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts",
         "src/vs/workbench/contrib/chat/common/participants/chatAgents.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts",
@@ -204,9 +198,13 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts",
         "src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts",
@@ -220,7 +218,9 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpServersView.ts",
         "src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts",
@@ -232,8 +232,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 80,
-      "size": 859738,
-      "sha256": "d4ab790a551db2e5451e9f07807e15a2ee9f516de38d52412b39f5865bbf761c"
+      "size": 859925,
+      "sha256": "1fb1a841e1df73b432b1ecf0883dc56f5874e514cd75cb2d3e0ab6bb69338a1e"
     },
     {
       "stage": "chat-built-in-mode",
@@ -265,8 +265,8 @@
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
       ],
       "fileCount": 24,
-      "size": 58621,
-      "sha256": "4eb9db4e3a2141f7a5e15e0f37b390567277bb0c69ff80d6d2c3c2bc59433fd3"
+      "size": 58861,
+      "sha256": "4605402f4188cc51baf683f367e36ecd375faa395eca6d7e098d85a3288df817"
     },
     {
       "stage": "text-polish",

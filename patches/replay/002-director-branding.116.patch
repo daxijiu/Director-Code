@@ -1787,14 +1787,14 @@ index 6438d3b42831fd5dc4a30a1fa48f2a52c907bd75..f14b82600dcbf1205b9983bad3435dd1
  
  	content += CONFIG_HELP_TEXT_AFTER;
 diff --git a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
-index c7d20959bb1558dda20811b7e54b960f47290db6..b8401f8073969853e690c7d99a4b807b8da48346 100644
+index c7d20959bb1558dda20811b7e54b960f47290db6..620d8b738aaf8ccaedbef44224375984811cea8a 100644
 --- a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
 +++ b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
 @@ -60,6 +60,7 @@ import { IViewDescriptorService, ViewContainerLocation } from '../../../common/v
  import { toErrorMessage } from '../../../../base/common/errorMessage.js';
  import { ILogService } from '../../../../platform/log/common/log.js';
  import { FONT } from '../../../../base/common/font.js';
-+import { isDirectorCodeBuiltInMode } from '../../chat/common/agentEngine/builtInModeUtil.js';
++import { isDirectorCodeBuiltInMode } from '../../directorCode/common/agentEngine/builtInModeUtil.js';
  
  const configurationKey = 'workbench.startupEditor';
  const MAX_SESSIONS = 6;
