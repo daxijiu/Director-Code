@@ -243,7 +243,10 @@ function isTextPolish(filePath) {
 function isToolLayer(filePath) {
   return [
     'src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts',
+    'src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts',
+    'src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts',
     'src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts',
+    'src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts',
   ].includes(filePath);
 }
 

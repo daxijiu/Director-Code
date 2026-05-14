@@ -1,5 +1,29 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 最新记忆：116 read-only tools Phase 2 已完成
+
+- 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
+- `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` 的 Phase 2 read-only workspace tools / GitHub v1 gate 已完成、replay-land、测试通过。
+- Phase 2 新增 Director-owned model-facing 工具：`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo`。
+- 核心落点：
+  - `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts`：8 个 read-only 工具实现和 tool data。
+  - `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts`：注册工具到 `ILanguageModelToolsService` 和 read tool set。
+  - `src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts`：仅增加注册 contribution 的 import hook。
+  - `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts`：将 8 个工具纳入 Ask/Edit/Agent read allowlist，Inline 仍无工具。
+  - `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts` 与 `directorToolRegistry.test.ts`：覆盖工具声明、workspace path rejection、读取/列目录、search query、diagnostics、SCM、image data、GitHub sanitized remote/fallback 和 allowlist。
+- 安全/范围口径：
+  - `read_file` / `list_dir` / `view_image` 只接受当前 workspace 内路径；workspace 外路径直接拒绝，不做隐式外部读取。
+  - 文本读取有 byte cap 和 binary rejection；目录/search/diagnostics/SCM 输出有 result cap。
+  - `file_search` / `grep_search` 走 VS Code search service；`get_errors` 走 marker service；`get_changed_files` 走 SCM resource groups，不直接 shell `git status`。
+  - `github_repo` v1 只做 owner/repo 或 workspace `.git/config` GitHub remote 推断，输出 sanitized URL；remote indexed search、PR/issue mutation、Copilot parity 均返回 controlled not-supported/fallback。
+- Replay/control-plane 落点：
+  - `patches/replay/007-director-tool-layer.116.patch` 更新为包含 Phase 1 registry 和 Phase 2 read-only tools。
+  - `patches/replay/004-director-agent-engine.116.patch` 仅包含注册 hook 的小改动。
+  - 同步更新 `patches/series.116.json`、`docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`、116 reports、`tool-migration-report.md`、`scripts/upgrade/generate-director-patches.mjs` 分类。
+- Phase 2 已通过 clean replay 验证：`validate-series`、`validate-product-overrides`、`expected-contracts`、clean `materialize-vscode`、canonical manifest validation、`npm run compile-check-ts-native`、`npm run gulp -- transpile-client-esbuild`、targeted tests `14 passing`。
+- clean materialize 后仍需 `npm ci` 恢复依赖才能在 generated tree 跑编译/测试；不要提交 `node_modules`。当前未跟踪 `artifacts/` 仍是构建/验证产物，不要默认纳入 Git。
+- 下一波从 Phase 3 开始：Chat Editing contract、reviewable edit progress、shared edit adapter、`create_directory` review transaction。不要在 Phase 3 reviewable edit contract 之前暴露 write/edit/create/delete 工具。
+
 ## 2026-05-14 最新记忆：116 tool registry Phase 1 已完成
 
 - 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
@@ -17,7 +41,7 @@
   - 更新 `scripts/upgrade/generate-director-patches.mjs` / `scripts/upgrade/generate-series.mjs`：known stages 与 profile-enabled stages 分离，新增 `tool-layer`、`chat-editing`、`edit-tools` exact stage 解析和 path classification；known-but-disabled stage 会明确失败，不静默丢文件。
 - Phase 1 已通过验证：`npm run compile-check-ts-native`、`npm run gulp -- transpile-client-esbuild`、`node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`、`validate-series`、`validate-product-overrides`、`expected-contracts`、clean `materialize-vscode`、canonical manifest validation。
 - clean materialize 后生成目录的 `node_modules` 曾被移除并已通过 `npm ci` 恢复；不要把依赖目录纳入提交。当前未跟踪 `artifacts/` 仍是构建/验证产物，不要默认纳入 Git。
-- 下一波从 Phase 2 开始：实现 Director-owned read-only workspace tools 和 GitHub v1 gate（`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo`），优先使用 VS Code services，继续 replay-land、验证、记忆更新、提交并推送。
+- Phase 2 read-only workspace tools 和 GitHub v1 gate 已完成；后续从 Phase 3 Chat Editing contract 开始。
 
 ## 2026-05-14 最新记忆：116 Mermaid runtime Phase 0 已完成
 

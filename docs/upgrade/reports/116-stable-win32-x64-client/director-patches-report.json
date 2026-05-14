@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T07:59:39.985Z",
+  "generatedAt": "2026-05-14T08:27:47.707Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 220,
+  "changedFileCount": 223,
   "patches": [
     {
       "stage": "branding",
@@ -230,8 +230,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 78,
-      "size": 841419,
-      "sha256": "a879b90ebe5a5d71666a34e99f0af88fd8d5b0fcee2d5a89419a5d3c40cc1d92"
+      "size": 841470,
+      "sha256": "dccb66793b68ed2f76f3e0c3e646b0d95a553bd71b56682ec646eb3479ad81fa"
     },
     {
       "stage": "chat-built-in-mode",
@@ -282,12 +282,15 @@
       "stage": "tool-layer",
       "path": "patches/replay/007-director-tool-layer.116.patch",
       "files": [
+        "src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts",
+        "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
+        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts"
       ],
-      "fileCount": 2,
-      "size": 16175,
-      "sha256": "7cf333102f6cf1ec09239d03ae84866e344976fc0f12d6e969f538e6c09cb3c3"
+      "fileCount": 5,
+      "size": 63124,
+      "sha256": "8c0ed1d78d479574419848c9976452c2b6a6b631a1ac323e646d03a3125836e7"
     }
   ]
 }

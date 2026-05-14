@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T08:10:20.935Z",
-  "treeHash": "878034da481da9c3d0b6e35dea24378df8e773523807d7c36cb9562a0f85c854",
+  "generatedAt": "2026-05-14T08:35:43.913Z",
+  "treeHash": "5073e1284f4387c99f598ae8dd4c532ff195d2a87e3c984882d108a0cb15385a",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39692,7 +39692,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "372b725443d8802f7704b6de78886c91d8f92627db73f870c0ea80253c8bd521",
+      "sha256": "b2e3592fd9a62305b80556fa7358193815bb8a9f57d854cb2d4f96ddf637bdd2",
       "mode": 33206,
       "type": "file"
     },
@@ -39723,6 +39723,12 @@
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts",
       "sha256": "fec12978a726d446d4d471df07bce0e5e58e7805fa2f63ae76e28d2e6adb1094",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts",
+      "sha256": "8d92c33b08396f080eb0673b4af79f36494bf91577898593d75b224ad5216497",
       "mode": 33206,
       "type": "file"
     },
@@ -41923,8 +41929,14 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
+      "sha256": "295c37263473f5ce92ac3ed45e20edfa378a1264586e57766101c0d11b6f8ade",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
-      "sha256": "01fe5e6f672a185b0c7e9e9342a75acb0a805409cbe0647a3470e837992af752",
+      "sha256": "41768d2acd47fa4e629462f2506378a2c9a4e128b942debbb22d767319a2503d",
       "mode": 33206,
       "type": "file"
     },
@@ -43279,8 +43291,14 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
+      "sha256": "e9c82b9008ed7d3e9493102d6a4791fe36065675b6d2876cbef9dcb9f3b95336",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
-      "sha256": "b7e91664e379519ccdab53e27b988369408bc8efdf2a014f702d80a77b6951a8",
+      "sha256": "1126926d23154780c8514ee7dc67c804adde3d498a0e3a24940a76b35a1a0dcb",
       "mode": 33206,
       "type": "file"
     },

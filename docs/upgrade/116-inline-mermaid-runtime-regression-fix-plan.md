@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate implemented, replay-landed, and validated. Phase 2 read-only workspace tools and GitHub v1 are next.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate and Phase 2 read-only workspace tools/GitHub v1 gate are implemented, replay-landed, and validated. Phase 3 Chat Editing contract is next.
 
 Execution decisions added on 2026-05-13:
 
@@ -28,7 +28,11 @@ Execution progress added on 2026-05-14:
 - The deterministic migration artifact is `docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md`.
 - Replay assets updated for Phase 1: new `patches/replay/007-director-tool-layer.116.patch`, updated `004-director-agent-engine.116.patch`, active profile, `patches/series.116.json`, canonical manifest, reports, and generator classification logic.
 - Phase 1 validation completed: `compile-check-ts-native`, `transpile-client-esbuild`, targeted `directorToolRegistry.test.ts` (`5 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, and canonical manifest validation.
-- Next implementation wave starts at Phase 2 read-only workspace tools and GitHub v1 gate.
+- Phase 2 read-only workspace tools and GitHub v1 gate are implemented. Director now registers `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, `view_image`, and `github_repo` by stable model-facing names.
+- Phase 2 tools are workspace-scoped and read-only. File/directory/image tools reject paths outside the current workspace; text output is capped/truncated; search results are capped; diagnostics and SCM use VS Code marker/SCM services; `github_repo` provides sanitized minimal repo context and controlled v1 remote-search fallback.
+- Phase 2 replay assets updated: `patches/replay/007-director-tool-layer.116.patch`, the small registration hook in `004-director-agent-engine.116.patch`, `patches/series.116.json`, canonical manifest, generated reports, and `tool-migration-report.md`.
+- Phase 2 validation completed from clean replay: `compile-check-ts-native`, `transpile-client-esbuild`, targeted registry/read-only tool tests (`14 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, and canonical manifest validation.
+- Next implementation wave starts at Phase 3 Chat Editing contract.
 
 ## Summary
 

@@ -313,10 +313,10 @@ index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..07f6cd6f78ca25253b0133060b3446400ad1f0bd
+index 0000000000000000000000000000000000000000..59f26a7bc70210e5d9b3bdf8526a7eb92870a9dd
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,276 @@
+@@ -0,0 +1,277 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -362,6 +362,7 @@ index 0000000000000000000000000000000000000000..07f6cd6f78ca25253b0133060b344640
 +import { IOAuthService, OAuthService } from '../../common/agentEngine/oauthService.js';
 +import { IAuthStateService, AuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
++import './directorReadOnlyTools.contribution.js';
 +
 +// ============================================================================
 +// Service Registration

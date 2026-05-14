@@ -70,7 +70,7 @@ bash scripts/upgrade/materialize-vscode.sh \
 4. `004-director-agent-engine.116.patch`: Director agent harness、model/tool bridge、agent engine、language-model/tool service integration、MCP 相关 agent paths。
 5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI entry points。
 6. `006-director-text-polish.116.patch`: 小范围文本和 prompt polish。
-7. `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、migration report/test layer，以及后续 read-only workspace/GitHub v1 context tools。Phase 1 gate 已完成。
+7. `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、migration report/test layer、read-only workspace/GitHub v1 context tools。Phase 1-2 gates 已完成。
 
 计划中的后续新增 stage：
 
@@ -84,6 +84,8 @@ bash scripts/upgrade/materialize-vscode.sh \
 - 重复构建入口是 `scripts/build-director-116.ps1` 或 `scripts/build-director-116.cmd`。默认会 materialize 116 Director tree、安装依赖、编译、构建 installer 并复制到 `artifacts/out/stable/win32-x64`。
 - Director settings 入口仍需要并入 VS Code 116 的 Agent Customizations 界面，计划文件是 `docs/upgrade/116-agent-customizations-director-settings-plan.md`。
 - 当前大优化计划是 `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`，覆盖 Mermaid runtime、inline chat、Ask/Edit/Agent mode routing、Chat Editing UI、工具层复刻和 GitHub v1 read-only repo context。
+- Phase 2 read-only tool layer 已完成并 replay-backed：`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo` 均由 Director-owned 工具提供，落在 `007-director-tool-layer.116.patch`，注册 hook 的小改动落在 `004-director-agent-engine.116.patch`。
+- 下一波按计划进入 Phase 3 Chat Editing contract；不要在 reviewable edit contract 之前暴露 write/edit/create/delete 工具。
 
 ## Build And Package
 
