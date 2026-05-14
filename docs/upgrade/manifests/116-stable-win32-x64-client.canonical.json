@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T15:55:28.621Z",
-  "treeHash": "273c7f62f5552f6258c72ca6a1d49dfb39b62d75ec389cac23db4c67e556c26e",
+  "generatedAt": "2026-05-14T16:10:07.093Z",
+  "treeHash": "ff0ceea652300ac1686b1d1a7946bd0dcd28bbea9f47ce23d23043a52297e19e",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39692,13 +39692,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "a3117c1342674008ec9ec38c61f15a602415f2bea0fa8ddc67742a95ca65d2fa",
+      "sha256": "5cec210bc253ba45444aa2e300300ddc76bdd92f65b8292f43827a9016b4bcc7",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts",
-      "sha256": "a0e1338d3cad6ba73baa920cc8c3bb587c3bad6935ea2de17871d3b697d33a9a",
+      "sha256": "582608fc5f81aaa7633a1673eb244a6a54aeca559c65b6d894c29df54d0e3b9d",
       "mode": 33206,
       "type": "file"
     },
@@ -39710,19 +39710,19 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts",
-      "sha256": "2c4961f6d5e8b68511796db29d6393bff00985ea1411959e9f0225a69b4b0aeb",
+      "sha256": "655186d1bf7ab2bc7e9d9b544a96df9a8fb20b7e8ca4552e8437259b939c1e2c",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts",
-      "sha256": "3cf9831443f5f91550698699630add01bd5e905eeddec15762e39058b0bcb93f",
+      "sha256": "c972aafcc3e4bdf6bca6fb9125d7e66e85219605a66548a8edc8dd94736d9ead",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts",
-      "sha256": "fec12978a726d446d4d471df07bce0e5e58e7805fa2f63ae76e28d2e6adb1094",
+      "sha256": "c3fa2503a58badd7ec2503a32a117622c70f08fa97f4c98b1e86d60301dd49d3",
       "mode": 33206,
       "type": "file"
     },
@@ -39746,13 +39746,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts",
-      "sha256": "1e9f9e07737a0a9920fd90ec624cf19ac1b1ca46fdcf43b56a4bb9bfef15c637",
+      "sha256": "3ffeafd0b3e235c2073b1dcaf5061f1ed153e69e2c54fe6bfc34e65ec594edbc",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/oauthWidget.ts",
-      "sha256": "dc1c97bfecb890baff17bac3baf6ff0ca27aa719f093655c78eceb838456d24f",
+      "sha256": "a506141083b82f1d25923ff6df170569d758ecbb3d611a885dda98b3b4eed701",
       "mode": 33206,
       "type": "file"
     },
@@ -39764,7 +39764,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/providerSettingsWidget.ts",
-      "sha256": "752a3ff22dfc545740569c601abf7b4cce4051c4605805b39deb4a9d1070bce3",
+      "sha256": "51685f25ca4ac8448ecd01787e267e922b78810684189ba740a122d9e1d4f494",
       "mode": 33206,
       "type": "file"
     },
@@ -41900,19 +41900,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts",
-      "sha256": "10848bb4fdcfe310b2eb998105b183aa4db8d7d59132f79eb286e2d27a800057",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts",
-      "sha256": "0d5f3d15c69f5917c5fc9b1520aafb7c0ba2e5dfb080d8daf486996701127134",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts",
-      "sha256": "e2209cb5e4bf58122b2ac563f4bb0cd595589dbce58323b31cfe9c16dfd3cfc6",
+      "sha256": "5bde54b405ff6c54c63537fc69aab08e0e890468e1fe249359ec854e74b2f1e3",
       "mode": 33206,
       "type": "file"
     },
@@ -41924,7 +41912,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/compact.ts",
-      "sha256": "7faee019aef9dd9350029e929e86e93339df24de5e9bf582416da45716b78b2d",
+      "sha256": "4a65d71045e9a59097a404ac76b968d15efbf4033bee04e2bd1c0ebe93fba962",
       "mode": 33206,
       "type": "file"
     },
@@ -41959,98 +41947,14 @@
       "type": "file"
     },
     {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts",
-      "sha256": "213626a4aaf505456f787760658651d89046dc14b18e6f2042fa881f6d8db0bb",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/geminiAuth.ts",
-      "sha256": "570668de3e7d18c270d4657a0908269c4c396fcf007a7e4488e14c93f00b91b4",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/modelCatalog.ts",
-      "sha256": "d9aad8ad8509f5fb30297d6eb1c45554ce56fff60a5f77a8bf7b9949728272db",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/modelResolver.ts",
-      "sha256": "fd8e777d2b075efad4c311d80344a068e11c9e4e77e69593b82c214f2211c99a",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/oauthLoginController.ts",
-      "sha256": "5173da516fd18a9f4079adcf7544c35ab1f7553288cbaaebb88d6dcee38c1d20",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/oauthService.ts",
-      "sha256": "77b2a7226c6828659c372c96dea73d655f0354128bd4741d928278f2388030fc",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/abstractProvider.ts",
-      "sha256": "00374c8b38ec4626c8047a00d79bb2cb7359227dc884b8c021c07e638781d3bd",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/anthropicProvider.ts",
-      "sha256": "0a384dc0d04f22ef565e34311143d9d033aef1fa7410ab8df7c827c4d3f89d3f",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/geminiProvider.ts",
-      "sha256": "bbf887c51a615814147b82c102520655128108c9e80381946b96062aa653f11e",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiCodexProvider.ts",
-      "sha256": "aeab201e19297aee51fa206d91ce67146d0b2d58c11d98ba7932433943caa851",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/openaiProvider.ts",
-      "sha256": "ddb2f631f2322544d63df41c87006d09749c342ebc61caed1f9d849f6bf0d407",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/providerFactory.ts",
-      "sha256": "785f36afd5b3cf77ca51d465e89bd5f28be9027845c08f4c222575126e5807df",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/providers/providerTypes.ts",
-      "sha256": "118c7c530db571cf0134a12594050892ceca648911df2b0b99c21e40dcd883eb",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/retry.ts",
       "sha256": "f7b7ba408208351e858b860427117379878182468d365c8e54c0d702ca647420",
       "mode": 33206,
       "type": "file"
     },
     {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/settingsWriteQueue.ts",
-      "sha256": "9df743a82682177704427029cbc10ff01084a8f293172bd82c97824d26bfefd9",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/tokens.ts",
-      "sha256": "fec13e04ae73d90acb76b3d7b4345068446f4c4e8523d50e0f8a189781482cdb",
+      "sha256": "d74d73dbc41148aef3210d52c13cf1db23ccf6049c8acda0a7760d292b83cdad",
       "mode": 33206,
       "type": "file"
     },
@@ -42788,7 +42692,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts",
-      "sha256": "fc26fbd04de31391e797d3c9edc5a4442fef27f9b79f528ebd6aaf6229d097fc",
+      "sha256": "7009a19883d4c59190d87aaa21c6c344a8fdec408c1aca338365c5e8bbc34b2a",
       "mode": 33206,
       "type": "file"
     },
@@ -43250,55 +43154,55 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts",
-      "sha256": "6950ccd7952cd70df4fa60bc95700f405377950c22a6875ad2e7854055bf08fa",
+      "sha256": "736c018228fb82ebf62d94955073e7c96b041432014066137d45ce01777d4341",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts",
-      "sha256": "4ff8fe15be7f3b55486eee42a8dc1300fa7dfa08782cbb93cda9e809a5c28650",
+      "sha256": "2e93dec6d66e67f6ea403b7973266fb2ea12306d1c35b6501407db60e7c5ad86",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts",
-      "sha256": "64e37990bcc66731a2c3aeeaf5853f85a29efc20b593b785024b84cac3c0fca1",
+      "sha256": "394fb04c115f04e88cb452b1521c814938a21619a710e83013fd0fc81f111dd9",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts",
-      "sha256": "40838cc508d52bba6986ac83dad915df27df05d3ce5ad048312fbfa7c0c52fd7",
+      "sha256": "a30593f5ccd90a5e0fe82c33eee996452b445144973c6ea815b9bdd04bd23bb3",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts",
-      "sha256": "845de7b6fd9a35a5b26d94174919b8693cb3b8070b12b09aa81d1ca3712ee392",
+      "sha256": "4e1108cb1cb801d3541fd4d4d8cd8fbd8e4d02f01e5d1673d6e8a689ac9f957e",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts",
-      "sha256": "9e21e6c8f48600c65269cf4c9b331557a7061a09ce2162998cc0ed7b67146cd4",
+      "sha256": "305d435b8b7fbb4052d7c6807c7addf52af7e0f03f3907612a36408f18af41c3",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts",
-      "sha256": "e1d566bbf3a1c6959782975824dc65b4e050963eb45a686d62575ddefab8892b",
+      "sha256": "be3fbe5adc5517c7fafed247ff4b04b3e6853d5144875a5257f3da11b5489c2f",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts",
-      "sha256": "fd1c2fb02872e8760a700cd56aeab48f0f1973103752852bb53c74401c87697d",
+      "sha256": "8145f82aa298556a912f99118e446e7a45ec63c3cc04e61965fe7e76e8f3a3a2",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts",
-      "sha256": "642e08ba8c24605cea8c8a134d2970943a92c76857db8b30653cd31ef304994a",
+      "sha256": "e2c919666674b62090d993080c54b0d4bcd37b65b6225a8371c9e392759489b4",
       "mode": 33206,
       "type": "file"
     },
@@ -43316,7 +43220,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts",
-      "sha256": "8f273ac5888d5adb51a5bc3560e7483f0793b0c82952b67bcc50422027380a94",
+      "sha256": "39ed65285fc60f76e484aa4f6d0ff330217793a6d058a0440284c5b7bf5e23f8",
       "mode": 33206,
       "type": "file"
     },
@@ -43340,25 +43244,25 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts",
-      "sha256": "cf25cd47323a12c1eb43d56c0fe36a73502fa9ace6c69a4c2cbd989b9345f92d",
+      "sha256": "0d13c45554da5198da9b1e0dc325fcf7385eaa7445f16eef97762f2f71e73e5d",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts",
-      "sha256": "82028db56b6c3061fd9753fd4942e5f2412bb379ae951a18b3c4f42f6477ee7c",
+      "sha256": "a819244c1b9ecd3afd4d780d26a8fac3f0acac7c8437221b79b014abeb1be0e9",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts",
-      "sha256": "3b77e1a3e72ba9f72a632ad51a29b45695e115c9693f704ffcf599e45231bac8",
+      "sha256": "cf762ded921ec3002bdf94e7a83965b7415efde384a7bc5c96ed0fc4746b4310",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts",
-      "sha256": "7942fb69dd1ea8ca83f0665e5714fc137f18dde9da3dacd8d3283bf44c7de1a0",
+      "sha256": "e50be3d7cab5abd89110631e6a30ea0807b1463ce09397e4578e07a2634afc1d",
       "mode": 33206,
       "type": "file"
     },
@@ -43370,31 +43274,31 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts",
-      "sha256": "a6ba0aeb820bb43b23139b574d6fd3258cf36c5b2d21f0f7652c7551fa1d7017",
+      "sha256": "eed5976a680b9d2e94e4db6761609bcd247eb8eedf8e608d363847e5ff025652",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts",
-      "sha256": "866d2c700e2fbc791c4c32a86026a007151777946ad22310f99d3678b1e185f5",
+      "sha256": "ef16a32287bfb131e76d4fe4994f3949985601d8c0e3c69384644bdef9e6a039",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts",
-      "sha256": "dd9011bcb7cb6c923ce6828e7a74ba235fdf3fc9ffb41f3f5ea06f0002b1e461",
+      "sha256": "1afa82ccfe6905cc39d5b77d00514b67a701e94848dc14e94b304b9cf1b857a2",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts",
-      "sha256": "c490f7b946e5b917a7d6ada99edd3e13f1df048a20bd0e1ef88aee8a6bd55f97",
+      "sha256": "d63aadb25a75613becf40b4385604d4e52a7b9e2ed12191d973c469553371173",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts",
-      "sha256": "bdb09fe090e317d0f61fdf3942adfb1953cd59ed69d5082c934dd6732fae4377",
+      "sha256": "b3bed9387fe7a6d034c98f02cbdc61aeb37b95ed9807a764e6f9b302133ac9df",
       "mode": 33206,
       "type": "file"
     },
@@ -43406,13 +43310,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts",
-      "sha256": "6440b1998bb52d22fd9147b5d1f3482c012eff5b02a550232ee38298a680a692",
+      "sha256": "0a5d41044c3963036cf12f0351a878e95b4674897f2e0a23d8f395b12fd6a491",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts",
-      "sha256": "ec9bb9c26f94787591455e8d1fb30ba1ae96f6470516e8df99dc4c3e86b0df3c",
+      "sha256": "9cbd017de255d03f686dde2794966f95e5fb214e3a21c5c7785a2210d0be6478",
       "mode": 33206,
       "type": "file"
     },
@@ -45332,7 +45236,103 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts",
-      "sha256": "bb7c7e3dcab8ed4dac958e617c78a0b7d08294ec40cd866ddc77a8bb2df80e40",
+      "sha256": "c635a6236f431bd4a51e7190d6ece217fd6a967a229bbab55ea80ca8c80479d0",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts",
+      "sha256": "0d5f3d15c69f5917c5fc9b1520aafb7c0ba2e5dfb080d8daf486996701127134",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts",
+      "sha256": "e2209cb5e4bf58122b2ac563f4bb0cd595589dbce58323b31cfe9c16dfd3cfc6",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts",
+      "sha256": "213626a4aaf505456f787760658651d89046dc14b18e6f2042fa881f6d8db0bb",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts",
+      "sha256": "570668de3e7d18c270d4657a0908269c4c396fcf007a7e4488e14c93f00b91b4",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts",
+      "sha256": "d9aad8ad8509f5fb30297d6eb1c45554ce56fff60a5f77a8bf7b9949728272db",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts",
+      "sha256": "fd8e777d2b075efad4c311d80344a068e11c9e4e77e69593b82c214f2211c99a",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts",
+      "sha256": "5173da516fd18a9f4079adcf7544c35ab1f7553288cbaaebb88d6dcee38c1d20",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts",
+      "sha256": "77b2a7226c6828659c372c96dea73d655f0354128bd4741d928278f2388030fc",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts",
+      "sha256": "00374c8b38ec4626c8047a00d79bb2cb7359227dc884b8c021c07e638781d3bd",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts",
+      "sha256": "0a384dc0d04f22ef565e34311143d9d033aef1fa7410ab8df7c827c4d3f89d3f",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts",
+      "sha256": "bbf887c51a615814147b82c102520655128108c9e80381946b96062aa653f11e",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiCodexProvider.ts",
+      "sha256": "aeab201e19297aee51fa206d91ce67146d0b2d58c11d98ba7932433943caa851",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts",
+      "sha256": "ddb2f631f2322544d63df41c87006d09749c342ebc61caed1f9d849f6bf0d407",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.ts",
+      "sha256": "785f36afd5b3cf77ca51d465e89bd5f28be9027845c08f4c222575126e5807df",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts",
+      "sha256": "118c7c530db571cf0134a12594050892ceca648911df2b0b99c21e40dcd883eb",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts",
+      "sha256": "9df743a82682177704427029cbc10ff01084a8f293172bd82c97824d26bfefd9",
       "mode": 33206,
       "type": "file"
     },

@@ -1,5 +1,23 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer Phase 2 wave 2 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 2 module extraction wave 2 completed: provider/BYOK/OAuth/model resolver/settings common code moved from `src/vs/workbench/contrib/chat/common/agentEngine/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/`.
+- Moved files: `apiKeyService.ts`, `authStateService.ts`, `fetchUtils.ts`, `geminiAuth.ts`, `modelCatalog.ts`, `modelResolver.ts`, `oauthLoginController.ts`, `oauthService.ts`, `settingsWriteQueue.ts`, and `providers/*`.
+- `agentEngineTypes.ts` now imports provider types locally from `./providers/providerTypes.js`; browser/common/test code imports the moved group through `directorCode/common/agentEngine`.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/series.116.json`, `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`, `director-patches-report.json`, `materialize-report.json`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`, then `npm run compile-check-ts-native`, `npm run compile`, targeted provider/auth/model node tests passed with `435 passing`, and `apiKeysWidget` browser test passed with `4 passing`.
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: continue Phase 2 by moving the remaining Agent loop/runtime/browser UI pieces into `directorCode`, while leaving upstream chat contribution/service files as thin hooks.
+
 ## 2026-05-14 latest memory: thin-layer Phase 2 wave 1 completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

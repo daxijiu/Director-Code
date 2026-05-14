@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
-  "generatedAt": "2026-05-14T15:49:34.356Z",
+  "generatedAt": "2026-05-14T16:08:06.045Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -76,7 +76,7 @@
     },
     {
       "path": "patches/replay/004-director-agent-engine.116.patch",
-      "sha256": "b2c0e7cf5b843dec4ce4983a28f8dffecb03d42c2e05b8cbeb937fba79b1fc07",
+      "sha256": "d4ab790a551db2e5451e9f07807e15a2ee9f516de38d52412b39f5865bbf761c",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
