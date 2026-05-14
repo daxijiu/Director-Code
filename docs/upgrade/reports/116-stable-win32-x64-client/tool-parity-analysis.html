@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>VS Code 48 工具与 Director 工具面差异分析</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f6f7f9;
+			--panel: #ffffff;
+			--text: #1d2433;
+			--muted: #667085;
+			--line: #d7dce5;
+			--blue: #2563eb;
+			--green: #15803d;
+			--amber: #b45309;
+			--red: #b42318;
+			--violet: #6d28d9;
+			--ink: #111827;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--text);
+			font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+		}
+
+		main {
+			max-width: 1240px;
+			margin: 0 auto;
+			padding: 32px 24px 56px;
+		}
+
+		header {
+			margin-bottom: 24px;
+		}
+
+		h1 {
+			margin: 0 0 10px;
+			color: var(--ink);
+			font-size: 28px;
+			line-height: 1.2;
+			letter-spacing: 0;
+		}
+
+		h2 {
+			margin: 30px 0 12px;
+			color: var(--ink);
+			font-size: 20px;
+			line-height: 1.3;
+			letter-spacing: 0;
+		}
+
+		h3 {
+			margin: 20px 0 8px;
+			color: var(--ink);
+			font-size: 16px;
+			letter-spacing: 0;
+		}
+
+		p {
+			margin: 8px 0;
+		}
+
+		code {
+			padding: 1px 5px;
+			border: 1px solid #e1e5ee;
+			border-radius: 4px;
+			background: #f8fafc;
+			font: 12px/1.4 Consolas, "SFMono-Regular", monospace;
+		}
+
+		.note {
+			border-left: 4px solid var(--blue);
+			background: #eff6ff;
+			padding: 12px 14px;
+			margin: 16px 0;
+			color: #1e3a8a;
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 12px;
+			margin: 18px 0 24px;
+		}
+
+		.metric {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 14px;
+			min-height: 92px;
+		}
+
+		.metric strong {
+			display: block;
+			margin-bottom: 4px;
+			color: var(--ink);
+			font-size: 28px;
+			line-height: 1;
+		}
+
+		.metric span {
+			color: var(--muted);
+		}
+
+		.panel {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 16px;
+			margin: 14px 0;
+		}
+
+		.legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: 14px 0;
+		}
+
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			min-height: 24px;
+			padding: 2px 8px;
+			border-radius: 999px;
+			border: 1px solid transparent;
+			font-weight: 600;
+			font-size: 12px;
+			white-space: nowrap;
+		}
+
+		.badge.direct {
+			color: #14532d;
+			background: #dcfce7;
+			border-color: #86efac;
+		}
+
+		.badge.partial {
+			color: #78350f;
+			background: #fef3c7;
+			border-color: #fcd34d;
+		}
+
+		.badge.missing {
+			color: #7f1d1d;
+			background: #fee2e2;
+			border-color: #fca5a5;
+		}
+
+		.badge.extra {
+			color: #4c1d95;
+			background: #ede9fe;
+			border-color: #c4b5fd;
+		}
+
+		.table-wrap {
+			overflow-x: auto;
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			min-width: 1080px;
+		}
+
+		th, td {
+			padding: 10px 12px;
+			border-bottom: 1px solid var(--line);
+			text-align: left;
+			vertical-align: top;
+		}
+
+		th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			background: #f1f5f9;
+			color: #344054;
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+
+		tr:last-child td {
+			border-bottom: 0;
+		}
+
+		td:first-child {
+			width: 56px;
+			color: var(--muted);
+			text-align: right;
+		}
+
+		td.tool {
+			font-weight: 700;
+			color: var(--ink);
+			white-space: nowrap;
+		}
+
+		.source-list {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.source-list li {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: #fbfcfe;
+			padding: 10px;
+		}
+
+		ul {
+			margin: 8px 0;
+			padding-left: 20px;
+		}
+
+		@media (max-width: 860px) {
+			main {
+				padding: 22px 14px 40px;
+			}
+
+			.grid,
+			.source-list {
+				grid-template-columns: 1fr;
+			}
+
+			h1 {
+				font-size: 23px;
+			}
+		}
+	</style>
+</head>
+<body>
+<main>
+	<header>
+		<h1>VS Code 48 工具与 Director 工具面差异分析</h1>
+		<p>日期：2026-05-14。比较对象是用户给出的 VS Code UI 48 个工具，以及当前 116 Director 模型可见 allowlist。</p>
+		<div class="note">
+			用户列表里的 <code>runlnTerminal</code>、<code>typelnPage</code>、<code>viewlmage</code>、<code>getProjectSetuplnfo</code> 看起来是 I/l 字形混淆；本报告按 VS Code/Copilot 源码中的 <code>runInTerminal</code>、<code>typeInPage</code>、<code>viewImage</code>、<code>getProjectSetupInfo</code> 归类，并在表格中保留原始写法。
+		</div>
+	</header>
+
+	<section class="grid" aria-label="summary">
+		<div class="metric">
+			<strong>48</strong>
+			<span>VS Code UI 工具总数</span>
+		</div>
+		<div class="metric">
+			<strong>10</strong>
+			<span>Direct 直接复刻：Director 暴露同名模型工具</span>
+		</div>
+		<div class="metric">
+			<strong>12</strong>
+			<span>Partial 对应但不完全一样：能力相近，名称/策略/实现不同</span>
+		</div>
+		<div class="metric">
+			<strong>26</strong>
+			<span>Missing：VS Code 有，Director 当前没有模型可调用等价物</span>
+		</div>
+	</section>
+
+	<section class="panel">
+		<h2>判定口径</h2>
+		<p>本报告比较的是“模型可见工具面”。如果上游源码存在某工具，但 Director registry 将它标为 <code>defer</code>、<code>hide</code> 或没有 registry entry，就按 Director 不暴露处理。</p>
+		<p><strong>直接复刻</strong>指 VS Code UI 的工具名和 Director 模型名相同，并且当前 Agent mode 可以调用。<strong>对应但不完全一样</strong>指 Director 有相近能力，但采用 snake_case 名称、Director-owned 安全实现、Chat Editing review flow、不同确认策略，或能力边界比 VS Code 原工具更窄。<strong>他有我们没有</strong>指 Director 当前没有模型可调用的等价能力；个别项有弱替代会在备注里写明。</p>
+		<div class="legend">
+			<span class="badge direct">Direct 直接复刻</span>
+			<span class="badge partial">Partial 对应但不完全一样</span>
+			<span class="badge missing">Missing 他有我们没有</span>
+			<span class="badge extra">Director-only 我们有他没有</span>
+		</div>
+	</section>
+
+	<section>
+		<h2>48 个 VS Code UI 工具逐项对照</h2>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>VS Code UI 工具</th>
+						<th>分类</th>
+						<th>Director 对应工具</th>
+						<th>结论与差异</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>1</td>
+						<td class="tool"><code>runSubagent</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>runSubagent</code></td>
+						<td>同名保留，Agent-only，带 pre-approval。用于独立子智能体编排。</td>
+					</tr>
+					<tr>
+						<td>2</td>
+						<td class="tool"><code>clickElement</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>VS Code/Copilot 属于 agentic browser 工具；Director registry 当前没有浏览器 DOM 点击工具。</td>
+					</tr>
+					<tr>
+						<td>3</td>
+						<td class="tool"><code>dragElement</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游浏览器交互工具；Director 当前没有拖拽页面元素的模型工具。</td>
+					</tr>
+					<tr>
+						<td>4</td>
+						<td class="tool"><code>handleDialog</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游浏览器 dialog 响应工具；Director 当前没有浏览器 dialog 控制面。</td>
+					</tr>
+					<tr>
+						<td>5</td>
+						<td class="tool"><code>hoverElement</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游浏览器 hover 工具；Director 当前没有对应 DOM hover 工具。</td>
+					</tr>
+					<tr>
+						<td>6</td>
+						<td class="tool"><code>navigatePage</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游浏览器导航/刷新工具；Director 只有网页内容抓取能力，没有集成浏览器页面状态。</td>
+					</tr>
+					<tr>
+						<td>7</td>
+						<td class="tool"><code>openBrowserPage</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游可打开集成浏览器 URL；Director 当前没有 browser page session 工具。</td>
+					</tr>
+					<tr>
+						<td>8</td>
+						<td class="tool"><code>readPage</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>弱替代：<code>vscode_fetchWebPage_internal</code></td>
+						<td><code>readPage</code>读取浏览器当前页面；Director 的 fetch 只抓取 URL 主内容，不保留页面交互状态。</td>
+					</tr>
+					<tr>
+						<td>9</td>
+						<td class="tool"><code>runPlaywrightCode</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游可执行 Playwright 片段；Director 当前没有通用浏览器自动化代码执行工具。</td>
+					</tr>
+					<tr>
+						<td>10</td>
+						<td class="tool"><code>screenshotPage</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游浏览器截图工具；Director 的 <code>view_image</code> 只能查看工作区图片文件，不是页面截图。</td>
+					</tr>
+					<tr>
+						<td>11</td>
+						<td class="tool"><code>typelnPage</code> / <code>typeInPage</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>按上游 <code>CoreTypeInPage = type_in_page</code> 归类；Director 当前没有页面输入/按键工具。</td>
+					</tr>
+					<tr>
+						<td>12</td>
+						<td class="tool"><code>createDirectory</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>create_directory</code></td>
+						<td>能力对应，但 Director 改为 snake_case，并通过目录创建 review transaction，接受后才落盘。</td>
+					</tr>
+					<tr>
+						<td>13</td>
+						<td class="tool"><code>createFile</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>create_file</code></td>
+						<td>能力对应，但 Director 走 Chat Editing review flow；名称和确认语义不同。</td>
+					</tr>
+					<tr>
+						<td>14</td>
+						<td class="tool"><code>createJupyterNotebook</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>弱替代：<code>create_file</code></td>
+						<td>Director 可创建普通文件，但没有 Notebook 语义、cell 结构或 Jupyter 专用创建工具。</td>
+					</tr>
+					<tr>
+						<td>15</td>
+						<td class="tool"><code>editFiles</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>apply_patch</code>, <code>replace_string_in_file</code>, <code>multi_replace_string_in_file</code></td>
+						<td>Director 没有同名聚合式 <code>editFiles</code>；改为显式 reviewable edit primitives。</td>
+					</tr>
+					<tr>
+						<td>16</td>
+						<td class="tool"><code>editNotebook</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>Director 当前不暴露 Notebook 专用编辑工具；文本 patch 不等价于 Notebook cell 编辑。</td>
+					</tr>
+					<tr>
+						<td>17</td>
+						<td class="tool"><code>createAndRunTask</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>createAndRunTask</code></td>
+						<td>同名保留，Agent-only，pre-approval。用于创建并执行 VS Code task。</td>
+					</tr>
+					<tr>
+						<td>18</td>
+						<td class="tool"><code>getTerminalOutput</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>getTerminalOutput</code></td>
+						<td>同名保留，Agent-only read。Ask/Edit 不暴露终端上下文。</td>
+					</tr>
+					<tr>
+						<td>19</td>
+						<td class="tool"><code>killTerminal</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>killTerminal</code></td>
+						<td>同名保留，Agent-only，pre-approval。用于清理终端。</td>
+					</tr>
+					<tr>
+						<td>20</td>
+						<td class="tool"><code>runlnTerminal</code> / <code>runInTerminal</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>runInTerminal</code></td>
+						<td>同名保留，Agent-only，pre-approval。底层上游 ToolName 是 <code>run_in_terminal</code>。</td>
+					</tr>
+					<tr>
+						<td>21</td>
+						<td class="tool"><code>runNotebookCell</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>Director 当前没有 Notebook cell 执行工具。</td>
+					</tr>
+					<tr>
+						<td>22</td>
+						<td class="tool"><code>sendToTerminal</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>sendToTerminal</code></td>
+						<td>同名保留，Agent-only，pre-approval。用于向已有终端发送输入。</td>
+					</tr>
+					<tr>
+						<td>23</td>
+						<td class="tool"><code>getNotebookSummary</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>Director 当前没有 Notebook cell 摘要/元数据读取工具。</td>
+					</tr>
+					<tr>
+						<td>24</td>
+						<td class="tool"><code>problems</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>get_errors</code></td>
+						<td>能力对应诊断读取，但 Director 使用自有 <code>get_errors</code>，基于 VS Code markers，Ask/Edit/Agent 可用。</td>
+					</tr>
+					<tr>
+						<td>25</td>
+						<td class="tool"><code>readFile</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>read_file</code></td>
+						<td>能力对应，但 Director 使用工作区边界校验和大文件截断策略；模型名不同。</td>
+					</tr>
+					<tr>
+						<td>26</td>
+						<td class="tool"><code>terminalLastCommand</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>terminalLastCommand</code></td>
+						<td>同名保留，Agent-only read。</td>
+					</tr>
+					<tr>
+						<td>27</td>
+						<td class="tool"><code>terminalSelection</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>terminalSelection</code></td>
+						<td>同名保留，Agent-only read。</td>
+					</tr>
+					<tr>
+						<td>28</td>
+						<td class="tool"><code>viewlmage</code> / <code>viewImage</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>view_image</code></td>
+						<td>能力对应图片查看，但 Director 工具受工作区路径限制，并提供文本元数据 fallback。</td>
+					</tr>
+					<tr>
+						<td>29</td>
+						<td class="tool"><code>changes</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>get_changed_files</code></td>
+						<td>都读取 SCM 变更状态；Director v1 是只读文件状态工具，不等于完整 diff/SCM 操作面。</td>
+					</tr>
+					<tr>
+						<td>30</td>
+						<td class="tool"><code>codebase</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>弱替代：<code>file_search</code>, <code>grep_search</code>, <code>usages</code></td>
+						<td>VS Code/Copilot 的 <code>codebase</code> 是语义搜索；Director 当前没有等价 semantic workspace search。</td>
+					</tr>
+					<tr>
+						<td>31</td>
+						<td class="tool"><code>fileSearch</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>file_search</code></td>
+						<td>能力对应 glob/path 文件搜索，但 Director 用 snake_case 自有实现和工作区约束。</td>
+					</tr>
+					<tr>
+						<td>32</td>
+						<td class="tool"><code>listDirectory</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>list_dir</code></td>
+						<td>能力对应目录 listing；Director 限制工作区边界并限制结果数量。</td>
+					</tr>
+					<tr>
+						<td>33</td>
+						<td class="tool"><code>searchResults</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>弱替代：<code>grep_search</code></td>
+						<td>VS Code 工具读取 Search View 当前结果；Director 没有读取 UI 搜索视图状态的工具。</td>
+					</tr>
+					<tr>
+						<td>34</td>
+						<td class="tool"><code>textSearch</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>grep_search</code></td>
+						<td>能力对应正则/文本搜索；Director 使用自有工具名和结果约束。</td>
+					</tr>
+					<tr>
+						<td>35</td>
+						<td class="tool"><code>todo</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>todo</code></td>
+						<td>同名保留，Agent-only，用于任务规划状态。</td>
+					</tr>
+					<tr>
+						<td>36</td>
+						<td class="tool"><code>askQuestions</code></td>
+						<td><span class="badge direct">Direct</span></td>
+						<td><code>askQuestions</code></td>
+						<td>同名保留，Agent-only，pre-approval。底层 reference 是 <code>vscode_askQuestions</code>。</td>
+					</tr>
+					<tr>
+						<td>37</td>
+						<td class="tool"><code>extensions</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>存在 registry entry 但 <code>defer</code></td>
+						<td>Director 明确不暴露 extension marketplace search；当前不在任何 mode 的 allowlist。</td>
+					</tr>
+					<tr>
+						<td>38</td>
+						<td class="tool"><code>getProjectSetuplnfo</code> / <code>getProjectSetupInfo</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游新工作区/项目脚手架辅助工具；Director 当前没有等价工具。</td>
+					</tr>
+					<tr>
+						<td>39</td>
+						<td class="tool"><code>installExtension</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>存在 registry entry 但 <code>hide</code></td>
+						<td>Director 明确隐藏 extension 安装工具，原因是它属于产品/工作区突变。</td>
+					</tr>
+					<tr>
+						<td>40</td>
+						<td class="tool"><code>memory</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游 Copilot memory 文件系统工具；Director 当前没有持久 memory 工具。</td>
+					</tr>
+					<tr>
+						<td>41</td>
+						<td class="tool"><code>newWorkspace</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>存在 registry entry <code>new</code> 但 <code>defer</code></td>
+						<td>Director 暂不暴露工作区脚手架创建；该行为需要单独 mutation policy。</td>
+					</tr>
+					<tr>
+						<td>42</td>
+						<td class="tool"><code>resolveMemoryFileUri</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>依赖上游 memory 文件系统；Director 没有 memory path resolver。</td>
+					</tr>
+					<tr>
+						<td>43</td>
+						<td class="tool"><code>runCommand</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游 <code>run_vscode_command</code> 可执行 VS Code command；Director 当前没有通用 command bridge。</td>
+					</tr>
+					<tr>
+						<td>44</td>
+						<td class="tool"><code>vscodeAPI</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>无</td>
+						<td>上游扩展开发 API 文档检索工具；Director 当前没有该专用知识检索工具。</td>
+					</tr>
+					<tr>
+						<td>45</td>
+						<td class="tool"><code>fetch</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>vscode_fetchWebPage_internal</code></td>
+						<td>都用于网页内容抽取；Director 使用 VS Code 内部 fetch 工具名，并保留 pre/post approval 流。</td>
+					</tr>
+					<tr>
+						<td>46</td>
+						<td class="tool"><code>githubRepo</code></td>
+						<td><span class="badge partial">Partial</span></td>
+						<td><code>github_repo</code></td>
+						<td>能力方向对应，但 Director v1 是 minimal read-only GitHub context；远端 indexed search、PR/issue workflow 不在范围内。</td>
+					</tr>
+					<tr>
+						<td>47</td>
+						<td class="tool"><code>githubTextSearch</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>弱替代：<code>github_repo</code></td>
+						<td>Director 没有独立 GitHub text search；当前 <code>github_repo</code> 明确不覆盖远端 indexed search。</td>
+					</tr>
+					<tr>
+						<td>48</td>
+						<td class="tool"><code>renderMermaidDiagram</code></td>
+						<td><span class="badge missing">Missing</span></td>
+						<td>上游扩展有注册，但 Director 未 allowlist</td>
+						<td>Mermaid extension 注册了该 LM tool；Director registry 没有 entry，因此 Director 模型工具面不暴露。</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section>
+		<h2>直接复刻清单</h2>
+		<div class="panel">
+			<p>这些工具在用户给出的 VS Code UI 列表和 Director allowlist 中使用同一个模型可见名称，主要集中在 Agent-only 的任务、终端、规划、用户询问工具。</p>
+			<ul>
+				<li><code>runSubagent</code></li>
+				<li><code>createAndRunTask</code></li>
+				<li><code>getTerminalOutput</code></li>
+				<li><code>killTerminal</code></li>
+				<li><code>runInTerminal</code></li>
+				<li><code>sendToTerminal</code></li>
+				<li><code>terminalLastCommand</code></li>
+				<li><code>terminalSelection</code></li>
+				<li><code>todo</code></li>
+				<li><code>askQuestions</code></li>
+			</ul>
+		</div>
+	</section>
+
+	<section>
+		<h2>对应但不完全一样清单</h2>
+		<div class="panel">
+			<p>这些工具的能力方向基本对应，但 Director 做了命名、边界、确认策略或实现层面的收敛。</p>
+			<ul>
+				<li><code>createDirectory</code> -> <code>create_directory</code></li>
+				<li><code>createFile</code> -> <code>create_file</code></li>
+				<li><code>editFiles</code> -> <code>apply_patch</code> / <code>replace_string_in_file</code> / <code>multi_replace_string_in_file</code></li>
+				<li><code>problems</code> -> <code>get_errors</code></li>
+				<li><code>readFile</code> -> <code>read_file</code></li>
+				<li><code>viewImage</code> -> <code>view_image</code></li>
+				<li><code>changes</code> -> <code>get_changed_files</code></li>
+				<li><code>fileSearch</code> -> <code>file_search</code></li>
+				<li><code>listDirectory</code> -> <code>list_dir</code></li>
+				<li><code>textSearch</code> -> <code>grep_search</code></li>
+				<li><code>fetch</code> -> <code>vscode_fetchWebPage_internal</code></li>
+				<li><code>githubRepo</code> -> <code>github_repo</code></li>
+			</ul>
+		</div>
+	</section>
+
+	<section>
+		<h2>VS Code 有但 Director 当前没有</h2>
+		<div class="panel">
+			<h3>浏览器自动化工具</h3>
+			<p><code>clickElement</code>, <code>dragElement</code>, <code>handleDialog</code>, <code>hoverElement</code>, <code>navigatePage</code>, <code>openBrowserPage</code>, <code>readPage</code>, <code>runPlaywrightCode</code>, <code>screenshotPage</code>, <code>typeInPage</code>。</p>
+			<h3>Notebook 工具</h3>
+			<p><code>createJupyterNotebook</code>, <code>editNotebook</code>, <code>runNotebookCell</code>, <code>getNotebookSummary</code>。</p>
+			<h3>VS Code/Copilot 专用能力</h3>
+			<p><code>codebase</code>, <code>searchResults</code>, <code>extensions</code>, <code>getProjectSetupInfo</code>, <code>installExtension</code>, <code>memory</code>, <code>newWorkspace</code>, <code>resolveMemoryFileUri</code>, <code>runCommand</code>, <code>vscodeAPI</code>, <code>githubTextSearch</code>, <code>renderMermaidDiagram</code>。</p>
+			<p>其中 <code>extensions</code>、<code>installExtension</code>、<code>newWorkspace</code> 在 Director registry 中能看到被登记过的影子项，但状态是 <code>defer</code> 或 <code>hide</code>，不属于当前模型可调用工具。</p>
+		</div>
+	</section>
+
+	<section>
+		<h2>Director 有但用户给出的 VS Code 48 列表没有</h2>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Director 工具</th>
+						<th>分类</th>
+						<th>说明</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="tool"><code>apply_patch</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>显式 patch 原语；VS Code UI 48 中以 <code>editFiles</code> 聚合展示，而 Director 单独暴露。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>replace_string_in_file</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>精确字符串替换原语，走 Chat Editing review flow。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>multi_replace_string_in_file</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>批量精确字符串替换原语，走 Chat Editing review flow。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>runTask</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>执行已有 task；用户给出的 48 列表只有 <code>createAndRunTask</code>。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>getTaskOutput</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>读取 task 输出；用户给出的 48 列表未列出。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>task_complete</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>Director Agent loop 的任务完成信号。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>usages</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>基于 <code>vscode_listCodeUsages</code> 的代码使用点查询；用户给出的 48 列表未列出。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>artifacts</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>会话 artifact surfacing 工具。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>artifactRules</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>会话 artifact 规则更新工具。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>vscode_get_confirmation</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>Director 保留的通用确认 helper。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>vscode_get_confirmation_with_options</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>Director 保留的选项式确认 helper。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>vscode_get_modified_files_confirmation</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>修改文件确认 helper，保留到 reviewable edit contract 完整替代直接 mutation path。</td>
+					</tr>
+					<tr>
+						<td class="tool"><code>vscode_get_terminal_confirmation</code></td>
+						<td><span class="badge extra">Director-only surface</span></td>
+						<td>终端工具确认 helper。</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<p>说明：如果按源码内部工具而不是用户给出的 UI 48 列表比较，上游 Copilot 也有若干低层编辑原语；这里的“我们有他没有”严格按用户提供的 VS Code UI 48 个工具面判断。</p>
+	</section>
+
+	<section>
+		<h2>来源</h2>
+		<ul class="source-list">
+			<li><code>vscode.generated/layers/director/vscode/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts</code><br>Director 模型工具 allowlist、keep/defer/hide、mode 约束。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/extensions/copilot/src/extension/tools/common/toolNames.ts</code><br>VS Code/Copilot 工具名称、类别、上游 internal ToolName。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/extensions/copilot/src/extension/tools/**</code><br>上游 Copilot 各工具实现位置。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/extensions/mermaid-chat-features/package.json</code> 和 <code>src/chatOutputRenderer.ts</code><br><code>renderMermaidDiagram</code> 的注册来源。</li>
+			<li><code>docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md</code><br>116 工具迁移阶段报告。</li>
+		</ul>
+	</section>
+</main>
+</body>
+</html>

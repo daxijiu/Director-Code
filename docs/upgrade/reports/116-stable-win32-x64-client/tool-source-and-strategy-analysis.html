@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>VS Code 116 Tool Source And Director Strategy Analysis</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--bg: #f7f8fa;
+			--panel: #ffffff;
+			--text: #1f2328;
+			--muted: #5f6b7a;
+			--line: #d8dee6;
+			--head: #eef2f7;
+			--direct: #126b46;
+			--counterpart: #8a5a00;
+			--defer: #8a2631;
+			--unknown: #5d6470;
+			--code: #eef2f7;
+		}
+
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #111318;
+				--panel: #181b21;
+				--text: #e8edf3;
+				--muted: #a9b4c0;
+				--line: #303744;
+				--head: #222936;
+				--direct: #70d7a4;
+				--counterpart: #f0c05f;
+				--defer: #ff8f9b;
+				--unknown: #bac4d1;
+				--code: #252b36;
+			}
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--text);
+			font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+
+		main {
+			max-width: 1380px;
+			margin: 0 auto;
+			padding: 28px 24px 48px;
+		}
+
+		h1, h2, h3 {
+			line-height: 1.25;
+			margin: 0;
+		}
+
+		h1 {
+			font-size: 26px;
+			margin-bottom: 8px;
+		}
+
+		h2 {
+			font-size: 19px;
+			margin: 28px 0 10px;
+		}
+
+		h3 {
+			font-size: 15px;
+			margin: 18px 0 8px;
+		}
+
+		p {
+			margin: 8px 0;
+		}
+
+		code {
+			background: var(--code);
+			border-radius: 4px;
+			padding: 1px 4px;
+			font-family: Consolas, "SFMono-Regular", monospace;
+			font-size: 0.93em;
+		}
+
+		.lede {
+			color: var(--muted);
+			max-width: 980px;
+		}
+
+		.panel {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 16px 18px;
+			margin-top: 14px;
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 12px;
+			margin-top: 14px;
+		}
+
+		.metric {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 14px;
+		}
+
+		.metric strong {
+			display: block;
+			font-size: 22px;
+			line-height: 1.1;
+			margin-bottom: 6px;
+		}
+
+		.metric span {
+			color: var(--muted);
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			overflow: hidden;
+			margin-top: 12px;
+		}
+
+		th, td {
+			border-bottom: 1px solid var(--line);
+			border-right: 1px solid var(--line);
+			padding: 9px 10px;
+			vertical-align: top;
+		}
+
+		th {
+			background: var(--head);
+			text-align: left;
+			font-weight: 650;
+			white-space: nowrap;
+		}
+
+		td:last-child, th:last-child {
+			border-right: 0;
+		}
+
+		tr:last-child td {
+			border-bottom: 0;
+		}
+
+		.tool {
+			white-space: nowrap;
+			font-weight: 650;
+		}
+
+		.tag {
+			display: inline-block;
+			border-radius: 999px;
+			padding: 1px 8px;
+			font-size: 12px;
+			font-weight: 650;
+			border: 1px solid currentColor;
+			white-space: nowrap;
+		}
+
+		.direct { color: var(--direct); }
+		.counterpart { color: var(--counterpart); }
+		.defer { color: var(--defer); }
+		.unknown { color: var(--unknown); }
+
+		ul {
+			margin: 8px 0 0;
+			padding-left: 20px;
+		}
+
+		li {
+			margin: 5px 0;
+		}
+
+		.note {
+			color: var(--muted);
+		}
+
+		@media (max-width: 960px) {
+			main { padding: 20px 14px 36px; }
+			.grid { grid-template-columns: 1fr; }
+			table { display: block; overflow-x: auto; }
+			th, td { min-width: 160px; }
+		}
+	</style>
+</head>
+<body>
+<main>
+	<h1>VS Code 116 48 个工具来源与 Director 对齐策略</h1>
+	<p class="lede">
+		本报告基于本地 116 materialized source，对用户在 VS Code UI 看到的 48 个工具逐项核对：
+		哪些是 VS Code core 可直接复用，哪些是 Copilot 扩展贡献工具只能复刻 schema/name，哪些是 Director 已有能力的对应项，
+		以及哪些需要延期或先确认来源。
+	</p>
+
+	<div class="grid">
+		<div class="metric"><strong>48</strong><span>用户提供的 UI 工具名逐项覆盖</span></div>
+		<div class="metric"><strong>3</strong><span>来源大类：VS Code core / Copilot extension / 其他扩展或动态工具</span></div>
+		<div class="metric"><strong>0</strong><span>报告阶段不改运行时代码，不改变当前工具暴露面</span></div>
+		<div class="metric"><strong>1</strong><span><code>renderMermaidDiagram</code> 结论被修正</span></div>
+	</div>
+
+	<h2>结论摘要</h2>
+	<div class="panel">
+		<ul>
+			<li><code>runSubagent</code> 可以直接对齐复用。它不是 Copilot 扩展实现，而是 VS Code core 的 <code>RunSubagentTool</code>。Director 与上游该文件无实质 diff；差异只来自 Director Agent Engine 选择何时把它放进 model-facing allowlist。</li>
+			<li>浏览器交互工具 <code>clickElement</code> / <code>openBrowserPage</code> / <code>runPlaywrightCode</code> 等也是 VS Code core 工具，代码在 <code>src/vs/workbench/contrib/browserView/electron-browser/tools/</code>，Director tree 中代码与上游一致。它们可直接复用，但需要单独确定安全策略和 <code>workbench.browser.enableChatTools</code> 默认行为。</li>
+			<li>终端与任务工具 <code>runInTerminal</code>、<code>getTerminalOutput</code>、<code>createAndRunTask</code> 等是 VS Code core 工具，Director 已直接复用；当前差异主要是两处用户可见品牌文案。</li>
+			<li><code>createFile</code> / <code>createDirectory</code> 与 Director 当前 <code>create_file</code> / <code>create_directory</code> 是能力对应，但不是直接复用：上游同名工具来自 Copilot 扩展，Director 已有 reviewable implementation。推荐保留 Director 实现，后续若切名到 camelCase，应只对齐 model-facing name/schema。</li>
+			<li><code>apply_patch</code>、<code>replace_string_in_file</code>、<code>multi_replace_string_in_file</code> 不建议并入 <code>editFiles</code>。Copilot 的 <code>editFiles</code> 在 package 里是 placeholder；Director 的 reviewable edit primitives 是实能力，应继续保留 Director-owned 口径。</li>
+			<li><code>renderMermaidDiagram</code> 不是 Copilot 工具。它由 <code>extensions/mermaid-chat-features</code> 注册，Director tree 中也存在并注册，所以用户测试“116 能用”是合理的。旧报告里“Director 未 allowlist”只说明 Director Agent Engine 默认不会把它下发给模型，不等于扩展/UI 不可用。</li>
+			<li><code>githubTextSearch</code> 在本地 VS Code 116 source、Director source、Copilot package 里都没有静态注册命中。它更像运行时动态来源，例如 MCP/GitHub 相关扩展贡献；实现前需要抓取实际 tool source/id。</li>
+		</ul>
+	</div>
+
+	<h2>判定准则</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>分类</th>
+				<th>含义</th>
+				<th>维护策略</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>工具实现位于 VS Code core 或仍保留的内置扩展；Director 可以通过 <code>ILanguageModelToolsService</code> 注册的真实工具直接调用。</td>
+				<td>只维护 Director registry / allowlist / 模式策略 / 品牌文案，尽量不 fork 工具实现。</td>
+			</tr>
+			<tr>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>Director 已有相同或接近能力，但上游 UI 名来自 Copilot 扩展，不能在去 Copilot 化产品里直接依赖 Copilot runtime。</td>
+				<td>保留 Director implementation；可以按 <code>toolReferenceName</code> 对齐名称和常用参数，必要时接受 alias。</td>
+			</tr>
+			<tr>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>能力依赖 Copilot 服务、商业登录、Notebook/Workspace/Command 高风险 mutation，或暂不属于当前 Director coding-agent 主线。</td>
+				<td>不暴露给模型；需要产品策略、安全策略和 schema 报告后再做。</td>
+			</tr>
+			<tr>
+				<td><span class="tag unknown">来源待确认</span></td>
+				<td>静态源码中找不到注册，可能是运行时 MCP/扩展/用户 profile 贡献。</td>
+				<td>先抓 runtime raw tool snapshot，再决定是否复用、封装或忽略。</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h2>关键核对点</h2>
+	<div class="panel">
+		<h3><code>runSubagent</code></h3>
+		<p>
+			实现来源是 <code>src/vs/workbench/contrib/chat/common/tools/builtinTools/runSubagentTool.ts</code>。
+			对比 <code>layers/vscode</code> 与 <code>layers/director</code> 后该文件无 diff；因此不存在 “Director 自己实现的 runSubagent 与 Copilot 不一致” 这个问题。
+			Copilot 的 <code>ToolName.CoreRunSubagent</code> 只是引用 core tool id/reference，不是 Copilot 扩展提供实现。
+		</p>
+		<p>
+			Director 当前在 <code>directorToolRegistry.ts</code> 中把 <code>runSubagent</code> 限定为 Agent mode、需要 pre-approval。
+			如果后续要更贴近 VS Code UI 的工具集合，保留这条 registry entry 即可，不需要重写工具。
+		</p>
+
+		<h3><code>renderMermaidDiagram</code></h3>
+		<p>
+			上游和 Director 都有 <code>extensions/mermaid-chat-features/package.json</code> 的
+			<code>languageModelTools</code> 注册，<code>src/chatOutputRenderer.ts</code> 里调用
+			<code>vscode.lm.registerTool('renderMermaidDiagram', ...)</code>。
+			这个工具返回 Mermaid markdown block，并附带自定义 renderer details。
+		</p>
+		<p>
+			Director Agent Engine 当前只通过 <code>getDirectorToolAllowlist()</code> 生成模型工具定义；
+			<code>renderMermaidDiagram</code> 没有 registry entry，所以默认不会进入 Director Agent 的 <code>tools</code> 数组。
+			用户看到它可用，可能来自 UI raw tool picker、非 Director 路径，或 Mermaid markdown renderer 本身能渲染模型输出的 Mermaid code block。
+			推荐后续增加一个明确的 registry entry，而不是自实现 Mermaid 工具。
+		</p>
+
+		<h3>Copilot extension 工具</h3>
+		<p>
+			<code>vscode.generated/layers/director/vscode/extensions/copilot</code> 不存在，说明 Director runtime 不能直接调用 Copilot extension 的 tool implementation。
+			这些工具只能把 <code>toolReferenceName</code>、常用 input schema 和用户体验作为参考，然后由 Director 自己实现或明确延期。
+		</p>
+	</div>
+
+	<h2>48 工具逐项结论</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>#</th>
+				<th>UI 工具名</th>
+				<th>上游来源</th>
+				<th>Director 当前状态</th>
+				<th>结论</th>
+				<th>建议策略</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>1</td>
+				<td class="tool"><code>runSubagent</code></td>
+				<td>VS Code core：<code>builtinTools/runSubagentTool.ts</code></td>
+				<td>已 allowlist，Agent-only；implementation 与上游无 diff。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。只维护 Director mode/approval 策略，不 fork 实现。</td>
+			</tr>
+			<tr>
+				<td>2</td>
+				<td class="tool"><code>clickElement</code></td>
+				<td>VS Code core browser tool：<code>clickBrowserTool.ts</code></td>
+				<td>工具会由 core 注册；Director registry 未默认 allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>可复用原实现。先给 browser tool 组做安全策略，再加 registry entry。</td>
+			</tr>
+			<tr>
+				<td>3</td>
+				<td class="tool"><code>dragElement</code></td>
+				<td>VS Code core browser tool：<code>dragElementTool.ts</code></td>
+				<td>同 browser tool 组。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>跟随 browser tool 组处理；不单独实现。</td>
+			</tr>
+			<tr>
+				<td>4</td>
+				<td class="tool"><code>handleDialog</code></td>
+				<td>VS Code core browser tool：<code>handleDialogBrowserTool.ts</code></td>
+				<td>同 browser tool 组。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>跟随 browser tool 组处理；确认对弹窗确认/取消的用户可见策略。</td>
+			</tr>
+			<tr>
+				<td>5</td>
+				<td class="tool"><code>hoverElement</code></td>
+				<td>VS Code core browser tool：<code>hoverElementTool.ts</code></td>
+				<td>同 browser tool 组。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>跟随 browser tool 组处理。</td>
+			</tr>
+			<tr>
+				<td>6</td>
+				<td class="tool"><code>navigatePage</code></td>
+				<td>VS Code core browser tool：<code>navigateBrowserTool.ts</code></td>
+				<td>同 browser tool 组。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>跟随 browser tool 组处理；沿用 network filter。</td>
+			</tr>
+			<tr>
+				<td>7</td>
+				<td class="tool"><code>openBrowserPage</code></td>
+				<td>VS Code core browser tool：<code>openBrowserTool.ts</code>；禁用 agentic browser 时有 non-agentic 版本。</td>
+				<td>同 browser tool 组；当前不在 Director Agent allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>可作为 browser 组第一批候选；需决定是否默认启用 <code>workbench.browser.enableChatTools</code>。</td>
+			</tr>
+			<tr>
+				<td>8</td>
+				<td class="tool"><code>readPage</code></td>
+				<td>VS Code core browser tool：<code>readBrowserTool.ts</code></td>
+				<td>Director 有 <code>vscode_fetchWebPage_internal</code>，但那是 URL/file fetch，不等同浏览器页面读取。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>如果启用 browser 组，直接用 core <code>readPage</code>；不要拿 <code>fetch</code> 伪装。</td>
+			</tr>
+			<tr>
+				<td>9</td>
+				<td class="tool"><code>runPlaywrightCode</code></td>
+				<td>VS Code core browser tool：<code>runPlaywrightCodeTool.ts</code></td>
+				<td>未默认 allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>高能力工具，建议 browser 组最后开放；需要更强确认和结果审计。</td>
+			</tr>
+			<tr>
+				<td>10</td>
+				<td class="tool"><code>screenshotPage</code></td>
+				<td>VS Code core browser tool：<code>screenshotBrowserTool.ts</code></td>
+				<td>未默认 allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>与 browser 组一起开放；注意 image/data part 能力。</td>
+			</tr>
+			<tr>
+				<td>11</td>
+				<td class="tool"><code>typeInPage</code></td>
+				<td>VS Code core browser tool：<code>typeBrowserTool.ts</code></td>
+				<td>未默认 allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>属于可提交表单的交互工具，开放时应要求 pre-approval。</td>
+			</tr>
+			<tr>
+				<td>12</td>
+				<td class="tool"><code>createDirectory</code></td>
+				<td>Copilot extension：<code>copilot_createDirectory</code></td>
+				<td>Director 已有 <code>create_directory</code>，走 review transaction，accept 前不 mkdir。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>保留 Director 实现。后续可把 model-facing 名切到 <code>createDirectory</code>，schema 接受 <code>dirPath</code> 或 Director <code>path</code>。</td>
+			</tr>
+			<tr>
+				<td>13</td>
+				<td class="tool"><code>createFile</code></td>
+				<td>Copilot extension：<code>copilot_createFile</code></td>
+				<td>Director 已有 <code>create_file</code>，走 reviewable Chat Editing textEdit。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>保留 Director 实现。后续可切名到 <code>createFile</code>，schema 对齐 <code>filePath/content</code>，内部仍做 workspace 审查和 review UI。</td>
+			</tr>
+			<tr>
+				<td>14</td>
+				<td class="tool"><code>createJupyterNotebook</code></td>
+				<td>Copilot extension：<code>copilot_createNewJupyterNotebook</code></td>
+				<td>Director 无等价 notebook 创建工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>不是第一批。需要 Notebook editing contract 和 Jupyter 依赖策略。</td>
+			</tr>
+			<tr>
+				<td>15</td>
+				<td class="tool"><code>editFiles</code></td>
+				<td>Copilot extension package 中是 placeholder：<code>copilot_editFiles</code></td>
+				<td>Director 已有 reviewable edit primitives。</td>
+				<td><span class="tag defer">不复刻</span></td>
+				<td>不实现、不合并。继续保留 <code>apply_patch</code> / string replacement 等 Director-owned 工具。</td>
+			</tr>
+			<tr>
+				<td>16</td>
+				<td class="tool"><code>editNotebook</code></td>
+				<td>Copilot extension：<code>copilot_editNotebook</code></td>
+				<td>Director 无 notebook edit tool。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>需要 Notebook-specific review contract；暂不纳入。</td>
+			</tr>
+			<tr>
+				<td>17</td>
+				<td class="tool"><code>createAndRunTask</code></td>
+				<td>VS Code core terminal/task tool：<code>createAndRunTaskTool.ts</code></td>
+				<td>已 allowlist，Agent-only；Director 仅改了品牌文案。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持直接复用。继续通过 VS Code task confirmation 和 Director mode policy 控制。</td>
+			</tr>
+			<tr>
+				<td>18</td>
+				<td class="tool"><code>getTerminalOutput</code></td>
+				<td>VS Code core terminal tool：<code>getTerminalOutputTool.ts</code></td>
+				<td>已 allowlist，Agent-only。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>19</td>
+				<td class="tool"><code>killTerminal</code></td>
+				<td>VS Code core terminal tool：<code>killTerminalTool.ts</code></td>
+				<td>已 allowlist，Agent-only，pre-approval。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>20</td>
+				<td class="tool"><code>runInTerminal</code></td>
+				<td>VS Code core terminal tool：<code>runInTerminalTool.ts</code></td>
+				<td>已 allowlist，Agent-only，pre-approval。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状；安全策略继续沿用 terminal sandbox/network filter/confirmation。</td>
+			</tr>
+			<tr>
+				<td>21</td>
+				<td class="tool"><code>runNotebookCell</code></td>
+				<td>Copilot extension：<code>copilot_runNotebookCell</code></td>
+				<td>Director 无等价工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>需 Notebook execution policy；暂不纳入。</td>
+			</tr>
+			<tr>
+				<td>22</td>
+				<td class="tool"><code>sendToTerminal</code></td>
+				<td>VS Code core terminal tool：<code>sendToTerminalTool.ts</code></td>
+				<td>已 allowlist，Agent-only，pre-approval。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>23</td>
+				<td class="tool"><code>getNotebookSummary</code></td>
+				<td>Copilot extension：<code>copilot_getNotebookSummary</code></td>
+				<td>Director 无等价工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>Notebook 组统一评审。</td>
+			</tr>
+			<tr>
+				<td>24</td>
+				<td class="tool"><code>problems</code></td>
+				<td>Copilot extension：<code>copilot_getErrors</code></td>
+				<td>Director 已有 <code>get_errors</code>，基于 marker service。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>problems</code>，保留 Director 实现；schema 可接受 Copilot <code>filePaths</code> 和 Director <code>path/includeWarnings</code>。</td>
+			</tr>
+			<tr>
+				<td>25</td>
+				<td class="tool"><code>readFile</code></td>
+				<td>Copilot extension：<code>copilot_readFile</code></td>
+				<td>Director 已有 <code>read_file</code>，workspace-scoped，支持行范围/byte cap。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>readFile</code>，保留 Director workspace guard；schema 接受 <code>filePath</code> 与 <code>path</code>。</td>
+			</tr>
+			<tr>
+				<td>26</td>
+				<td class="tool"><code>terminalLastCommand</code></td>
+				<td>VS Code core terminal tool：<code>getTerminalLastCommandTool.ts</code></td>
+				<td>已 allowlist，Agent-only。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>27</td>
+				<td class="tool"><code>terminalSelection</code></td>
+				<td>VS Code core terminal tool：<code>getTerminalSelectionTool.ts</code></td>
+				<td>已 allowlist，Agent-only。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>28</td>
+				<td class="tool"><code>viewImage</code></td>
+				<td>Copilot extension：<code>copilot_viewImage</code></td>
+				<td>Director 已有 <code>view_image</code>，workspace-scoped。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>viewImage</code>，保留 Director implementation 和 image/text fallback。</td>
+			</tr>
+			<tr>
+				<td>29</td>
+				<td class="tool"><code>changes</code></td>
+				<td>Copilot extension：<code>copilot_getChangedFiles</code></td>
+				<td>Director 已有 <code>get_changed_files</code>，基于 SCM resource groups。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>changes</code>，保留 Director 实现；后续补 <code>repositoryPath/sourceControlState</code> 兼容。</td>
+			</tr>
+			<tr>
+				<td>30</td>
+				<td class="tool"><code>codebase</code></td>
+				<td>Copilot extension：<code>copilot_searchCodebase</code>，语义搜索能力。</td>
+				<td>Director 当前没有语义索引/embedding-backed search。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>不能直接复用 Copilot 服务。若要实现，需要 Director 自建 semantic index 或接入独立 provider。</td>
+			</tr>
+			<tr>
+				<td>31</td>
+				<td class="tool"><code>fileSearch</code></td>
+				<td>Copilot extension：<code>copilot_findFiles</code></td>
+				<td>Director 已有 <code>file_search</code>，基于 VS Code search service。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>fileSearch</code>，保留 Director implementation；schema 对齐 <code>query/maxResults</code>。</td>
+			</tr>
+			<tr>
+				<td>32</td>
+				<td class="tool"><code>listDirectory</code></td>
+				<td>Copilot extension：<code>copilot_listDirectory</code></td>
+				<td>Director 已有 <code>list_dir</code>，workspace-scoped。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>listDirectory</code>，保留 Director workspace guard 和 result cap。</td>
+			</tr>
+			<tr>
+				<td>33</td>
+				<td class="tool"><code>searchResults</code></td>
+				<td>Copilot extension：<code>copilot_getSearchResults</code>，读取 Search view 结果。</td>
+				<td>Director 无等价 UI-state tool。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>低优先级；已有 <code>textSearch</code>/<code>fileSearch</code> 能覆盖主要需求。</td>
+			</tr>
+			<tr>
+				<td>34</td>
+				<td class="tool"><code>textSearch</code></td>
+				<td>Copilot extension：<code>copilot_findTextInFiles</code></td>
+				<td>Director 已有 <code>grep_search</code>，基于 VS Code search service。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>textSearch</code>，保留 Director implementation；schema 需要从 <code>isRegExp/includePattern</code> 映射到现有参数。</td>
+			</tr>
+			<tr>
+				<td>35</td>
+				<td class="tool"><code>todo</code></td>
+				<td>VS Code core：<code>manageTodoListTool.ts</code></td>
+				<td>已 allowlist，Agent-only。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>36</td>
+				<td class="tool"><code>askQuestions</code></td>
+				<td>VS Code core：<code>askQuestionsTool.ts</code></td>
+				<td>已 allowlist，Agent-only。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>保持现状。</td>
+			</tr>
+			<tr>
+				<td>37</td>
+				<td class="tool"><code>extensions</code></td>
+				<td>VS Code core：<code>SearchExtensionsToolData</code>，toolReferenceName 为 <code>extensions</code>。</td>
+				<td>Director registry 标记 defer；不默认暴露。</td>
+				<td><span class="tag direct">可直接复用但需策略</span></td>
+				<td>实现无需重写，但要先处理 marketplace/gallery、Open VSX、用户可见 “VS Code Marketplace” 文案和商业入口策略。</td>
+			</tr>
+			<tr>
+				<td>38</td>
+				<td class="tool"><code>getProjectSetupInfo</code></td>
+				<td>Copilot extension：<code>copilot_getProjectSetupInfo</code></td>
+				<td>Director 无等价工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>与 <code>newWorkspace</code> 一起评审，当前不是核心 coding-agent 工具。</td>
+			</tr>
+			<tr>
+				<td>39</td>
+				<td class="tool"><code>installExtension</code></td>
+				<td>Copilot extension singular：<code>copilot_installExtension</code>；VS Code core 另有 plural <code>installExtensions</code>。</td>
+				<td>Director 隐藏 core <code>installExtensions</code>，没有 Copilot singular。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>扩展安装是产品 mutation。若未来开放，优先封装 core plural 工具并强制用户确认。</td>
+			</tr>
+			<tr>
+				<td>40</td>
+				<td class="tool"><code>memory</code></td>
+				<td>Copilot extension：<code>copilot_memory</code>，含 Copilot Memory service / local memory path。</td>
+				<td>Director 无等价工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>不要复用 Copilot memory 语义。若需要长期记忆，应设计 Director-owned storage 和隐私策略。</td>
+			</tr>
+			<tr>
+				<td>41</td>
+				<td class="tool"><code>newWorkspace</code></td>
+				<td>Copilot extension：<code>copilot_createNewWorkspace</code>；VS Code core setup 里另有 <code>new</code> tool。</td>
+				<td>Director registry 对 core <code>new</code> 标记 defer。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>不是直接 1:1。若做 Director scaffolding，应单独设计，不复用 Copilot workspace generator。</td>
+			</tr>
+			<tr>
+				<td>42</td>
+				<td class="tool"><code>resolveMemoryFileUri</code></td>
+				<td>Copilot extension：<code>copilot_resolveMemoryFileUri</code></td>
+				<td>Director 无 memory tool，因此无 companion resolver。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>跟随 <code>memory</code> 决策。</td>
+			</tr>
+			<tr>
+				<td>43</td>
+				<td class="tool"><code>runCommand</code></td>
+				<td>Copilot extension：<code>copilot_runVscodeCommand</code></td>
+				<td>Director 无通用 command runner。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>高风险。通用 VS Code command execution 不应默认暴露；如实现需 command allowlist。</td>
+			</tr>
+			<tr>
+				<td>44</td>
+				<td class="tool"><code>vscodeAPI</code></td>
+				<td>Copilot extension：<code>copilot_getVSCodeAPI</code></td>
+				<td>Director 无等价文档检索工具。</td>
+				<td><span class="tag defer">延期/不实现</span></td>
+				<td>可未来做 Director docs/static API search；不是当前 runtime 关键工具。</td>
+			</tr>
+			<tr>
+				<td>45</td>
+				<td class="tool"><code>fetch</code></td>
+				<td>Copilot extension：<code>copilot_fetchWebPage</code>；VS Code core 另有 <code>vscode_fetchWebPage_internal</code>。</td>
+				<td>Director 暴露 <code>vscode_fetchWebPage_internal</code>，支持 URL/file fetch 和确认。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>推荐改名对齐为 <code>fetch</code>，直接背靠 core fetch tool；schema 需处理 Copilot 的 <code>query</code> required 与 core 的 <code>urls</code>-only 差异。</td>
+			</tr>
+			<tr>
+				<td>46</td>
+				<td class="tool"><code>githubRepo</code></td>
+				<td>Copilot extension：<code>copilot_githubRepo</code>，面向 GitHub repo code search。</td>
+				<td>Director 已有 <code>github_repo</code> v1，只做 minimal read-only repo context，不做 remote indexed search。</td>
+				<td><span class="tag counterpart">对应但不 1:1</span></td>
+				<td>可改名对齐为 <code>githubRepo</code>，但必须保留 controlled not-supported 口径，避免暗示 Copilot 级远端搜索。</td>
+			</tr>
+			<tr>
+				<td>47</td>
+				<td class="tool"><code>githubTextSearch</code></td>
+				<td>本地 VS Code 116 source、Director source、Copilot package 均无静态注册命中。</td>
+				<td>Director 无等价工具。</td>
+				<td><span class="tag unknown">来源待确认</span></td>
+				<td>先抓 runtime raw tool snapshot，确认是否来自 GitHub MCP 或外部扩展。确认前不要实现。</td>
+			</tr>
+			<tr>
+				<td>48</td>
+				<td class="tool"><code>renderMermaidDiagram</code></td>
+				<td>内置扩展：<code>extensions/mermaid-chat-features</code></td>
+				<td>Director tree 中存在并注册；Director registry 未默认 allowlist。</td>
+				<td><span class="tag direct">直接复用</span></td>
+				<td>修正旧结论。若希望 Director Agent 显式可调用，加 registry entry 即可，不要自实现。</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h2>推荐工具治理方案</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>波次</th>
+				<th>范围</th>
+				<th>动作</th>
+				<th>风险点</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>Tool Wave A</td>
+				<td>Director 已有 read/create/fetch/github 能力</td>
+				<td>逐个输出 schema 报告，然后把 model-facing 名称对齐到 <code>readFile</code>、<code>listDirectory</code>、<code>fileSearch</code>、<code>textSearch</code>、<code>problems</code>、<code>changes</code>、<code>viewImage</code>、<code>createFile</code>、<code>createDirectory</code>、<code>fetch</code>、<code>githubRepo</code>。</td>
+				<td>不能丢现有能力；路径参数要统一 absolute vs workspace-relative；<code>githubRepo</code> 必须说明不支持 Copilot 远端索引。</td>
+			</tr>
+			<tr>
+				<td>Tool Wave B</td>
+				<td>VS Code core direct reuse</td>
+				<td>保持 <code>runSubagent</code>、terminal/task、todo、askQuestions；为 <code>renderMermaidDiagram</code> 加明确 registry entry；browser 组按安全策略整体纳入。</td>
+				<td>browser tools 会真实操作网页；<code>runPlaywrightCode</code> 需更谨慎的确认/日志策略。</td>
+			</tr>
+			<tr>
+				<td>Tool Wave C</td>
+				<td>Copilot-only deferred tools</td>
+				<td>不直接复用 Copilot extension runtime。Notebook、memory、newWorkspace、runCommand、vscodeAPI、codebase 等单独立项。</td>
+				<td>这些工具大多绑定 Copilot 服务、workspace mutation 或外部文档/索引能力，贸然暴露会增加维护面和安全面。</td>
+			</tr>
+			<tr>
+				<td>Tool Wave D</td>
+				<td>动态来源工具</td>
+				<td>增加 runtime raw tool snapshot 报告，特别确认 <code>githubTextSearch</code> 的 source/id/schema。</td>
+				<td>没有来源就无法判断许可、实现依赖和安全策略。</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h2>证据路径</h2>
+	<div class="panel">
+		<ul>
+			<li><code>vscode.generated/layers/vscode/vscode/src/vs/workbench/contrib/chat/common/tools/builtinTools/runSubagentTool.ts</code> 与 Director 同路径无 diff。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/src/vs/workbench/contrib/browserView/electron-browser/tools/browserTools.contribution.ts</code> 注册 browser tool set；各工具 <code>toolReferenceName</code> 为 UI camelCase 名。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/terminal.chatAgentTools.contribution.ts</code> 注册 terminal/task 工具；Director 与上游仅 task 文案品牌有 diff。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/extensions/copilot/package.json</code> 的 <code>contributes.languageModelTools</code> 定义 Copilot 工具的 <code>toolReferenceName</code> 与 schema。</li>
+			<li><code>vscode.generated/layers/vscode/vscode/extensions/copilot/src/extension/tools/node/allTools.ts</code> 列出 Copilot extension 实现文件；Director tree 中没有 <code>extensions/copilot</code>。</li>
+			<li><code>vscode.generated/layers/director/vscode/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts</code> 是 Director Agent Engine 当前 model-facing allowlist 的准绳。</li>
+			<li><code>vscode.generated/layers/director/vscode/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts</code> 与 <code>editTools/directorEditTools.ts</code> 是 Director-owned 当前能力实现。</li>
+			<li><code>vscode.generated/layers/director/vscode/extensions/mermaid-chat-features/package.json</code> 与 <code>src/chatOutputRenderer.ts</code> 确认 <code>renderMermaidDiagram</code> 在 Director 中存在并注册。</li>
+		</ul>
+	</div>
+</main>
+</body>
+</html>

@@ -1,4 +1,21 @@
 # Memory - 项目状态与上下文
+
+## 2026-05-14 latest memory: thin-layer refactor planning wave accepted
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Deprecated plan retained for history: `docs/upgrade/director-thin-layer-refactor-plan.md`.
+- Accepted tool strategy report: `docs/upgrade/reports/116-stable-win32-x64-client/tool-source-and-strategy-analysis.html`.
+- Prior broad comparison report retained for reference: `docs/upgrade/reports/116-stable-win32-x64-client/tool-parity-analysis.html`.
+- The v2 plan keeps replay/profile/canonical manifest as release truth, keeps VSCodium as the lower layer, and moves Director-owned business logic toward `src/vs/workbench/contrib/directorCode/` while leaving upstream chat/agent files as thin hooks.
+- Tool governance is source-based rather than full Copilot parity. VS Code core tools are reused directly where possible; Copilot extension metadata is only a static reference for model-facing names/schemas when Director owns the implementation.
+- `tool-facade-research.md` is now a hard gate before Phase 3 tool code changes; it must be accepted before any tool facade cutover, browser exposure, direct-reuse allowlist change, or model-facing rename.
+- The plan includes a final 48-tool disposition table. `renderMermaidDiagram` is a direct allowlist of the retained Mermaid extension. Browser tools are direct VS Code core reuse with Director registry policy, pre-approval for mutation/interaction, and `runPlaywrightCode` audit requirements.
+- `createFile`/`createDirectory` migration and snake_case cutover belong to Phase 3. Phase 4 only keeps `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` as Director-owned edit primitives; `editFiles` remains hidden.
+- `fetch` only promises current Director URL/file fetch capability. `githubRepo` only promises limited Director repo context and must explicitly reject/limit Copilot-style remote indexed search. `githubTextSearch` remains hidden until runtime source/id/schema evidence exists.
+- `extensions` is a Phase 3 direct-reuse candidate but cannot be exposed until product/gallery/marketplace wording policy is documented and the commercial/name grep gate passes.
+- Execution protocol: every completed wave updates `.claude/memory.md`, commits, pushes, and then continues. This planning package is treated as the first completed planning wave after documentation self-check.
+- `artifacts/` remains untracked and must not be committed by default.
+
 ## 2026-05-14 latest memory: 116 package regression Phase 6 automated pass
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Phase 6 package/regression automated pass completed after Phase 5 commit `788fe9d7 Add 116 Director mode routing and inline edits` was pushed.
