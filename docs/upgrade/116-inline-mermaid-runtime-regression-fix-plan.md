@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, Phase 3 Chat Editing contract, Phase 4 reviewable edit tools, and Phase 5 Ask/Edit/Inline mode routing are implemented, replay-landed, and validated. Phase 6 package/regression gate is next after the Phase 5 push.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, Phase 3 Chat Editing contract, Phase 4 reviewable edit tools, and Phase 5 Ask/Edit/Inline mode routing are implemented, replay-landed, validated, and pushed. Phase 6 package/regression automated build and non-destructive smoke are complete; installer/manual acceptance remains the external release-candidate check.
 
 Execution decisions added on 2026-05-13:
 
@@ -46,6 +46,14 @@ Execution progress added on 2026-05-14:
 - Director settings and Agent Customizations integration are present: the Agent Customizations editor includes a Director Code section that opens `director-code.openSettings`, and the Director language model provider advertises the same management command.
 - Phase 5 replay ownership follows the actual generator classification: mode routing and agent request plumbing are in `004-director-agent-engine.116.patch`; the Agent Customizations bridge remains in `005-director-chat-built-in-mode.116.patch`; inline edit adapter changes are in `008-director-chat-editing.116.patch`; edit-tool test compatibility updates are in `009-director-edit-tools.116.patch`.
 - Phase 5 validation completed from clean replay: clean `materialize-vscode`, `npm ci` after clearing stale Windows native build processes, `compile-check-ts-native`, `transpile-client-esbuild`, targeted Director browser tests (`21 passing`), inline controller request parity smoke (`2 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, and canonical manifest write/validate.
+- Phase 5 was committed and pushed as `788fe9d7` (`Add 116 Director mode routing and inline edits`).
+- Phase 6 package build completed with `scripts/build-director-116.ps1` without `-SkipReplay`. Installers were produced under `artifacts/out/stable/win32-x64/`.
+- Phase 6 installer hashes:
+  - `system-setup/Director-CodeSetup-x64-1.116.0.exe`: `DAF13D81BC9580443DC52BB3E700839983EAAB8649138733AD2B0208C793ACBB`
+  - `user-setup/Director-CodeUserSetup-x64-1.116.0.exe`: `A96A9259DFC943B7D53912F0C8A888C886E239EA72A99974D674D5BC44748764`
+- Phase 6 non-destructive smoke cleared the Director Code NLS cache, verified the packaged `defaultChatAgent.provider` object shape, launched the loose build with a temporary user-data/extensions profile, observed the Electron process tree, and then terminated only that temporary-profile process tree.
+- Phase 6 replay validation passed: `validate-series`, `validate-product-overrides`, `expected-contracts`, clean post-build `materialize-vscode`, and canonical manifest validation. The package build's temporary canonical drift was from generated extension `dist/` files and was cleared by the post-build clean materialize.
+- Interactive installer/manual smoke was not run automatically to avoid changing the user's installed Director Code app/profile; those user-side checks remain required before calling this a fully manually accepted release candidate.
 
 ## Summary
 

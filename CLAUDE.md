@@ -1,5 +1,16 @@
 # CLAUDE.md - Director-Code replay source guide
 
+## 2026-05-14 Phase 6 Package Regression Update
+
+- Phase 6 non-destructive package/regression pass is complete and should be committed/pushed as its own wave.
+- `scripts/build-director-116.ps1` was run without `-SkipReplay`; it materialized from replay, installed dependencies, ran compile/core/min/package tasks, and produced both installers.
+- Installer artifacts:
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `DAF13D81BC9580443DC52BB3E700839983EAAB8649138733AD2B0208C793ACBB`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `A96A9259DFC943B7D53912F0C8A888C886E239EA72A99974D674D5BC44748764`
+- `%APPDATA%\Director-Code\clp` was cleared before runtime smoke. A loose-build launch smoke used a temp profile under `artifacts/phase6-smoke`, observed the expected Electron process tree, then terminated only processes for that temp profile.
+- Replay/product validators passed after the package build. A post-build canonical check drifted because build outputs add extension `dist/` files; clean materialize was rerun and canonical manifest validation then passed.
+- Interactive installer/manual smoke was not run automatically to avoid modifying the user's installed app/profile. Treat user-side installer/manual acceptance as the only remaining external release-candidate check.
+
 ## 2026-05-14 Phase 5 Mode Routing Update
 
 - Phase 5 Ask/Edit/Inline mode routing is complete, replay-backed, clean-materialized, validated, and ready for commit/push.
