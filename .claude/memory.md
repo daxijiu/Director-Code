@@ -1,5 +1,34 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 最新记忆：116 Chat Editing contract Phase 3 已完成
+
+- 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
+- `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` 的 Phase 3 Chat Editing contract gate 已完成、replay-land、clean replay 验证通过。
+- Phase 3 新增 replay stage：`patches/replay/008-director-chat-editing.116.patch`；active profile、`patches/series.116.json`、canonical manifest、director patch report 和 generator classification 已同步。
+- 核心实现：`src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`。
+  - `DirectorChatEditingAdapter` 只通过 `chatSessionResource` + `chatRequestId` 解析目标 chat request；缺失或找不到 request 会返回 controlled error，不回退到 `getRequests().at(-1)`。
+  - 单文件文本编辑 response parts 顺序为：可选 `markdownContent` explanation、`codeblockUri` with `isEdit: true`、`textEdit` start、`textEdit` progress、`textEdit` done。
+  - VS Code 116 会把 `textEdit` progress 合并成 `textEditGroup`，由 `ChatEditingService` 观察并启动 reviewable Chat Editing UI diff。
+  - `DirectorInternalSingleFileEditProbe` 仅是内部 probe/测试 harness，没有注册成 model-visible tool、command、settings、menu 或 chat tool。
+  - `formatDirectorChatEditToolResult()` 为后续 Phase 4 edit tools 提供 compact success/error text result。
+- 契约报告：`docs/upgrade/reports/116-stable-win32-x64-client/chat-editing-contract-report.md`。
+  - 明确记录 116 panel Chat Editing 的 `textEdit` -> `textEditGroup` -> `ChatEditingService.startStreamingEdits()` 路径。
+  - 明确记录 `workspaceEdit` 在 116 的原生实现只处理 file deletion；directory creation 不能原生生成目录 diff。
+  - Phase 4 `create_directory` 必须走 Director-owned review transaction：先生成 pending transaction + accept/reject chat command buttons，accept 后再 `IFileService.createFolder`，reject/no-op，不做静默 mkdir。
+  - EditorInline 仍需 Phase 5 单独实现 inline session binding；panel Chat Editing contract 不能替代 inline。
+- Phase 3 已通过验证：
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - clean replay 后 `npm ci`
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - targeted tests：`directorToolRegistry.test.ts` + `directorReadOnlyTools.test.ts` + `directorChatEditingAdapter.test.ts`，共 `19 passing`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- 下一波从 Phase 4 reviewable edit tools 开始：`apply_patch`、`create_file`、`create_directory`、`replace_string_in_file`、`multi_replace_string_in_file`。不要暴露任何不能复用 Phase 3 reviewable contract 的写入/编辑工具。
+- `artifacts/` 仍是未跟踪构建/验证产物，不要默认提交；clean materialize 后 generated tree 仍需 `npm ci` 才能跑编译和测试。
+
 ## 2026-05-14 最新记忆：116 read-only tools Phase 2 已完成
 
 - 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。

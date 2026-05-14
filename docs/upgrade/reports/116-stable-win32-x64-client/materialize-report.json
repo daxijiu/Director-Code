@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-14T08:31:08.624Z",
+  "generatedAt": "2026-05-14T08:53:02.386Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/116-stable-win32-x64-client.json",
@@ -44,7 +44,8 @@
       "patches/replay/004-director-agent-engine.116.patch",
       "patches/replay/005-director-chat-built-in-mode.116.patch",
       "patches/replay/006-director-text-polish.116.patch",
-      "patches/replay/007-director-tool-layer.116.patch"
+      "patches/replay/007-director-tool-layer.116.patch",
+      "patches/replay/008-director-chat-editing.116.patch"
     ]
   },
   "applications": [
@@ -96,6 +97,13 @@
       "size": 63124,
       "sha256": "8c0ed1d78d479574419848c9976452c2b6a6b631a1ac323e646d03a3125836e7",
       "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/008-director-chat-editing.116.patch",
+      "size": 15377,
+      "sha256": "33fde407196bc15c8415582561bb94669c135a21c5a964a0079dc4dfb0305926",
+      "status": "passed"
     }
   ],
   "referenceOverlays": {
@@ -119,7 +127,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "532cf5f5049d8f82eee364d6384bc8216e820fd35e6e1ace529b3d21df7ab93d"
+      "fileManifestHash": "c7ffbd470c91759ce8ae2935f401b3234411b0fcfb8c5888781a47de4bd90ca0"
     }
   ],
   "checks": {

@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate and Phase 2 read-only workspace tools/GitHub v1 gate are implemented, replay-landed, and validated. Phase 3 Chat Editing contract is next.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, and Phase 3 Chat Editing contract are implemented, replay-landed, and validated. Phase 4 reviewable edit tools are next after Phase 3 push.
 
 Execution decisions added on 2026-05-13:
 
@@ -32,7 +32,11 @@ Execution progress added on 2026-05-14:
 - Phase 2 tools are workspace-scoped and read-only. File/directory/image tools reject paths outside the current workspace; text output is capped/truncated; search results are capped; diagnostics and SCM use VS Code marker/SCM services; `github_repo` provides sanitized minimal repo context and controlled v1 remote-search fallback.
 - Phase 2 replay assets updated: `patches/replay/007-director-tool-layer.116.patch`, the small registration hook in `004-director-agent-engine.116.patch`, `patches/series.116.json`, canonical manifest, generated reports, and `tool-migration-report.md`.
 - Phase 2 validation completed from clean replay: `compile-check-ts-native`, `transpile-client-esbuild`, targeted registry/read-only tool tests (`14 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, and canonical manifest validation.
-- Next implementation wave starts at Phase 3 Chat Editing contract.
+- Phase 3 Chat Editing contract is implemented in `patches/replay/008-director-chat-editing.116.patch`. The shared adapter is `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`.
+- Phase 3 binds reviewable panel edits by `chatSessionResource` and `chatRequestId`, rejects missing request ids instead of falling back to the last request, emits explanation/codeblock/textEdit start-progress-done response parts, and returns compact model-loop edit results.
+- Phase 3 validation coverage is `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`; it verifies explicit request binding, no last-request fallback, workspace target rejection, internal-only probe behavior, and compact result formatting.
+- The Phase 3 contract report is `docs/upgrade/reports/116-stable-win32-x64-client/chat-editing-contract-report.md`. It documents the VS Code 116 `textEdit` to `textEditGroup` path, the directory-creation review transaction plan, and the EditorInline prerequisite note.
+- Next implementation wave starts at Phase 4 reviewable edit tools after Phase 3 push.
 
 ## Summary
 

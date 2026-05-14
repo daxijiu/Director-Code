@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T08:27:47.707Z",
+  "generatedAt": "2026-05-14T08:48:25.805Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 223,
+  "changedFileCount": 225,
   "patches": [
     {
       "stage": "branding",
@@ -291,6 +291,17 @@
       "fileCount": 5,
       "size": 63124,
       "sha256": "8c0ed1d78d479574419848c9976452c2b6a6b631a1ac323e646d03a3125836e7"
+    },
+    {
+      "stage": "chat-editing",
+      "path": "patches/replay/008-director-chat-editing.116.patch",
+      "files": [
+        "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
+        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts"
+      ],
+      "fileCount": 2,
+      "size": 15377,
+      "sha256": "33fde407196bc15c8415582561bb94669c135a21c5a964a0079dc4dfb0305926"
     }
   ]
 }

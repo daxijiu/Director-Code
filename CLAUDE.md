@@ -71,10 +71,10 @@ bash scripts/upgrade/materialize-vscode.sh \
 5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI entry points。
 6. `006-director-text-polish.116.patch`: 小范围文本和 prompt polish。
 7. `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、migration report/test layer、read-only workspace/GitHub v1 context tools。Phase 1-2 gates 已完成。
+8. `008-director-chat-editing.116.patch`: Director-owned Chat Editing contract、reviewable text edit progress adapter、internal single-file edit probe、request/session binding tests。Phase 3 gate 已完成。
 
 计划中的后续新增 stage：
 
-- `008-director-chat-editing.116.patch`: Chat Editing UI contract、reviewable edit progress、shared edit adapter、`create_directory` review transaction。
 - `009-director-edit-tools.116.patch`: 仅在 edit tool 实现足够大时拆出，否则并入 `008`。
 
 ## 当前 116 重要事实
@@ -85,7 +85,8 @@ bash scripts/upgrade/materialize-vscode.sh \
 - Director settings 入口仍需要并入 VS Code 116 的 Agent Customizations 界面，计划文件是 `docs/upgrade/116-agent-customizations-director-settings-plan.md`。
 - 当前大优化计划是 `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`，覆盖 Mermaid runtime、inline chat、Ask/Edit/Agent mode routing、Chat Editing UI、工具层复刻和 GitHub v1 read-only repo context。
 - Phase 2 read-only tool layer 已完成并 replay-backed：`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo` 均由 Director-owned 工具提供，落在 `007-director-tool-layer.116.patch`，注册 hook 的小改动落在 `004-director-agent-engine.116.patch`。
-- 下一波按计划进入 Phase 3 Chat Editing contract；不要在 reviewable edit contract 之前暴露 write/edit/create/delete 工具。
+- Phase 3 Chat Editing contract 已完成并 replay-backed：`DirectorChatEditingAdapter` 通过 `chatSessionResource` + `chatRequestId` 绑定目标请求，发出 explanation / `codeblockUri` / `textEdit` start-progress-done response parts，生成 VS Code 116 Chat Editing UI 可观察的 `textEditGroup` 路径；内部 probe 不注册为模型可见工具。契约报告是 `docs/upgrade/reports/116-stable-win32-x64-client/chat-editing-contract-report.md`。
+- 下一波按计划进入 Phase 4 reviewable edit tools；不要暴露任何不能走 Phase 3 reviewable contract 的 write/edit/create/delete 工具。
 
 ## Build And Package
 

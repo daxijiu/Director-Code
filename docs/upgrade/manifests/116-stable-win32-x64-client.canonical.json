@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T08:35:43.913Z",
-  "treeHash": "5073e1284f4387c99f598ae8dd4c532ff195d2a87e3c984882d108a0cb15385a",
+  "generatedAt": "2026-05-14T08:58:18.236Z",
+  "treeHash": "fd3bdf4996bc863cdc0fc071cbbc4fb429bb39253bbe74a25db3e27d7698b7eb",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -41941,6 +41941,12 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
+      "sha256": "aac1284ef4bb9f2d88f3e44ca62552fd160c44d19b176ce9c860223277241083",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts",
       "sha256": "213626a4aaf505456f787760658651d89046dc14b18e6f2042fa881f6d8db0bb",
       "mode": 33206,
@@ -43281,6 +43287,12 @@
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts",
       "sha256": "642e08ba8c24605cea8c8a134d2970943a92c76857db8b30653cd31ef304994a",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts",
+      "sha256": "14edb140f2c15ccc77f9353c7836b5764bddbbda5d05558b823fa370b855da92",
       "mode": 33206,
       "type": "file"
     },

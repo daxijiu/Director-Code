@@ -253,6 +253,7 @@ function isToolLayer(filePath) {
 function isChatEditing(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editing/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editing/')) return true;
+  if (filePath === 'src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts') return true;
   return false;
 }
 

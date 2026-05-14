@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
-  "generatedAt": "2026-05-14T08:27:55.605Z",
+  "generatedAt": "2026-05-14T08:48:32.191Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -160,6 +160,28 @@
         "client"
       ],
       "order": 7,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/008-director-chat-editing.116.patch",
+      "sha256": "33fde407196bc15c8415582561bb94669c135a21c5a964a0079dc4dfb0305926",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "director",
+      "stage": "chat-editing",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "stable"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 8,
       "placeholders": []
     }
   ]

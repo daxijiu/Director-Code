@@ -36,7 +36,8 @@
       "patches/replay/004-director-agent-engine.116.patch",
       "patches/replay/005-director-chat-built-in-mode.116.patch",
       "patches/replay/006-director-text-polish.116.patch",
-      "patches/replay/007-director-tool-layer.116.patch"
+      "patches/replay/007-director-tool-layer.116.patch",
+      "patches/replay/008-director-chat-editing.116.patch"
     ],
     "vscodiumLayerManifest": "docs/upgrade/vscodium-layer.116.json",
     "prepareParityReport": "docs/upgrade/reports/116-stable-win32-x64-client/prepare-parity-report.json"

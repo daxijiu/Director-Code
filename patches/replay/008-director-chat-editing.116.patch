@@ -1,0 +1,414 @@
+diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4d8a9eaa0bef14e6de03e31467dbde99df60ca13
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
+@@ -0,0 +1,240 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { getErrorMessage } from '../../../../../../base/common/errors.js';
++import { MarkdownString } from '../../../../../../base/common/htmlContent.js';
++import { extUriBiasedIgnorePathCase, relativePath } from '../../../../../../base/common/resources.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { TextEdit } from '../../../../../../editor/common/languages.js';
++import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
++import { IChatProgress, IChatService } from '../../chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../model/chatModel.js';
++
++export interface DirectorPanelChatEditBinding {
++	readonly chatSessionResource: URI;
++	readonly chatRequestId: string;
++}
++
++export interface DirectorSingleFileTextEditRequest extends DirectorPanelChatEditBinding {
++	readonly targetUri?: URI;
++	readonly path?: string;
++	readonly intent?: string;
++	readonly explanation?: string;
++	readonly edits: readonly TextEdit[];
++}
++
++export type DirectorChatEditResult =
++	| {
++		readonly ok: true;
++		readonly requestId: string;
++		readonly uri: URI;
++		readonly relativePath: string;
++		readonly editCount: number;
++		readonly emittedParts: readonly string[];
++	}
++	| {
++		readonly ok: false;
++		readonly reason: string;
++	};
++
++type DirectorChatEditFailure = Extract<DirectorChatEditResult, { readonly ok: false }>;
++
++interface DirectorProgressChatModel extends IChatModel {
++	acceptResponseProgress(request: IChatRequestModel, progress: IChatProgress, quiet?: boolean): void;
++}
++
++interface DirectorResolvedPanelBinding {
++	readonly ok: true;
++	readonly model: DirectorProgressChatModel;
++	readonly request: IChatRequestModel;
++}
++
++interface DirectorResolvedTarget {
++	readonly ok: true;
++	readonly uri: URI;
++	readonly workspaceFolder: IWorkspaceFolder;
++}
++
++export function formatDirectorChatEditToolResult(result: DirectorChatEditResult): string {
++	if (!result.ok) {
++		return `edit_result: error\nreason: ${result.reason}`;
++	}
++
++	return [
++		'edit_result: success',
++		`path: ${result.relativePath}`,
++		`edits: ${result.editCount}`,
++		'review: Chat Editing UI'
++	].join('\n');
++}
++
++export class DirectorChatEditingAdapter {
++
++	constructor(
++		@IChatService private readonly chatService: IChatService,
++		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
++	) { }
++
++	async emitSingleFileTextEdit(request: DirectorSingleFileTextEditRequest, token: CancellationToken): Promise<DirectorChatEditResult> {
++		if (token.isCancellationRequested) {
++			return { ok: false, reason: 'Edit was cancelled before it could start.' };
++		}
++
++		const binding = this.resolvePanelBinding(request);
++		if (!binding.ok) {
++			return binding;
++		}
++
++		const target = this.resolveWorkspaceTarget(request);
++		if (!target.ok) {
++			return target;
++		}
++
++		const edits = [...request.edits];
++		const emittedParts: string[] = [];
++
++		try {
++			binding.model.startEditingSession(false);
++
++			const explanation = request.explanation?.trim() || request.intent?.trim();
++			if (explanation) {
++				this.emit(binding, {
++					kind: 'markdownContent',
++					content: new MarkdownString(`\n${explanation}\n`)
++				});
++				emittedParts.push('markdownContent');
++			}
++
++			this.emit(binding, {
++				kind: 'codeblockUri',
++				uri: target.uri,
++				isEdit: true
++			});
++			emittedParts.push('codeblockUri');
++
++			this.emit(binding, {
++				kind: 'textEdit',
++				uri: target.uri,
++				edits: []
++			});
++			emittedParts.push('textEdit:start');
++
++			if (edits.length > 0) {
++				this.emit(binding, {
++					kind: 'textEdit',
++					uri: target.uri,
++					edits
++				});
++				emittedParts.push('textEdit:progress');
++			}
++
++			this.emit(binding, {
++				kind: 'textEdit',
++				uri: target.uri,
++				edits: [],
++				done: true
++			});
++			emittedParts.push('textEdit:done');
++		} catch (error) {
++			return { ok: false, reason: `Could not emit reviewable edit progress: ${getErrorMessage(error)}` };
++		}
++
++		return {
++			ok: true,
++			requestId: request.chatRequestId,
++			uri: target.uri,
++			relativePath: relativePath(target.workspaceFolder.uri, target.uri) || '.',
++			editCount: edits.length,
++			emittedParts
++		};
++	}
++
++	private emit(binding: DirectorResolvedPanelBinding, progress: IChatProgress): void {
++		binding.model.acceptResponseProgress(binding.request, progress);
++	}
++
++	private resolvePanelBinding(binding: DirectorPanelChatEditBinding): DirectorResolvedPanelBinding | DirectorChatEditFailure {
++		if (!binding.chatRequestId) {
++			return { ok: false, reason: 'Missing chatRequestId; reviewable edits must bind to an explicit chat request.' };
++		}
++
++		const model = this.chatService.getSession(binding.chatSessionResource);
++		if (!model) {
++			return { ok: false, reason: 'Could not find the chat session for the edit request.' };
++		}
++
++		if (!hasProgressSink(model)) {
++			return { ok: false, reason: 'The chat session does not support edit progress emission.' };
++		}
++
++		const request = model.getRequests().find(candidate => candidate.id === binding.chatRequestId);
++		if (!request) {
++			return { ok: false, reason: `Could not find chat request '${binding.chatRequestId}' in the target session.` };
++		}
++
++		return { ok: true, model, request };
++	}
++
++	private resolveWorkspaceTarget(request: DirectorSingleFileTextEditRequest): DirectorResolvedTarget | DirectorChatEditFailure {
++		const uri = request.targetUri ?? this.uriFromPath(request.path);
++		if (!uri) {
++			return { ok: false, reason: 'Missing edit target path or URI.' };
++		}
++
++		const workspaceFolder = this.workspaceContextService.getWorkspaceFolder(uri)
++			?? this.workspaceContextService.getWorkspace().folders.find(candidate => extUriBiasedIgnorePathCase.isEqualOrParent(uri, candidate.uri));
++		if (!workspaceFolder) {
++			return { ok: false, reason: 'Edit target is outside the current workspace.' };
++		}
++
++		return { ok: true, uri, workspaceFolder };
++	}
++
++	private uriFromPath(path: string | undefined): URI | undefined {
++		const raw = path?.trim();
++		if (!raw) {
++			return undefined;
++		}
++
++		if (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) {
++			return URI.parse(raw);
++		}
++
++		if (isAbsoluteFilePath(raw)) {
++			return URI.file(raw);
++		}
++
++		const folder = this.workspaceContextService.getWorkspace().folders[0];
++		if (!folder) {
++			return undefined;
++		}
++
++		return URI.joinPath(folder.uri, raw.replace(/\\/g, '/'));
++	}
++}
++
++export class DirectorInternalSingleFileEditProbe {
++
++	constructor(
++		private readonly adapter: DirectorChatEditingAdapter,
++	) { }
++
++	run(request: Omit<DirectorSingleFileTextEditRequest, 'intent'> & { readonly intent?: string }, token: CancellationToken): Promise<DirectorChatEditResult> {
++		return this.adapter.emitSingleFileTextEdit({
++			...request,
++			intent: request.intent ?? 'Director internal single-file edit contract probe',
++			explanation: request.explanation ?? 'Director internal single-file edit contract probe'
++		}, token);
++	}
++}
++
++function hasProgressSink(model: IChatModel): model is DirectorProgressChatModel {
++	return typeof (model as Partial<DirectorProgressChatModel>).acceptResponseProgress === 'function';
++}
++
++function isAbsoluteFilePath(path: string): boolean {
++	return /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('/') || path.startsWith('\\\\');
++}
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239866bfcbf
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
+@@ -0,0 +1,162 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { TextEdit } from '../../../../../../editor/common/languages.js';
++import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
++import { IChatProgress, IChatService } from '../../../common/chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../../common/model/chatModel.js';
++import { DirectorChatEditingAdapter, DirectorInternalSingleFileEditProbe, formatDirectorChatEditToolResult } from '../../../common/agentEngine/editing/directorChatEditingAdapter.js';
++
++suite('Director Chat Editing Adapter', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	const root = URI.file('/workspace');
++	const folder = { uri: root, name: 'workspace', index: 0 } as IWorkspaceFolder;
++	const sessionResource = URI.parse('vscode-chat://director-test/session');
++
++	function workspaceService(): IWorkspaceContextService {
++		return {
++			getWorkspace: () => ({ id: 'test', folders: [folder] }),
++			getWorkspaceFolder: (resource: URI) => resource.path.startsWith(root.path) ? folder : null,
++		} as unknown as IWorkspaceContextService;
++	}
++
++	function request(id: string): IChatRequestModel {
++		return { id } as IChatRequestModel;
++	}
++
++	function textEdit(text: string): TextEdit {
++		return {
++			range: {
++				startLineNumber: 1,
++				startColumn: 1,
++				endLineNumber: 1,
++				endColumn: 1,
++			},
++			text
++		};
++	}
++
++	function modelWithRequests(requests: IChatRequestModel[]) {
++		const calls: Array<{ requestId: string; progress: IChatProgress }> = [];
++		let startCount = 0;
++		const model = {
++			getRequests: () => requests,
++			startEditingSession: () => { startCount++; },
++			acceptResponseProgress: (target: IChatRequestModel, progress: IChatProgress) => calls.push({ requestId: target.id, progress }),
++			sessionResource,
++		} as unknown as IChatModel & { acceptResponseProgress(target: IChatRequestModel, progress: IChatProgress): void };
++
++		return {
++			model,
++			calls,
++			startCount: () => startCount,
++		};
++	}
++
++	function chatService(model: IChatModel): IChatService {
++		return {
++			getSession: (resource: URI) => resource.toString() === sessionResource.toString() ? model : undefined,
++		} as unknown as IChatService;
++	}
++
++	test('emits reviewable text edit progress against the explicit chatRequestId', async () => {
++		const targetRequest = request('target-request');
++		const laterRequest = request('later-request');
++		const fake = modelWithRequests([targetRequest, laterRequest]);
++		const adapter = new DirectorChatEditingAdapter(chatService(fake.model), workspaceService());
++
++		const result = await adapter.emitSingleFileTextEdit({
++			chatSessionResource: sessionResource,
++			chatRequestId: 'target-request',
++			path: 'src/example.ts',
++			explanation: 'Replace selected text',
++			edits: [textEdit('value')],
++		}, CancellationToken.None);
++
++		assert.strictEqual(result.ok, true);
++		assert.strictEqual(fake.startCount(), 1);
++		assert.deepStrictEqual(fake.calls.map(call => call.requestId), [
++			'target-request',
++			'target-request',
++			'target-request',
++			'target-request',
++			'target-request',
++		]);
++		assert.deepStrictEqual(fake.calls.map(call => call.progress.kind), [
++			'markdownContent',
++			'codeblockUri',
++			'textEdit',
++			'textEdit',
++			'textEdit',
++		]);
++		assert.strictEqual(fake.calls[2].progress.kind, 'textEdit');
++		assert.strictEqual(fake.calls[2].progress.edits.length, 0);
++		assert.strictEqual(fake.calls[3].progress.kind, 'textEdit');
++		assert.strictEqual(fake.calls[3].progress.edits.length, 1);
++		assert.strictEqual(fake.calls[4].progress.kind, 'textEdit');
++		assert.strictEqual(fake.calls[4].progress.done, true);
++		assert.strictEqual(result.relativePath, 'src/example.ts');
++	});
++
++	test('does not fall back to the last request when chatRequestId is missing from the session', async () => {
++		const fake = modelWithRequests([request('first-request'), request('last-request')]);
++		const adapter = new DirectorChatEditingAdapter(chatService(fake.model), workspaceService());
++
++		const result = await adapter.emitSingleFileTextEdit({
++			chatSessionResource: sessionResource,
++			chatRequestId: 'missing-request',
++			path: 'src/example.ts',
++			edits: [textEdit('value')],
++		}, CancellationToken.None);
++
++		assert.strictEqual(result.ok, false);
++		assert.match(result.reason, /missing-request/);
++		assert.strictEqual(fake.calls.length, 0);
++		assert.strictEqual(fake.startCount(), 0);
++	});
++
++	test('rejects edit targets outside the workspace', async () => {
++		const fake = modelWithRequests([request('target-request')]);
++		const adapter = new DirectorChatEditingAdapter(chatService(fake.model), workspaceService());
++
++		const result = await adapter.emitSingleFileTextEdit({
++			chatSessionResource: sessionResource,
++			chatRequestId: 'target-request',
++			targetUri: URI.file('/outside/example.ts'),
++			edits: [textEdit('value')],
++		}, CancellationToken.None);
++
++		assert.strictEqual(result.ok, false);
++		assert.match(result.reason, /outside the current workspace/);
++		assert.strictEqual(fake.calls.length, 0);
++	});
++
++	test('keeps the synthetic edit probe internal to the adapter contract', async () => {
++		const fake = modelWithRequests([request('target-request')]);
++		const adapter = new DirectorChatEditingAdapter(chatService(fake.model), workspaceService());
++		const probe = new DirectorInternalSingleFileEditProbe(adapter);
++
++		const result = await probe.run({
++			chatSessionResource: sessionResource,
++			chatRequestId: 'target-request',
++			path: 'src/probe.ts',
++			edits: [textEdit('probe')],
++		}, CancellationToken.None);
++
++		assert.strictEqual(result.ok, true);
++		assert.strictEqual(fake.calls[0].progress.kind, 'markdownContent');
++		assert.match(formatDirectorChatEditToolResult(result), /edit_result: success/);
++	});
++
++	test('formats compact edit errors for the model loop', () => {
++		assert.strictEqual(formatDirectorChatEditToolResult({ ok: false, reason: 'no session' }), 'edit_result: error\nreason: no session');
++	});
++});
