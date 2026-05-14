@@ -1,5 +1,18 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: Phase 3 tool facade research pending review
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 hard-gate research report produced: `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md`.
+- Report status is `pending-review`; do not implement tool facade cutovers, direct-reuse allowlist changes, browser tool exposure, or model-facing tool renames until the user explicitly accepts the report and the status is changed to `accepted`.
+- The report has one final disposition table covering all 48 VS Code UI tools. Local self-check confirmed all 48 expected tool names are present.
+- Documentation validation passed: `git diff --check`, `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`, and the 48-tool/status self-check.
+- The report keeps `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` unchanged and outside Copilot `editFiles` parity.
+- The report proposes direct reuse for VS Code core browser tools and `renderMermaidDiagram`, Director facade cutover for read/search/create/fetch/githubRepo tools, and `defer-hidden` for notebook/memory/newWorkspace/runCommand/vscodeAPI/codebase/searchResults/githubTextSearch-class tools.
+- `director-surface-inventory.md` was updated to list `tool-facade-research.md` as a current report and record the pending-review hard gate.
+- `artifacts/` remains untracked and must not be committed by default.
+- Next step: wait for explicit user acceptance of `tool-facade-research.md`. After acceptance, update its status to `accepted`, commit that status change, then start Phase 3 implementation waves.
+
 ## 2026-05-14 latest memory: thin-layer Phase 2 wave 4 completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

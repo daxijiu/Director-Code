@@ -33,6 +33,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 | `expected-contracts-report.json` | Expected contract validation output. |
 | `materialize-report.json` | Materialization output for the active profile. |
 | `tool-migration-report.md` | Current Director tool registry/migration status. |
+| `tool-facade-research.md` | Phase 3 hard-gate research report for 48-tool facade/direct-reuse disposition. Status is `pending-review` until explicitly accepted. |
 | `chat-editing-contract-report.md` | Chat Editing contract analysis and Phase 3 implementation notes. |
 | `edit-tools-report.md` | Reviewable edit tools implementation report. |
 | `mode-routing-report.md` | Ask/Edit/Agent/Inline routing report. |
@@ -165,6 +166,7 @@ No final `010` stage is allowed in the canonical replay series.
 - Phase 2 wave 3 completed: Agent loop/runtime helpers now live under `src/vs/workbench/contrib/directorCode/common/agentEngine/`; the patch changed `002`, `004`, and `005` because `builtInModeUtil` is imported by branding and chat built-in-mode files.
 - Phase 2 wave 4 completed: browser Agent contribution/UI code now lives under `src/vs/workbench/contrib/directorCode/browser/agentEngine/`; upstream `chat.contribution.ts` only imports the Director contribution.
 - Phase 2 Agent Engine extraction is complete for common/runtime/provider/browser UI code. Remaining chat-path Director business logic is intentionally the Phase 3/4 tool/edit surface.
+- Phase 3 hard-gate report has been produced at `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md` with `Status: pending-review`; no tool facade or allowlist implementation may start until it is explicitly accepted.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
 - Phase 3 owns tool implementation moves that also require model-facing name cutover, including `createFile` and `createDirectory`.
 - `artifacts/` must remain untracked.
