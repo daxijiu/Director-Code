@@ -5,12 +5,15 @@ import { createHash } from 'node:crypto';
 import { getWorkspaceRoot, run, toPosix, writeJson } from './reference-manifest-lib.mjs';
 
 const PROFILE_INDEX = 'docs/upgrade/profiles/index.json';
-const STAGES = [
+const KNOWN_STAGES = [
   'branding',
   'product-build-release',
   'agent-engine',
   'chat-built-in-mode',
   'text-polish',
+  'tool-layer',
+  'chat-editing',
+  'edit-tools',
 ];
 
 function main() {
@@ -26,15 +29,17 @@ function main() {
   assertDirectory(directorAbsolute, sourceDirector);
 
   const stageToPatch = patchMap(profile);
+  const enabledStages = [...stageToPatch.keys()];
   const worktree = path.join(root, '.cache', 'upgrade-estimator', 'director-patch-diff', profile.profile);
 
   createDiffWorktree(vscodiumAbsolute, directorAbsolute, worktree);
   const changed = stagedChangedFiles(worktree);
   const classified = classifyChangedFiles(changed);
+  assertNoDisabledStageChanges(classified, stageToPatch, profile.profile);
   fs.mkdirSync(path.join(root, 'patches', 'replay'), { recursive: true });
 
   const patches = [];
-  for (const stage of STAGES) {
+  for (const stage of enabledStages) {
     const patchPath = stageToPatch.get(stage);
     if (!patchPath) {
       throw new Error(`Profile ${profile.profile} is missing Director patch for stage ${stage}`);
@@ -120,13 +125,26 @@ function loadProfile(root, requestedProfile) {
 function patchMap(profile) {
   const out = new Map();
   for (const patch of profile.replayInputs?.directorDeltaPatches || []) {
-    if (patch.includes('branding')) out.set('branding', patch);
-    else if (patch.includes('product-build-release')) out.set('product-build-release', patch);
-    else if (patch.includes('agent-engine')) out.set('agent-engine', patch);
-    else if (patch.includes('chat-built-in-mode')) out.set('chat-built-in-mode', patch);
-    else if (patch.includes('text-polish')) out.set('text-polish', patch);
+    const stage = directorStageFromPatchPath(patch);
+    if (!stage) {
+      throw new Error(`Unknown Director patch stage for ${patch}`);
+    }
+    out.set(stage, patch);
   }
   return out;
+}
+
+function directorStageFromPatchPath(patchPath) {
+  const base = path.basename(patchPath);
+  if (base.includes('tool-layer')) return 'tool-layer';
+  if (base.includes('chat-editing')) return 'chat-editing';
+  if (base.includes('edit-tools')) return 'edit-tools';
+  if (base.includes('branding')) return 'branding';
+  if (base.includes('product-build-release')) return 'product-build-release';
+  if (base.includes('agent-engine')) return 'agent-engine';
+  if (base.includes('chat-built-in-mode')) return 'chat-built-in-mode';
+  if (base.includes('text-polish')) return 'text-polish';
+  return undefined;
 }
 
 function assertDirectory(absolute, label) {
@@ -136,7 +154,7 @@ function assertDirectory(absolute, label) {
 }
 
 function classifyChangedFiles(changed) {
-  const out = new Map(STAGES.map((stage) => [stage, []]));
+  const out = new Map(KNOWN_STAGES.map((stage) => [stage, []]));
   const unclassified = [];
 
   for (const entry of changed) {
@@ -153,6 +171,21 @@ function classifyChangedFiles(changed) {
   }
 
   return out;
+}
+
+function assertNoDisabledStageChanges(classified, stageToPatch, profileId) {
+  const disabledChanged = [];
+  for (const [stage, files] of classified.entries()) {
+    if (files.length > 0 && !stageToPatch.has(stage)) {
+      disabledChanged.push(`${stage}:\n${files.map((file) => `  ${file}`).join('\n')}`);
+    }
+  }
+  if (disabledChanged.length > 0) {
+    throw new Error(
+      `Profile ${profileId} has changed files for known Director stage(s) that are not enabled in replayInputs.directorDeltaPatches.\n` +
+      `Add the corresponding patch entry to the profile/series or classify the files into an enabled stage:\n${disabledChanged.join('\n')}`
+    );
+  }
 }
 
 function stagedChangedFiles(worktree) {
@@ -178,6 +211,9 @@ function stagedChangedFiles(worktree) {
 function classifyPath(filePath) {
   if (isProductBuildRelease(filePath)) return 'product-build-release';
   if (isTextPolish(filePath)) return 'text-polish';
+  if (isToolLayer(filePath)) return 'tool-layer';
+  if (isChatEditing(filePath)) return 'chat-editing';
+  if (isEditTools(filePath)) return 'edit-tools';
   if (isAgentEngine(filePath)) return 'agent-engine';
   if (isChatBuiltInMode(filePath)) return 'chat-built-in-mode';
   if (isBranding(filePath)) return 'branding';
@@ -202,6 +238,25 @@ function isTextPolish(filePath) {
     'src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts',
     'src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts',
   ].includes(filePath);
+}
+
+function isToolLayer(filePath) {
+  return [
+    'src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts',
+    'src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts',
+  ].includes(filePath);
+}
+
+function isChatEditing(filePath) {
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editing/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editing/')) return true;
+  return false;
+}
+
+function isEditTools(filePath) {
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editTools/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editTools/')) return true;
+  return false;
 }
 
 function isAgentEngine(filePath) {

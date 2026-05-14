@@ -1,0 +1,310 @@
+diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6b4f915771ce795edc0adde293d9bf9a7b957ed0
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
+@@ -0,0 +1,210 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import type { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
++import type { AgentToolDefinition } from './agentEngineTypes.js';
++import type { IToolData } from '../tools/languageModelToolsService.js';
++
++export const enum DirectorToolMode {
++	Ask = 'ask',
++	Edit = 'edit',
++	Agent = 'agent',
++	Inline = 'inline',
++}
++
++export type DirectorToolAccess = 'read' | 'write' | 'execute' | 'coordination' | 'confirmation';
++export type DirectorToolDisposition = 'keep' | 'wrap' | 'rename' | 'hide' | 'defer';
++export type DirectorToolBacking = 'vscode-core' | 'director' | 'deferred';
++export type DirectorToolConfirmationPolicy = 'none' | 'pre-approval' | 'post-approval' | 'pre-and-post-approval' | 'not-model-callable';
++
++export interface DirectorToolRegistryEntry {
++	readonly modelName: string;
++	readonly internalToolIds: readonly string[];
++	readonly internalReferenceNames: readonly string[];
++	readonly description: string;
++	readonly inputSchema?: IJSONSchema;
++	readonly access: DirectorToolAccess;
++	readonly allowedModes: readonly DirectorToolMode[];
++	readonly confirmationPolicy: DirectorToolConfirmationPolicy;
++	readonly backing: DirectorToolBacking;
++	readonly requiredCapabilities?: readonly string[];
++	readonly disposition: DirectorToolDisposition;
++	readonly migrationNote: string;
++}
++
++export interface DirectorResolvedTool {
++	readonly entry: DirectorToolRegistryEntry;
++	readonly toolData: IToolData;
++	readonly modelName: string;
++	readonly toolId: string;
++	readonly definition: AgentToolDefinition;
++	readonly isReadOnly: boolean;
++}
++
++export interface DirectorRawToolSnapshot {
++	readonly id: string;
++	readonly referenceName: string;
++	readonly source: string;
++	readonly disposition: DirectorToolDisposition | 'unreviewed';
++	readonly modelName: string;
++	readonly allowedModes: readonly DirectorToolMode[];
++	readonly access: DirectorToolAccess | 'unknown';
++	readonly note: string;
++}
++
++const NO_MODES: readonly DirectorToolMode[] = [];
++const AGENT_ONLY: readonly DirectorToolMode[] = [DirectorToolMode.Agent];
++const READ_CONTEXT_MODES: readonly DirectorToolMode[] = [DirectorToolMode.Ask, DirectorToolMode.Edit, DirectorToolMode.Agent];
++
++function entry(
++	modelName: string,
++	internalToolIds: readonly string[],
++	internalReferenceNames: readonly string[],
++	access: DirectorToolAccess,
++	allowedModes: readonly DirectorToolMode[],
++	confirmationPolicy: DirectorToolConfirmationPolicy,
++	disposition: DirectorToolDisposition,
++	migrationNote: string,
++	options?: {
++		readonly backing?: DirectorToolBacking;
++		readonly description?: string;
++		readonly inputSchema?: IJSONSchema;
++		readonly requiredCapabilities?: readonly string[];
++	},
++): DirectorToolRegistryEntry {
++	return {
++		modelName,
++		internalToolIds,
++		internalReferenceNames,
++		description: options?.description ?? '',
++		inputSchema: options?.inputSchema,
++		access,
++		allowedModes,
++		confirmationPolicy,
++		backing: options?.backing ?? 'vscode-core',
++		requiredCapabilities: options?.requiredCapabilities,
++		disposition,
++		migrationNote,
++	};
++}
++
++export const directorToolRegistry: readonly DirectorToolRegistryEntry[] = [
++	entry('askQuestions', ['vscode_askQuestions'], ['askQuestions'], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve the existing user-question helper for Agent prompts that need explicit user input.'),
++	entry('vscode_get_confirmation', ['vscode_get_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve generic confirmation behavior for current Agent flows.'),
++	entry('vscode_get_confirmation_with_options', ['vscode_get_confirmation_with_options'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve option-based confirmation behavior for current Agent flows.'),
++	entry('vscode_get_modified_files_confirmation', ['vscode_get_modified_files_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve modified-files confirmation behavior until Phase 3/4 reviewable edit tools replace direct mutation paths.'),
++
++	entry('todo', ['manage_todo_list'], ['todo'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task planning visible to the Agent loop.'),
++	entry('task_complete', ['task_complete'], [], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task completion signaling available to the Agent loop.'),
++	entry('runSubagent', ['runSubagent'], ['runSubagent'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Keep subagent orchestration restricted to Agent mode.'),
++
++	entry('vscode_fetchWebPage_internal', ['vscode_fetchWebPage_internal'], [], 'read', [DirectorToolMode.Ask, DirectorToolMode.Agent], 'pre-and-post-approval', 'keep', 'Keep existing web/file fetch capability reviewed by the backing VS Code confirmation flow.'),
++	entry('usages', ['vscode_listCodeUsages'], ['usages'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Expose code usage lookup as read-only context in Ask/Edit/Agent.'),
++
++	entry('runInTerminal', ['run_in_terminal'], ['runInTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal execution for Agent mode only.'),
++	entry('sendToTerminal', ['send_to_terminal'], ['sendToTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal input routing for Agent mode only.'),
++	entry('getTerminalOutput', ['get_terminal_output'], ['getTerminalOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal output inspection, but keep terminal context out of Ask v1.'),
++	entry('killTerminal', ['kill_terminal'], ['killTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal cleanup for Agent mode only.'),
++	entry('terminalSelection', ['terminal_selection'], ['terminalSelection'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal selection context for Agent mode only.'),
++	entry('terminalLastCommand', ['terminal_last_command'], ['terminalLastCommand'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal command context for Agent mode only.'),
++	entry('vscode_get_terminal_confirmation', ['vscode_get_terminal_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal confirmation helper for Agent terminal tools.'),
++	entry('runTask', ['run_task'], ['runTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task execution for Agent mode only.'),
++	entry('createAndRunTask', ['create_and_run_task'], ['createAndRunTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task creation/execution for Agent mode only.'),
++	entry('getTaskOutput', ['get_task_output'], ['getTaskOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve task output inspection for Agent mode only.'),
++
++	entry('rename', ['vscode_renameSymbol'], ['rename'], 'write', NO_MODES, 'not-model-callable', 'defer', 'Direct rename mutates workspace state and must wait for the Phase 3/4 reviewable edit contract.'),
++	entry('vscode_editFile_internal', ['vscode_editFile_internal', 'vscode_editFile'], [], 'write', NO_MODES, 'not-model-callable', 'hide', 'Internal edit tool relies on last-request editing-session binding and must not be exposed beside Director reviewable edit tools.'),
++	entry('new', ['setup_tools_createNewWorkspace'], ['new'], 'write', NO_MODES, 'not-model-callable', 'defer', 'Workspace scaffolding is a mutation and is excluded from Ask/Agent until a reviewed policy exists.'),
++
++	entry('artifacts', ['setArtifacts'], ['artifacts'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep session artifact surfacing available to Agent mode.'),
++	entry('artifactRules', ['setArtifactRules'], ['artifactRules'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep session artifact rule updates available to Agent mode.'),
++	entry('resolveDebugEventDetails', ['vscode_resolveDebugEventDetails_internal'], ['resolveDebugEventDetails'], 'read', AGENT_ONLY, 'none', 'defer', 'Debug-event details stay out of the default model vocabulary until runtime policy is reviewed.'),
++
++	entry('extensions', ['vscode_searchExtensions_internal'], ['extensions'], 'read', NO_MODES, 'not-model-callable', 'defer', 'Extension marketplace search is not part of the Phase 1/2 coding-context gate.'),
++	entry('installExtensions', ['vscode_installExtensions'], ['installExtensions'], 'write', NO_MODES, 'not-model-callable', 'hide', 'Extension installation is a workspace/product mutation and is not exposed by default.'),
++];
++
++const registryById = new Map<string, DirectorToolRegistryEntry>();
++const registryByReference = new Map<string, DirectorToolRegistryEntry>();
++
++for (const item of directorToolRegistry) {
++	for (const id of item.internalToolIds) {
++		registryById.set(id, item);
++	}
++	for (const referenceName of item.internalReferenceNames) {
++		registryByReference.set(referenceName, item);
++	}
++}
++
++export function getDirectorToolRegistryEntry(toolData: IToolData): DirectorToolRegistryEntry | undefined {
++	return registryById.get(toolData.id) ?? (toolData.toolReferenceName ? registryByReference.get(toolData.toolReferenceName) : undefined);
++}
++
++export function getDirectorToolAllowlist(rawTools: Iterable<IToolData>, mode: DirectorToolMode): DirectorResolvedTool[] {
++	const resolved: DirectorResolvedTool[] = [];
++	const seenModelNames = new Set<string>();
++
++	for (const toolData of rawTools) {
++		const entry = getDirectorToolRegistryEntry(toolData);
++		if (!entry || entry.disposition === 'hide' || entry.disposition === 'defer' || !entry.allowedModes.includes(mode)) {
++			continue;
++		}
++		if (seenModelNames.has(entry.modelName)) {
++			continue;
++		}
++		const description = entry.description || toolData.modelDescription || toolData.displayName;
++		if (!description) {
++			continue;
++		}
++		seenModelNames.add(entry.modelName);
++		resolved.push({
++			entry,
++			toolData,
++			modelName: entry.modelName,
++			toolId: toolData.id,
++			isReadOnly: entry.access === 'read',
++			definition: {
++				name: entry.modelName,
++				description,
++				inputSchema: toAgentInputSchema(entry.inputSchema ?? toolData.inputSchema),
++				isReadOnly: entry.access === 'read',
++			},
++		});
++	}
++
++	return resolved.sort((left, right) => left.modelName.localeCompare(right.modelName));
++}
++
++export function createDirectorRawToolSnapshot(rawTools: Iterable<IToolData>): DirectorRawToolSnapshot[] {
++	const rows: DirectorRawToolSnapshot[] = [];
++	for (const toolData of rawTools) {
++		const entry = getDirectorToolRegistryEntry(toolData);
++		rows.push({
++			id: toolData.id,
++			referenceName: toolData.toolReferenceName ?? '',
++			source: toolData.source.type,
++			disposition: entry?.disposition ?? 'unreviewed',
++			modelName: entry?.modelName ?? toolData.toolReferenceName ?? toolData.id,
++			allowedModes: entry?.allowedModes ?? [],
++			access: entry?.access ?? 'unknown',
++			note: entry?.migrationNote ?? 'No Director registry entry; hidden from model-facing Director tools by default.',
++		});
++	}
++	return rows.sort((left, right) => (left.referenceName || left.id).localeCompare(right.referenceName || right.id));
++}
++
++function toAgentInputSchema(schema: IJSONSchema | undefined): AgentToolDefinition['inputSchema'] {
++	if (schema?.type === 'object') {
++		return {
++			type: 'object',
++			properties: (schema.properties as Record<string, any>) || {},
++			required: Array.isArray(schema.required) ? schema.required : undefined,
++		};
++	}
++	return {
++		type: 'object',
++		properties: {},
++	};
++}
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..98b3b268bc17ae6f5f52e7d67ab1193897a14464
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
+@@ -0,0 +1,88 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { ToolDataSource, type IToolData } from '../../../common/tools/languageModelToolsService.js';
++import { createDirectorRawToolSnapshot, DirectorToolMode, getDirectorToolAllowlist } from '../../../common/agentEngine/directorToolRegistry.js';
++
++suite('Director Tool Registry', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	function tool(id: string, referenceName: string | undefined, modelDescription = `${referenceName ?? id} description`): IToolData {
++		return {
++			id,
++			toolReferenceName: referenceName,
++			displayName: referenceName ?? id,
++			modelDescription,
++			source: ToolDataSource.Internal,
++			inputSchema: {
++				type: 'object',
++				properties: {
++					value: { type: 'string' },
++				},
++				required: ['value'],
++			},
++		};
++	}
++
++	test('computes an Ask allowlist with read-only tools only', () => {
++		const raw = [
++			tool('vscode_listCodeUsages', 'usages'),
++			tool('run_in_terminal', 'runInTerminal'),
++			tool('vscode_renameSymbol', 'rename'),
++			tool('vscode_fetchWebPage_internal', undefined),
++		];
++
++		const askTools = getDirectorToolAllowlist(raw, DirectorToolMode.Ask);
++
++		assert.deepStrictEqual(askTools.map(item => item.modelName), ['usages', 'vscode_fetchWebPage_internal']);
++		assert.ok(askTools.every(item => item.definition.isReadOnly === true));
++		assert.ok(!askTools.some(item => item.modelName === 'runInTerminal'));
++		assert.ok(!askTools.some(item => item.modelName === 'rename'));
++	});
++
++	test('preserves existing terminal and task tools for Agent mode', () => {
++		const raw = [
++			tool('run_in_terminal', 'runInTerminal'),
++			tool('run_task', 'runTask'),
++			tool('create_and_run_task', 'createAndRunTask'),
++			tool('get_task_output', 'getTaskOutput'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++		const names = agentTools.map(item => item.modelName);
++
++		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runTask']);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
++	});
++
++	test('hides internal edit and deferred mutation tools from Agent mode', () => {
++		const raw = [
++			tool('vscode_editFile_internal', undefined),
++			tool('vscode_renameSymbol', 'rename'),
++			tool('setup_tools_createNewWorkspace', 'new'),
++			tool('manage_todo_list', 'todo'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++
++		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['todo']);
++	});
++
++	test('marks unreviewed raw tools as hidden by default in snapshots', () => {
++		const raw = [
++			tool('unreviewed_tool', 'unreviewedTool'),
++			tool('vscode_editFile_internal', undefined),
++		];
++
++		const snapshot = createDirectorRawToolSnapshot(raw);
++
++		assert.strictEqual(snapshot.find(item => item.id === 'unreviewed_tool')?.disposition, 'unreviewed');
++		assert.strictEqual(snapshot.find(item => item.id === 'vscode_editFile_internal')?.disposition, 'hide');
++	});
++});

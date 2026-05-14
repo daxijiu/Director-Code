@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1+ remains planned and must not start until explicitly requested.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate implemented, replay-landed, and validated. Phase 2 read-only workspace tools and GitHub v1 are next.
 
 Execution decisions added on 2026-05-13:
 
@@ -22,7 +22,13 @@ Execution progress added on 2026-05-14:
 - Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/series.116.json`, `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`, and related generated reports.
 - Validation completed: `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, canonical manifest validation, `compile-check-ts-native`, `transpile-client-esbuild`, and targeted browser tests (`5 passing`).
 - Full package build completed with `scripts/build-director-116.ps1`; installers were produced under `artifacts/out/stable/win32-x64/` and accepted by user manual testing.
-- Do not proceed to Phase 1 tool registry/mode policy work unless the user explicitly requests the next phase.
+- The user explicitly requested continuation on 2026-05-14 after Phase 0 acceptance.
+- Phase 1 tool registry/mode policy gate is implemented. The central registry is `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts`; the bridge now consumes registry-filtered tool definitions instead of forwarding unreviewed `toolsService.getTools()` output.
+- Agent mode now uses the registry-filtered allowlist while preserving existing terminal/task/confirmation/todo/subagent/fetch/usages behavior according to the migration report. Ask/Edit/Inline computed allowlists are inspectable even before full mode routing lands.
+- The deterministic migration artifact is `docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md`.
+- Replay assets updated for Phase 1: new `patches/replay/007-director-tool-layer.116.patch`, updated `004-director-agent-engine.116.patch`, active profile, `patches/series.116.json`, canonical manifest, reports, and generator classification logic.
+- Phase 1 validation completed: `compile-check-ts-native`, `transpile-client-esbuild`, targeted `directorToolRegistry.test.ts` (`5 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, and canonical manifest validation.
+- Next implementation wave starts at Phase 2 read-only workspace tools and GitHub v1 gate.
 
 ## Summary
 
@@ -257,6 +263,7 @@ Current 116 stages are:
 4. `004-director-agent-engine.116.patch`: Director agent harness, model/tool bridge, agent engine, language-model/tool service integration, MCP-related agent paths.
 5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode, Copilot commercial-flow bypasses, chat setup/status/model picker/agent session UI entry points.
 6. `006-director-text-polish.116.patch`: small text/prompt polish.
+7. `007-director-tool-layer.116.patch`: Director-owned tool registry, mode policy, migration report/test layer, and future read-only workspace/GitHub v1 tools.
 
 Planned stage ownership for this optimization:
 
@@ -264,7 +271,7 @@ Planned stage ownership for this optimization:
   - Primary owner: update existing `004-director-agent-engine.116.patch`.
   - Rationale: fixes are in extension host language model/tool plumbing and Director model/tool bridge behavior.
 - Phase 1 tool registry and mode policy:
-  - Preferred owner: new `007-director-tool-layer.116.patch` if it introduces a central registry or new tool-policy modules.
+  - Owner: `007-director-tool-layer.116.patch` for the central registry, mode policy, migration report, and registry tests.
   - Acceptable exception: small bridge-only adjustments can stay in `004-director-agent-engine.116.patch`.
 - Phase 2 read-only workspace tools:
   - Preferred owner: new `007-director-tool-layer.116.patch`.

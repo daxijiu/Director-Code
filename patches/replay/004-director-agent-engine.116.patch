@@ -1043,10 +1043,10 @@ index 0000000000000000000000000000000000000000..b1f85fb88cdf9fa3c12570c911372c9b
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f293418b1f22f8b54237220a7d2dbc11e279dcfa
+index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749bd85bb7d5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,461 @@
+@@ -0,0 +1,464 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1085,6 +1085,7 @@ index 0000000000000000000000000000000000000000..f293418b1f22f8b54237220a7d2dbc11
 +import { IChatService, type IChatFollowup, type IChatProgress } from '../../common/chatService/chatService.js';
 +import type { IChatProgressResponseContent } from '../../common/model/chatModel.js';
 +import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
++import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
 +import { agentEventToProgress } from './progressBridge.js';
 +import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';
 +import { VSCodeToolBridge, getAgentToolDefinitions, waitForAgentToolRegistryReady } from './toolBridge.js';
@@ -1236,8 +1237,10 @@ index 0000000000000000000000000000000000000000..f293418b1f22f8b54237220a7d2dbc11
 +				request.sessionResource,
 +				request.requestId,
 +				token,
++				undefined,
++				DirectorToolMode.Agent,
 +			);
-+			const toolDefinitions = getAgentToolDefinitions(this.toolsService);
++			const toolDefinitions = getAgentToolDefinitions(this.toolsService, undefined, DirectorToolMode.Agent);
 +
 +			// 5. Convert history to normalized messages
 +			const richResponses = this.getRichResponses(request, history.length);
@@ -4092,10 +4095,10 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..27fad94c07de2a28cbcd20f159315e54dc7a8a2f
+index 0000000000000000000000000000000000000000..d317f8982799430c94d4c35ff5c804368b097de2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
-@@ -0,0 +1,261 @@
+@@ -0,0 +1,227 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4116,9 +4119,9 @@ index 0000000000000000000000000000000000000000..27fad94c07de2a28cbcd20f159315e54
 +import { URI } from '../../../../../base/common/uri.js';
 +import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
 +import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
++import { DirectorToolMode, getDirectorToolAllowlist } from '../../common/agentEngine/directorToolRegistry.js';
 +import type {
 +	ILanguageModelToolsService,
-+	IToolData,
 +	IToolInvocation,
 +	CountTokensCallback,
 +} from '../../common/tools/languageModelToolsService.js';
@@ -4191,43 +4194,9 @@ index 0000000000000000000000000000000000000000..27fad94c07de2a28cbcd20f159315e54
 +export function getAgentToolDefinitions(
 +	toolsService: ILanguageModelToolsService,
 +	model?: ILanguageModelChatMetadata,
++	mode: DirectorToolMode = DirectorToolMode.Agent,
 +): AgentToolDefinition[] {
-+	const tools: AgentToolDefinition[] = [];
-+
-+	for (const toolData of toolsService.getTools(model)) {
-+		if (!toolData.modelDescription && !toolData.displayName) {
-+			continue;
-+		}
-+
-+		const definition: AgentToolDefinition = {
-+			name: toolData.toolReferenceName || toolData.id,
-+			description: toolData.modelDescription || toolData.displayName,
-+			inputSchema: toolData.inputSchema
-+				? {
-+					type: 'object' as const,
-+					properties: (toolData.inputSchema as any).properties || {},
-+					required: (toolData.inputSchema as any).required,
-+				}
-+				: {
-+					type: 'object' as const,
-+					properties: {},
-+				},
-+			isReadOnly: isToolReadOnly(toolData),
-+		};
-+		tools.push(definition);
-+	}
-+
-+	return tools;
-+}
-+
-+/**
-+ * Determine if a tool is read-only based on its tags and tool set membership.
-+ */
-+function isToolReadOnly(toolData: IToolData): boolean {
-+	if (toolData.tags?.includes('readonly')) {
-+		return true;
-+	}
-+	return false;
++	return getDirectorToolAllowlist(toolsService.getTools(model), mode).map(tool => tool.definition);
 +}
 +
 +// ============================================================================
@@ -4255,12 +4224,12 @@ index 0000000000000000000000000000000000000000..27fad94c07de2a28cbcd20f159315e54
 +		private readonly requestId: string,
 +		private readonly token: CancellationToken,
 +		model?: ILanguageModelChatMetadata,
++		mode: DirectorToolMode = DirectorToolMode.Agent,
 +	) {
-+		for (const toolData of toolsService.getTools(model)) {
-+			const name = toolData.toolReferenceName || toolData.id;
-+			this.toolNameToId.set(name, toolData.id);
-+			if (isToolReadOnly(toolData)) {
-+				this.readOnlyTools.add(name);
++		for (const tool of getDirectorToolAllowlist(toolsService.getTools(model), mode)) {
++			this.toolNameToId.set(tool.modelName, tool.toolId);
++			if (tool.isReadOnly) {
++				this.readOnlyTools.add(tool.modelName);
 +			}
 +		}
 +	}

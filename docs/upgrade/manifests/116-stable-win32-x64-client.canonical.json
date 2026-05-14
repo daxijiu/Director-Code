@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T06:33:03.631Z",
-  "treeHash": "8ca5d75c15d71085a33d6884014caee2bbe066259c55f20f0e6b3ee50f72a1e1",
+  "generatedAt": "2026-05-14T08:10:20.935Z",
+  "treeHash": "878034da481da9c3d0b6e35dea24378df8e773523807d7c36cb9562a0f85c854",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39710,7 +39710,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts",
-      "sha256": "65e7b76882c9acf90a42cc7852569dc87d14564b70dc52e8adf568310c84d790",
+      "sha256": "3ba38d0d02e91531a1f3ec4785ab73684e4e01854c0a66a0a5815c5402ce7c2d",
       "mode": 33206,
       "type": "file"
     },
@@ -39758,7 +39758,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts",
-      "sha256": "890363258e9324893296b8e5a28d06f3dfd8cf6d7d60e53debfeadc0b9a45537",
+      "sha256": "e558647dedd206ac1dbc365fb7f4389663837de37b2097c99995c3cd0ddf5da7",
       "mode": 33206,
       "type": "file"
     },
@@ -41923,6 +41923,12 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
+      "sha256": "01fe5e6f672a185b0c7e9e9342a75acb0a805409cbe0647a3470e837992af752",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts",
       "sha256": "213626a4aaf505456f787760658651d89046dc14b18e6f2042fa881f6d8db0bb",
       "mode": 33206,
@@ -43269,6 +43275,12 @@
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts",
       "sha256": "8f273ac5888d5adb51a5bc3560e7483f0793b0c82952b67bcc50422027380a94",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
+      "sha256": "b7e91664e379519ccdab53e27b988369408bc8efdf2a014f702d80a77b6951a8",
       "mode": 33206,
       "type": "file"
     },

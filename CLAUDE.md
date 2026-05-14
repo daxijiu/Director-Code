@@ -70,10 +70,10 @@ bash scripts/upgrade/materialize-vscode.sh \
 4. `004-director-agent-engine.116.patch`: Director agent harness、model/tool bridge、agent engine、language-model/tool service integration、MCP 相关 agent paths。
 5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI entry points。
 6. `006-director-text-polish.116.patch`: 小范围文本和 prompt polish。
+7. `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、migration report/test layer，以及后续 read-only workspace/GitHub v1 context tools。Phase 1 gate 已完成。
 
-计划中的新增 stage：
+计划中的后续新增 stage：
 
-- `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、read-only workspace/GitHub v1 context tools。
 - `008-director-chat-editing.116.patch`: Chat Editing UI contract、reviewable edit progress、shared edit adapter、`create_directory` review transaction。
 - `009-director-edit-tools.116.patch`: 仅在 edit tool 实现足够大时拆出，否则并入 `008`。
 

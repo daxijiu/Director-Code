@@ -1,5 +1,24 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 最新记忆：116 tool registry Phase 1 已完成
+
+- 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
+- 用户已在 Phase 0 packaged-build acceptance 后明确要求继续后续阶段；`docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` 的 Phase 1 tool registry / mode policy gate 已完成、replay-land、测试通过。
+- Phase 1 核心落点：
+  - 新增 `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts`，集中维护 Director 工具的 model-facing name、内部 tool id、schema、read/write/execute 分类、允许模式、确认策略和迁移处置。
+  - `src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts` 改为消费 registry-filtered allowlist，不再直接把未审查的 `toolsService.getTools()` 全量暴露给模型。
+  - `src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts` 明确以 `DirectorToolMode.Agent` 初始化工具 bridge 和模型工具定义。
+  - 新增 `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`，覆盖 Ask 无写/执行工具、Agent 保留 terminal/task 工具、内部 edit/rename/new workspace 隐藏或 defer、unknown snapshot 标记。
+- Phase 1 迁移报告：`docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md`。报告记录 raw/current tool 迁移表和 Ask/Edit/Agent/Inline computed allowlists；内容应保持 deterministic、sanitized，不包含 token、绝对用户路径或 volatile timestamp。
+- Replay/control-plane 落点：
+  - 新增 `patches/replay/007-director-tool-layer.116.patch`。
+  - 更新 `patches/replay/004-director-agent-engine.116.patch` 以承载 agent bridge 调用点变化。
+  - 更新 `docs/upgrade/profiles/116-stable-win32-x64-client.json`、`patches/series.116.json`、`docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json` 和 116 reports。
+  - 更新 `scripts/upgrade/generate-director-patches.mjs` / `scripts/upgrade/generate-series.mjs`：known stages 与 profile-enabled stages 分离，新增 `tool-layer`、`chat-editing`、`edit-tools` exact stage 解析和 path classification；known-but-disabled stage 会明确失败，不静默丢文件。
+- Phase 1 已通过验证：`npm run compile-check-ts-native`、`npm run gulp -- transpile-client-esbuild`、`node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`、`validate-series`、`validate-product-overrides`、`expected-contracts`、clean `materialize-vscode`、canonical manifest validation。
+- clean materialize 后生成目录的 `node_modules` 曾被移除并已通过 `npm ci` 恢复；不要把依赖目录纳入提交。当前未跟踪 `artifacts/` 仍是构建/验证产物，不要默认纳入 Git。
+- 下一波从 Phase 2 开始：实现 Director-owned read-only workspace tools 和 GitHub v1 gate（`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo`），优先使用 VS Code services，继续 replay-land、验证、记忆更新、提交并推送。
+
 ## 2026-05-14 最新记忆：116 Mermaid runtime Phase 0 已完成
 
 - 当前 checkout 仍是 `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
@@ -16,7 +35,7 @@
 - 完整安装包已用 `.\scripts\build-director-116.ps1` 构建，未用 `-SkipReplay`。输出：
   - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe`
   - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe`
-- 用户已确认安装包实际测试通过。Phase 0 视为完成；不要继续 Phase 1 tool registry / Ask/Edit/Inline / Chat Editing 实施，除非用户明确要求进入下一阶段。
+- 用户已确认安装包实际测试通过。Phase 0 视为完成；用户随后已明确要求进入后续阶段，Phase 1 tool registry / mode policy gate 也已完成。后续继续从 Phase 2 开始。
 - 当前工作区仍可能有未跟踪 `artifacts/` 安装包产物；这些产物不要默认纳入 Git。
 
 ## 2026-05-13 当前最高优先级记忆
@@ -34,7 +53,7 @@
   - `004-director-agent-engine.116.patch`: Director agent harness、model/tool bridge、agent engine、language-model/tool service integration、MCP agent paths。
   - `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI。
   - `006-director-text-polish.116.patch`: 小范围文本/prompt polish。
-- 计划中的新增 stages：`007-director-tool-layer.116.patch`、`008-director-chat-editing.116.patch`，必要时 `009-director-edit-tools.116.patch`。
+- 当前新增 stage：`007-director-tool-layer.116.patch` 已用于 Phase 1。计划中的后续 stages：`008-director-chat-editing.116.patch`，必要时 `009-director-edit-tools.116.patch`。
 - 116 空白 Workbench 修复已经 replay 化：根因是 `defaultChatAgent.provider` 覆盖不完整，VS Code 116 启动读 `provider.enterprise.id`；修复保留完整 provider object shape，落在 `003-director-product-build-release.116.patch`、expected product JSON 和 `validate-product-overrides.mjs`。后续 product/default-agent 修改必须保留这个 contract。
 - Director settings 入口要并入 VS Code 116 的 Agent Customizations 界面，计划文件是 `docs/upgrade/116-agent-customizations-director-settings-plan.md`。
 - 当前大优化计划是 `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`：覆盖 Mermaid runtime、inline chat、Ask/Edit/Agent mode routing、Chat Editing UI、工具层复刻、GitHub v1 read-only repo context。

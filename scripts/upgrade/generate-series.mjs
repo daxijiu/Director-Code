@@ -99,6 +99,9 @@ function seriesEntry(root, profile, planned, order) {
 
 function directorStageFromPath(patchPath) {
   const base = path.basename(patchPath, '.patch').replace(/^\d+-director-/, '');
+  if (base.includes('tool-layer')) return 'tool-layer';
+  if (base.includes('chat-editing')) return 'chat-editing';
+  if (base.includes('edit-tools')) return 'edit-tools';
   if (base.includes('branding')) return 'branding';
   if (base.includes('product')) return 'product-build-release';
   if (base.includes('agent-engine')) return 'agent-engine';
