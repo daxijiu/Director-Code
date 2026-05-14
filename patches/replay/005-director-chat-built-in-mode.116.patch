@@ -352,14 +352,14 @@ index 4517c4e41451c28f13d88bf301ecc84587f0c7b0..dda4d2ee691b74b6e01ceeb129bb5c23
  .ai-customization-management-editor .mcp-detail-container {
  	height: 100%;
 diff --git a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts b/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
-index e752209f42896da4ab7f3a188b4810a156a09f4a..acab49d7562fa387a83d8b45ea495721a93e41f0 100644
+index e752209f42896da4ab7f3a188b4810a156a09f4a..784eefa8e2362ec9329269ab932d1bcaf3af6e3b 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts
 @@ -15,6 +15,7 @@ import { createDecorator } from '../../../../../platform/instantiation/common/in
  import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
  import { ChatMessageRole, ILanguageModelsService } from '../../common/languageModels.js';
  import * as nls from '../../../../../nls.js';
-+import { selectAuxiliaryLanguageModel } from '../agentEngine/auxiliaryModelSelection.js';
++import { selectAuxiliaryLanguageModel } from '../../../directorCode/browser/agentEngine/auxiliaryModelSelection.js';
  
  /**
   * Simple diff info interface for explanation generation
@@ -696,14 +696,14 @@ index 96db31bee112378dfff69ca6c5b713fca22def3d..1f8ed6ca469f3f2051d058ff6a735435
  
  		let hasAddedWaitWarning = false;
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
-index 2a0ab1b86209286a97f22e4dc3cd0e14805871e4..cda71c29d03d3ea6e84463ff3068961521323ceb 100644
+index 2a0ab1b86209286a97f22e4dc3cd0e14805871e4..6b490fcd6ddd9b820449627e714eb678ea0a5a1f 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts
 @@ -40,6 +40,7 @@ import { IChatCollapsibleIODataPart } from './chatToolInputOutputContentPart.js'
  import { ChatThinkingExternalResourceWidget } from './chatThinkingExternalResourcesWidget.js';
  import { LocalChatSessionUri, chatSessionResourceToId } from '../../../common/model/chatUri.js';
  import { IEditSessionDiffStats } from '../../../common/editing/chatEditingService.js';
-+import { selectAuxiliaryLanguageModel } from '../../agentEngine/auxiliaryModelSelection.js';
++import { selectAuxiliaryLanguageModel } from '../../../../directorCode/browser/agentEngine/auxiliaryModelSelection.js';
  
  
  function extractTextFromPart(content: IChatThinkingPart): string {

@@ -1,5 +1,25 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer Phase 2 wave 4 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 2 module extraction wave 4 completed: browser Agent contribution/UI code moved from `src/vs/workbench/contrib/chat/browser/agentEngine/` to `src/vs/workbench/contrib/directorCode/browser/agentEngine/`.
+- Moved files: `agentEngine.contribution.ts`, `apiKeysWidget.ts`, `auxiliaryModelSelection.ts`, `directorCodeAgent.ts`, `directorCodeModelProvider.ts`, `directorCodeSettingsEditor.ts`, `messageNormalization.ts`, `oauthWidget.ts`, `progressBridge.ts`, `providerSettingsWidget.ts`, `toolBridge.ts`, and `media/directorCodeSettings.css`.
+- `src/vs/workbench/contrib/chat/browser/agentEngine/` now only retains `directorReadOnlyTools.contribution.ts` and `editTools/directorEditTools.contribution.ts`, which are intentionally deferred to the Phase 3/4 tool/edit waves.
+- `chat.contribution.ts`, chat built-in-mode files, and Agent Engine tests now import browser Agent code through `directorCode/browser/agentEngine`.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/005-director-chat-built-in-mode.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`; the first run hit a Windows native-module lock and succeeded after stopping the stale `node-gyp`/`MSBuild` processes and rerunning.
+  - `npm run compile-check-ts-native`, `npm run compile`, targeted node Agent browser/common tests passed with `115 passing`, and targeted browser `apiKeysWidget` + `chatModelPicker` tests passed with `45 passing`.
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 3 hard gate. Produce `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md` with `Status: pending-review` and wait for explicit user acceptance before any tool facade/allowlist implementation.
+
 ## 2026-05-14 latest memory: thin-layer Phase 2 wave 3 completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

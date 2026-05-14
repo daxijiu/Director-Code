@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T16:22:28.275Z",
+  "generatedAt": "2026-05-14T16:38:35.281Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -154,18 +154,6 @@
         "src/vs/workbench/api/common/extHostLanguageModelTools.ts",
         "src/vs/workbench/api/common/extHostLanguageModels.ts",
         "src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/auxiliaryModelSelection.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeSettingsEditor.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/media/directorCodeSettings.css",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/oauthWidget.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/providerSettingsWidget.ts",
-        "src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts",
         "src/vs/workbench/contrib/chat/browser/chat.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts",
         "src/vs/workbench/contrib/chat/common/participants/chatAgents.ts",
@@ -198,6 +186,18 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts",
         "src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/apiKeysWidget.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/auxiliaryModelSelection.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/media/directorCodeSettings.css",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/messageNormalization.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/oauthWidget.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/progressBridge.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts",
+        "src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts",
@@ -232,8 +232,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 80,
-      "size": 859925,
-      "sha256": "1fb1a841e1df73b432b1ecf0883dc56f5874e514cd75cb2d3e0ab6bb69338a1e"
+      "size": 859908,
+      "sha256": "615d232fa74460d32b783aaae10f29808be44b7869837fe2d9d01a43849e50bc"
     },
     {
       "stage": "chat-built-in-mode",
@@ -265,8 +265,8 @@
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
       ],
       "fileCount": 24,
-      "size": 58861,
-      "sha256": "4605402f4188cc51baf683f367e36ecd375faa395eca6d7e098d85a3288df817"
+      "size": 58915,
+      "sha256": "d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753"
     },
     {
       "stage": "text-polish",
