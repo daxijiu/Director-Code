@@ -1,5 +1,22 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer Phase 2 wave 1 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 2 module extraction wave 1 completed: `agentEngineTypes.ts` moved from `src/vs/workbench/contrib/chat/common/agentEngine/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/`.
+- All Agent Engine/browser/test imports now reference the new `directorCode/common/agentEngine/agentEngineTypes.js` path. The moved type file temporarily imports `providerTypes.js` from the remaining chat-path provider implementation; move providers/BYOK as a coherent next wave.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`, `director-patches-report.json`, `materialize-report.json`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci` after materialize, then `npm run compile-check-ts-native`, `npm run compile`, and targeted `npm run test-node -- --run ...agentEngine.test.ts --run ...progressBridge.test.ts --run ...compact.test.ts` passed with `61 passing`.
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 2 provider/BYOK/settings extraction into `src/vs/workbench/contrib/directorCode/`, preserving existing semantic patch stages and leaving upstream chat files as thin hooks.
+
 ## 2026-05-14 latest memory: thin-layer Phase 1 inventory completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

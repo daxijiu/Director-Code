@@ -736,7 +736,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +}
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..02cbd2fbb2e092028098c6b6a573fb97e59d4c9e
+index 0000000000000000000000000000000000000000..ee1e93f912d2da991b37fa09ed5624deb1f3d59b
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
 @@ -0,0 +1,224 @@
@@ -746,7 +746,7 @@ index 0000000000000000000000000000000000000000..02cbd2fbb2e092028098c6b6a573fb97
 + *--------------------------------------------------------------------------------------------*/
 +
 +import type { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
-+import type { AgentToolDefinition } from './agentEngineTypes.js';
++import type { AgentToolDefinition } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import type { IToolData } from '../tools/languageModelToolsService.js';
 +
 +export const enum DirectorToolMode {

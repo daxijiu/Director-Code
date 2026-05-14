@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
-  "generatedAt": "2026-05-14T09:50:13.733Z",
+  "generatedAt": "2026-05-14T15:49:34.356Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -76,7 +76,7 @@
     },
     {
       "path": "patches/replay/004-director-agent-engine.116.patch",
-      "sha256": "a991036987be9489795ab73e9503217b6133d912a916b53c304216e3cc18f98b",
+      "sha256": "b2c0e7cf5b843dec4ce4983a28f8dffecb03d42c2e05b8cbeb937fba79b1fc07",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -142,7 +142,7 @@
     },
     {
       "path": "patches/replay/007-director-tool-layer.116.patch",
-      "sha256": "4e13b07bea8dcfdbbbae84b9dd9a2a834b4dd6dee7a3bcf1e95b713dc468469f",
+      "sha256": "ab9b8d4395a20e1ba5c5d718c2b90d827b761be207ce706abf2155d2de53e400",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

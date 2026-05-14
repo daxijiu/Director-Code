@@ -4,7 +4,7 @@ Date: 2026-05-14
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 1 baseline inventory
+Status: Phase 2 module extraction wave 1
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -12,6 +12,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
 - Current branch: `refactor/112-replay-baseline`
 - Baseline commit when this wave started: `e290c012 Clarify thin-layer plan gates`
+- Phase 2 wave 1 started after commit: `22792213 Add thin-layer surface inventory`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -70,10 +71,10 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 | --- | --- | ---: | ---: | --- | --- |
 | `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 175179 | `643751f5e0991e2e7f773a5c68a0277b80cd185469776fa74eb1618af1347687` | `declarative product config` plus user-visible text/resource replacement. |
 | `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 17420 | `f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1` | `declarative product config`. |
-| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 80 | 857322 | `a991036987be9489795ab73e9503217b6133d912a916b53c304216e3cc18f98b` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
+| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 80 | 857567 | `b2c0e7cf5b843dec4ce4983a28f8dffecb03d42c2e05b8cbeb937fba79b1fc07` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
 | `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58621 | `4eb9db4e3a2141f7a5e15e0f37b390567277bb0c69ff80d6d2c3c2bc59433fd3` | Mix of `declarative product config` and `must-touch upstream hook`. |
 | `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 3 | 13099 | `9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141` | `declarative product config` / user-visible text polish. |
-| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 65861 | `4e13b07bea8dcfdbbbae84b9dd9a2a834b4dd6dee7a3bcf1e95b713dc468469f` | `Director-owned logic`. |
+| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 65900 | `ab9b8d4395a20e1ba5c5d718c2b90d827b761be207ce706abf2155d2de53e400` | `Director-owned logic`. |
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21221 | `1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9` | `Director-owned logic`. |
 | `edit-tools` | `patches/replay/009-director-edit-tools.116.patch` | 3 | 45110 | `094d248c40996cf246124287b469f7b80bb6a7e6d6a4b2e5484ac1f1d8b5b2db` | `Director-owned logic`. |
 
@@ -86,7 +87,8 @@ These files are Director business logic and should move to `src/vs/workbench/con
 | Current path group | Stage | Planned semantic stage | Notes |
 | --- | --- | --- | --- |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Agent contribution, Director Agent registration, settings UI, widgets, message normalization, progress bridge, tool bridge, and provider UI. |
-| `src/vs/workbench/contrib/chat/common/agentEngine/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Agent loop, provider/BYOK/OAuth/model resolver, compact/token helpers, retry, settings queue, mode routing, and provider implementations. |
+| `src/vs/workbench/contrib/chat/common/agentEngine/*` except `agentEngineTypes.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Agent loop, provider/BYOK/OAuth/model resolver, compact/token helpers, retry, settings queue, mode routing, and provider implementations. |
+| `src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 1 moved the shared Agent Engine protocol/types out of the upstream chat tree. It temporarily imports provider types from the remaining chat-path provider implementation until the provider group is migrated. |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read-only tool contribution. Phase 3 owns further facade/name cutover. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read/search/context implementations. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director registry, mode allowlist, backing classification, and confirmation policy. |
@@ -153,6 +155,8 @@ No final `010` stage is allowed in the canonical replay series.
 
 ## Phase 2 Readiness Notes
 
+- Phase 2 wave 1 completed: `agentEngineTypes.ts` now lives under `src/vs/workbench/contrib/directorCode/common/agentEngine/`, and all Agent Engine/browser/test imports were updated to the new path.
+- This wave intentionally left provider implementations under `src/vs/workbench/contrib/chat/common/agentEngine/providers/`; the next extraction wave should move a coherent provider/BYOK group instead of only one dependency file.
 - The largest upgrade-risk surface is currently the Director-owned `agentEngine` tree living under `src/vs/workbench/contrib/chat/`.
 - Phase 2 should move Director-owned logic to `src/vs/workbench/contrib/directorCode/` in small groups and leave only import/registration/bridge hooks in upstream chat files.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.

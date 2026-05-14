@@ -1045,7 +1045,7 @@ index 0000000000000000000000000000000000000000..b1f85fb88cdf9fa3c12570c911372c9b
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..bf8b99d6d6340792b34003e5cfb46b5923c204fd
+index 0000000000000000000000000000000000000000..5161d8ee99ce3d97ed4a09cf0f16bee31f6518c0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 @@ -0,0 +1,653 @@
@@ -1072,7 +1072,7 @@ index 0000000000000000000000000000000000000000..bf8b99d6d6340792b34003e5cfb46b59
 +import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 +import { ITextModelService } from '../../../../../editor/common/services/resolverService.js';
 +import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
-+import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
++import type { AgentEngineConfig } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
 +import { IAuthStateService, normalizeAuthVariantForProvider, type IResolvedAuthState } from '../../common/agentEngine/authStateService.js';
 +import { CONFIG_GEMINI_KEY_IN_URL } from '../../common/agentEngine/geminiAuth.js';
@@ -3655,7 +3655,7 @@ index 0000000000000000000000000000000000000000..fd1f290554422b957d35c4ca502a0b3b
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..95ba77c0bfc46409ec615b29318651b892176e15
+index 0000000000000000000000000000000000000000..454c37f0a79de315c0795f50717fd186d17305c6
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/progressBridge.ts
 @@ -0,0 +1,185 @@
@@ -3672,7 +3672,7 @@ index 0000000000000000000000000000000000000000..95ba77c0bfc46409ec615b29318651b8
 + */
 +
 +import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-+import type { AgentEvent, AgentToolUseEvent, AgentToolResultEvent, AgentSystemEvent, AgentTextDeltaEvent, AgentThinkingDeltaEvent } from '../../common/agentEngine/agentEngineTypes.js';
++import type { AgentEvent, AgentToolUseEvent, AgentToolResultEvent, AgentSystemEvent, AgentTextDeltaEvent, AgentThinkingDeltaEvent } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import type { IChatProgress, IChatMarkdownContent, IChatProgressMessage, IChatThinkingPart } from '../../common/chatService/chatService.js';
 +
 +/**
@@ -4341,7 +4341,7 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..d317f8982799430c94d4c35ff5c804368b097de2
+index 0000000000000000000000000000000000000000..0ea14c210403803fe200c79fe49b58140e83601f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts
 @@ -0,0 +1,227 @@
@@ -4364,7 +4364,7 @@ index 0000000000000000000000000000000000000000..d317f8982799430c94d4c35ff5c80436
 +import { IDisposable } from '../../../../../base/common/lifecycle.js';
 +import { URI } from '../../../../../base/common/uri.js';
 +import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
-+import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
++import type { AgentToolDefinition } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { DirectorToolMode, getDirectorToolAllowlist } from '../../common/agentEngine/directorToolRegistry.js';
 +import type {
 +	ILanguageModelToolsService,
@@ -4665,7 +4665,7 @@ index 1a4a5f55ae81744961d24b4af28879cf14813b1a..ef9e52f5f61f2ef05a7de783aa0b398e
  					return { type: ToolConfirmKind.ConfirmationNotNeeded, reason: 'auto-approve-all' };
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..55ee18b44e70102235550226531beca18698d53a
+index 0000000000000000000000000000000000000000..dcf6ebf139b0b8fdc274a325da470dd76072ddab
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts
 @@ -0,0 +1,788 @@
@@ -4701,7 +4701,7 @@ index 0000000000000000000000000000000000000000..55ee18b44e70102235550226531beca1
 +	MutableMessageParam,
 +	ToolResult,
 +	ToolUseBlock,
-+} from './agentEngineTypes.js';
++} from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import type {
 +	CreateMessageResponse,
 +	LLMProvider,
@@ -5456,222 +5456,6 @@ index 0000000000000000000000000000000000000000..55ee18b44e70102235550226531beca1
 +	getSessionId(): string {
 +		return this.sessionId;
 +	}
-+}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..a627f34fb47309fd5218096f5c758e125c5289ed
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts
-@@ -0,0 +1,210 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * Agent Engine Type Definitions
-+ *
-+ * Core types for the Agent Engine, ported from open-agent-sdk-typescript.
-+ * These types define the internal message protocol, tool interfaces,
-+ * configuration, and streaming event types.
-+ */
-+
-+import type { LLMProvider, NormalizedContentBlock, TokenUsage } from './providers/providerTypes.js';
-+
-+// --------------------------------------------------------------------------
-+// Content Block Types
-+// --------------------------------------------------------------------------
-+
-+export type ContentBlock =
-+	| { readonly type: 'text'; readonly text: string }
-+	| { readonly type: 'tool_use'; readonly id: string; readonly name: string; readonly input: any }
-+	| { readonly type: 'thinking'; readonly thinking: string };
-+
-+// --------------------------------------------------------------------------
-+// Tool Types
-+// --------------------------------------------------------------------------
-+
-+export interface AgentToolDefinition {
-+	readonly name: string;
-+	readonly description: string;
-+	readonly inputSchema: {
-+		readonly type: 'object';
-+		readonly properties: Record<string, any>;
-+		readonly required?: readonly string[];
-+	};
-+	/** Whether this tool only reads data (can be run concurrently). */
-+	readonly isReadOnly?: boolean;
-+}
-+
-+export interface ToolResult {
-+	readonly type: 'tool_result';
-+	readonly tool_use_id: string;
-+	readonly content: string;
-+	readonly is_error?: boolean;
-+}
-+
-+export interface ToolUseBlock {
-+	readonly type: 'tool_use';
-+	readonly id: string;
-+	readonly name: string;
-+	readonly input: any;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Permission Types
-+// --------------------------------------------------------------------------
-+
-+export type PermissionBehavior = 'allow' | 'deny';
-+
-+export interface CanUseToolResult {
-+	readonly behavior: PermissionBehavior;
-+	readonly updatedInput?: unknown;
-+	readonly message?: string;
-+}
-+
-+export type CanUseToolFn = (
-+	toolName: string,
-+	input: unknown,
-+) => Promise<CanUseToolResult>;
-+
-+// --------------------------------------------------------------------------
-+// Hook Types
-+// --------------------------------------------------------------------------
-+
-+export type AgentHookEvent =
-+	| 'PreToolUse'
-+	| 'PostToolUse'
-+	| 'PostToolUseFailure'
-+	| 'PreCompact'
-+	| 'PostCompact';
-+
-+export interface AgentHookContext {
-+	readonly toolName?: string;
-+	readonly toolInput?: unknown;
-+	readonly toolResult?: string;
-+	readonly error?: Error;
-+}
-+
-+export interface AgentHookResult {
-+	readonly behavior?: PermissionBehavior;
-+}
-+
-+export type AgentHookFn = (event: AgentHookEvent, context: AgentHookContext) => Promise<AgentHookResult | void>;
-+
-+export interface IAgentHookRegistry {
-+	register(event: AgentHookEvent, hook: AgentHookFn): void;
-+	execute(event: AgentHookEvent, context: AgentHookContext): Promise<AgentHookResult[]>;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Agent Engine Configuration
-+// --------------------------------------------------------------------------
-+
-+export interface AgentEngineConfig {
-+	readonly cwd: string;
-+	readonly model: string;
-+	readonly provider: LLMProvider;
-+	readonly tools: AgentToolDefinition[];
-+	readonly systemPrompt?: string;
-+	readonly appendSystemPrompt?: string;
-+	readonly maxTurns: number;
-+	readonly maxBudgetUsd?: number;
-+	readonly maxTokens: number;
-+	/** Override context window size for auto-compact. 0 = use model default. */
-+	readonly maxInputTokens?: number;
-+	/** Optional dedicated model for LLM-based conversation compaction. */
-+	readonly compactModel?: string;
-+	/** Session-scoped key used to mark a compact model unavailable after 403/404. */
-+	readonly compactModelUnavailableKey?: string;
-+	readonly thinking?: { readonly type: string; readonly budget_tokens?: number };
-+	readonly canUseTool?: CanUseToolFn;
-+	readonly abortSignal?: AbortSignal;
-+	readonly hookRegistry?: IAgentHookRegistry;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Agent Engine Events (streaming output)
-+// --------------------------------------------------------------------------
-+
-+export type AgentEvent =
-+	| AgentAssistantEvent
-+	| AgentTextDeltaEvent
-+	| AgentThinkingDeltaEvent
-+	| AgentToolUseEvent
-+	| AgentToolResultEvent
-+	| AgentSystemEvent
-+	| AgentResultEvent;
-+
-+export interface AgentAssistantEvent {
-+	readonly type: 'assistant';
-+	readonly message: {
-+		readonly role: 'assistant';
-+		readonly content: ContentBlock[];
-+	};
-+	readonly renderText?: boolean;
-+}
-+
-+/** Streaming text chunk — emitted as LLM generates text tokens. */
-+export interface AgentTextDeltaEvent {
-+	readonly type: 'text_delta';
-+	readonly text: string;
-+}
-+
-+/** Streaming thinking chunk — emitted as LLM generates thinking tokens. */
-+export interface AgentThinkingDeltaEvent {
-+	readonly type: 'thinking_delta';
-+	readonly thinking: string;
-+}
-+
-+export interface AgentToolUseEvent {
-+	readonly type: 'tool_use';
-+	readonly id: string;
-+	readonly name: string;
-+	readonly input: any;
-+}
-+
-+export interface AgentToolResultEvent {
-+	readonly type: 'tool_result';
-+	readonly tool_use_id: string;
-+	readonly tool_name: string;
-+	readonly content: string;
-+	readonly is_error?: boolean;
-+}
-+
-+export interface AgentSystemEvent {
-+	readonly type: 'system';
-+	readonly subtype: 'init' | 'compact_boundary' | 'status';
-+	readonly model?: string;
-+	readonly tools?: string[];
-+	readonly message?: string;
-+}
-+
-+export interface AgentResultEvent {
-+	readonly type: 'result';
-+	readonly subtype: 'success' | 'error' | 'error_max_turns' | 'error_max_budget_usd';
-+	readonly usage: TokenUsage;
-+	readonly cost: number;
-+	readonly numTurns: number;
-+	readonly error?: string;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Auto-Compact State
-+// --------------------------------------------------------------------------
-+
-+export interface AutoCompactState {
-+	compacted: boolean;
-+	turnCounter: number;
-+	consecutiveFailures: number;
-+}
-+
-+// --------------------------------------------------------------------------
-+// Mutable message param (internal use in engine)
-+// --------------------------------------------------------------------------
-+
-+export interface MutableMessageParam {
-+	role: 'user' | 'assistant';
-+	content: string | NormalizedContentBlock[];
 +}
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts b/src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts
 new file mode 100644
@@ -6508,7 +6292,7 @@ index 0000000000000000000000000000000000000000..82c92062ad90104b4131abdef4d3be40
 +}
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts b/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a09986f99a
+index 0000000000000000000000000000000000000000..98dda6ae515f65542fd1b8f9e349c3845d0f3ab1
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/compact.ts
 @@ -0,0 +1,364 @@
@@ -6530,7 +6314,7 @@ index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a0
 + */
 +
 +import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type LLMProvider, type NormalizedMessageParam } from './providers/providerTypes.js';
-+import type { AutoCompactState } from './agentEngineTypes.js';
++import type { AutoCompactState } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { estimateMessagesTokens, getAutoCompactThreshold, AUTOCOMPACT_BUFFER_TOKENS } from './tokens.js';
 +import { getCompactRank, getProviderDefaultCompactModel, type IModelEntry } from './modelCatalog.js';
 +import type { ProviderName } from './apiKeyService.js';
@@ -12859,7 +12643,7 @@ index 0000000000000000000000000000000000000000..c2b072bb10f8851973dcc9bc28846908
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..bbbba9b47ba76495d50321e6bacf04bc8c8d83a1
+index 0000000000000000000000000000000000000000..464378a407ba6d1bf8640b3e43204a6bcc83cb77
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 @@ -0,0 +1,275 @@
@@ -12886,7 +12670,7 @@ index 0000000000000000000000000000000000000000..bbbba9b47ba76495d50321e6bacf04bc
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 +import type {
 +	AgentToolDefinition,
-+} from '../../../common/agentEngine/agentEngineTypes.js';
++} from '../../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import type {
 +	NormalizedMessageParam,
 +} from '../../../common/agentEngine/providers/providerTypes.js';
@@ -15074,7 +14858,7 @@ index 0000000000000000000000000000000000000000..5e1d280867486ddca55a5f7c65b464f0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..1fd012460afc4a4c208c56b41d1666cfd5d32a1b
+index 0000000000000000000000000000000000000000..7cd2eb2d9b2e006f1d7c8d2ae065fa9144d98d5a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 @@ -0,0 +1,435 @@
@@ -15098,7 +14882,7 @@ index 0000000000000000000000000000000000000000..1fd012460afc4a4c208c56b41d1666cf
 +	shouldAutoCompact,
 +} from '../../../common/agentEngine/compact.js';
 +import type { LLMProvider, CreateMessageParams, CreateMessageResponse } from '../../../common/agentEngine/providers/providerTypes.js';
-+import type { AutoCompactState } from '../../../common/agentEngine/agentEngineTypes.js';
++import type { AutoCompactState } from '../../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT } from '../../../common/agentEngine/providers/providerTypes.js';
 +
 +// --------------------------------------------------------------------------
@@ -16120,7 +15904,7 @@ index 0000000000000000000000000000000000000000..9551f19a67e19942a43a5b8877a6444c
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..2c5b153707e9445ac0cb54a1a44be202b6353f7f
+index 0000000000000000000000000000000000000000..b9dee2a7fbffa62e5056daa38f2480f1c57c9fcf
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 @@ -0,0 +1,777 @@
@@ -16153,7 +15937,7 @@ index 0000000000000000000000000000000000000000..2c5b153707e9445ac0cb54a1a44be202
 +	AgentAssistantEvent,
 +	AgentSystemEvent,
 +	AgentResultEvent,
-+} from '../../../common/agentEngine/agentEngineTypes.js';
++} from '../../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +import type {
 +	NormalizedMessageParam,
 +	TokenUsage,
@@ -21215,7 +20999,7 @@ index 0000000000000000000000000000000000000000..5dd940f6173c9901efe620a832832d0d
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..cf9b4257e1fc3c977354d7608e08b91d14880b34
+index 0000000000000000000000000000000000000000..f48c763ced203da648bf688d5f385931a76aedbb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts
 @@ -0,0 +1,290 @@
@@ -21227,7 +21011,7 @@ index 0000000000000000000000000000000000000000..cf9b4257e1fc3c977354d7608e08b91d
 +import assert from 'assert';
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 +import { agentEventToProgress } from '../../../browser/agentEngine/progressBridge.js';
-+import type { AgentEvent } from '../../../common/agentEngine/agentEngineTypes.js';
++import type { AgentEvent } from '../../../../directorCode/common/agentEngine/agentEngineTypes.js';
 +
 +suite("AgentEngine - ProgressBridge", () => {
 +
@@ -22349,6 +22133,222 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
 +		});
 +	});
  });
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..00b74789aa826eea8a6bf60a02775491e62bccf8
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
+@@ -0,0 +1,210 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++/**
++ * Agent Engine Type Definitions
++ *
++ * Core types for the Agent Engine, ported from open-agent-sdk-typescript.
++ * These types define the internal message protocol, tool interfaces,
++ * configuration, and streaming event types.
++ */
++
++import type { LLMProvider, NormalizedContentBlock, TokenUsage } from '../../../chat/common/agentEngine/providers/providerTypes.js';
++
++// --------------------------------------------------------------------------
++// Content Block Types
++// --------------------------------------------------------------------------
++
++export type ContentBlock =
++	| { readonly type: 'text'; readonly text: string }
++	| { readonly type: 'tool_use'; readonly id: string; readonly name: string; readonly input: any }
++	| { readonly type: 'thinking'; readonly thinking: string };
++
++// --------------------------------------------------------------------------
++// Tool Types
++// --------------------------------------------------------------------------
++
++export interface AgentToolDefinition {
++	readonly name: string;
++	readonly description: string;
++	readonly inputSchema: {
++		readonly type: 'object';
++		readonly properties: Record<string, any>;
++		readonly required?: readonly string[];
++	};
++	/** Whether this tool only reads data (can be run concurrently). */
++	readonly isReadOnly?: boolean;
++}
++
++export interface ToolResult {
++	readonly type: 'tool_result';
++	readonly tool_use_id: string;
++	readonly content: string;
++	readonly is_error?: boolean;
++}
++
++export interface ToolUseBlock {
++	readonly type: 'tool_use';
++	readonly id: string;
++	readonly name: string;
++	readonly input: any;
++}
++
++// --------------------------------------------------------------------------
++// Permission Types
++// --------------------------------------------------------------------------
++
++export type PermissionBehavior = 'allow' | 'deny';
++
++export interface CanUseToolResult {
++	readonly behavior: PermissionBehavior;
++	readonly updatedInput?: unknown;
++	readonly message?: string;
++}
++
++export type CanUseToolFn = (
++	toolName: string,
++	input: unknown,
++) => Promise<CanUseToolResult>;
++
++// --------------------------------------------------------------------------
++// Hook Types
++// --------------------------------------------------------------------------
++
++export type AgentHookEvent =
++	| 'PreToolUse'
++	| 'PostToolUse'
++	| 'PostToolUseFailure'
++	| 'PreCompact'
++	| 'PostCompact';
++
++export interface AgentHookContext {
++	readonly toolName?: string;
++	readonly toolInput?: unknown;
++	readonly toolResult?: string;
++	readonly error?: Error;
++}
++
++export interface AgentHookResult {
++	readonly behavior?: PermissionBehavior;
++}
++
++export type AgentHookFn = (event: AgentHookEvent, context: AgentHookContext) => Promise<AgentHookResult | void>;
++
++export interface IAgentHookRegistry {
++	register(event: AgentHookEvent, hook: AgentHookFn): void;
++	execute(event: AgentHookEvent, context: AgentHookContext): Promise<AgentHookResult[]>;
++}
++
++// --------------------------------------------------------------------------
++// Agent Engine Configuration
++// --------------------------------------------------------------------------
++
++export interface AgentEngineConfig {
++	readonly cwd: string;
++	readonly model: string;
++	readonly provider: LLMProvider;
++	readonly tools: AgentToolDefinition[];
++	readonly systemPrompt?: string;
++	readonly appendSystemPrompt?: string;
++	readonly maxTurns: number;
++	readonly maxBudgetUsd?: number;
++	readonly maxTokens: number;
++	/** Override context window size for auto-compact. 0 = use model default. */
++	readonly maxInputTokens?: number;
++	/** Optional dedicated model for LLM-based conversation compaction. */
++	readonly compactModel?: string;
++	/** Session-scoped key used to mark a compact model unavailable after 403/404. */
++	readonly compactModelUnavailableKey?: string;
++	readonly thinking?: { readonly type: string; readonly budget_tokens?: number };
++	readonly canUseTool?: CanUseToolFn;
++	readonly abortSignal?: AbortSignal;
++	readonly hookRegistry?: IAgentHookRegistry;
++}
++
++// --------------------------------------------------------------------------
++// Agent Engine Events (streaming output)
++// --------------------------------------------------------------------------
++
++export type AgentEvent =
++	| AgentAssistantEvent
++	| AgentTextDeltaEvent
++	| AgentThinkingDeltaEvent
++	| AgentToolUseEvent
++	| AgentToolResultEvent
++	| AgentSystemEvent
++	| AgentResultEvent;
++
++export interface AgentAssistantEvent {
++	readonly type: 'assistant';
++	readonly message: {
++		readonly role: 'assistant';
++		readonly content: ContentBlock[];
++	};
++	readonly renderText?: boolean;
++}
++
++/** Streaming text chunk — emitted as LLM generates text tokens. */
++export interface AgentTextDeltaEvent {
++	readonly type: 'text_delta';
++	readonly text: string;
++}
++
++/** Streaming thinking chunk — emitted as LLM generates thinking tokens. */
++export interface AgentThinkingDeltaEvent {
++	readonly type: 'thinking_delta';
++	readonly thinking: string;
++}
++
++export interface AgentToolUseEvent {
++	readonly type: 'tool_use';
++	readonly id: string;
++	readonly name: string;
++	readonly input: any;
++}
++
++export interface AgentToolResultEvent {
++	readonly type: 'tool_result';
++	readonly tool_use_id: string;
++	readonly tool_name: string;
++	readonly content: string;
++	readonly is_error?: boolean;
++}
++
++export interface AgentSystemEvent {
++	readonly type: 'system';
++	readonly subtype: 'init' | 'compact_boundary' | 'status';
++	readonly model?: string;
++	readonly tools?: string[];
++	readonly message?: string;
++}
++
++export interface AgentResultEvent {
++	readonly type: 'result';
++	readonly subtype: 'success' | 'error' | 'error_max_turns' | 'error_max_budget_usd';
++	readonly usage: TokenUsage;
++	readonly cost: number;
++	readonly numTurns: number;
++	readonly error?: string;
++}
++
++// --------------------------------------------------------------------------
++// Auto-Compact State
++// --------------------------------------------------------------------------
++
++export interface AutoCompactState {
++	compacted: boolean;
++	turnCounter: number;
++	consecutiveFailures: number;
++}
++
++// --------------------------------------------------------------------------
++// Mutable message param (internal use in engine)
++// --------------------------------------------------------------------------
++
++export interface MutableMessageParam {
++	role: 'user' | 'assistant';
++	content: string | NormalizedContentBlock[];
++}
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
 index ea735f845e95276e50cdc8451eb02635af8bb099..94ad664182a5f8072975d00632b8f63a37eaa79e 100644
 --- a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts

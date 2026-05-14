@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T09:50:08.215Z",
+  "generatedAt": "2026-05-14T15:49:05.462Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -169,7 +169,6 @@
         "src/vs/workbench/contrib/chat/browser/chat.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/agentEngine.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/agentEngineTypes.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/apiKeyService.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts",
@@ -221,6 +220,7 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts",
         "src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpServersView.ts",
         "src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts",
@@ -232,8 +232,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 80,
-      "size": 857322,
-      "sha256": "a991036987be9489795ab73e9503217b6133d912a916b53c304216e3cc18f98b"
+      "size": 857567,
+      "sha256": "b2c0e7cf5b843dec4ce4983a28f8dffecb03d42c2e05b8cbeb937fba79b1fc07"
     },
     {
       "stage": "chat-built-in-mode",
@@ -291,8 +291,8 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts"
       ],
       "fileCount": 5,
-      "size": 65861,
-      "sha256": "4e13b07bea8dcfdbbbae84b9dd9a2a834b4dd6dee7a3bcf1e95b713dc468469f"
+      "size": 65900,
+      "sha256": "ab9b8d4395a20e1ba5c5d718c2b90d827b761be207ce706abf2155d2de53e400"
     },
     {
       "stage": "chat-editing",
