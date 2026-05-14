@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T09:13:41.500Z",
+  "generatedAt": "2026-05-14T09:50:08.215Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 228,
+  "changedFileCount": 230,
   "patches": [
     {
       "stage": "branding",
@@ -174,6 +174,7 @@
         "src/vs/workbench/contrib/chat/common/agentEngine/authStateService.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/builtInModeUtil.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/compact.ts",
+        "src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/geminiAuth.ts",
         "src/vs/workbench/contrib/chat/common/agentEngine/modelCatalog.ts",
@@ -202,6 +203,7 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts",
+        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts",
@@ -229,9 +231,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 78,
-      "size": 841527,
-      "sha256": "198435ee58ca2402e9587c5a2c2c66f0ecf6ec02c2db0900367a216aeda50017"
+      "fileCount": 80,
+      "size": 857322,
+      "sha256": "a991036987be9489795ab73e9503217b6133d912a916b53c304216e3cc18f98b"
     },
     {
       "stage": "chat-built-in-mode",
@@ -300,8 +302,8 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts"
       ],
       "fileCount": 2,
-      "size": 17229,
-      "sha256": "f189da76e493643a4fcb426881f7879500614a2abfd96369a32391e52b342f44"
+      "size": 21221,
+      "sha256": "1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9"
     },
     {
       "stage": "edit-tools",
@@ -312,8 +314,8 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts"
       ],
       "fileCount": 3,
-      "size": 45100,
-      "sha256": "204d375342ad7d439f0813d65df8f5fcb936af9a05356710f7f326e00549eb29"
+      "size": 45110,
+      "sha256": "094d248c40996cf246124287b469f7b80bb6a7e6d6a4b2e5484ac1f1d8b5b2db"
     }
   ]
 }

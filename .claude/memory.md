@@ -1,4 +1,28 @@
 # Memory - 项目状态与上下文
+## 2026-05-14 latest memory: 116 mode routing Phase 5 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` Phase 5 Ask/Edit/Inline mode routing is implemented, replay-landed, clean-materialized, and validated.
+- Director now registers Ask/Edit/Agent panel modes. Runtime routing uses `directorChatModeRouting.ts`: Ask is read-only Q&A, Edit uses reviewable edit tools, Agent remains full autonomous mode, and EditorInline maps to Inline even if the UI sends Ask/Edit mode metadata.
+- Inline v1 uses selected editor context from `locationData`, asks for replacement text only, parses fenced/plain/`<replacement>` responses, and emits a real `textEdit` with `DirectorChatEditingAdapter.emitInlineTextEdit()`. Inline has no model-callable tools.
+- Attached context variables are summarized into the user message in `messageNormalization.ts`; VS Code mode instructions are appended to the system prompt without duplication.
+- Agent Customizations integration is present: the Director Code section opens `director-code.openSettings`, and the Director model provider descriptor uses the same management command.
+- Phase 5 replay ownership note: mode routing and agent request plumbing are in `004-director-agent-engine.116.patch`; the settings/customizations bridge remains in `005-director-chat-built-in-mode.116.patch`; inline edit adapter changes are in `008-director-chat-editing.116.patch`; test compatibility updates are in `009-director-edit-tools.116.patch`.
+- Phase 5 reports/docs updated:
+  - `docs/upgrade/reports/116-stable-win32-x64-client/mode-routing-report.md`
+  - `docs/upgrade/reports/116-stable-win32-x64-client/tool-migration-report.md`
+  - `docs/upgrade/116-agent-customizations-director-settings-plan.md`
+- Validation completed from clean replay:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `npm ci` after clearing stale Windows native `node-gyp` / `MSBuild` / `link` processes from a file-lock failure
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` -> `21 passing`
+  - `npm run test-browser-no-install -- --grep "hover mode sendRequest"` -> `2 passing`
+  - `validate-series`, `validate-product-overrides`, `expected-contracts`
+  - canonical manifest write and validation
+- `artifacts/` remains untracked build/validation output and must not be committed by default. `node_modules` must not be committed.
+- Next wave: Phase 6 package/regression. Run `scripts/build-director-116.ps1` or `.cmd` without `-SkipReplay`, clear `%APPDATA%\Director-Code\clp` before packaged runtime smoke, then record package/manual-smoke status.
+
 
 ## 2026-05-14 最新记忆：116 reviewable edit tools Phase 4 已完成
 

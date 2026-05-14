@@ -313,7 +313,7 @@ index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..776a5923226a805a925e0cc29da20e9480d17770
+index 0000000000000000000000000000000000000000..f780a53c34fb7949ff5264ec1abbaa3bec6facc1
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
 @@ -0,0 +1,278 @@
@@ -554,7 +554,7 @@ index 0000000000000000000000000000000000000000..776a5923226a805a925e0cc29da20e94
 +			},
 +			slashCommands: [],
 +			locations: [ChatAgentLocation.Chat, ChatAgentLocation.EditorInline, ChatAgentLocation.Terminal],
-+			modes: [ChatModeKind.Agent],
++			modes: [ChatModeKind.Ask, ChatModeKind.Edit, ChatModeKind.Agent],
 +			disambiguation: [{
 +				category: 'coding',
 +				description: 'AI coding assistant with tool use',
@@ -1045,10 +1045,10 @@ index 0000000000000000000000000000000000000000..b1f85fb88cdf9fa3c12570c911372c9b
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749bd85bb7d5
+index 0000000000000000000000000000000000000000..bf8b99d6d6340792b34003e5cfb46b5923c204fd
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,464 @@
+@@ -0,0 +1,653 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1065,9 +1065,12 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +
 +import { CancellationToken } from '../../../../../base/common/cancellation.js';
 +import { Disposable } from '../../../../../base/common/lifecycle.js';
++import type { IRange } from '../../../../../editor/common/core/range.js';
++import { Selection } from '../../../../../editor/common/core/selection.js';
 +import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 +import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 +import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
++import { ITextModelService } from '../../../../../editor/common/services/resolverService.js';
 +import { AgentEngine } from '../../common/agentEngine/agentEngine.js';
 +import type { AgentEngineConfig } from '../../common/agentEngine/agentEngineTypes.js';
 +import { providerToApiType, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
@@ -1078,6 +1081,8 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../common/agentEngine/modelCatalog.js';
 +import { IModelResolverService, normalizeModelResolverBaseURL } from '../../common/agentEngine/modelResolver.js';
 +import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../common/agentEngine/compact.js';
++import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../common/agentEngine/directorChatModeRouting.js';
++import { DirectorChatEditingAdapter, parseDirectorInlineReplacement } from '../../common/agentEngine/editing/directorChatEditingAdapter.js';
 +import type {
 +	IChatAgentImplementation,
 +	IChatAgentRequest,
@@ -1086,6 +1091,7 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +} from '../../common/participants/chatAgents.js';
 +import { IChatService, type IChatFollowup, type IChatProgress } from '../../common/chatService/chatService.js';
 +import type { IChatProgressResponseContent } from '../../common/model/chatModel.js';
++import { ChatAgentLocation, type ChatModeKind } from '../../common/constants.js';
 +import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
 +import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
 +import { agentEventToProgress } from './progressBridge.js';
@@ -1114,6 +1120,14 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +	readonly provider: ProviderName;
 +	readonly model: string;
 +	readonly apiType: AgentEngineConfig['provider']['apiType'];
++}
++
++interface DirectorInlineEditorContext {
++	readonly uri: IChatAgentRequest['sessionResource'];
++	readonly selection: IRange;
++	readonly selectedText: string;
++	readonly nearbyText: string;
++	readonly languageId: string;
 +}
 +
 +// ============================================================================
@@ -1146,6 +1160,7 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 +		@IInstantiationService private readonly instantiationService: IInstantiationService,
 +		@IModelResolverService private readonly modelResolverService: IModelResolverService,
++		@ITextModelService private readonly textModelService: ITextModelService,
 +	) {
 +		super();
 +	}
@@ -1168,6 +1183,12 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 +			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 +			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
++			const modeKind = this.resolveRequestModeKind(request);
++			const directorMode = getDirectorToolModeForRequest({
++				location: request.location,
++				locationData: request.locationData,
++				modeKind,
++			});
 +
 +			// 1b. Override model if user selected one from the Chat UI model picker
 +			if (request.userSelectedModelId) {
@@ -1240,9 +1261,9 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +				request.requestId,
 +				token,
 +				undefined,
-+				DirectorToolMode.Agent,
++				directorMode,
 +			);
-+			const toolDefinitions = getAgentToolDefinitions(this.toolsService, undefined, DirectorToolMode.Agent);
++			const toolDefinitions = getAgentToolDefinitions(this.toolsService, undefined, directorMode);
 +
 +			// 5. Convert history to normalized messages
 +			const richResponses = this.getRichResponses(request, history.length);
@@ -1272,7 +1293,9 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +				model: modelId,
 +				provider: llmProvider,
 +				tools: toolDefinitions,
-+				maxTurns,
++				systemPrompt: getDirectorModeSystemPrompt(directorMode),
++				appendSystemPrompt: request.modeInstructions?.content,
++				maxTurns: getDirectorModeMaxTurns(maxTurns, directorMode),
 +				maxTokens,
 +				maxInputTokens: maxInputTokens > 0 ? maxInputTokens : undefined,
 +				compactModel: compactModelResolution.model,
@@ -1282,19 +1305,39 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +			const engine = new AgentEngine(config, toolBridge, previousMessages);
 +
 +			// 9. Run the agentic loop
-+			const userMessage = requestToUserMessage(request);
++			const inlineContext = directorMode === DirectorToolMode.Inline
++				? await this.resolveInlineEditorContext(request, token)
++				: undefined;
++			if (directorMode === DirectorToolMode.Inline && !inlineContext) {
++				return {
++					errorDetails: {
++						message: 'Inline edit could not resolve the active editor document and selection.',
++					},
++					timings: { totalElapsed: Date.now() - startTime },
++				};
++			}
++			const userMessage = inlineContext
++				? this.createInlineEditPrompt(request, inlineContext)
++				: requestToUserMessage(request);
 +
 +			try {
 +				// 10. Run the agentic loop
 +				let firstProgressSent = false;
 +				let firstProgressTime: number | undefined;
++				let inlineResponseText = '';
 +
 +				for await (const event of engine.submitMessage(userMessage)) {
 +					if (token.isCancellationRequested) {
 +						break;
 +					}
 +
-+					const progressParts = agentEventToProgress(event);
++					if (directorMode === DirectorToolMode.Inline) {
++						inlineResponseText += this.extractEventText(event);
++					}
++
++					const progressParts = directorMode === DirectorToolMode.Inline
++						? []
++						: agentEventToProgress(event);
 +					if (progressParts.length > 0) {
 +						if (!firstProgressSent) {
 +							firstProgressTime = Date.now() - startTime;
@@ -1321,6 +1364,51 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +									numTurns: resultEvent.numTurns,
 +								},
 +							};
++						}
++
++						if (directorMode === DirectorToolMode.Inline && inlineContext) {
++							const replacement = parseDirectorInlineReplacement(inlineResponseText);
++							if (!replacement.ok) {
++								return {
++									errorDetails: { message: replacement.reason },
++									timings: {
++										firstProgress: firstProgressTime,
++										totalElapsed: Date.now() - startTime,
++									},
++									metadata: {
++										usage: resultEvent.usage,
++										cost: resultEvent.cost,
++										numTurns: resultEvent.numTurns,
++										subtype: 'inline_edit_parse_error',
++									},
++								};
++							}
++
++							const editAdapter = this.instantiationService.createInstance(DirectorChatEditingAdapter);
++							const editResult = await editAdapter.emitInlineTextEdit({
++								chatSessionResource: request.sessionResource,
++								chatRequestId: request.requestId,
++								targetUri: inlineContext.uri,
++								range: inlineContext.selection,
++								replacementText: replacement.text,
++							}, token);
++							if (!editResult.ok) {
++								return {
++									errorDetails: { message: editResult.reason },
++									timings: {
++										firstProgress: firstProgressTime,
++										totalElapsed: Date.now() - startTime,
++									},
++									metadata: {
++										usage: resultEvent.usage,
++										cost: resultEvent.cost,
++										numTurns: resultEvent.numTurns,
++										subtype: 'inline_edit_emit_error',
++									},
++								};
++							}
++
++							firstProgressTime ??= Date.now() - startTime;
 +						}
 +
 +						return {
@@ -1385,6 +1473,91 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +		}
 +
 +		return [];
++	}
++
++	private resolveRequestModeKind(request: IChatAgentRequest): ChatModeKind | undefined {
++		const chatService = this.getChatService();
++		const session = chatService?.getSession(request.sessionResource);
++		return session?.getRequests().find(candidate => candidate.id === request.requestId)?.modeInfo?.kind;
++	}
++
++	private async resolveInlineEditorContext(request: IChatAgentRequest, token: CancellationToken): Promise<DirectorInlineEditorContext | undefined> {
++		if (request.location !== ChatAgentLocation.EditorInline && request.locationData?.type !== ChatAgentLocation.EditorInline) {
++			return undefined;
++		}
++		if (request.locationData?.type !== ChatAgentLocation.EditorInline) {
++			return undefined;
++		}
++
++		const uri = request.locationData.document;
++		const selection = Selection.liftSelection(request.locationData.selection);
++		const ref = await this.textModelService.createModelReference(uri);
++		try {
++			if (token.isCancellationRequested) {
++				return undefined;
++			}
++
++			const model = ref.object.textEditorModel;
++			const selectedText = isEmptyRange(selection) ? '' : model.getValueInRange(selection);
++			const startLine = Math.max(1, selection.startLineNumber - 40);
++			const endLine = Math.min(model.getLineCount(), selection.endLineNumber + 40);
++			const nearbyRange: IRange = {
++				startLineNumber: startLine,
++				startColumn: 1,
++				endLineNumber: endLine,
++				endColumn: model.getLineMaxColumn(endLine),
++			};
++			const nearbyText = truncateInlineContext(model.getValueInRange(nearbyRange));
++			return {
++				uri,
++				selection,
++				selectedText,
++				nearbyText,
++				languageId: model.getLanguageId(),
++			};
++		} finally {
++			ref.dispose();
++		}
++	}
++
++	private createInlineEditPrompt(request: IChatAgentRequest, context: DirectorInlineEditorContext): string {
++		return [
++			'Edit the current editor selection according to the user request.',
++			'',
++			`User request:\n${request.message}`,
++			'',
++			`File: ${context.uri.toString()}`,
++			`Language: ${context.languageId}`,
++			`Selection: ${formatRange(context.selection)}`,
++			'',
++			context.selectedText
++				? `Selected text:\n\`\`\`\`${context.languageId}\n${context.selectedText}\n\`\`\`\``
++				: 'The selection is empty; return text to insert at the cursor.',
++			'',
++			`Nearby context:\n\`\`\`\`${context.languageId}\n${context.nearbyText}\n\`\`\`\``,
++			'',
++			'Return only the replacement text for the selected range or insertion.',
++		].join('\n');
++	}
++
++	private extractEventText(event: any): string {
++		if (event.type === 'text_delta') {
++			return event.text ?? '';
++		}
++		if (event.type !== 'assistant' || !event.renderText) {
++			return '';
++		}
++		const content = event.message?.content;
++		if (typeof content === 'string') {
++			return content;
++		}
++		if (Array.isArray(content)) {
++			return content
++				.filter((block: any) => block?.type === 'text' && typeof block.text === 'string')
++				.map((block: any) => block.text)
++				.join('');
++		}
++		return '';
 +	}
 +
 +	private getRichResponses(request: IChatAgentRequest, historyLength: number): ReadonlyArray<ReadonlyArray<IChatProgressResponseContent>> | undefined {
@@ -1512,6 +1685,22 @@ index 0000000000000000000000000000000000000000..eb16bf307a63c1def6fbd363054d749b
 +	private sessionKey(sessionResource: IChatAgentRequest['sessionResource']): string {
 +		return sessionResource.toString();
 +	}
++}
++
++function isEmptyRange(range: IRange): boolean {
++	return range.startLineNumber === range.endLineNumber && range.startColumn === range.endColumn;
++}
++
++function formatRange(range: IRange): string {
++	return `${range.startLineNumber}:${range.startColumn}-${range.endLineNumber}:${range.endColumn}`;
++}
++
++function truncateInlineContext(value: string): string {
++	const maxChars = 12_000;
++	if (value.length <= maxChars) {
++		return value;
++	}
++	return value.slice(0, maxChars) + '\n[context truncated]';
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeModelProvider.ts
 new file mode 100644
@@ -2652,10 +2841,10 @@ index 0000000000000000000000000000000000000000..72972213c4421cac9288fd848911cbc0
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..fd17ace0b3548b544d5685123e49ba815ffbe09e
+index 0000000000000000000000000000000000000000..6ffd1e62bea71cab4d1b416ed161b3b51a56a6d7
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts
-@@ -0,0 +1,433 @@
+@@ -0,0 +1,488 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -2685,7 +2874,12 @@ index 0000000000000000000000000000000000000000..fd17ace0b3548b544d5685123e49ba81
 + * Extract the user's text message from an IChatAgentRequest.
 + */
 +export function requestToUserMessage(request: IChatAgentRequest): string {
-+	return request.message || '';
++	const parts: string[] = [request.message || ''];
++	const context = describeRequestContext(request);
++	if (context) {
++		parts.push(context);
++	}
++	return parts.filter(Boolean).join('\n\n');
 +}
 +
 +/**
@@ -2747,6 +2941,56 @@ index 0000000000000000000000000000000000000000..fd17ace0b3548b544d5685123e49ba81
 +	}
 +
 +	return messages;
++}
++
++function describeRequestContext(request: IChatAgentRequest): string {
++	const parts: string[] = [];
++
++	const variables = request.variables?.variables ?? [];
++	const describedVariables = variables
++		.map(describeVariable)
++		.filter((value): value is string => !!value);
++	if (describedVariables.length > 0) {
++		parts.push(`Attached context:\n${describedVariables.slice(0, 20).join('\n')}`);
++	}
++
++	return parts.join('\n\n');
++}
++
++function describeVariable(variable: any): string | undefined {
++	const label = variable.fullName || variable.name || variable.id || variable.kind || 'context';
++	const value = variable.value;
++
++	if (typeof variable.code === 'string') {
++		return `- ${label}: pasted ${variable.language || 'text'}\n${truncateContextText(variable.code, 2_000)}`;
++	}
++	if (typeof value === 'string') {
++		return `- ${label}: ${truncateContextText(value, 1_000)}`;
++	}
++	if (value?.uri?.toString && value.range) {
++		return `- ${label}: ${value.uri.toString()} ${formatContextRange(value.range)}`;
++	}
++	if (value?.toString && typeof value.toString === 'function' && value.toString !== Object.prototype.toString) {
++		return `- ${label}: ${value.toString()}`;
++	}
++	if (variable.uri?.toString) {
++		return `- ${label}: ${variable.uri.toString()}`;
++	}
++	if (variable.modelDescription) {
++		return `- ${label}: ${truncateContextText(variable.modelDescription, 1_000)}`;
++	}
++	return undefined;
++}
++
++function formatContextRange(range: any): string {
++	if (typeof range.startLineNumber === 'number') {
++		return `${range.startLineNumber}:${range.startColumn}-${range.endLineNumber}:${range.endColumn}`;
++	}
++	return '';
++}
++
++function truncateContextText(value: string, maxChars: number): string {
++	return value.length <= maxChars ? value : value.slice(0, maxChars) + '\n[truncated]';
 +}
 +
 +function richResponseToNormalizedMessages(
@@ -6631,6 +6875,83 @@ index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a0
 +	}
 +
 +	return parts.join('\n\n');
++}
+diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ec3d75af255ae8aa3725cd95ba473da3830d300
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts
+@@ -0,0 +1,71 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { ChatAgentLocation, ChatModeKind } from '../constants.js';
++import type { IChatLocationData } from '../chatService/chatService.js';
++import { DirectorToolMode } from './directorToolRegistry.js';
++
++export interface DirectorChatModeRoutingInput {
++	readonly location: ChatAgentLocation;
++	readonly locationData?: IChatLocationData;
++	readonly modeKind?: ChatModeKind;
++}
++
++export function getDirectorToolModeForRequest(input: DirectorChatModeRoutingInput): DirectorToolMode {
++	if (input.location === ChatAgentLocation.EditorInline || input.locationData?.type === ChatAgentLocation.EditorInline) {
++		return DirectorToolMode.Inline;
++	}
++
++	switch (input.modeKind) {
++		case ChatModeKind.Ask:
++			return DirectorToolMode.Ask;
++		case ChatModeKind.Edit:
++			return DirectorToolMode.Edit;
++		case ChatModeKind.Agent:
++		default:
++			return DirectorToolMode.Agent;
++	}
++}
++
++export function getDirectorModeMaxTurns(configuredMaxTurns: number, mode: DirectorToolMode): number {
++	switch (mode) {
++		case DirectorToolMode.Ask:
++			return Math.max(1, Math.min(configuredMaxTurns, 6));
++		case DirectorToolMode.Inline:
++			return 1;
++		default:
++			return configuredMaxTurns;
++	}
++}
++
++export function getDirectorModeSystemPrompt(mode: DirectorToolMode): string | undefined {
++	switch (mode) {
++		case DirectorToolMode.Ask:
++			return [
++				'You are Director Code in Ask mode.',
++				'Answer programming and workspace questions clearly and concisely.',
++				'You may use only read-only context tools when they help answer the question.',
++				'Do not edit files, run terminal commands, create tasks, or mutate workspace state.',
++				'Use provided attachments, current editor context, custom instructions, and chat history when relevant.',
++			].join('\n');
++		case DirectorToolMode.Edit:
++			return [
++				'You are Director Code in Edit mode.',
++				'Focus on producing reviewable workspace edits for the user request.',
++				'Read relevant context first, then use only Director reviewable edit tools for file changes.',
++				'Do not use terminal or task execution. Keep edits conservative and explain the result briefly.',
++			].join('\n');
++		case DirectorToolMode.Inline:
++			return [
++				'You are Director Code in inline editor mode.',
++				'Return only the exact replacement text for the selected range or cursor insertion.',
++				'Do not include explanations, markdown prose, file names, or tool calls.',
++				'If the replacement is multiple lines, a single fenced code block containing only the replacement is allowed.',
++			].join('\n');
++		case DirectorToolMode.Agent:
++		default:
++			return undefined;
++	}
 +}
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts b/src/vs/workbench/contrib/chat/common/agentEngine/fetchUtils.ts
 new file mode 100644
@@ -15442,6 +15763,62 @@ index 0000000000000000000000000000000000000000..c5f1ed04cf3e78ee130598929337d4ba
 +				assert.ok(PROVIDER_DISPLAY_NAMES[p].length > 0);
 +			}
 +		});
++	});
++});
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..2c5e637ee725dbd00b25309617196a44f810ca22
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
+@@ -0,0 +1,50 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { URI } from '../../../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { Selection } from '../../../../../../editor/common/core/selection.js';
++import { ChatAgentLocation, ChatModeKind } from '../../../common/constants.js';
++import { DirectorToolMode } from '../../../common/agentEngine/directorToolRegistry.js';
++import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../../common/agentEngine/directorChatModeRouting.js';
++
++suite('Director Chat Mode Routing', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('maps chat modes to Director tool modes', () => {
++		assert.strictEqual(getDirectorToolModeForRequest({ location: ChatAgentLocation.Chat, modeKind: ChatModeKind.Ask }), DirectorToolMode.Ask);
++		assert.strictEqual(getDirectorToolModeForRequest({ location: ChatAgentLocation.Chat, modeKind: ChatModeKind.Edit }), DirectorToolMode.Edit);
++		assert.strictEqual(getDirectorToolModeForRequest({ location: ChatAgentLocation.Chat, modeKind: ChatModeKind.Agent }), DirectorToolMode.Agent);
++		assert.strictEqual(getDirectorToolModeForRequest({ location: ChatAgentLocation.Chat }), DirectorToolMode.Agent);
++	});
++
++	test('routes EditorInline requests to Inline even when the UI sends Ask mode', () => {
++		const mode = getDirectorToolModeForRequest({
++			location: ChatAgentLocation.EditorInline,
++			modeKind: ChatModeKind.Ask,
++			locationData: {
++				type: ChatAgentLocation.EditorInline,
++				id: 'editor',
++				document: URI.file('/workspace/file.ts'),
++				selection: new Selection(1, 1, 1, 5),
++				wholeRange: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 5 },
++			},
++		});
++
++		assert.strictEqual(mode, DirectorToolMode.Inline);
++	});
++
++	test('uses bounded turns and mode-specific prompt guardrails', () => {
++		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Inline), 1);
++		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Ask), 6);
++		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Agent), 25);
++		assert.ok(/Do not edit files/.test(getDirectorModeSystemPrompt(DirectorToolMode.Ask) ?? ''));
++		assert.ok(/reviewable edit tools/.test(getDirectorModeSystemPrompt(DirectorToolMode.Edit) ?? ''));
++		assert.ok(/exact replacement text/.test(getDirectorModeSystemPrompt(DirectorToolMode.Inline) ?? ''));
++		assert.strictEqual(getDirectorModeSystemPrompt(DirectorToolMode.Agent), undefined);
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts

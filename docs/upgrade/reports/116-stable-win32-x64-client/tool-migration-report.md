@@ -2,7 +2,7 @@
 
 Profile: `116-stable-win32-x64-client`
 
-Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 4 reviewable edit tools gate
+Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
 
 This report is intentionally stable and sanitized. It contains no API keys, tokens, user paths, volatile timestamps, or machine-local runtime state.
 
@@ -10,7 +10,7 @@ This report is intentionally stable and sanitized. It contains no API keys, toke
 
 The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
 
-The runtime-effective lists for Ask/Edit/Agent/Inline are revalidated later after Phase 5 mode routing is wired. Phase 1 verifies the registry-computed lists and makes the Director Agent path consume those lists.
+The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Phase 5 mode routing was wired. The Director bridge now chooses the registry-filtered list per request mode, while EditorInline intentionally receives no model-callable tools.
 
 ## Registry-Computed Allowlists
 
@@ -152,8 +152,15 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 - Director Agent requests pass the Agent mode policy explicitly in `src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts`
 - Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`, and `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
 
-## Phase 1-4 Validation
+## Phase 1-5 Validation
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
-- `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
+- `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`21 passing`)
+- `npm run test-browser-no-install -- --grep "hover mode sendRequest"` (`2 passing`)
+- `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+- `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+
+See also `docs/upgrade/reports/116-stable-win32-x64-client/mode-routing-report.md`.

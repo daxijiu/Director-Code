@@ -4,7 +4,7 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, Phase 3 Chat Editing contract, and Phase 4 reviewable edit tools are implemented, replay-landed, and validated. Phase 5 Ask/Edit/Inline mode routing is next after Phase 4 push.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1 tool registry/mode policy gate, Phase 2 read-only workspace tools/GitHub v1 gate, Phase 3 Chat Editing contract, Phase 4 reviewable edit tools, and Phase 5 Ask/Edit/Inline mode routing are implemented, replay-landed, and validated. Phase 6 package/regression gate is next after the Phase 5 push.
 
 Execution decisions added on 2026-05-13:
 
@@ -40,7 +40,12 @@ Execution progress added on 2026-05-14:
 - Phase 4 text/file tools use the Phase 3 `DirectorChatEditingAdapter` and emit reviewable `textEdit` progress; `create_directory` uses Director-owned pending transactions and accept/reject command buttons, creating the folder only after accept.
 - Phase 4 registry policy exposes edit tools only in Edit and Agent. Ask and Inline still have no model-callable mutation tools.
 - Phase 4 validation coverage is `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`; it verifies reviewable replace progress, patch hunk application, duplicate create-file rejection, overlapping multi-replace rejection, and directory creation no-op-before-accept behavior.
-- Next implementation wave starts at Phase 5 Ask/Edit/Inline mode routing after Phase 4 push.
+- Phase 5 Ask/Edit/Inline mode routing is implemented. Director now registers for Ask/Edit/Agent panel modes, routes runtime requests through `directorChatModeRouting.ts`, keeps Agent as the full autonomous harness, constrains Ask to Q&A/read-only tools, uses reviewable edit tools for Edit, and treats EditorInline as a non-tool inline edit protocol.
+- Inline v1 now gathers selected editor context from `locationData`, asks for replacement text only, parses fenced/plain/`<replacement>` responses, and emits a real `textEdit` against the selected editor request through `DirectorChatEditingAdapter.emitInlineTextEdit()`. Inline still exposes no model-callable tools.
+- Runtime effective tool policy is now validated after routing: Ask has read-only tools only; Edit has read/search plus reviewable edit tools; Agent keeps the full reviewed registry; Inline has an empty tool list.
+- Director settings and Agent Customizations integration are present: the Agent Customizations editor includes a Director Code section that opens `director-code.openSettings`, and the Director language model provider advertises the same management command.
+- Phase 5 replay ownership follows the actual generator classification: mode routing and agent request plumbing are in `004-director-agent-engine.116.patch`; the Agent Customizations bridge remains in `005-director-chat-built-in-mode.116.patch`; inline edit adapter changes are in `008-director-chat-editing.116.patch`; edit-tool test compatibility updates are in `009-director-edit-tools.116.patch`.
+- Phase 5 validation completed from clean replay: clean `materialize-vscode`, `npm ci` after clearing stale Windows native build processes, `compile-check-ts-native`, `transpile-client-esbuild`, targeted Director browser tests (`21 passing`), inline controller request parity smoke (`2 passing`), `validate-series`, `validate-product-overrides`, `expected-contracts`, and canonical manifest write/validate.
 
 ## Summary
 

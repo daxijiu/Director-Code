@@ -1,9 +1,9 @@
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601d71de17b
+index 0000000000000000000000000000000000000000..932ef3ccab477f4f6c72eb7988add0c1d2d5ed65
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
-@@ -0,0 +1,298 @@
+@@ -0,0 +1,382 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12,8 +12,9 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +import { CancellationToken } from '../../../../../../base/common/cancellation.js';
 +import { getErrorMessage } from '../../../../../../base/common/errors.js';
 +import { MarkdownString } from '../../../../../../base/common/htmlContent.js';
-+import { extUriBiasedIgnorePathCase, relativePath } from '../../../../../../base/common/resources.js';
++import { basename, extUriBiasedIgnorePathCase, relativePath } from '../../../../../../base/common/resources.js';
 +import { URI } from '../../../../../../base/common/uri.js';
++import { IRange } from '../../../../../../editor/common/core/range.js';
 +import { TextEdit } from '../../../../../../editor/common/languages.js';
 +import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
 +import { IChatProgress, IChatService } from '../../chatService/chatService.js';
@@ -41,6 +42,12 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +	readonly rejectCommandId: string;
 +}
 +
++export interface DirectorInlineTextEditRequest extends DirectorPanelChatEditBinding {
++	readonly targetUri: URI;
++	readonly range: IRange;
++	readonly replacementText: string;
++}
++
 +export type DirectorChatEditResult =
 +	| {
 +		readonly ok: true;
@@ -53,7 +60,7 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +	| {
 +		readonly ok: false;
 +		readonly reason: string;
-+	};
++		};
 +
 +type DirectorChatEditFailure = Extract<DirectorChatEditResult, { readonly ok: false }>;
 +
@@ -85,6 +92,25 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +		`edits: ${result.editCount}`,
 +		'review: Chat Editing UI'
 +	].join('\n');
++}
++
++export function parseDirectorInlineReplacement(rawResponse: string): { readonly ok: true; readonly text: string } | DirectorChatEditFailure {
++	const raw = rawResponse.trim();
++	if (!raw) {
++		return { ok: false, reason: 'Inline response did not contain replacement text.' };
++	}
++
++	const fenced = extractSingleFencedBlock(raw);
++	if (fenced !== undefined) {
++		return { ok: true, text: fenced };
++	}
++
++	const tagged = raw.match(/^\s*<replacement>\s*([\s\S]*?)\s*<\/replacement>\s*$/i);
++	if (tagged) {
++		return { ok: true, text: tagged[1] };
++	}
++
++	return { ok: true, text: raw };
 +}
 +
 +export class DirectorChatEditingAdapter {
@@ -216,6 +242,59 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +		};
 +	}
 +
++	async emitInlineTextEdit(request: DirectorInlineTextEditRequest, token: CancellationToken): Promise<DirectorChatEditResult> {
++		if (token.isCancellationRequested) {
++			return { ok: false, reason: 'Inline edit was cancelled before it could start.' };
++		}
++
++		const binding = this.resolvePanelBinding(request);
++		if (!binding.ok) {
++			return binding;
++		}
++
++		const edit: TextEdit = {
++			range: request.range,
++			text: request.replacementText,
++		};
++		const emittedParts: string[] = [];
++
++		try {
++			binding.model.startEditingSession(false);
++			this.emit(binding, {
++				kind: 'textEdit',
++				uri: request.targetUri,
++				edits: [],
++				done: false,
++			});
++			emittedParts.push('textEdit:start');
++			this.emit(binding, {
++				kind: 'textEdit',
++				uri: request.targetUri,
++				edits: [edit],
++				done: false,
++			});
++			emittedParts.push('textEdit:progress');
++			this.emit(binding, {
++				kind: 'textEdit',
++				uri: request.targetUri,
++				edits: [],
++				done: true,
++			});
++			emittedParts.push('textEdit:done');
++		} catch (error) {
++			return { ok: false, reason: `Could not emit inline edit progress: ${getErrorMessage(error)}` };
++		}
++
++		return {
++			ok: true,
++			requestId: request.chatRequestId,
++			uri: request.targetUri,
++			relativePath: basename(request.targetUri),
++			editCount: 1,
++			emittedParts
++		};
++	}
++
 +	private emit(binding: DirectorResolvedPanelBinding, progress: IChatProgress): void {
 +		binding.model.acceptResponseProgress(binding.request, progress);
 +	}
@@ -302,12 +381,17 @@ index 0000000000000000000000000000000000000000..8e813c83acadba4d3bcb0df20f939601
 +function isAbsoluteFilePath(path: string): boolean {
 +	return /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('/') || path.startsWith('\\\\');
 +}
++
++function extractSingleFencedBlock(raw: string): string | undefined {
++	const match = raw.match(/^\s*(`{3,}|~{3,})[^\r\n]*\r?\n([\s\S]*?)\r?\n\1\s*$/);
++	return match?.[2];
++}
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239866bfcbf
+index 0000000000000000000000000000000000000000..08ed6f10022a90003f01c98bd1bcd2d928d0f380
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,195 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -321,7 +405,7 @@ index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239
 +import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
 +import { IChatProgress, IChatService } from '../../../common/chatService/chatService.js';
 +import { IChatModel, IChatRequestModel } from '../../../common/model/chatModel.js';
-+import { DirectorChatEditingAdapter, DirectorInternalSingleFileEditProbe, formatDirectorChatEditToolResult } from '../../../common/agentEngine/editing/directorChatEditingAdapter.js';
++import { DirectorChatEditingAdapter, DirectorInternalSingleFileEditProbe, formatDirectorChatEditToolResult, parseDirectorInlineReplacement } from '../../../common/agentEngine/editing/directorChatEditingAdapter.js';
 +
 +suite('Director Chat Editing Adapter', () => {
 +
@@ -428,7 +512,7 @@ index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239
 +		}, CancellationToken.None);
 +
 +		assert.strictEqual(result.ok, false);
-+		assert.match(result.reason, /missing-request/);
++		assert.ok(/missing-request/.test(result.reason));
 +		assert.strictEqual(fake.calls.length, 0);
 +		assert.strictEqual(fake.startCount(), 0);
 +	});
@@ -445,7 +529,7 @@ index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239
 +		}, CancellationToken.None);
 +
 +		assert.strictEqual(result.ok, false);
-+		assert.match(result.reason, /outside the current workspace/);
++		assert.ok(/outside the current workspace/.test(result.reason));
 +		assert.strictEqual(fake.calls.length, 0);
 +	});
 +
@@ -463,10 +547,43 @@ index 0000000000000000000000000000000000000000..f5c0885e21bb0b4142ca2edd93ed4239
 +
 +		assert.strictEqual(result.ok, true);
 +		assert.strictEqual(fake.calls[0].progress.kind, 'markdownContent');
-+		assert.match(formatDirectorChatEditToolResult(result), /edit_result: success/);
++		assert.ok(/edit_result: success/.test(formatDirectorChatEditToolResult(result)));
++	});
++
++	test('emits inline text edits against the explicit inline request', async () => {
++		const fake = modelWithRequests([request('inline-request')]);
++		const adapter = new DirectorChatEditingAdapter(chatService(fake.model), workspaceService());
++
++		const result = await adapter.emitInlineTextEdit({
++			chatSessionResource: sessionResource,
++			chatRequestId: 'inline-request',
++			targetUri: URI.file('/outside/current.ts'),
++			range: {
++				startLineNumber: 2,
++				startColumn: 3,
++				endLineNumber: 2,
++				endColumn: 7,
++			},
++			replacementText: 'value',
++		}, CancellationToken.None);
++
++		assert.strictEqual(result.ok, true);
++		assert.strictEqual(fake.startCount(), 1);
++		assert.deepStrictEqual(fake.calls.map(call => call.progress.kind), ['textEdit', 'textEdit', 'textEdit']);
++		assert.strictEqual(fake.calls[1].progress.kind, 'textEdit');
++		assert.strictEqual(fake.calls[1].progress.edits[0].text, 'value');
++		assert.strictEqual(fake.calls[2].progress.kind, 'textEdit');
++		assert.strictEqual(fake.calls[2].progress.done, true);
 +	});
 +
 +	test('formats compact edit errors for the model loop', () => {
 +		assert.strictEqual(formatDirectorChatEditToolResult({ ok: false, reason: 'no session' }), 'edit_result: error\nreason: no session');
++	});
++
++	test('parses inline replacement protocol responses', () => {
++		assert.deepStrictEqual(parseDirectorInlineReplacement('```ts\nconst value = 1;\n```'), { ok: true, text: 'const value = 1;' });
++		assert.deepStrictEqual(parseDirectorInlineReplacement('<replacement>\nvalue\n</replacement>'), { ok: true, text: 'value' });
++		assert.deepStrictEqual(parseDirectorInlineReplacement('plain value'), { ok: true, text: 'plain value' });
++		assert.strictEqual(parseDirectorInlineReplacement('   ').ok, false);
 +	});
 +});

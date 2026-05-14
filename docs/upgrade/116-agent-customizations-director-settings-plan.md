@@ -4,7 +4,16 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: plan only. Do not implement from this file until explicitly requested.
+Status: implemented, replay-backed, and validated as part of the 116 Phase 5 mode routing gate.
+
+Execution progress added on 2026-05-14:
+
+- `AICustomizationManagementSection.DirectorCode` is included in the Agent Customizations management section list.
+- The Agent Customizations editor renders a Director Code section with an action that executes `director-code.openSettings`.
+- The Director language model provider descriptor advertises `managementCommand: 'director-code.openSettings'`.
+- Existing Director settings entry points remain unchanged; credentials and OAuth state still stay in the existing Director settings/secrets path.
+- Replay ownership remains shallow: the Agent Customizations bridge is captured in `005-director-chat-built-in-mode.116.patch`, while Phase 5 mode-routing source changes are captured in their existing agent/editing stages.
+- Validation was covered by the Phase 5 clean replay gate: TypeScript compile, esbuild transpile, targeted Director browser tests, inline request parity smoke, replay validators, and canonical manifest validation.
 
 ## Summary
 

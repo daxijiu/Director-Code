@@ -883,7 +883,7 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +}
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546a7b857e4
+index 0000000000000000000000000000000000000000..9123bacad4581c718b751001933b3502ccaa72e1
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
 @@ -0,0 +1,206 @@
@@ -1015,7 +1015,7 @@ index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546
 +
 +		const result = await tool.invoke(invocation({ path: 'src/a.ts', oldString: '1', newString: '2' }), async () => 0, undefined as any, CancellationToken.None);
 +
-+		assert.match(textOf(result), /edit_result: success/);
++		assert.ok(/edit_result: success/.test(textOf(result)));
 +		assert.deepStrictEqual(fakeChat.calls.map(call => call.progress.kind), ['markdownContent', 'codeblockUri', 'textEdit', 'textEdit', 'textEdit']);
 +		const editProgress = fakeChat.calls[3].progress;
 +		assert.strictEqual(editProgress.kind, 'textEdit');
@@ -1035,7 +1035,7 @@ index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546
 +			],
 +		}), async () => 0, undefined as any, CancellationToken.None);
 +
-+		assert.match(textOf(result), /overlap/);
++		assert.ok(/overlap/.test(textOf(result)));
 +		assert.strictEqual(fakeChat.calls.length, 0);
 +	});
 +
@@ -1046,7 +1046,7 @@ index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546
 +
 +		const result = await tool.invoke(invocation({ path: 'src/a.ts', content: 'new' }), async () => 0, undefined as any, CancellationToken.None);
 +
-+		assert.match(textOf(result), /already exists/);
++		assert.ok(/already exists/.test(textOf(result)));
 +		assert.strictEqual(fakeChat.calls.length, 0);
 +	});
 +
@@ -1064,7 +1064,7 @@ index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546
 +
 +		const result = await tool.invoke(invocation({ patch }), async () => 0, undefined as any, CancellationToken.None);
 +
-+		assert.match(textOf(result), /edit_result: success/);
++		assert.ok(/edit_result: success/.test(textOf(result)));
 +		const editProgress = fakeChat.calls[3].progress;
 +		assert.strictEqual(editProgress.kind, 'textEdit');
 +		assert.strictEqual(editProgress.edits[0].text, 'const a = 2;\n');
@@ -1089,7 +1089,7 @@ index 0000000000000000000000000000000000000000..f2481d25cfb69adc4e2045afad05d546
 +		await acceptDirectorDirectoryCreationTransaction(fakeFiles, transactionId);
 +		const result = await resultPromise;
 +
-+		assert.match(textOf(result), /edit_result: success/);
++		assert.ok(/edit_result: success/.test(textOf(result)));
 +		assert.strictEqual(fakeFiles._folders.has(URI.joinPath(root, 'src/new-dir').toString()), true);
 +	});
 +});

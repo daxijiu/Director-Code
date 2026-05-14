@@ -1,5 +1,15 @@
 # CLAUDE.md - Director-Code replay source guide
 
+## 2026-05-14 Phase 5 Mode Routing Update
+
+- Phase 5 Ask/Edit/Inline mode routing is complete, replay-backed, clean-materialized, validated, and ready for commit/push.
+- Runtime routing now maps Ask/Edit/Agent/EditorInline through `directorChatModeRouting.ts`: Ask uses read-only Q&A policy, Edit uses reviewable edit tools, Agent remains the full autonomous harness, and Inline exposes no model-callable tools.
+- Inline now uses selected editor context plus `DirectorChatEditingAdapter.emitInlineTextEdit()` to emit a real `textEdit` for the inline request. Fallback-only inline behavior is no longer the Phase 5 target.
+- Phase 5 replay ownership: mode routing source is in `004-director-agent-engine.116.patch`; Agent Customizations settings bridge remains in `005-director-chat-built-in-mode.116.patch`; inline edit adapter changes are in `008-director-chat-editing.116.patch`; edit tool test compatibility updates are in `009-director-edit-tools.116.patch`.
+- Phase 5 report: `docs/upgrade/reports/116-stable-win32-x64-client/mode-routing-report.md`.
+- Validation completed: clean materialize, `npm ci` after clearing stale Windows native build processes, `compile-check-ts-native`, `transpile-client-esbuild`, Director browser tests (`21 passing`), inline controller smoke (`2 passing`), replay validators, and canonical manifest validation.
+- Next wave is Phase 6 package/regression. Use `scripts/build-director-116.ps1` or `.cmd` without `-SkipReplay`; clear `%APPDATA%\Director-Code\clp` before packaged runtime smoke.
+
 > 每次开始工作先确认当前分支和 `git status --short`。不要把生成后的 VS Code
 > 源码树当作长期源码真相；它只是不稳定的调试和验证工作区。
 

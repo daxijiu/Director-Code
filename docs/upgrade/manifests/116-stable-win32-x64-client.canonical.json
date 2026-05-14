@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T09:27:06.327Z",
-  "treeHash": "b27da9e4aab1e3fb687c5dd4d144d236a73260a37cd190ebbae980486b080eb9",
+  "generatedAt": "2026-05-14T10:10:02.974Z",
+  "treeHash": "174e65f7171def69bd47c548108214598208f916d26f1be878ea7d97c1328283",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39692,7 +39692,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "c1f178d67132aec8a9bbd1b1a02b01711a0ec7a988dffb425994de859a058cdf",
+      "sha256": "a3117c1342674008ec9ec38c61f15a602415f2bea0fa8ddc67742a95ca65d2fa",
       "mode": 33206,
       "type": "file"
     },
@@ -39710,7 +39710,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts",
-      "sha256": "3ba38d0d02e91531a1f3ec4785ab73684e4e01854c0a66a0a5815c5402ce7c2d",
+      "sha256": "e8a927dae7e13439cd8dd6b2e19c9d61712884a4e9a8092a72b75d7eb4dab03b",
       "mode": 33206,
       "type": "file"
     },
@@ -39746,7 +39746,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/messageNormalization.ts",
-      "sha256": "9f3c74379e391d0ff16ee63cbf758f013f1b4f8a77c8a40e47adff6ce0f79527",
+      "sha256": "1e9f9e07737a0a9920fd90ec624cf19ac1b1ca46fdcf43b56a4bb9bfef15c637",
       "mode": 33206,
       "type": "file"
     },
@@ -41935,6 +41935,12 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorChatModeRouting.ts",
+      "sha256": "89805c2e567bdf58ed5bab4a0cd72b7ddf578c00af28e685d99ae1d1246b8ee1",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
       "sha256": "295c37263473f5ce92ac3ed45e20edfa378a1264586e57766101c0d11b6f8ade",
       "mode": 33206,
@@ -41948,7 +41954,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
-      "sha256": "49714555a133b469f3f0c214cbca7d39762c995edd2b38af40e66a3931e42281",
+      "sha256": "edd19b131cbc757c81eb5daee94f6799f3dbb426f9ab03776de35be882967374",
       "mode": 33206,
       "type": "file"
     },
@@ -43304,7 +43310,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts",
-      "sha256": "14edb140f2c15ccc77f9353c7836b5764bddbbda5d05558b823fa370b855da92",
+      "sha256": "76b1f803c006c5c9dd0ad7db380b416137a0c5a48462eefe85504e4ad141b02c",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts",
+      "sha256": "b3fcade051fb7545060f3b0ee5a2b3ed422f837905efc30b2c8c2198868dc5ff",
       "mode": 33206,
       "type": "file"
     },
@@ -43316,7 +43328,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts",
-      "sha256": "2289ad9eea04059f657e506097c84bdfd9754ae0ba74684bff54fadc933ecb27",
+      "sha256": "50a053a96b4a804dfb36c77ab3af5efd13855c2e6f0b987d633212d958c6f204",
       "mode": 33206,
       "type": "file"
     },
