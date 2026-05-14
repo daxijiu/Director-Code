@@ -1,5 +1,24 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 最新记忆：116 Mermaid runtime Phase 0 已完成
+
+- 当前 checkout 仍是 `E:\Projects\Director-Code-batch\Director-Code-112-check`，当前分支 `refactor/112-replay-baseline`。
+- `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md` 的 Phase 0 runtime hotfix 已按用户要求实施、replay-land、完整打包，并由用户实际验证通过。
+- 已推送提交：`ce2ed24a Fix 116 Mermaid language model runtime regression` 到 `origin/refactor/112-replay-baseline`。
+- Phase 0 修复内容：
+  - `isProposedApiEnabled()` 恢复为精确检查 `extension.enabledApiProposals.includes(proposal)`，不再“声明任意 proposal 就放行全部 proposal”。
+  - `ExtHostLanguageModelTools.getTools()` 的工具 API object shape 使用 `chatParticipantAdditions` gating，不再误用 `chatParticipantPrivate`。
+  - `ExtHostLanguageModels.getLanguageModelByIdentifier()` / `selectLanguageModels()` 增加缺失模型恢复保护：恢复只尝试一次、失败后记录、重复 warning 去重、恢复异常返回 unavailable，不再递归刷日志。
+  - `vscode.mermaid-chat-features` 只声明 `chatOutputRenderer` 时不会收到 `chatParticipantAdditions` 行为，也不会因为 Mermaid 工具 DTO 的 `modelId` 附带 `options.model` 触发 LanguageModelProxy 缺失模型风暴。
+- 新增回归测试：`src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts`，覆盖 exact proposal gating、Mermaid-like extension 不获 chatParticipantAdditions、缺失模型恢复不递归、恢复异常 bounded、`selectLanguageModels()` 不递归恢复。目标 browser test 为 5 passing。
+- Replay 落点：`patches/replay/004-director-agent-engine.116.patch`；同时更新了 `patches/series.116.json`、`docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`、`docs/upgrade/reports/116-stable-win32-x64-client/*` 和 `scripts/upgrade/generate-director-patches.mjs` 的 runtime path 分类。
+- 已通过验证：`validate-series`、`validate-product-overrides`、`expected-contracts`、clean `materialize-vscode`、canonical manifest validation、`compile-check-ts-native`、`transpile-client-esbuild`、targeted browser test。
+- 完整安装包已用 `.\scripts\build-director-116.ps1` 构建，未用 `-SkipReplay`。输出：
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe`
+- 用户已确认安装包实际测试通过。Phase 0 视为完成；不要继续 Phase 1 tool registry / Ask/Edit/Inline / Chat Editing 实施，除非用户明确要求进入下一阶段。
+- 当前工作区仍可能有未跟踪 `artifacts/` 安装包产物；这些产物不要默认纳入 Git。
+
 ## 2026-05-13 当前最高优先级记忆
 
 - 当前 checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`。

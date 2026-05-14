@@ -4,12 +4,25 @@ Date: 2026-05-13
 
 Phase: P2 follow-up
 
-Status: investigation complete, plan only. Do not implement from this file until explicitly requested.
+Status: Phase 0 implemented, replay-landed, packaged, manually accepted, and pushed. Phase 1+ remains planned and must not start until explicitly requested.
 
 Execution decisions added on 2026-05-13:
 
 - Phase 0 is an independent runtime hotfix. Complete and replay-land Phase 0 first, then produce a build for user manual acceptance before starting Phase 1 or later feature work.
 - Director tool model-facing names must use Copilot-compatible names as the primary names wherever a Copilot-compatible capability exists. Director-specific ids are internal implementation details or compatibility aliases, not the main model vocabulary.
+
+Execution progress added on 2026-05-14:
+
+- Phase 0 runtime hotfix is complete and accepted by user packaged-build testing.
+- Commit `ce2ed24a` (`Fix 116 Mermaid language model runtime regression`) is pushed to `origin/refactor/112-replay-baseline`.
+- The fix restores exact proposed API gating in `isProposedApiEnabled()`, so `vscode.mermaid-chat-features` keeps `chatOutputRenderer` without receiving `chatParticipantAdditions`.
+- `ExtHostLanguageModelTools.getTools()` now gates tool source/full-reference API shape on `chatParticipantAdditions`, not `chatParticipantPrivate`.
+- Missing model recovery in `ExtHostLanguageModels` is bounded: it does not recurse through `selectLanguageModels()`, records failed recoveries, deduplicates repeated warnings, and returns unavailable when recovery fails.
+- Regression coverage is in `src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts` and is included in `004-director-agent-engine.116.patch`.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/series.116.json`, `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`, and related generated reports.
+- Validation completed: `validate-series`, `validate-product-overrides`, `expected-contracts`, clean `materialize-vscode`, canonical manifest validation, `compile-check-ts-native`, `transpile-client-esbuild`, and targeted browser tests (`5 passing`).
+- Full package build completed with `scripts/build-director-116.ps1`; installers were produced under `artifacts/out/stable/win32-x64/` and accepted by user manual testing.
+- Do not proceed to Phase 1 tool registry/mode policy work unless the user explicitly requests the next phase.
 
 ## Summary
 
