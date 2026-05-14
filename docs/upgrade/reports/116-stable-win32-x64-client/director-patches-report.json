@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-13T16:02:46.233Z",
+  "generatedAt": "2026-05-14T06:30:52.424Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 214,
+  "changedFileCount": 218,
   "patches": [
     {
       "stage": "branding",
@@ -151,6 +151,9 @@
       "path": "patches/replay/004-director-agent-engine.116.patch",
       "files": [
         "src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts",
+        "src/vs/workbench/api/common/extHostLanguageModelTools.ts",
+        "src/vs/workbench/api/common/extHostLanguageModels.ts",
+        "src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts",
         "src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/agentEngine/apiKeysWidget.ts",
         "src/vs/workbench/contrib/chat/browser/agentEngine/auxiliaryModelSelection.ts",
@@ -223,11 +226,12 @@
         "src/vs/workbench/contrib/mcp/common/mcpSamplingService.ts",
         "src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts",
         "src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts",
-        "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts"
+        "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
+        "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 74,
-      "size": 826164,
-      "sha256": "d445cd5f0f5bcffd8d27a050c73ff872bba54dd80d183e11e33cdf88bc765e21"
+      "fileCount": 78,
+      "size": 841930,
+      "sha256": "f19cd7a5f3854409c8cc6fc8e36be94f6371ee64db056a8ca06ac5010d22ffe5"
     },
     {
       "stage": "chat-built-in-mode",

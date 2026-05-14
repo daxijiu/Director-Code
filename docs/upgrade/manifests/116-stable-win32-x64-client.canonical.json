@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-13T16:02:56.033Z",
-  "treeHash": "3e71e6eb350e9fdb3beeafe0238ed59b5769f2b21f4acac5caf42d17a2c840f7",
+  "generatedAt": "2026-05-14T06:33:03.631Z",
+  "treeHash": "8ca5d75c15d71085a33d6884014caee2bbe066259c55f20f0e6b3ee50f72a1e1",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -37034,13 +37034,13 @@
     },
     {
       "path": "src/vs/workbench/api/common/extHostLanguageModels.ts",
-      "sha256": "2ee7c0c589cd5678edc7cd186b33bc2c049660a48e59d3ecc7b51ef12b05683e",
+      "sha256": "66ee4e1fd59d980eaaeae034f8b3057c94bacd55be6561b60f6c67a5096e70ad",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/api/common/extHostLanguageModelTools.ts",
-      "sha256": "47d52027ba8b79554d7462f19e975465359aafb6738c9dc09b4a9fba14f412cd",
+      "sha256": "0437fdb73a7f5fddb7a0c200af1838830e04f60d43d9527ba59c1c7a4ee294ef",
       "mode": 33206,
       "type": "file"
     },
@@ -37881,6 +37881,12 @@
     {
       "path": "src/vs/workbench/api/test/common/extHostExtensionActivator.test.ts",
       "sha256": "74d9aeb3e4674930bfeae3049bfb727da3dc032e847183950a15ee6b2dcaa03c",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts",
+      "sha256": "258e7f7d386099037ac39b6c14c4812f5a349c1a419392faa0af2dac0b4cf32c",
       "mode": 33206,
       "type": "file"
     },
@@ -55490,7 +55496,7 @@
     },
     {
       "path": "src/vs/workbench/services/extensions/common/extensions.ts",
-      "sha256": "7da4cd5b46b61c2e9839786c5904bc0e5ec94b5d395bedb1f898f9d93e5780db",
+      "sha256": "dc322f03dd71c587c9c32024e21c1cebb11a17ba6b147321df738cab4e080fa3",
       "mode": 33206,
       "type": "file"
     },

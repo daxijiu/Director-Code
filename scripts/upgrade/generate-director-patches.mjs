@@ -208,12 +208,17 @@ function isAgentEngine(filePath) {
   if (filePath.includes('/agentEngine/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/mcp/')) return true;
   return [
+    'src/vs/workbench/api/common/extHostLanguageModelTools.ts',
+    'src/vs/workbench/api/common/extHostLanguageModels.ts',
+    'src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts',
     'src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts',
     'src/vs/workbench/contrib/chat/browser/chat.contribution.ts',
     'src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts',
     'src/vs/workbench/contrib/chat/common/participants/chatAgents.ts',
     'src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts',
     'src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts',
+    'src/vs/workbench/services/extensions/common/extensions.ts',
+    'src/vs/workbench/services/extensions/test/common/extensions.test.ts',
   ].includes(filePath);
 }
 

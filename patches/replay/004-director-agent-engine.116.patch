@@ -17,6 +17,300 @@ index 5cec86ba5414063a9029bbc3ca8f89a4c6d4d023..9d8eaaffee4c1655f29653ed2b561f96
  			: false;
  		const source: ToolDataSource = isBuiltinTool
  			? ToolDataSource.Internal
+diff --git a/src/vs/workbench/api/common/extHostLanguageModelTools.ts b/src/vs/workbench/api/common/extHostLanguageModelTools.ts
+index f10129cfb766fbce98f57e71234a712b433192b6..f92bca9bb8608acaf5e6d0b0d60ad88851180d2a 100644
+--- a/src/vs/workbench/api/common/extHostLanguageModelTools.ts
++++ b/src/vs/workbench/api/common/extHostLanguageModelTools.ts
+@@ -159,7 +159,7 @@ export class ExtHostLanguageModelTools implements ExtHostLanguageModelToolsShape
+ 	}
+ 
+ 	getTools(extension: IExtensionDescription): vscode.LanguageModelToolInformation[] {
+-		const hasParticipantAdditions = isProposedApiEnabled(extension, 'chatParticipantPrivate');
++		const hasParticipantAdditions = isProposedApiEnabled(extension, 'chatParticipantAdditions');
+ 
+ 		return Array.from(this._allTools.values())
+ 			.map(tool => hasParticipantAdditions ? tool.apiObjectWithChatParticipantAdditions : tool.apiObject)
+diff --git a/src/vs/workbench/api/common/extHostLanguageModels.ts b/src/vs/workbench/api/common/extHostLanguageModels.ts
+index 9d2d8bc68c6103c81057c002db3eb9b7382888dd..b91b01b4c46c35588bbd42c7926e3e35d9e33d6a 100644
+--- a/src/vs/workbench/api/common/extHostLanguageModels.ts
++++ b/src/vs/workbench/api/common/extHostLanguageModels.ts
+@@ -128,6 +128,9 @@ export class ExtHostLanguageModels implements ExtHostLanguageModelsShape {
+ 	private readonly _modelAccessList = new ExtensionIdentifierMap<ExtensionIdentifierSet>();
+ 	private readonly _pendingRequest = new Map<number, { languageModelId: string; res: LanguageModelResponse }>();
+ 	private readonly _ignoredFileProviders = new Map<number, vscode.LanguageModelIgnoredFileProvider>();
++	private readonly _activeMissingModelRecoveries = new Set<string>();
++	private readonly _failedMissingModelRecoveries = new Set<string>();
++	private readonly _dedupedMissingModelWarnings = new Set<string>();
+ 	private _languageModelProxyProvider: vscode.LanguageModelProxyProvider | undefined;
+ 
+ 	constructor(
+@@ -378,24 +381,49 @@ export class ExtHostLanguageModels implements ExtHostLanguageModelsShape {
+ 		return this.getLanguageModelByIdentifier(extension, defaultModelId);
+ 	}
+ 
+-	async getLanguageModelByIdentifier(extension: IExtensionDescription, modelId: string | undefined): Promise<vscode.LanguageModelChat | undefined> {
++	async getLanguageModelByIdentifier(extension: IExtensionDescription, modelId: string | undefined, allowRecovery = true): Promise<vscode.LanguageModelChat | undefined> {
+ 		if (!modelId) {
+ 			return undefined;
+ 		}
+ 
+ 		let model = this._localModels.get(modelId);
+ 		if (!model) {
+-			// model gone? is this an error on us? Try to resolve model again
+-			this._logService.warn(`[LanguageModelProxy](${extension.identifier.value}) Could not find model '${modelId}' in local cache. Trying to resolve model again.`);
+ 			const vendor = this.getVendorFromModelIdentifier(modelId);
+ 			if (!vendor) {
+-				this._logService.warn(`[LanguageModelProxy](${extension.identifier.value}) Could not extract vendor from model identifier '${modelId}'.`);
++				this._warnMissingModelOnce(extension, modelId, 'missing-vendor', `Could not extract vendor from model identifier '${modelId}'.`);
+ 				return undefined;
+ 			}
+-			await this.selectLanguageModels(extension, { vendor });
++
++			const recoveryKey = this._getMissingModelRecoveryKey(extension, modelId);
++			if (!allowRecovery) {
++				this._warnMissingModelOnce(extension, modelId, 'missing-no-recovery', `Could not find model '${modelId}' in local cache.`);
++				return undefined;
++			}
++			if (this._activeMissingModelRecoveries.has(recoveryKey)) {
++				this._warnMissingModelOnce(extension, modelId, 'recursive-recovery', `Could not find model '${modelId}' in local cache while recovery is already running.`);
++				return undefined;
++			}
++			if (this._failedMissingModelRecoveries.has(recoveryKey)) {
++				this._warnMissingModelOnce(extension, modelId, 'failed-recovery', `Could not find model '${modelId}' in local cache after an earlier recovery attempt.`);
++				return undefined;
++			}
++
++			this._warnMissingModelOnce(extension, modelId, 'start-recovery', `Could not find model '${modelId}' in local cache. Trying to resolve model again.`);
++			this._activeMissingModelRecoveries.add(recoveryKey);
++			try {
++				await this._selectLanguageModelIdentifiers(extension, { vendor });
++			} catch (err) {
++				this._failedMissingModelRecoveries.add(recoveryKey);
++				this._warnMissingModelOnce(extension, modelId, 'recovery-error', `Could not recover model '${modelId}': ${err instanceof Error ? err.message : String(err)}`);
++				return undefined;
++			} finally {
++				this._activeMissingModelRecoveries.delete(recoveryKey);
++			}
++
+ 			model = this._localModels.get(modelId);
+ 			if (!model) {
+-				this._logService.warn(`[LanguageModelProxy](${extension.identifier.value}) Could not find model '${modelId}' in local cache after re-resolving models.`);
++				this._failedMissingModelRecoveries.add(recoveryKey);
++				this._warnMissingModelOnce(extension, modelId, 'after-recovery', `Could not find model '${modelId}' in local cache after re-resolving models.`);
+ 				return undefined;
+ 			}
+ 		}
+@@ -443,11 +471,11 @@ export class ExtHostLanguageModels implements ExtHostLanguageModelsShape {
+ 	async selectLanguageModels(extension: IExtensionDescription, selector: vscode.LanguageModelChatSelector) {
+ 
+ 		// this triggers extension activation
+-		const models = await this._proxy.$selectChatModels({ ...selector, extension: extension.identifier });
++		const models = await this._selectLanguageModelIdentifiers(extension, selector);
+ 
+ 		const result: vscode.LanguageModelChat[] = [];
+ 
+-		const modelPromises = models.map(identifier => this.getLanguageModelByIdentifier(extension, identifier));
++		const modelPromises = models.map(identifier => this.getLanguageModelByIdentifier(extension, identifier, false));
+ 		const modelResults = await Promise.all(modelPromises);
+ 		for (const model of modelResults) {
+ 			if (model) {
+@@ -458,6 +486,23 @@ export class ExtHostLanguageModels implements ExtHostLanguageModelsShape {
+ 		return result;
+ 	}
+ 
++	private _selectLanguageModelIdentifiers(extension: IExtensionDescription, selector: vscode.LanguageModelChatSelector): Promise<string[]> {
++		return this._proxy.$selectChatModels({ ...selector, extension: extension.identifier });
++	}
++
++	private _getMissingModelRecoveryKey(extension: IExtensionDescription, modelId: string): string {
++		return `${ExtensionIdentifier.toKey(extension.identifier)}\u0000${modelId}`;
++	}
++
++	private _warnMissingModelOnce(extension: IExtensionDescription, modelId: string, reason: string, message: string): void {
++		const key = `${this._getMissingModelRecoveryKey(extension, modelId)}\u0000${reason}`;
++		if (this._dedupedMissingModelWarnings.has(key)) {
++			return;
++		}
++		this._dedupedMissingModelWarnings.add(key);
++		this._logService.warn(`[LanguageModelProxy](${extension.identifier.value}) ${message}`);
++	}
++
+ 	private async _sendChatRequest(extension: IExtensionDescription, languageModelId: string, messages: vscode.LanguageModelChatMessage2[], options: vscode.LanguageModelChatRequestOptions, token: CancellationToken) {
+ 
+ 		const internalMessages: IChatMessage[] = this._convertMessages(extension, messages);
+diff --git a/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts b/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f58e8dc07
+--- /dev/null
++++ b/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts
+@@ -0,0 +1,167 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
++import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
++import type { IExtensionDescription } from '../../../../platform/extensions/common/extensions.js';
++import type { ApiProposalName } from '../../../../platform/extensions/common/extensionsApiProposals.js';
++import { NullLogService } from '../../../../platform/log/common/log.js';
++import { nullExtensionDescription, isProposedApiEnabled } from '../../../services/extensions/common/extensions.js';
++import { mock } from '../../../test/common/workbenchTestServices.js';
++import { MainContext } from '../../common/extHost.protocol.js';
++import type { IToolDataDto, MainThreadLanguageModelsShape, MainThreadLanguageModelToolsShape } from '../../common/extHost.protocol.js';
++import type { IExtHostAuthentication } from '../../common/extHostAuthentication.js';
++import { ExtHostLanguageModels } from '../../common/extHostLanguageModels.js';
++import { ExtHostLanguageModelTools } from '../../common/extHostLanguageModelTools.js';
++import { TestRPCProtocol } from './testRPCProtocol.js';
++
++suite('ExtHost language model runtime', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('proposed API gating is exact per proposal', () => {
++		const extension = extensionWithProposals('vscode.mermaid-chat-features', ['chatOutputRenderer']);
++
++		assert.strictEqual(isProposedApiEnabled(extension, 'chatOutputRenderer'), true);
++		assert.strictEqual(isProposedApiEnabled(extension, 'chatParticipantAdditions'), false);
++		assert.strictEqual(isProposedApiEnabled(extension, 'chatParticipantPrivate'), false);
++	});
++
++	test('tool metadata additions are gated by chatParticipantAdditions', () => {
++		const rpcProtocol = createRpcProtocol();
++		const languageModels = createLanguageModels(rpcProtocol);
++		const tools = new ExtHostLanguageModelTools(rpcProtocol, languageModels);
++		const tool = createToolData();
++
++		tools.$onDidChangeTools([tool]);
++
++		const mermaidTools = tools.getTools(extensionWithProposals('vscode.mermaid-chat-features', ['chatOutputRenderer']));
++		assert.strictEqual(mermaidTools.length, 1);
++		assert.strictEqual((mermaidTools[0] as { source?: unknown }).source, undefined);
++		assert.strictEqual((mermaidTools[0] as { fullReferenceName?: unknown }).fullReferenceName, undefined);
++
++		const participantTools = tools.getTools(extensionWithProposals('test.participant', ['chatParticipantAdditions']));
++		assert.strictEqual(participantTools.length, 1);
++		assert.notStrictEqual((participantTools[0] as { source?: unknown }).source, undefined);
++		assert.strictEqual((participantTools[0] as { fullReferenceName?: string }).fullReferenceName, tool.fullReferenceName);
++
++		languageModels.dispose();
++	});
++
++	test('missing model lookup tries recovery once and does not recurse', async () => {
++		const rpcProtocol = createRpcProtocol();
++		const extension = extensionWithProposals('vscode.mermaid-chat-features', ['chatOutputRenderer']);
++		const languageModels = createLanguageModels(rpcProtocol);
++		let selectCalls = 0;
++
++		rpcProtocol.set(MainContext.MainThreadLanguageModels, new class extends mock<MainThreadLanguageModelsShape>() {
++			override $selectChatModels(): Promise<string[]> {
++				selectCalls++;
++				return Promise.resolve(['director-code/deepseek-chat']);
++			}
++		});
++
++		const first = await languageModels.getLanguageModelByIdentifier(extension, 'director-code/deepseek-chat');
++		const second = await languageModels.getLanguageModelByIdentifier(extension, 'director-code/deepseek-chat');
++
++		assert.strictEqual(first, undefined);
++		assert.strictEqual(second, undefined);
++		assert.strictEqual(selectCalls, 1);
++
++		languageModels.dispose();
++	});
++
++	test('missing model recovery errors are bounded', async () => {
++		const rpcProtocol = createRpcProtocol();
++		const extension = extensionWithProposals('vscode.mermaid-chat-features', ['chatOutputRenderer']);
++		const languageModels = createLanguageModels(rpcProtocol);
++		let selectCalls = 0;
++
++		rpcProtocol.set(MainContext.MainThreadLanguageModels, new class extends mock<MainThreadLanguageModelsShape>() {
++			override $selectChatModels(): Promise<string[]> {
++				selectCalls++;
++				return Promise.reject(new Error('provider unavailable'));
++			}
++		});
++
++		const first = await languageModels.getLanguageModelByIdentifier(extension, 'director-code/deepseek-chat');
++		const second = await languageModels.getLanguageModelByIdentifier(extension, 'director-code/deepseek-chat');
++
++		assert.strictEqual(first, undefined);
++		assert.strictEqual(second, undefined);
++		assert.strictEqual(selectCalls, 1);
++
++		languageModels.dispose();
++	});
++
++	test('selectLanguageModels does not recover missing identifiers recursively', async () => {
++		const rpcProtocol = createRpcProtocol();
++		const extension = extensionWithProposals('test.participant', ['chatParticipantAdditions']);
++		const languageModels = createLanguageModels(rpcProtocol);
++		let selectCalls = 0;
++
++		rpcProtocol.set(MainContext.MainThreadLanguageModels, new class extends mock<MainThreadLanguageModelsShape>() {
++			override $selectChatModels(): Promise<string[]> {
++				selectCalls++;
++				return Promise.resolve(['director-code/deepseek-chat']);
++			}
++		});
++
++		const result = await languageModels.selectLanguageModels(extension, { vendor: 'director-code' });
++
++		assert.deepStrictEqual(result, []);
++		assert.strictEqual(selectCalls, 1);
++
++		languageModels.dispose();
++	});
++});
++
++function createRpcProtocol(): TestRPCProtocol {
++	const rpcProtocol = new TestRPCProtocol();
++	rpcProtocol.set(MainContext.MainThreadLanguageModelTools, new class extends mock<MainThreadLanguageModelToolsShape>() {
++		override $getTools(): Promise<IToolDataDto[]> {
++			return Promise.resolve([]);
++		}
++	});
++	rpcProtocol.set(MainContext.MainThreadLanguageModels, new class extends mock<MainThreadLanguageModelsShape>() {
++		override $selectChatModels(): Promise<string[]> {
++			return Promise.resolve([]);
++		}
++	});
++	return rpcProtocol;
++}
++
++function createLanguageModels(rpcProtocol: TestRPCProtocol): ExtHostLanguageModels {
++	return new ExtHostLanguageModels(rpcProtocol, new NullLogService(), new class extends mock<IExtHostAuthentication>() { });
++}
++
++function createToolData(): IToolDataDto {
++	return {
++		id: 'renderMermaidDiagram',
++		displayName: 'Render Mermaid Diagram',
++		modelDescription: 'Render a Mermaid diagram.',
++		source: {
++			type: 'extension',
++			label: 'Mermaid',
++			extensionId: new ExtensionIdentifier('vscode.mermaid-chat-features')
++		},
++		fullReferenceName: 'vscode.mermaid-chat-features/renderMermaidDiagram',
++		inputSchema: {
++			type: 'object',
++			properties: {
++				markup: { type: 'string' }
++			}
++		}
++	};
++}
++
++function extensionWithProposals(id: string, proposals: ApiProposalName[]): IExtensionDescription {
++	return {
++		...nullExtensionDescription,
++		identifier: new ExtensionIdentifier(id),
++		enabledApiProposals: proposals
++	};
++}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..07f6cd6f78ca25253b0133060b3446400ad1f0bd
@@ -21960,3 +22254,16 @@ index 0000000000000000000000000000000000000000..38ed2f7de87533e1fb267664c63a88aa
 +		assert.strictEqual(sessionMap.has('server-never'), false);
 +	});
 +});
+diff --git a/src/vs/workbench/services/extensions/common/extensions.ts b/src/vs/workbench/services/extensions/common/extensions.ts
+index b4a8251394c0b05567591f8ff2bbb551f56f0a31..c7fee71a2e23b0bdc0f38f68c4e7ebbe8634e4a4 100644
+--- a/src/vs/workbench/services/extensions/common/extensions.ts
++++ b/src/vs/workbench/services/extensions/common/extensions.ts
+@@ -324,7 +324,7 @@ export function isProposedApiEnabled(extension: IExtensionDescription, proposal:
+ 	if (!extension.enabledApiProposals) {
+ 		return false;
+ 	}
+-	return true;// extension.enabledApiProposals.includes(proposal);
++	return extension.enabledApiProposals.includes(proposal);
+ }
+ 
+ export function checkProposedApiEnabled(extension: IExtensionDescription, proposal: ApiProposalName): void {
