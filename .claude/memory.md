@@ -1,5 +1,17 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-14 latest memory: thin-layer plan hardening accepted
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan remains `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Latest plan hardening clarifies browser tool safety: browser mutation/interaction tools require Director-level pre-approval that global auto-approve settings cannot bypass.
+- `readPage` and `screenshotPage` require domain/session approval unless they operate on the current user-opened Director browser session.
+- `runPlaywrightCode` audit is limited to the tool invocation result/chat transcript by default; no separate persistent log is added unless a future policy requires it.
+- `tool-facade-research.md` must carry `Status: pending-review` and be changed to `Status: accepted` after explicit user approval before Phase 3 implementation starts.
+- `extensions` may only get hidden Phase 3 research/registry preparation; model-facing exposure waits for Phase 5 product/gallery/marketplace wording policy and commercial/name grep gate approval.
+- Phase 1 artifact inventory is summary-only: record top-level purpose, key installer hashes when relevant, and non-commit policy; do not produce or commit full generated artifact file lists.
+- Validation order is fixed: run full 116 validation after the refactor, run it again before the 117/next-version dry-run, then run target profile validators after the dry-run.
+- `artifacts/` remains untracked and must not be committed by default.
+
 ## 2026-05-14 latest memory: thin-layer refactor planning wave accepted
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

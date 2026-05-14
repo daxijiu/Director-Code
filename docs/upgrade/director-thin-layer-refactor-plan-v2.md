@@ -46,6 +46,7 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
 ### 1. Baseline And Surface Inventory
 
 - Record the current 116 baseline: Phase 0-6 reports, package regression status, installer hashes, accepted tool strategy report, and current untracked generated artifacts.
+- Untracked generated artifact recording is summary-only. Record the top-level purpose, key installer hashes when relevant, and the non-commit policy; do not produce or commit a full generated artifact file list.
 - Produce `docs/upgrade/reports/116-stable-win32-x64-client/director-surface-inventory.md`.
 - Classify current Director patch surface into:
   - `must-touch upstream hook`
@@ -73,6 +74,7 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
 
 - Produce `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md` before Phase 3 code changes.
 - `tool-facade-research.md` is a hard gate. It must be reviewed and accepted before any tool facade cutover, direct-reuse allowlist change, browser tool exposure, or model-facing tool rename is implemented.
+- `tool-facade-research.md` must include a top-level status field. It starts as `Status: pending-review`; after explicit user approval it must be updated to `Status: accepted` before Phase 3 implementation begins.
 - Use the accepted source report as the required starting point:
   - `docs/upgrade/reports/116-stable-win32-x64-client/tool-source-and-strategy-analysis.html`
 - Use one table. Each row must include:
@@ -108,8 +110,10 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
   - Add `renderMermaidDiagram` to the Director Agent direct-reuse allowlist by reusing the retained `extensions/mermaid-chat-features` tool. Do not reimplement it.
   - Directly reuse VS Code core browser tools. The research report must document the accepted safety, confirmation, and mode policy for browser interaction tools, but their implementation source remains VS Code core.
   - Enable Director Agent access to VS Code core browser tools by default through Director registry policy and confirmation controls. `workbench.browser.enableChatTools` must not be the only safety boundary.
-  - Browser mutation/interaction tools require pre-approval: `clickElement`, `dragElement`, `handleDialog`, `navigatePage`, `openBrowserPage`, `runPlaywrightCode`, and `typeInPage`. `runPlaywrightCode` must also record the submitted code and a result summary in the tool result/audit path.
-  - `extensions` remains in Phase 3 direct-reuse scope, but it cannot be exposed until the product/gallery/marketplace wording and commercial policy are documented and pass the commercial/name grep gate.
+  - Browser mutation/interaction tools require Director-level pre-approval: `clickElement`, `dragElement`, `handleDialog`, `navigatePage`, `openBrowserPage`, `runPlaywrightCode`, and `typeInPage`. This pre-approval is a hard gate and must not be bypassed by global VS Code chat/tool auto-approve settings.
+  - `readPage` and `screenshotPage` require domain/session approval unless they operate on the current user-opened Director browser session.
+  - `runPlaywrightCode` must record the submitted code and a result summary in the tool invocation result/chat transcript. Do not add a separate persistent log by default.
+  - `extensions` remains a final direct-reuse candidate, but Phase 3 may only perform research and hidden registry preparation. It cannot become model-facing until the Phase 5 product/gallery/marketplace wording policy is documented and passes the commercial/name grep gate.
 - Valid final statuses:
   - `direct-reuse-allowlist`
   - `director-facade-cutover`
@@ -129,16 +133,16 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
 | VS Code UI tool | Final status | Director decision |
 | --- | --- | --- |
 | `runSubagent` | `direct-reuse-allowlist` | Reuse VS Code core implementation. |
-| `clickElement` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval. |
-| `dragElement` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval. |
-| `handleDialog` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval and dialog outcome visibility. |
+| `clickElement` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval that global auto-approve settings cannot bypass. |
+| `dragElement` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval that global auto-approve settings cannot bypass. |
+| `handleDialog` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval and dialog outcome visibility. |
 | `hoverElement` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation. |
-| `navigatePage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval and navigation/network policy. |
-| `openBrowserPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval. |
-| `readPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; do not map it to `fetch`. |
-| `runPlaywrightCode` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require pre-approval and record submitted code plus result summary. |
-| `screenshotPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation. |
-| `typeInPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation with pre-approval for input/submission risk. |
+| `navigatePage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval and navigation/network policy. |
+| `openBrowserPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval. |
+| `readPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; do not map it to `fetch`; require domain/session approval outside the current user-opened Director browser session. |
+| `runPlaywrightCode` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require Director-level pre-approval and record submitted code plus result summary in the chat/tool result only. |
+| `screenshotPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation; require domain/session approval outside the current user-opened Director browser session. |
+| `typeInPage` | `direct-reuse-allowlist` | Reuse VS Code core browser implementation with Director-level pre-approval for input/submission risk. |
 | `createDirectory` | `director-facade-cutover` | Keep Director-owned implementation; cut over from `create_directory` in Phase 3. |
 | `createFile` | `director-facade-cutover` | Keep Director-owned reviewable implementation; cut over from `create_file` in Phase 3. |
 | `createJupyterNotebook` | `defer-hidden` | Do not implement in this plan; requires separate Notebook creation contract. |
@@ -164,7 +168,7 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
 | `textSearch` | `director-facade-cutover` | Keep Director VS Code search-service implementation; cut over from current grep/text search tool. |
 | `todo` | `direct-reuse-allowlist` | Reuse VS Code core todo implementation. |
 | `askQuestions` | `direct-reuse-allowlist` | Reuse VS Code core ask-questions implementation. |
-| `extensions` | `direct-reuse-allowlist` | Reuse VS Code core extension search implementation only after product/gallery/marketplace wording policy is documented and passes the commercial/name grep gate. |
+| `extensions` | `direct-reuse-allowlist` | Reuse VS Code core extension search implementation. Phase 3 may only prepare it hidden; model-facing exposure waits for Phase 5 product/gallery/marketplace wording and grep gate approval. |
 | `getProjectSetupInfo` | `defer-hidden` | Do not implement in this plan; evaluate with any future workspace setup wave. |
 | `installExtension` | `defer-hidden` | Do not expose in this plan; extension install mutation needs separate product/security policy. |
 | `memory` | `defer-hidden` | Do not implement Copilot memory semantics; future memory must be Director-owned. |
@@ -210,9 +214,11 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
 ### 6. Replay Consolidation And Upgrade Dry Run
 
 - Ensure final canonical replay has no `010` refactor stage and no temporary local patch in `patches/series.116.json`.
+- Run the full 116 validation set before starting the 117 stable or next-version dry-run.
 - Run a dry-run against 117 stable or the next available upstream version.
 - Prefer an existing target profile. If none exists, create a dry-run-only profile and do not include it in release series.
 - Produce `docs/upgrade/reports/<target-profile>/thin-layer-upgrade-dry-run-report.md`.
+- After the dry-run, run the target profile's required replay/product/expected-contract validators and record any skipped build/test steps with reasons.
 - Compare conflict files, conflict hunks, chat/tool/model/provider conflicts, and product-field manual decisions against the current 116 baseline.
 - If conflicts still scatter across upstream chat files, continue module extraction before considering any fork-shape change.
 
@@ -222,7 +228,10 @@ Tool parity is intentionally source-based, not full Copilot parity. This plan pr
   - Run replay validators for every code/replay wave.
   - Run the targeted tests for the code paths touched by the wave.
   - Run the commercial/name grep gate only when required by the Execution Protocol before Phase 5, and always after Phase 5.
-Full validation, required in Phase 6 and before release handoff:
+
+### Full Validation
+
+Required after the 116 refactor completes, again in Phase 6 before the 117 or next-version dry-run, and before release handoff.
 
 - Replay validators:
   ```powershell
@@ -251,7 +260,8 @@ Full validation, required in Phase 6 and before release handoff:
   node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
   ```
 - Tool facade tests must cover model-facing names, schema adapters, mode allowlists, current capability preservation, browser direct-reuse policy, removal of old names for the cutover tools, and `editFiles` not being model-callable.
-- Browser tool tests must prove Director registry policy controls exposure even when VS Code browser tool settings are enabled, and mutation/interaction tools require pre-approval.
+- Browser tool tests must prove Director registry policy controls exposure even when VS Code browser tool settings are enabled, mutation/interaction tools require Director-level pre-approval even when global auto-approve is enabled, and `readPage`/`screenshotPage` require domain/session approval outside the current user-opened Director browser session.
+- `runPlaywrightCode` tests must prove the submitted code and result summary appear in the tool invocation result/chat transcript without adding a separate persistent log by default.
 - `githubRepo` tests must prove remote indexed search returns the controlled limited/unsupported behavior unless a future Director-owned GitHub provider exists.
 - `renderMermaidDiagram` tests must prove it is a direct allowlist of the retained Mermaid extension tool, not a Director reimplementation.
 - Product audit tests must include `defaultChatAgent` provider shape, commercial grep report, and packaged `product.json` smoke.
@@ -263,6 +273,6 @@ Full validation, required in Phase 6 and before release handoff:
 - Edit tools remain Director-owned and out of Copilot parity scope.
 - `githubTextSearch` is not assumed to be a Copilot or VS Code core tool until runtime evidence proves its source.
 - Browser tools are reused from VS Code core rather than reimplemented.
-- Browser tools are enabled for Director Agent through Director registry policy and pre-approval controls.
+- Browser tools are enabled for Director Agent through Director registry policy and Director-level approval controls that are not bypassed by global auto-approve settings.
 - VSCodium remains the lower layer.
 - A pure VS Code fork is not part of this plan.
