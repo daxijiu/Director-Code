@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 Plan Mode 调研报告</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2937;
+      --muted: #5b6472;
+      --border: #d7dde6;
+      --bg: #ffffff;
+      --soft: #f6f8fb;
+      --accent: #1458d4;
+      --ok: #146c43;
+      --warn: #9a5b00;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 28px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 { font-size: 30px; }
+    h2 {
+      font-size: 22px;
+      padding-top: 30px;
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 22px;
+    }
+    p { margin: 10px 0; }
+    ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    code {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--soft);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--soft); }
+    a { color: var(--accent); }
+    .meta {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .summary {
+      margin-top: 24px;
+      padding: 18px 20px;
+      background: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .decision {
+      border-left: 4px solid var(--ok);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+    .risk {
+      border-left: 4px solid var(--warn);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Phase 2 Plan Mode 调研报告</h1>
+  <p class="meta">日期：2026-05-15 ｜ 工作区：<code>E:\Projects\Director-Code-batch\Director-Code-112-check</code> ｜ 主题：Director native Plan、Claude Plan、ACP Plan 的统一策略</p>
+
+  <section class="summary">
+    <h2>结论摘要</h2>
+    <ul>
+      <li>本地 VS Code 主线的核心 Chat Mode 仍是 Ask、Edit、Agent。Plan 不是第四个全局 <code>ChatModeKind</code>，而是 Agent Host / Claude session 的配置状态。</li>
+      <li>Director 不能只“新增一个 xxx agent 配置文件”就完成 Plan Mode。真正需要的是 tool policy、权限继承、退出/审批路径、UI 状态和测试。</li>
+      <li>推荐 Director v1 把 Plan 做成一个 session/mode profile：只读工具 + 计划输出 + 审批后切到 Edit 或 Agent。Claude 外部 Agent 直接映射 <code>permissionMode: "plan"</code>，ACP Agent 优先使用其 advertised session mode。</li>
+      <li>OpenCode/free-code 的关键经验是：Plan Mode 的 edit deny 必须传递给 subagents，否则子 Agent 可以绕过计划态限制。</li>
+    </ul>
+  </section>
+
+  <h2>VS Code 观察</h2>
+  <p>本地 <code>E:\Projects\sub-projects\vscode</code> checkout 显示 <code>package.json</code> version 为 <code>1.121.0</code>。相关实现说明：</p>
+  <ul>
+    <li><code>src/vs/workbench/contrib/chat/common/constants.ts</code>：核心 <code>ChatModeKind</code> 只有 <code>Ask</code>、<code>Edit</code>、<code>Agent</code>。</li>
+    <li><code>src/vs/platform/agentHost/common/agentHostSchema.ts</code>：Agent Host 有 <code>interactive</code> 和 <code>plan</code> 两种 session mode。Plan 描述为先生成计划，再选择如何执行。</li>
+    <li><code>src/vs/platform/agentHost/common/claudeSessionConfigKeys.ts</code>：Claude permission mode 包含 <code>plan</code>，并把 auto approve/mode 等轴折叠到 Claude 自身 permission 语义。</li>
+    <li><code>extensions/copilot/src/extension/chatSessions/claude</code>：Claude 集成会处理 <code>ExitPlanMode</code>，并通过 review plan UI 让用户 approve、approve and auto-edit、approve and bypass approvals 或反馈拒绝。</li>
+  </ul>
+  <p>因此，VS Code 的模式更接近“Agent session 配置 chip”，而不是 chat framework 层新增 Plan 模式。</p>
+
+  <h2>参考实现对比</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>项目</th>
+        <th>Plan 表达方式</th>
+        <th>关键细节</th>
+        <th>对 Director 的启示</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>opencode</code></td>
+        <td>内置 primary agent：<code>build</code>、<code>plan</code>、<code>explore</code>。</td>
+        <td><code>plan</code> agent disallows all edit tools，只允许写 plan 文件。system reminder 要求理解、设计、review、final plan、ExitPlanMode。</td>
+        <td>Plan 应有真实 tool permission，而不是只有 prompt。</td>
+      </tr>
+      <tr>
+        <td><code>opencode</code></td>
+        <td>subagent permission inheritance。</td>
+        <td>测试覆盖了从 Plan Mode 启动 custom subagent 时不能绕过 edit deny。</td>
+        <td>Director 如果支持子 Agent 或外部 Agent delegations，必须在 host bridge 层继承 plan 限制。</td>
+      </tr>
+      <tr>
+        <td><code>free-code</code></td>
+        <td><code>PermissionMode.plan</code>。</td>
+        <td>进入 plan 时保存 <code>prePlanMode</code>，ExitPlanMode tool 需要用户交互确认，审批后再进入执行。</td>
+        <td>Plan 是状态机：enter、plan output、approve/revise、exit。</td>
+      </tr>
+      <tr>
+        <td><code>hermes-agent</code></td>
+        <td><code>/plan</code> skill。</td>
+        <td>只写 <code>.hermes/plans/</code> markdown，不执行项目修改。</td>
+        <td>轻量 Plan 可以先作为 skill/command，但要与 Director native mode policy 对齐。</td>
+      </tr>
+      <tr>
+        <td>Claude Agent SDK</td>
+        <td><code>permissionMode: "plan"</code>。</td>
+        <td>SDK 原生支持 plan permission mode，VS Code Claude 集成直接使用它。</td>
+        <td>Claude 不需要通过 Director 自己模拟 Plan，优先映射 SDK。</td>
+      </tr>
+      <tr>
+        <td>ACP</td>
+        <td>Session mode / plan updates。</td>
+        <td>ACP 可 advertised <code>availableModes</code>，也可发送 <code>plan</code> session update。</td>
+        <td>ACP adapter 可优先调用 <code>setSessionMode("plan")</code>，不可用时退化为 host-side 只读和 prompt injection。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Director 推荐设计</h2>
+  <h3>Native Director Plan</h3>
+  <ul>
+    <li>把 Plan 做成 Director-owned session/mode profile，而不是先强改 VS Code core <code>ChatModeKind</code>。</li>
+    <li>工具权限：默认只允许 read-only tool layer，例如 <code>read_file</code>、<code>list_dir</code>、<code>file_search</code>、<code>grep_search</code>、<code>get_errors</code>、<code>get_changed_files</code>、<code>view_image</code>。默认拒绝 reviewable edit tools、terminal destructive 操作和目录创建。</li>
+    <li>计划输出：第一版可直接返回 structured markdown；第二版可允许只写 <code>.director/plans/*.md</code>，但这仍要经过明确白名单。</li>
+    <li>退出路径：Plan response 底部提供 Approve and Edit、Approve and Agent、Revise Plan、Cancel。Approve 后将计划和上下文带入 Edit 或 Agent。</li>
+  </ul>
+
+  <h3>Claude Plan</h3>
+  <ul>
+    <li>Claude SDK adapter 中设置 <code>permissionMode: "plan"</code>，并处理 <code>ExitPlanMode</code> / review plan tool。</li>
+    <li>用户审批后可切到 <code>acceptEdits</code> 或 Director Edit/Agent session。不要让 Claude Plan 直接绕过 Director reviewable edit contract。</li>
+  </ul>
+
+  <h3>ACP Plan</h3>
+  <ul>
+    <li>若 ACP agent 在 <code>NewSessionResponse.modes</code> 或 session update 中暴露 plan mode，调用 <code>setSessionMode</code>。</li>
+    <li>若 agent 不支持 plan mode，Director adapter 仍应在 host bridge 层禁用 write/terminal dangerous capability，并注入 plan instructions。</li>
+    <li>ACP 的 <code>plan</code> session update 可以映射为 native Chat plan progress，而不必变成文件编辑。</li>
+  </ul>
+
+  <div class="decision">
+    <p><strong>建议：</strong>Plan Mode 作为跨 native/Claude/ACP 的 policy profile 来做。UI 表达可以先是 chat input chip 或 command，底层必须是一套可测试的 mode routing policy。</p>
+  </div>
+
+  <h2>最小实现步骤</h2>
+  <ol>
+    <li>新增 <code>DirectorChatMode.Plan</code> 或独立 session config key，但先不要修改 VS Code core enum，除非现有 UI 无法表达。</li>
+    <li>扩展 <code>directorChatModeRouting.ts</code>，加入 Plan policy：read-only + plan output，明确拒绝 edit tools。</li>
+    <li>新增 Plan prompt/reminder，要求先理解、必要时提问、输出执行计划、等待审批。</li>
+    <li>新增 approve/revise/cancel UI action，审批后切入 Edit 或 Agent。</li>
+    <li>Claude SDK adapter 映射 <code>permissionMode: "plan"</code>；ACP adapter 映射 <code>setSessionMode</code> 或 host-side fallback。</li>
+    <li>补充测试：Plan 不暴露 edit tools、Inline 不受影响、子 Agent 不能继承出 edit 权限、ExitPlanMode 审批能正确切换。</li>
+  </ol>
+
+  <h2>风险</h2>
+  <div class="risk">
+    <p><strong>主要风险：</strong>如果 Plan 只靠 prompt，模型或外部 Agent 很容易通过已有 edit/terminal 路径执行修改。必须在 tool registry、adapter bridge、subagent inheritance 三处都加限制。</p>
+  </div>
+  <ul>
+    <li>不要把 Plan 文件写入当成普通 edit tool，否则会触发 Chat Editing UI 的误导性审阅体验。</li>
+    <li>不要让外部 ACP agent 宣称 plan 后仍保留 writeTextFile/terminal dangerous 权限。</li>
+    <li>不要把 Plan 与 Ask 混同。Ask 是问答，Plan 是可审批的执行方案，后者需要状态机。</li>
+  </ul>
+
+  <h2>证据来源</h2>
+  <ul>
+    <li>VS Code 本地仓库：<code>E:\Projects\sub-projects\vscode</code></li>
+    <li>OpenCode 本地仓库：<code>E:\Projects\sub-projects\opencode</code></li>
+    <li>Hermes Agent 本地仓库：<code>E:\Projects\sub-projects\hermes-agent</code></li>
+    <li>Free Code 本地仓库：<code>E:\Projects\sub-projects\free-code</code></li>
+    <li>Claude SDK 本地仓库：<code>E:\Projects\sub-projects\claude-agent-sdk-python</code>、<code>E:\Projects\sub-projects\claude-agent-sdk-typescript</code></li>
+  </ul>
+</main>
+</body>
+</html>

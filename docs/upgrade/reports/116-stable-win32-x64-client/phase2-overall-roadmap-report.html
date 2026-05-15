@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 Provider / ACP / Plan 总体路线报告</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2937;
+      --muted: #5b6472;
+      --border: #d7dde6;
+      --bg: #ffffff;
+      --soft: #f6f8fb;
+      --accent: #1458d4;
+      --ok: #146c43;
+      --warn: #9a5b00;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 28px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 { font-size: 30px; }
+    h2 {
+      font-size: 22px;
+      padding-top: 30px;
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 22px;
+    }
+    p { margin: 10px 0; }
+    ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    code {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--soft);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--soft); }
+    a { color: var(--accent); }
+    .meta {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .summary {
+      margin-top: 24px;
+      padding: 18px 20px;
+      background: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .decision {
+      border-left: 4px solid var(--ok);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+    .risk {
+      border-left: 4px solid var(--warn);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Phase 2 Provider / ACP / Plan 总体路线报告</h1>
+  <p class="meta">日期：2026-05-15 ｜ 工作区：<code>E:\Projects\Director-Code-batch\Director-Code-112-check</code> ｜ 关联子报告：ACP、Provider UI、Plan Mode</p>
+
+  <section class="summary">
+    <h2>总判断</h2>
+    <ul>
+      <li>下一阶段不应被命名为单纯“ACP 接入”。更准确的范围是：Provider/Model Registry、External Agent Adapter、Plan Policy 三条线并行收束。</li>
+      <li>Claude Code 不走 ACP 优先，走 Claude Agent SDK TypeScript adapter。ACP 用于通用外部 Agent，包括 OpenCode、Hermes、Gemini、Codex ACP wrapper 等。</li>
+      <li>Provider UI 应在广泛外部 Agent 发布前完成。否则用户会在模型 provider、agent provider、mode/model picker 之间遇到同一套旧的单全局状态问题。</li>
+      <li>Plan Mode 应作为 mode/session policy 做，而不是只新增一个 agent config。Native Director、Claude SDK、ACP 都映射到同一套“只读计划、审批后执行”的产品语义。</li>
+    </ul>
+  </section>
+
+  <h2>四个核心决策</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>决策</th>
+        <th>建议</th>
+        <th>理由</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Claude 接入方式</td>
+        <td>使用 <code>@anthropic-ai/claude-agent-sdk</code> TypeScript SDK。</td>
+        <td>VS Code 主线 Claude 集成也是 SDK 路径；SDK 原生支持 permission mode、Plan、canUseTool、MCP/plugins、session resume。</td>
+      </tr>
+      <tr>
+        <td>ACP 定位</td>
+        <td>作为通用 external agent adapter，而不是所有 agent 的强制中间层。</td>
+        <td>ACP 适合 session/mode/model/permission/event 标准化，但会削弱 Claude 专有能力。</td>
+      </tr>
+      <tr>
+        <td>Provider UI</td>
+        <td>先做 workbench 内部 registry + 两个 UI，再逐步插件化。</td>
+        <td>当前已有单全局状态 bug；完全插件化要等 proposed API、OAuth、internal service bridge 边界明确。</td>
+      </tr>
+      <tr>
+        <td>Plan Mode</td>
+        <td>做成可测试 policy profile，审批后切 Edit/Agent。</td>
+        <td>参考实现都说明 Plan 需要权限兜底和退出状态机，不只是 prompt 或 config 文件。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>推荐顺序</h2>
+  <ol>
+    <li><strong>Vocabulary freeze：</strong>先在代码和 UI 文案中区分 LLM Provider、Model、External Agent、Agent Session、Plan Policy。避免把 provider 页面做成 agent 页面。</li>
+    <li><strong>Provider/Model UI wave：</strong>实现多 provider registry、Provider Manager、Model Catalog、chat picker provider grouping，并迁移旧配置。</li>
+    <li><strong>Claude SDK spike：</strong>以专用 adapter 接 Claude，完成 stream、cancel、permission、Plan、文件编辑 review 的最小闭环。</li>
+    <li><strong>ACP adapter wave：</strong>从 Hermes 或 OpenCode 开始，再试 Codex ACP wrapper。只要求 VS Code parity，不要求全部 Director tool registry 互通。</li>
+    <li><strong>Plan policy wave：</strong>把 native Director Plan、Claude Plan、ACP Plan 都映射到同一套 UI 和权限状态机。</li>
+    <li><strong>Codex decision gate：</strong>对比 ACP wrapper 与实际 VS Code/Codex extension 行为，决定是否需要专用 Codex adapter。</li>
+  </ol>
+
+  <div class="decision">
+    <p><strong>关于“Provider UI 是否必须在 ACP 前完成”：</strong>不必阻塞 Claude SDK / ACP 的技术验证，但应在正式用户可见的外部 Agent 聚合入口前完成。更现实的排法是 Provider UI wave 与 Claude SDK spike 并行，Provider UI 先进入 release candidate。</p>
+  </div>
+
+  <h2>建议 Patch / Replay 归属</h2>
+  <p>当前 AGENTS.md 要求长期源码真相是 replay control plane。后续代码落地时建议：</p>
+  <ul>
+    <li>Provider registry/settings/model picker 改动优先归入现有 settings/chat built-in mode 相关 stage；若改动过大，可新增明确的 <code>010-director-provider-registry.116.patch</code>，并同步 <code>patches/series.116.json</code>、profile、patch generation classification。</li>
+    <li>External Agent adapter 可归入 <code>004-director-agent-engine.116.patch</code>，若文件量和依赖显著增加，则新增 <code>010-director-external-agents.116.patch</code> 更清晰。</li>
+    <li>Plan mode policy 与 mode routing 相关，可优先扩展 Phase 5 所在的 mode routing ownership。若影响 UI/session provider 较大，再单独拆 stage。</li>
+    <li>任何 generated tree 调试成果必须回写 replay patch，完成前至少跑 profile-scoped replay validation。</li>
+  </ul>
+
+  <h2>验证门槛</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Wave</th>
+        <th>最低验证</th>
+        <th>补充验证</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Provider UI</td>
+        <td>settings migration test、provider registry unit test、model picker grouping smoke、replay validators。</td>
+        <td>OpenAI-compatible endpoint、OAuth login/logout、API key reset、multi-provider enable/disable manual smoke。</td>
+      </tr>
+      <tr>
+        <td>Claude SDK</td>
+        <td>adapter contract test、stream smoke、cancel smoke、permission prompt smoke、file edit review smoke。</td>
+        <td>Plan Mode approval/reject、MCP disabled/enabled、Windows packaged runtime smoke。</td>
+      </tr>
+      <tr>
+        <td>ACP adapter</td>
+        <td>spawn/connect/newSession/prompt/cancel test、permission request test、sessionUpdate mapping test。</td>
+        <td>Hermes/OpenCode/Codex ACP wrapper manual smoke，PATH/login shell edge cases。</td>
+      </tr>
+      <tr>
+        <td>Plan policy</td>
+        <td>mode routing denies edit tools、reviewable edit not emitted in Plan、approve switches to Edit/Agent。</td>
+        <td>External Agent plan fallback、subagent permission inheritance regression。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>建议立刻开的工程任务</h2>
+  <ol>
+    <li>写一份短 design doc：Provider Registry schema、External Agent Adapter interface、Plan Policy object 三个类型边界。</li>
+    <li>修 provider UI 的已知 bug：模型刷新结果不进入 UI、OAuth 只显示 active provider、API key status 被全局 provider 污染。</li>
+    <li>做 Claude TS SDK 版本 pin 和 adapter spike，先不提交大 UI，只验证 stream/permission/plan。</li>
+    <li>做 ACP adapter spike，优先 Hermes 或 OpenCode，因为本地仓库已有 ACP/plan 线索。</li>
+    <li>把 Plan Mode 的只读 policy 测试先写出来，避免后面 UI 推着安全边界走。</li>
+  </ol>
+
+  <h2>最终建议</h2>
+  <p>下一波如果要命名，建议叫 <strong>Phase 2 External Agent and Provider Foundation</strong>，而不是只叫 ACP。它的 acceptance 应该是：</p>
+  <ul>
+    <li>用户能在 Provider Manager 中同时启用多个模型 provider，并在 Model Catalog 中控制 chat picker 显示。</li>
+    <li>Claude Code 通过 SDK 出现在 native Chat session 中，Plan/permission/edit review 可用。</li>
+    <li>至少一个 ACP agent 通过通用 adapter 出现在 native Chat session 中，达到 VS Code parity。</li>
+    <li>Director native Plan 可以只读地产生计划，并在用户审批后进入 Edit/Agent。</li>
+  </ul>
+
+  <h2>关联报告</h2>
+  <ul>
+    <li><code>phase2-acp-agent-integration-report.html</code></li>
+    <li><code>phase2-provider-model-ui-report.html</code></li>
+    <li><code>phase2-plan-mode-report.html</code></li>
+  </ul>
+
+  <h2>公开参考</h2>
+  <ul>
+    <li><a href="https://code.visualstudio.com/api/extension-guides/ai/language-model-chat-provider">VS Code Language Model Chat Provider</a></li>
+    <li><a href="https://github.com/JohnnyZ93/oai-compatible-copilot">oai-compatible-copilot</a></li>
+    <li><a href="https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk">@anthropic-ai/claude-agent-sdk</a></li>
+  </ul>
+</main>
+</body>
+</html>

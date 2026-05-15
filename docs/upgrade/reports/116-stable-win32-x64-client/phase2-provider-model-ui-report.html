@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 Provider / Model UI 调研报告</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2937;
+      --muted: #5b6472;
+      --border: #d7dde6;
+      --bg: #ffffff;
+      --soft: #f6f8fb;
+      --accent: #1458d4;
+      --ok: #146c43;
+      --warn: #9a5b00;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 28px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 { font-size: 30px; }
+    h2 {
+      font-size: 22px;
+      padding-top: 30px;
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 22px;
+    }
+    p { margin: 10px 0; }
+    ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    code {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--soft);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--soft); }
+    a { color: var(--accent); }
+    .meta {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .summary {
+      margin-top: 24px;
+      padding: 18px 20px;
+      background: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .decision {
+      border-left: 4px solid var(--ok);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+    .risk {
+      border-left: 4px solid var(--warn);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Phase 2 Provider / Model UI 调研报告</h1>
+  <p class="meta">日期：2026-05-15 ｜ 工作区：<code>E:\Projects\Director-Code-batch\Director-Code-112-check</code> ｜ 主题：多 Provider、模型可见性、Chat 模型分组</p>
+
+  <section class="summary">
+    <h2>结论摘要</h2>
+    <ul>
+      <li>当前 Director provider UI 是单全局 provider/model/baseURL/authVariant 设计，无法满足“多个 provider 同时激活、模型单独显示/隐藏、chat picker 按 provider 分组”的目标。</li>
+      <li>Provider UI 工作建议排在大规模 ACP 外部 Agent UI 之前。它不阻塞 Claude SDK 技术 spike，但应先于面向用户的多 Agent 发布。</li>
+      <li>Provider 与 Model 应分成两个界面：Provider Manager 管连接和认证，Model Catalog 管模型发现、启用/隐藏、显示名、能力和默认选择。</li>
+      <li>可以参考 VS Code 公开 <code>LanguageModelChatProvider</code> API 和 <code>oai-compatible-copilot</code> 插件，但 Director 不宜立即完全迁移为普通扩展。推荐先做 workbench 内部 Provider Registry，再把可公开的 provider adapter 逐步插件化。</li>
+    </ul>
+  </section>
+
+  <h2>当前实现现状</h2>
+  <p>当前 116 generated tree 的相关代码位于 <code>vscode.generated/layers/director/vscode/src/vs/workbench/contrib/directorCode</code>。</p>
+  <table>
+    <thead>
+      <tr>
+        <th>文件 / 服务</th>
+        <th>当前能力</th>
+        <th>问题</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>agentEngine.contribution.ts</code></td>
+        <td>注册 <code>IApiKeyService</code>、<code>IOAuthService</code>、<code>IAuthStateService</code>、<code>IModelResolverService</code>，注册单一 <code>DirectorCodeModelProvider</code>。</td>
+        <td>语言模型 provider vendor 固定为 <code>director-code</code>，chat picker 难以按真实 provider 分组。</td>
+      </tr>
+      <tr>
+        <td><code>providerSettingsWidget.ts</code></td>
+        <td>提供 provider、authVariant、model、baseURL 选择。</td>
+        <td>所有设置写入单全局 config：<code>directorCode.ai.provider</code>、<code>directorCode.ai.model</code>、<code>directorCode.ai.baseURL</code>、<code>directorCode.ai.authVariant</code>。这天然只能表达一个当前 provider。</td>
+      </tr>
+      <tr>
+        <td><code>apiKeysWidget.ts</code></td>
+        <td>SecretStorage 中已有 provider-level 和 model-level key/config 结构。</td>
+        <td>UI 只像“多 provider key 列表”，但状态、测试和当前配置仍被全局 provider/baseURL/model 影响。</td>
+      </tr>
+      <tr>
+        <td><code>oauthWidget.ts</code></td>
+        <td>支持 Anthropic PKCE manual flow 和 OpenAI device code。</td>
+        <td>只展示当前 active provider 的 OAuth 行，不是 provider 管理页。</td>
+      </tr>
+      <tr>
+        <td><code>modelResolver.ts</code></td>
+        <td>已有按 provider/baseURL/auth identity/auth variant 组成的 cache key，并能 API/CDN/static 三层解析模型。</td>
+        <td>模型解析能力比 UI 先进。需要把 resolver 结果写入 Model Catalog，而不是只填单个 select。</td>
+      </tr>
+      <tr>
+        <td><code>DirectorCodeModelProvider</code></td>
+        <td>向 VS Code 语言模型服务暴露当前 provider 的模型。</td>
+        <td>metadata 只有单 vendor，且 custom/compatible 模型容易被全局 provider 推断污染。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>目标信息架构</h2>
+  <p>建议明确区分两个概念：LLM Provider 是“模型供应商或兼容 endpoint”，External Agent Provider 是“Claude Code / ACP Agent / Codex session”。本报告只处理 LLM Provider / Model UI。</p>
+
+  <h3>Provider Manager</h3>
+  <ul>
+    <li>每个 provider 是一个实例，而不是单纯 enum。一个用户可以同时有 <code>openai-main</code>、<code>openrouter</code>、<code>local-ollama</code>、<code>company-proxy</code>。</li>
+    <li>字段建议：<code>id</code>、<code>kind</code>、<code>displayName</code>、<code>enabled</code>、<code>baseURL</code>、<code>authType</code>、<code>authIdentityKey</code>、<code>createdAt</code>、<code>updatedAt</code>、<code>lastTest</code>。</li>
+    <li>操作建议：启用/停用、测试连接、刷新模型、OAuth 登录/注销/重置、API key 设置/清除、复制 diagnostics。</li>
+  </ul>
+
+  <h3>Model Catalog</h3>
+  <ul>
+    <li>每个 provider instance 下维护模型列表，来源包括 API discovery、内置 catalog、用户手动添加。</li>
+    <li>字段建议：<code>providerId</code>、<code>modelId</code>、<code>displayName</code>、<code>enabled</code>、<code>hidden</code>、<code>family</code>、<code>contextWindow</code>、<code>capabilities</code>、<code>pricing</code>、<code>defaultForModes</code>、<code>lastSeen</code>。</li>
+    <li>UI 建议：按 provider 分组的表格，搜索/过滤，批量显示/隐藏，刷新单 provider，显示 authentication/source 状态。</li>
+  </ul>
+
+  <h3>Chat 模型选择器</h3>
+  <ul>
+    <li>只显示 enabled provider 下 enabled 且未 hidden 的模型。</li>
+    <li>排序先按 provider，再按 pinned/default、能力、名称。</li>
+    <li>优先用真实 provider 分组。实现上可探索两条路：每个 provider instance 注册独立 language model provider vendor，或在单 provider metadata 中填充稳定 category。需要用 116 内部 model picker 实测。</li>
+  </ul>
+
+  <h2>插件化可行性</h2>
+  <p>VS Code 官方 <a href="https://code.visualstudio.com/api/extension-guides/ai/language-model-chat-provider">Language Model Chat Provider</a> 文档说明，扩展可以通过 <code>vscode.lm.registerLanguageModelChatProvider</code> 注册自己的语言模型 provider，并提供模型 metadata、token count 和 chat request 实现。<a href="https://github.com/JohnnyZ93/oai-compatible-copilot">oai-compatible-copilot</a> 已经证明 OpenAI-compatible provider 可以用这条公开 API 做出来。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>方案</th>
+        <th>优点</th>
+        <th>限制</th>
+        <th>建议</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>完全内置 workbench 实现</td>
+        <td>能直接使用现有 Director service、SecretStorage、Chat Editing、内部 model picker 细节。</td>
+        <td>代码继续落在 replay patch，边界不够清爽。</td>
+        <td>适合作为第一阶段，先把数据模型和 UI 修正。</td>
+      </tr>
+      <tr>
+        <td>完全内置扩展实现</td>
+        <td>结构清晰，接近 VS Code 生态，provider adapter 可独立演进。</td>
+        <td>需要确认 proposed API、secret storage、OAuth、本地 Director agent/tool policy 是否都能通过 extension API 表达。</td>
+        <td>不建议一步到位。</td>
+      </tr>
+      <tr>
+        <td>混合方案</td>
+        <td>Provider Registry 和权限桥留在 workbench，协议 adapter / public LM provider 可以逐步放入 built-in extension。</td>
+        <td>需要设计稳定 internal command/service bridge。</td>
+        <td>推荐。先内核，后插件化。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="decision">
+    <p><strong>建议：</strong>先实现 Director Provider Registry 和两个原生管理界面，再在第二步把 OpenAI-compatible provider adapter 抽到 built-in extension。这样可以修当前 bug，同时不把未来插件化路线堵死。</p>
+  </div>
+
+  <h2>与 ACP 工作的先后关系</h2>
+  <p>Provider UI 不阻塞 Claude SDK adapter 或 ACP adapter 的技术验证，因为外部 Agent session 不等于 LLM model provider。但是它应该优先于“正式发布多外部 Agent 体验”。原因是：</p>
+  <ul>
+    <li>用户会把 Provider、Model、Agent 三个入口混在一起理解。Provider UI 如果仍是单全局状态，多 Agent 接入后会更混乱。</li>
+    <li>Claude SDK adapter 可以独立使用 Claude OAuth/Copilot/Anthropic auth，但 Codex、OpenAI-compatible 模型和 Director native agent 需要清晰 provider/model registry。</li>
+    <li>Chat model picker 的 provider 分组要求会影响 model provider registration 方式，越晚改影响越大。</li>
+  </ul>
+
+  <h2>建议工作包</h2>
+  <ol>
+    <li>新增 provider instance registry 和 settings migration。保留旧 config 读取，将其迁移为一个默认 provider instance。</li>
+    <li>重做 Provider Manager UI：多 provider 列表、enabled toggle、URL/API key/OAuth login/logout/reset/test。</li>
+    <li>新增 Model Catalog UI：按 provider 分组的模型发现、启用/隐藏、手动添加、刷新和 diagnostics。</li>
+    <li>重写 <code>DirectorCodeModelProvider</code> 的模型发布逻辑，使 chat picker 只见用户启用模型，并按 provider 分组。</li>
+    <li>修复现有 refresh models 不回填 UI、OAuthWidget 只显示 active provider、API key 状态受全局 provider 污染等 bug。</li>
+    <li>补充迁移和 picker 行为测试，再做 clean materialize + replay validators。</li>
+  </ol>
+
+  <h2>证据来源</h2>
+  <ul>
+    <li>本仓库旧计划：<code>.cursor/plan-03-provider-settings.md</code></li>
+    <li>当前 generated 代码：<code>vscode.generated/layers/director/vscode/src/vs/workbench/contrib/directorCode/browser/settings</code>、<code>common/modelResolver.ts</code>、<code>common/apiKeyService.ts</code>、<code>common/authStateService.ts</code></li>
+    <li>VS Code 官方文档：<a href="https://code.visualstudio.com/api/extension-guides/ai/language-model-chat-provider">Language Model Chat Provider</a></li>
+    <li>参考插件：<a href="https://github.com/JohnnyZ93/oai-compatible-copilot">JohnnyZ93/oai-compatible-copilot</a></li>
+  </ul>
+</main>
+</body>
+</html>

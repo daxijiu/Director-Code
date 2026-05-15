@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 ACP / External Agent 接入调研报告</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2937;
+      --muted: #5b6472;
+      --border: #d7dde6;
+      --bg: #ffffff;
+      --soft: #f6f8fb;
+      --accent: #1458d4;
+      --ok: #146c43;
+      --warn: #9a5b00;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 28px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 { font-size: 30px; }
+    h2 {
+      font-size: 22px;
+      padding-top: 30px;
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 22px;
+    }
+    p { margin: 10px 0; }
+    ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    code {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--soft);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--soft); }
+    a { color: var(--accent); }
+    .meta {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .summary {
+      margin-top: 24px;
+      padding: 18px 20px;
+      background: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .decision {
+      border-left: 4px solid var(--ok);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+    .risk {
+      border-left: 4px solid var(--warn);
+      padding-left: 14px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Phase 2 ACP / External Agent 接入调研报告</h1>
+  <p class="meta">日期：2026-05-15 ｜ 工作区：<code>E:\Projects\Director-Code-batch\Director-Code-112-check</code> ｜ 目标基线：116 replay profile</p>
+
+  <section class="summary">
+    <h2>结论摘要</h2>
+    <ul>
+      <li>不建议把所有外部 Agent 强行标准化为 ACP。ACP 应作为通用外部 Agent 协议层，Claude Code 应优先走 <code>@anthropic-ai/claude-agent-sdk</code> TypeScript SDK 直连。</li>
+      <li>本地 VS Code 主线代码显示，Claude Code 也是通过 Claude Agent SDK 接入，并且把 plan、permission、tool confirmation、session content provider 等能力映射到 VS Code 原生 Chat Session UI；这支持我们为 Claude 做专用 adapter。</li>
+      <li><code>vscode-acp</code> 适合作为 ACP 进程、session、permission、mode/model 事件的参考，但它是独立 webview chat，不应作为 Director 最终 UI 架构。</li>
+      <li>Codex 在本地 VS Code checkout 中只看到核心 session type / UI 入口准备，未看到完整本地 Codex agent adapter。Director 可以先用通用 ACP 接 <code>codex-acp</code> 做 parity spike，再决定是否需要专用 Codex adapter。</li>
+      <li>第一版目标可以低于“完全并入 Director 内部工具体系”：达到 VS Code 式外部 Agent session、权限确认、流式消息、文件编辑可审阅即可。</li>
+    </ul>
+  </section>
+
+  <h2>既有 Director 前情</h2>
+  <p>旧 Phase 2 ACP 计划位于 <code>.cursor/plan-04-phase2-acp.md</code>，原始方向是将每个 ACP 外部 Agent 动态注册为 native chat agent，并通过 <code>AcpAgentProxy</code>、<code>AcpServerConnection</code>、<code>ClientSideConnection</code>、<code>AcpClientImpl</code> 把外部进程接入 VS Code Chat UI。</p>
+  <p>这个方向仍然成立，但现在需要按 116 replay 的现实收缩边界：当前 Director 已完成 Ask/Edit/Agent/Inline mode routing、read-only tools、reviewable edit tools 和 Chat Editing contract。新增 Agent 接入必须落回 replay patch，不能只改 <code>vscode.generated</code>。</p>
+
+  <h2>Claude Agent SDK 对比</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>Python SDK</th>
+        <th>TypeScript SDK</th>
+        <th>Director 选择</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>本地仓库</td>
+        <td><code>E:\Projects\sub-projects\claude-agent-sdk-python</code></td>
+        <td><code>E:\Projects\sub-projects\claude-agent-sdk-typescript</code></td>
+        <td>TS SDK 更贴近 Electron / VS Code runtime。</td>
+      </tr>
+      <tr>
+        <td>运行时</td>
+        <td>Python &gt;= 3.10，依赖 <code>anyio</code>、<code>mcp</code>，通过 subprocess 驱动 bundled/system <code>claude</code> CLI。</td>
+        <td>Node &gt;= 18，npm 包 <code>@anthropic-ai/claude-agent-sdk</code>，导出 <code>query</code>、bridge/browser/assistant/sdk-tools 类型。</td>
+        <td>Director 不应为主链路引入 Python helper runtime，除非做隔离服务。</td>
+      </tr>
+      <tr>
+        <td>核心能力</td>
+        <td><code>query()</code> async iterator，<code>ClaudeSDKClient</code> stateful client，支持 <code>interrupt()</code>、<code>set_permission_mode()</code>、<code>set_model()</code>。</td>
+        <td><code>query()</code> 返回 async generator，支持 <code>interrupt()</code>、<code>setPermissionMode()</code>、<code>setModel()</code>、<code>initializationResult()</code>。</td>
+        <td>两者能力相近，TS 更容易直接映射到 Director service 和 VS Code extension host/node 进程。</td>
+      </tr>
+      <tr>
+        <td>Plan / 权限</td>
+        <td><code>PermissionMode</code> 包含 <code>default</code>、<code>acceptEdits</code>、<code>plan</code>、<code>bypassPermissions</code>、<code>dontAsk</code>、<code>auto</code>。</td>
+        <td>同样包含这些 permission modes，并额外提供 <code>planModeInstructions</code>、<code>canUseTool</code>、hooks、MCP、plugins 等。</td>
+        <td>Claude 的 Plan Mode 应直接映射 SDK <code>permissionMode: "plan"</code>，不要先包一层 ACP 再丢失语义。</td>
+      </tr>
+      <tr>
+        <td>稳定性</td>
+        <td>项目较清晰，适合读代码理解行为。</td>
+        <td>npm 包版本推进较快，包内实现打包较重，需要 pin 版本并包一层 Director adapter。</td>
+        <td>主用 TS，Python 作为行为参考和测试对照。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="decision">
+    <p><strong>建议：</strong>Claude Code 走 <code>ClaudeAgentSdkAdapter</code>，固定 SDK 版本，Director 只依赖一层窄接口。该 adapter 负责 prompt stream、permission callback、plan mode、model switch、MCP/plugin 配置和 session resume。</p>
+  </div>
+
+  <h2>ACP 仓库与协议能力</h2>
+  <p><code>E:\Projects\sub-projects\vscode-acp</code> 是一个 ACP Client VS Code extension，核心价值是展示了 ACP 的最小闭环：</p>
+  <ul>
+    <li><code>AgentManager.ts</code> 负责启动 agent 子进程。Windows 下使用 shell 以获得用户 PATH，这对 Director 包装 CLI agent 很重要。</li>
+    <li><code>ConnectionManager.ts</code> 使用 <code>@agentclientprotocol/sdk</code> 的 <code>ClientSideConnection</code> 和 NDJSON stream 初始化协议能力。</li>
+    <li><code>AcpClientImpl.ts</code> 实现 client 端的文件读写、terminal、permission request 和 session update。</li>
+    <li><code>SessionManager.ts</code> 管理 <code>newSession</code>、<code>prompt</code>、<code>setSessionMode</code>、<code>unstable_setSessionModel</code>、auth retry。</li>
+  </ul>
+  <p>ACP SDK 当前可表达 session modes、models、tool calls、tool call updates、plan entries、usage updates、auth、provider config 等。适合接入 Gemini CLI、OpenCode、Hermes、Qwen、Codex ACP wrapper 等通用 agent。</p>
+  <p>但 <code>vscode-acp</code> 使用独立 webview chat，并且文件写入直接走 <code>vscode.workspace.fs</code>。Director 不应照搬这部分 UI 和写文件方式，而应把 ACP session update 映射到 native Chat progress 和 Phase 3 reviewable edit contract。</p>
+
+  <h2>VS Code 主线实现观察</h2>
+  <p>用户提到的 VS Code 当前版本为 120。本地 checkout <code>E:\Projects\sub-projects\vscode</code> 的 <code>package.json</code> 显示为 <code>1.121.0</code>，可视作 120 之后主线代码。相关发现如下：</p>
+  <ul>
+    <li><code>src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts</code> 定义了 Claude 和 Codex session provider。Claude 描述明确提到 Claude Agent SDK。</li>
+    <li><code>src/vs/workbench/contrib/chat/common/constants.ts</code> 中核心 <code>ChatModeKind</code> 仍是 Ask、Edit、Agent，没有独立核心 Plan mode。</li>
+    <li><code>src/vs/platform/agentHost/common/agentHostSchema.ts</code> 定义了 agent host session mode：<code>interactive</code> 与 <code>plan</code>。因此 Plan 更像 session config，而不是全局第四种 chat mode。</li>
+    <li><code>extensions/copilot/src/extension/chatSessions/claude</code> 下的实现通过 <code>@anthropic-ai/claude-agent-sdk</code> 接 Claude Code，并把 SDK 消息分发为 VS Code ChatResponse、tool confirmation、external edit tracking、ExitPlanMode review。</li>
+    <li>Codex 在该 checkout 中主要体现为 core session type 和 UI provider label，没有找到类似 Claude 那样完整的本地 adapter。后续应单独验证实际安装环境中的 Codex extension 或 ACP wrapper。</li>
+  </ul>
+
+  <h2>推荐架构</h2>
+  <p>建议抽出一层 Director-owned external agent abstraction，而不是把 ACP、Claude SDK、未来 Codex SDK 写进 chat contribution 主流程。</p>
+  <table>
+    <thead>
+      <tr>
+        <th>层级</th>
+        <th>职责</th>
+        <th>第一版边界</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>ExternalAgentRegistry</code></td>
+        <td>注册 Claude SDK、ACP、未来 Codex adapter；暴露 displayName、capabilities、mode/model 状态。</td>
+        <td>只管理外部 Agent，不混入 LLM provider/model registry。</td>
+      </tr>
+      <tr>
+        <td><code>ExternalAgentSession</code></td>
+        <td>统一 <code>start</code>、<code>resume</code>、<code>sendPrompt</code>、<code>cancel</code>、<code>setMode</code>、<code>setModel</code>、<code>dispose</code>。</td>
+        <td>输出标准事件：markdown、thinking、tool call、permission、file edit、plan、usage、error。</td>
+      </tr>
+      <tr>
+        <td><code>ClaudeAgentSdkAdapter</code></td>
+        <td>直接调用 TS SDK，映射 Claude permission modes、Plan Mode、canUseTool、MCP/plugins、session resume。</td>
+        <td>不经过 ACP。</td>
+      </tr>
+      <tr>
+        <td><code>AcpAgentAdapter</code></td>
+        <td>管理 ACP child process、NDJSON connection、auth、session mode/model、permission request。</td>
+        <td>用于 OpenCode、Hermes、Gemini、Codex ACP wrapper 等。</td>
+      </tr>
+      <tr>
+        <td><code>ChatProgressBridge</code></td>
+        <td>把 adapter events 映射到 native Chat response 和 reviewable edit contract。</td>
+        <td>达到 VS Code 级体验，不要求外部 Agent 完全调用 Director 内部 tool registry。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>建议实施顺序</h2>
+  <ol>
+    <li>先建立外部 Agent registry 和统一 session event model，只接入一个 mock adapter 做 native Chat progress 验证。</li>
+    <li>接入 Claude TS SDK adapter，完成 prompt、stream、cancel、permission、Plan Mode、文件编辑 review 映射。</li>
+    <li>接入 ACP adapter，先验证 OpenCode 或 Hermes，再验证 Codex ACP wrapper。</li>
+    <li>把 mode/model 选择收敛到 chat input session config，而不是复用 LLM 模型选择器。</li>
+    <li>再决定 Codex 是否需要专用 adapter。若 ACP wrapper 已满足 VS Code parity，可暂不专门实现。</li>
+  </ol>
+
+  <h2>风险与验证</h2>
+  <div class="risk">
+    <p><strong>风险：</strong>外部 Agent 能写文件、跑终端、调用子 Agent。Plan Mode 和权限必须在 host bridge 层兜底，不能只靠 prompt 或 agent 自觉。</p>
+  </div>
+  <ul>
+    <li>Windows CLI spawn/PATH/auth 环境需要专门 smoke。</li>
+    <li>Claude SDK npm 包推进很快，需要版本 pin 和 adapter contract test。</li>
+    <li>ACP <code>unstable_setSessionModel</code>、provider config 仍不稳定，不能作为 Director provider 管理核心。</li>
+    <li>所有最终代码要回写 replay patch，并跑 profile-scoped replay validation。</li>
+  </ul>
+
+  <h2>证据来源</h2>
+  <ul>
+    <li>本仓库旧计划：<code>.cursor/plan-04-phase2-acp.md</code>、<code>.cursor/plan-02-agent-core.md</code>、<code>.cursor/plan-03-provider-settings.md</code></li>
+    <li>本仓库 116 报告：<code>docs/upgrade/reports/116-stable-win32-x64-client/mode-routing-report.md</code>、<code>chat-editing-contract-report.md</code>、<code>edit-tools-report.md</code></li>
+    <li>Claude SDK 本地仓库：<code>E:\Projects\sub-projects\claude-agent-sdk-python</code>、<code>E:\Projects\sub-projects\claude-agent-sdk-typescript</code></li>
+    <li>ACP client 本地仓库：<code>E:\Projects\sub-projects\vscode-acp</code></li>
+    <li>VS Code 本地仓库：<code>E:\Projects\sub-projects\vscode</code></li>
+    <li>公开参考：<a href="https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk">@anthropic-ai/claude-agent-sdk on npm</a></li>
+  </ul>
+</main>
+</body>
+</html>
