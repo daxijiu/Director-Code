@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Director-Code 工具 Facade 调研确认稿</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f6f7f9;
+			--panel: #ffffff;
+			--ink: #20242a;
+			--muted: #5f6875;
+			--line: #d8dde6;
+			--accent: #1f6feb;
+			--reuse: #146c43;
+			--cutover: #8a4b00;
+			--defer: #6b4bb5;
+			--warn-bg: #fff7df;
+			--warn-line: #e7c66b;
+			--code-bg: #eef2f7;
+		}
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+		}
+		header {
+			background: #18202b;
+			color: white;
+			padding: 28px 36px;
+		}
+		header h1 {
+			margin: 0 0 12px;
+			font-size: 28px;
+			letter-spacing: 0;
+		}
+		header p {
+			margin: 4px 0;
+			color: #c8d2df;
+		}
+		main {
+			max-width: 1500px;
+			margin: 0 auto;
+			padding: 24px 28px 48px;
+		}
+		section {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			margin-bottom: 18px;
+			padding: 20px;
+		}
+		h2 {
+			margin: 0 0 14px;
+			font-size: 20px;
+		}
+		h3 {
+			margin: 18px 0 8px;
+			font-size: 16px;
+		}
+		.status {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 6px 10px;
+			border-radius: 999px;
+			background: var(--warn-bg);
+			border: 1px solid var(--warn-line);
+			color: #664d03;
+			font-weight: 600;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(180px, 1fr));
+			gap: 12px;
+		}
+		.card {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 14px;
+			background: #fbfcfe;
+		}
+		.card strong {
+			display: block;
+			font-size: 22px;
+			margin-bottom: 4px;
+		}
+		code {
+			background: var(--code-bg);
+			border-radius: 4px;
+			padding: 1px 5px;
+			font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+			font-size: 0.94em;
+		}
+		ul, ol {
+			margin: 8px 0 0 22px;
+			padding: 0;
+		}
+		li {
+			margin: 6px 0;
+		}
+		.table-wrap {
+			overflow-x: auto;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			min-width: 1420px;
+			background: white;
+		}
+		th, td {
+			border-bottom: 1px solid var(--line);
+			border-right: 1px solid var(--line);
+			padding: 9px 10px;
+			vertical-align: top;
+			text-align: left;
+		}
+		th:last-child, td:last-child {
+			border-right: 0;
+		}
+		th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			background: #edf2f8;
+			font-weight: 700;
+			white-space: nowrap;
+		}
+		tr:last-child td {
+			border-bottom: 0;
+		}
+		.tool {
+			font-weight: 700;
+			white-space: nowrap;
+		}
+		.badge {
+			display: inline-block;
+			border-radius: 999px;
+			padding: 2px 8px;
+			font-size: 12px;
+			font-weight: 700;
+			white-space: nowrap;
+		}
+		.reuse {
+			background: #dff3e8;
+			color: var(--reuse);
+		}
+		.cutover {
+			background: #fff0d6;
+			color: var(--cutover);
+		}
+		.defer {
+			background: #eee8ff;
+			color: var(--defer);
+		}
+		.note {
+			color: var(--muted);
+		}
+		.callout {
+			border-left: 4px solid var(--accent);
+			background: #eef5ff;
+			padding: 12px 14px;
+			border-radius: 6px;
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Director-Code 工具 Facade 调研确认稿</h1>
+		<p>中文 HTML 版本，来源于 <code>tool-facade-research.md</code>。</p>
+		<p>Profile: <code>116-stable-win32-x64-client</code> · Date: <code>2026-05-14</code></p>
+	</header>
+
+	<main>
+		<section>
+			<h2>当前状态</h2>
+			<p><span class="status">Status: accepted</span></p>
+			<div class="callout">
+				这是已接受的 Phase 3 硬门槛报告。后续可以按本文定义的实现波次推进工具 facade 切名、直接复用 allowlist、浏览器工具暴露和 model-facing 工具名重命名。
+			</div>
+		</section>
+
+		<section>
+			<h2>范围</h2>
+			<ul>
+				<li>保留 Director 当前已经暴露给模型的能力。</li>
+				<li>对已确认是 VS Code core 或保留内置扩展实现的工具，尽量直接复用上游实现。</li>
+				<li>对于工作区读取、搜索、图片、GitHub context、文件/目录创建等 Director 已有能力，保留 Director 实现，只在必要时对齐 model-facing 名称和 accepted schema。</li>
+				<li><code>apply_patch</code>、<code>replace_string_in_file</code>、<code>multi_replace_string_in_file</code> 本阶段不改名、不并入 Copilot <code>editFiles</code>。</li>
+				<li>不依赖、不打包、不恢复 Copilot extension runtime。</li>
+			</ul>
+		</section>
+
+		<section>
+			<h2>处置概览</h2>
+			<div class="grid">
+				<div class="card"><strong>48</strong><span>VS Code UI 工具全部覆盖</span></div>
+				<div class="card"><strong>22</strong><span><span class="badge reuse">direct-reuse-allowlist</span> 直接复用</span></div>
+				<div class="card"><strong>11</strong><span><span class="badge cutover">director-facade-cutover</span> Director 实现切名</span></div>
+				<div class="card"><strong>15</strong><span><span class="badge defer">defer-hidden</span> 延后且隐藏</span></div>
+			</div>
+		</section>
+
+		<section>
+			<h2>接受后实施顺序</h2>
+			<ol>
+				<li>工具 registry / direct-reuse wave：加入 browser tools 和 <code>renderMermaidDiagram</code> registry entry；<code>extensions</code> 仍隐藏到 Phase 5。</li>
+				<li>读取/搜索/context facade wave：<code>readFile</code>、<code>listDirectory</code>、<code>fileSearch</code>、<code>textSearch</code>、<code>problems</code>、<code>changes</code>、<code>viewImage</code>。</li>
+				<li>写入/创建 facade wave：<code>createFile</code>、<code>createDirectory</code>。</li>
+				<li>web/repo legacy exception facade wave：<code>fetch</code>、<code>githubRepo</code>。</li>
+				<li>每个工具切到新 model-facing 名称的同一波，移除旧 snake_case 或 legacy model-facing 名称；不保留双名兼容期。</li>
+			</ol>
+		</section>
+
+		<section>
+			<h2>需要你确认的点</h2>
+			<ul>
+				<li>接受 <code>fetch</code> 仅作为 URL/file fetch；<code>query</code> 只作为意图文本接受，不代表 Copilot web-search。</li>
+				<li>接受 <code>githubRepo</code> 仅作为有限 read-only repo context；远端 indexed search 返回受控 unsupported/limited 结果。</li>
+				<li>接受 browser tools 在 Phase 3 作为 Agent-only direct reuse；交互/修改类工具需要 Director-level pre-approval，页面读取/截图在非当前用户打开的 Director browser session 时需要 domain/session approval。</li>
+				<li>接受 <code>extensions</code> 来源上是 direct reuse，但在 Phase 5 product/gallery/marketplace 文案策略和商业/品牌 grep gate 前保持隐藏。</li>
+			</ul>
+		</section>
+
+		<section>
+			<h2>48 工具最终处置表</h2>
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>VS Code UI 工具</th>
+							<th>上游 model-facing 名称 / toolReferenceName</th>
+							<th>上游来源分类</th>
+							<th>上游 schema 摘要</th>
+							<th>Director 当前工具</th>
+							<th>接受的输入 schema</th>
+							<th>忽略或拒绝字段</th>
+							<th>返回格式策略</th>
+							<th>安全与模式策略</th>
+							<th>最终状态</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr><td class="tool"><code>runSubagent</code></td><td><code>runSubagent</code></td><td>VS Code core，<code>RunSubagentTool</code></td><td><code>prompt</code>、<code>description</code>、可选 <code>agentName</code>/<code>model</code>；必要时上游会要求 <code>agentName</code>。</td><td>Agent 中已暴露 <code>runSubagent</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游文本结果。</td><td>仅 Agent。保留 Director pre-approval 和上游嵌套深度限制。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>clickElement</code></td><td><code>clickElement</code></td><td>VS Code core browser tool</td><td><code>pageId</code>、<code>element</code>，且 <code>ref</code>/<code>selector</code> 二选一；可选 <code>dblClick</code>、<code>button</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 browser tool 结果。</td><td>仅 Agent。必须 Director-level pre-approval，不能被全局 auto-approve 绕过；还需要 browser tools 配置和 Director registry policy。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>dragElement</code></td><td><code>dragElement</code></td><td>VS Code core browser tool</td><td><code>pageId</code>、<code>fromElement</code>、<code>toElement</code>，两端都需要 ref 或 selector。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 browser tool 结果。</td><td>仅 Agent。必须 Director-level pre-approval，不能被全局 auto-approve 绕过。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>handleDialog</code></td><td><code>handleDialog</code></td><td>VS Code core browser tool</td><td><code>pageId</code>；可选 <code>acceptModal</code>、<code>promptText</code>、<code>selectFiles</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 dialog 结果。</td><td>仅 Agent。必须 Director-level pre-approval；结果需要让 dialog 动作在 chat/tool output 中可见。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>hoverElement</code></td><td><code>hoverElement</code></td><td>VS Code core browser tool</td><td><code>pageId</code>、<code>element</code>，且 <code>ref</code>/<code>selector</code> 二选一。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 browser tool 结果。</td><td>仅 Agent。不额外按 mutation 审批，但仍受 Director browser session/domain policy 和 browser tool allowlist 约束。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>navigatePage</code></td><td><code>navigatePage</code></td><td>VS Code core browser tool</td><td><code>pageId</code>、导航 <code>type</code>，按 type 可选 <code>url</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 browser tool 结果。</td><td>仅 Agent。必须 Director-level pre-approval；导航必须通过网络/域名策略。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>openBrowserPage</code></td><td><code>openBrowserPage</code></td><td>VS Code core browser tool</td><td><code>url</code> 必填，可选 <code>forceNew</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 page id 和 summary 结果。</td><td>仅 Agent。必须 Director-level pre-approval；URL 必须通过网络/域名策略。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>readPage</code></td><td><code>readPage</code></td><td>VS Code core browser tool</td><td><code>pageId</code> 必填。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游文本/page summary 结果。</td><td>初始仅 Agent。除非页面属于当前用户打开的 Director browser session，否则需要 domain/session approval。不要映射为 <code>fetch</code>。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>runPlaywrightCode</code></td><td><code>runPlaywrightCode</code></td><td>VS Code core browser tool</td><td><code>pageId</code> 必填，且 <code>code</code>/<code>deferredResultId</code> 二选一；可选 <code>timeoutMs</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游结果，但需确保提交的代码和结果摘要在 tool result 或 chat transcript 中可见。</td><td>仅 Agent。必须 Director-level pre-approval，不能被全局 auto-approve 绕过；本阶段不新增独立持久日志。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>screenshotPage</code></td><td><code>screenshotPage</code></td><td>VS Code core browser tool</td><td><code>pageId</code>；可选 <code>ref</code>、<code>selector</code>、<code>element</code>、<code>scrollIntoViewIfNeeded</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 image/data 结果。</td><td>初始仅 Agent。除非页面属于当前用户打开的 Director browser session，否则需要 domain/session approval。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>typeInPage</code></td><td><code>typeInPage</code></td><td>VS Code core browser tool</td><td><code>pageId</code>；<code>text</code>/<code>key</code> 二选一；可选目标 <code>ref</code>、<code>selector</code>、<code>element</code>。</td><td>core raw tool 存在，但 Director 还未 allowlist。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 browser tool 结果。</td><td>仅 Agent。输入/提交风险需要 Director-level pre-approval。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+
+						<tr><td class="tool"><code>createDirectory</code></td><td><code>createDirectory</code></td><td>仅 Copilot extension metadata</td><td><code>dirPath</code> 必填。</td><td><code>create_directory</code>，Director-owned review transaction。</td><td><code>dirPath</code> 必填；内部可映射到当前 <code>path</code>。</td><td>拒绝 workspace 外路径；切换后不保留旧 <code>create_directory</code> model-facing 名。</td><td>保留 Director accept/reject 目录创建事务；用户接受前不创建目录。</td><td>仅 Edit 和 Agent。reviewable 写操作，不 silent mkdir。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>createFile</code></td><td><code>createFile</code></td><td>仅 Copilot extension metadata</td><td><code>filePath</code> 和 <code>content</code> 必填。</td><td><code>create_file</code>，Director-owned reviewable creation。</td><td><code>filePath</code> 和 <code>content</code> 必填；可选 Director 扩展 <code>overwrite</code>；内部可映射到当前 <code>path</code>。</td><td>拒绝外部路径；除非 <code>overwrite</code> 为 true，否则拒绝重复文件；拒绝 binary/non-text content；切换后不保留旧名。</td><td>保留 Director Chat Editing <code>textEdit</code> review 结果。</td><td>仅 Edit 和 Agent。reviewable 写操作。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>createJupyterNotebook</code></td><td><code>createJupyterNotebook</code></td><td>仅 Copilot extension metadata</td><td><code>query</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。Notebook 创建需要单独契约。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>editFiles</code></td><td><code>editFiles</code></td><td>仅 Copilot extension metadata</td><td>package schema 是空 placeholder。</td><td>Director 有 <code>apply_patch</code>、<code>replace_string_in_file</code>、<code>multi_replace_string_in_file</code>。</td><td>不为 <code>editFiles</code> 提供 schema，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>保留现有 Director edit primitive 返回格式，不属于本阶段。</td><td>延后。不暴露 Copilot <code>editFiles</code>；继续保留 Director reviewable primitives。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>editNotebook</code></td><td><code>editNotebook</code></td><td>仅 Copilot extension metadata</td><td><code>filePath</code>、<code>editType</code>、<code>cellId</code> 必填；可选 <code>newCode</code>、<code>language</code>。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。Notebook 编辑需要单独策略和测试。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+
+						<tr><td class="tool"><code>createAndRunTask</code></td><td><code>createAndRunTask</code></td><td>VS Code core terminal/task tool</td><td>上游 core task tool 的创建/运行 schema。</td><td>Agent 中已暴露 <code>createAndRunTask</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 task execution 结果。</td><td>仅 Agent。保留 task confirmation 和 Director mode policy。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>getTerminalOutput</code></td><td><code>getTerminalOutput</code></td><td>VS Code core terminal tool</td><td>按上游 terminal 引用，可选 <code>id</code> 或 <code>terminalId</code>。</td><td>Agent 中已暴露 <code>getTerminalOutput</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal output 文本结果。</td><td>仅 Agent。只读取当前 Agent terminal execution context。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>killTerminal</code></td><td><code>killTerminal</code></td><td>VS Code core terminal tool</td><td><code>id</code> 必填。</td><td>Agent 中已暴露 <code>killTerminal</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal cleanup 结果。</td><td>仅 Agent。保留 existing pre-approval。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>runInTerminal</code></td><td><code>runInTerminal</code></td><td>VS Code core terminal tool</td><td><code>command</code>、<code>explanation</code>、<code>goal</code>、<code>mode</code>、<code>timeout</code> 必填；可选 sandbox/foreground 控制。</td><td>Agent 中已暴露 <code>runInTerminal</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal execution 和 monitoring 结果。</td><td>仅 Agent。保留 terminal confirmation、sandbox、network、auto-approval policy。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>runNotebookCell</code></td><td><code>runNotebookCell</code></td><td>仅 Copilot extension metadata</td><td><code>filePath</code> 和 <code>cellId</code> 必填；可选 <code>reason</code>、<code>continueOnError</code>。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。Notebook execution 需要单独安全策略。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>sendToTerminal</code></td><td><code>sendToTerminal</code></td><td>VS Code core terminal tool</td><td><code>command</code> 必填；可选 <code>id</code> 或 <code>terminalId</code>。</td><td>Agent 中已暴露 <code>sendToTerminal</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal input 结果。</td><td>仅 Agent。保留 existing pre-approval 和 active-terminal binding。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>getNotebookSummary</code></td><td><code>getNotebookSummary</code></td><td>仅 Copilot extension metadata</td><td><code>filePath</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。Notebook summary 需要单独 Notebook context contract。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+
+						<tr><td class="tool"><code>problems</code></td><td><code>problems</code></td><td>仅 Copilot extension metadata</td><td>可选 <code>filePaths</code> 数组。</td><td><code>get_errors</code>，Director-owned marker service reader。</td><td>可选 <code>filePaths</code>；可选 Director 扩展 <code>includeWarnings</code>、<code>maxResults</code>；单路径内部可映射到当前 <code>path</code>。</td><td>拒绝外部路径和非法 workspace path；切换后不保留旧 <code>get_errors</code> model-facing 名。</td><td>保留当前 Director diagnostics 文本格式；不运行 build。</td><td>Ask、Edit、Agent。只读。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>readFile</code></td><td><code>readFile</code></td><td>仅 Copilot extension metadata</td><td>Copilot metadata 要求 <code>filePath</code>、<code>startLine</code>、<code>endLine</code>。</td><td><code>read_file</code>，Director-owned workspace reader。</td><td><code>filePath</code> 必填；可选 <code>startLine</code>、<code>endLine</code>、<code>maxBytes</code>。测试需要时内部可接受当前 <code>path</code> alias，但 model-facing schema 用 <code>filePath</code>。</td><td>拒绝外部路径、binary file、不可读文件、过大 <code>maxBytes</code>；切换后不保留旧名。</td><td>保留当前 Director 文本结果和 truncation 标记。</td><td>Ask、Edit、Agent。只读 workspace guard。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>terminalLastCommand</code></td><td><code>terminalLastCommand</code></td><td>VS Code core terminal tool</td><td>无必填参数。</td><td>Agent 中已暴露 <code>terminalLastCommand</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal context 结果。</td><td>仅 Agent。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>terminalSelection</code></td><td><code>terminalSelection</code></td><td>VS Code core terminal tool</td><td>无必填参数。</td><td>Agent 中已暴露 <code>terminalSelection</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 terminal context 结果。</td><td>仅 Agent。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>viewImage</code></td><td><code>viewImage</code></td><td>仅 Copilot extension metadata</td><td><code>filePath</code> 必填。</td><td><code>view_image</code>，Director-owned workspace image reader。</td><td><code>filePath</code> 必填；内部可映射到当前 <code>path</code>。</td><td>拒绝外部路径和非图片文件；切换后不保留旧名。</td><td>保留当前 Director image data part 和文本 metadata fallback。</td><td>Ask、Edit、Agent。只读 workspace guard。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>changes</code></td><td><code>changes</code></td><td>仅 Copilot extension metadata</td><td>可选 <code>repositoryPath</code>，可选 <code>sourceControlState</code> 数组。</td><td><code>get_changed_files</code>，Director-owned SCM reader。</td><td>可选 <code>repositoryPath</code>、<code>sourceControlState</code>、Director 扩展 <code>maxResults</code>。</td><td>拒绝外部 repository path；无 SCM provider 时返回受控 unavailable 文本；切换后不保留旧名。</td><td>保留当前 Director SCM summary 格式；不变更。</td><td>Ask、Edit、Agent。只读 SCM context。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>codebase</code></td><td><code>codebase</code></td><td>Copilot extension service-backed semantic search</td><td><code>query</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后，直到 Director 有自己的 semantic index/provider。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>fileSearch</code></td><td><code>fileSearch</code></td><td>仅 Copilot extension metadata</td><td><code>query</code> 必填；可选 <code>maxResults</code>。</td><td><code>file_search</code>，Director-owned VS Code search service wrapper。</td><td><code>query</code> 必填；可选 <code>maxResults</code>、<code>include</code>、<code>exclude</code>。</td><td>拒绝空 query 和非法 workspace 状态；切换后不保留旧名。</td><td>保留当前 Director capped file path list。</td><td>Ask、Edit、Agent。只读 workspace search。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>listDirectory</code></td><td><code>listDirectory</code></td><td>仅 Copilot extension metadata</td><td><code>path</code> 必填。</td><td><code>list_dir</code>，Director-owned workspace directory listing。</td><td><code>path</code> 必填；可选 <code>maxResults</code>。</td><td>拒绝外部路径和非目录；切换后不保留旧名。</td><td>保留当前 Director sorted/capped directory 文本格式。</td><td>Ask、Edit、Agent。只读 workspace guard。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>searchResults</code></td><td><code>searchResults</code></td><td>仅 Copilot extension metadata</td><td>无必填参数。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。现有 <code>textSearch</code>/<code>fileSearch</code> 覆盖主要需求。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>textSearch</code></td><td><code>textSearch</code></td><td>仅 Copilot extension metadata</td><td><code>query</code> 和 <code>isRegexp</code> 必填；可选 <code>includePattern</code>、<code>maxResults</code>、<code>includeIgnoredFiles</code>。</td><td><code>grep_search</code>，Director-owned VS Code search service wrapper。</td><td><code>query</code> 必填；<code>isRegexp</code> 可选默认 false；可选 <code>includePattern</code>、<code>maxResults</code>、<code>includeIgnoredFiles</code>、Director 扩展 <code>isCaseSensitive</code>。内部可映射当前参数。</td><td>拒绝空 query 和非法 workspace 状态；切换后不保留旧名。</td><td>保留当前 Director text match summary、cap 和上下文 snippets。</td><td>Ask、Edit、Agent。只读 workspace search。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>todo</code></td><td><code>todo</code></td><td>VS Code core built-in tool</td><td><code>todoList</code> 数组必填；item 需要 <code>id</code>、<code>title</code>、<code>status</code>。</td><td>Agent 中已暴露 <code>todo</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 todo state/result。</td><td>仅 Agent。coordination tool，不变更 workspace。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>askQuestions</code></td><td><code>askQuestions</code></td><td>VS Code core built-in tool</td><td><code>questions</code> 数组必填；每个 question 需要 <code>header</code>、<code>question</code>；可选 <code>options</code>、<code>multiSelect</code>、<code>allowFreeformInput</code>。</td><td>Agent 中已暴露 <code>askQuestions</code>。</td><td>完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 structured answer 结果。</td><td>仅 Agent。需要 pre-approval / user interaction。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>extensions</code></td><td><code>extensions</code></td><td>VS Code core extension search tool</td><td>可选 <code>category</code>、<code>keywords</code>、<code>ids</code>。</td><td>core raw tool 存在，但 Director registry 当前 defer。</td><td>暴露时完全复用上游 schema。</td><td>除上游校验外无额外字段。</td><td>复用上游 OpenVSX extension search 结果。</td><td>Phase 3 只允许 hidden registry 准备。model-facing 暴露等待 Phase 5 product/gallery/marketplace 文案策略和商业/品牌 grep gate。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+						<tr><td class="tool"><code>getProjectSetupInfo</code></td><td><code>getProjectSetupInfo</code></td><td>仅 Copilot extension metadata</td><td><code>projectType</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后，未来 workspace setup wave 再评估。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>installExtension</code></td><td><code>installExtension</code></td><td>仅 Copilot extension metadata</td><td><code>id</code> 和 <code>name</code> 必填。</td><td>无；VS Code 有单独 core mutation <code>installExtensions</code>，当前隐藏。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。扩展安装需要单独产品/安全策略。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>memory</code></td><td><code>memory</code></td><td>Copilot extension memory service</td><td><code>command</code> 必填，并有大量 command-specific path/content 字段。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。不复用 Copilot memory 语义；未来 memory 必须 Director-owned。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>newWorkspace</code></td><td><code>newWorkspace</code></td><td>Copilot extension workspace generator</td><td><code>query</code> 必填。</td><td>core <code>new</code>/workspace setup 仍 defer。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。未来 scaffolding 必须 Director-owned。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>resolveMemoryFileUri</code></td><td><code>resolveMemoryFileUri</code></td><td>Copilot extension memory companion</td><td><code>path</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。当前没有 Director memory feature。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>runCommand</code></td><td><code>runCommand</code></td><td>Copilot extension command runner</td><td><code>commandId</code> 和 <code>name</code> 必填；可选 <code>args</code>、<code>skipCheck</code>。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。通用 VS Code command execution 需要 command allowlist 计划。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>vscodeAPI</code></td><td><code>vscodeAPI</code></td><td>Copilot extension docs retrieval</td><td><code>query</code> 必填。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后。未来 docs/static API search 可以 Director-owned。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>fetch</code></td><td><code>fetch</code></td><td>Copilot metadata + VS Code core fetch 实现</td><td>Copilot metadata 要求 <code>urls</code> 和 <code>query</code>；VS Code core internal fetch 只要求 <code>urls</code>。</td><td><code>vscode_fetchWebPage_internal</code>，VS Code core URL/file fetch，当前作为 legacy exception 暴露。</td><td><code>urls</code> 必填；可选 <code>query</code> 仅作为调用意图文本，不代表 web search。</td><td>拒绝缺失 <code>urls</code>、不支持 URI scheme、被阻止域名、未经批准的 workspace 外 file path。除非 Phase 3 发现 blocker，否则切换后不保留旧名。</td><td>背靠当前 core fetch result。返回 extracted web/file content、redirect、image data part 和 controlled errors。不要暗示 Copilot web-search。</td><td>Ask 和 Agent。保留 core URL/file pre/post approval 和 Director registry policy。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>githubRepo</code></td><td><code>githubRepo</code></td><td>仅 Copilot extension metadata</td><td>Copilot metadata 要求 <code>repo</code> 和 <code>query</code>。</td><td><code>github_repo</code>，Director-owned minimal read-only repo context。</td><td><code>repo</code> 可选，用于 workspace remote 推断；<code>query</code> 可选。若带 <code>query</code>，除非未来实现 Director provider，否则返回受控 limited/unsupported remote-search 文本。</td><td>拒绝 PR/issue mutation 和 Copilot-style remote indexed search；切换后不保留旧名。</td><td>保留 Director minimal repo context 结果；remote search 明确 unsupported，并建议用本地 <code>textSearch</code>/<code>fileSearch</code>。</td><td>Ask、Edit、Agent。只读。</td><td><span class="badge cutover">director-facade-cutover</span></td></tr>
+						<tr><td class="tool"><code>githubTextSearch</code></td><td><code>githubTextSearch</code></td><td>本地 VS Code 116、Director、Copilot package 中来源未知</td><td>未知。</td><td>无。</td><td>无，隐藏。</td><td>因为不暴露该工具，拒绝所有模型调用。</td><td>无。</td><td>延后，直到 runtime raw tool snapshot 识别 source、id、schema。</td><td><span class="badge defer">defer-hidden</span></td></tr>
+						<tr><td class="tool"><code>renderMermaidDiagram</code></td><td><code>renderMermaidDiagram</code></td><td>保留内置扩展 <code>extensions/mermaid-chat-features</code></td><td>可选 <code>markup</code>、可选 <code>title</code>；实际调用需要有意义的 <code>markup</code>。</td><td>扩展工具存在，用户可通过非 Director 路径看到；Director registry 尚未 allowlist。</td><td>复用保留扩展 schema；即使 package 未标记 required，Director 描述/测试也要求有效 <code>markup</code>。</td><td>空 markup 通过扩展实现拒绝或返回受控错误。</td><td>复用保留扩展 result 和 renderer；不自实现。</td><td>Agent allowlist。无写能力。</td><td><span class="badge reuse">direct-reuse-allowlist</span></td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+	</main>
+</body>
+</html>

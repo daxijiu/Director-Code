@@ -1,5 +1,15 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 tool facade research accepted
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- User accepted the Phase 3 tool facade research report after reviewing the Chinese HTML version.
+- `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md` status changed to `accepted`.
+- Chinese confirmation companion: `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.zh.html`.
+- `director-surface-inventory.md` now records the accepted hard gate.
+- Next wave: start Phase 3 implementation with direct-reuse registry/allowlist for VS Code core browser tools and retained `renderMermaidDiagram`, while keeping `extensions` hidden until Phase 5.
+- `artifacts/` remains untracked and must not be committed by default.
+
 ## 2026-05-14 latest memory: Phase 3 tool facade research pending review
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

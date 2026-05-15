@@ -1,6 +1,6 @@
 # Tool Facade Research
 
-Status: pending-review
+Status: accepted
 
 Profile: `116-stable-win32-x64-client`
 
@@ -10,7 +10,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
 Accepted source report: `docs/upgrade/reports/116-stable-win32-x64-client/tool-source-and-strategy-analysis.html`
 
-This report is the Phase 3 hard gate. Do not implement tool facade cutovers, direct-reuse allowlist changes, browser tool exposure, or model-facing tool renames until this file is explicitly accepted and the status is changed to `accepted`.
+This report is the accepted Phase 3 hard gate. Tool facade cutovers, direct-reuse allowlist changes, browser tool exposure, and model-facing tool renames may proceed in the implementation waves defined below.
 
 ## Scope
 
