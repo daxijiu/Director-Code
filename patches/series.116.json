@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
-  "generatedAt": "2026-05-15T04:32:21.316Z",
+  "generatedAt": "2026-05-15T05:23:23.958Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -32,7 +32,7 @@
     },
     {
       "path": "patches/replay/002-director-branding.116.patch",
-      "sha256": "1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909",
+      "sha256": "2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -54,7 +54,7 @@
     },
     {
       "path": "patches/replay/003-director-product-build-release.116.patch",
-      "sha256": "f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1",
+      "sha256": "49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -76,7 +76,7 @@
     },
     {
       "path": "patches/replay/004-director-agent-engine.116.patch",
-      "sha256": "3fda04adb2b42956fe25c8073991bd73b8a5555a5def746ac9ad25cc29c549fd",
+      "sha256": "7e630ed6504fb86ffb771a27df6772b59d36e4f3092d54884205b88ef4b8f0da",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -98,7 +98,7 @@
     },
     {
       "path": "patches/replay/005-director-chat-built-in-mode.116.patch",
-      "sha256": "d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753",
+      "sha256": "7516ac38ad601db2bb529a29440a96ad17d28a6dcdd818f52cbe09571ec78f45",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -120,7 +120,7 @@
     },
     {
       "path": "patches/replay/006-director-text-polish.116.patch",
-      "sha256": "9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141",
+      "sha256": "85c5cc08ef981379d7b09f3b53885aba649428f28c2cdc5ee5ae86bddcc77a9b",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -142,7 +142,7 @@
     },
     {
       "path": "patches/replay/007-director-tool-layer.116.patch",
-      "sha256": "572317d8e51aee1cfeb59e29049b00e7aafd54efe64442e3e99ef8f7499b0e70",
+      "sha256": "b9600c1cc66db5d69185f17ce2c9af9b9749a27f0e20354a11d9549c485ec91d",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

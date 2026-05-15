@@ -301,10 +301,10 @@ index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..034856c99b973654b2c8fa11d1f14adfee8f1714
+index 0000000000000000000000000000000000000000..f993664d10ba760465e8b0cd68b141971e24a618
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,189 @@
+@@ -0,0 +1,191 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -466,7 +466,7 @@ index 0000000000000000000000000000000000000000..034856c99b973654b2c8fa11d1f14adf
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'hoverElement')?.directorPreApprovalReason, undefined);
 +	});
 +
-+	test('allows retained Mermaid extension tool in Agent mode only', () => {
++	test('allows extension search and retained Mermaid direct-reuse tools', () => {
 +		const raw = [
 +			tool('renderMermaidDiagram', 'renderMermaidDiagram'),
 +			tool('vscode_searchExtensions_internal', 'extensions'),
@@ -474,12 +474,14 @@ index 0000000000000000000000000000000000000000..034856c99b973654b2c8fa11d1f14adf
 +
 +		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
 +
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), []);
-+		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['renderMermaidDiagram']);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), ['extensions']);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), ['extensions']);
++		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['extensions', 'renderMermaidDiagram']);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
-+		assert.strictEqual(agentTools[0].entry.backing, 'vscode-extension');
-+		assert.strictEqual(agentTools[0].definition.isReadOnly, true);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'extensions')?.entry.backing, 'vscode-core');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'extensions')?.definition.isReadOnly, true);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'renderMermaidDiagram')?.entry.backing, 'vscode-extension');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'renderMermaidDiagram')?.definition.isReadOnly, true);
 +	});
 +
 +	test('marks unreviewed raw tools as hidden by default in snapshots', () => {
@@ -1227,7 +1229,7 @@ index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e906442932821c47609cb18b161dba12fd052bbb
+index 0000000000000000000000000000000000000000..d9cbc12ed779f902f9402f0779087efa4f1bf059
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 @@ -0,0 +1,260 @@
@@ -1403,7 +1405,7 @@ index 0000000000000000000000000000000000000000..e906442932821c47609cb18b161dba12
 +	entry('artifactRules', ['setArtifactRules'], ['artifactRules'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep session artifact rule updates available to Agent mode.'),
 +	entry('resolveDebugEventDetails', ['vscode_resolveDebugEventDetails_internal'], ['resolveDebugEventDetails'], 'read', AGENT_ONLY, 'none', 'defer', 'Debug-event details stay out of the default model vocabulary until runtime policy is reviewed.'),
 +
-+	entry('extensions', ['vscode_searchExtensions_internal'], ['extensions'], 'read', NO_MODES, 'not-model-callable', 'defer', 'Extension marketplace search is not part of the Phase 1/2 coding-context gate.'),
++	entry('extensions', ['vscode_searchExtensions_internal'], ['extensions'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Reuse VS Code core extension search against the configured OpenVSX gallery. This is read-only search and does not install extensions.'),
 +	entry('installExtensions', ['vscode_installExtensions'], ['installExtensions'], 'write', NO_MODES, 'not-model-callable', 'hide', 'Extension installation is a workspace/product mutation and is not exposed by default.'),
 +	entry('renderMermaidDiagram', ['renderMermaidDiagram'], ['renderMermaidDiagram'], 'read', AGENT_ONLY, 'none', 'keep', 'Reuse the retained Mermaid chat extension tool in Agent mode without reimplementing rendering.', { backing: 'vscode-extension' }),
 +];

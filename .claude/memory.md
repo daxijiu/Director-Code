@@ -1,5 +1,28 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 5 commercial/name grep gate completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 5 commercial/name grep gate and product/gallery/marketplace audit is implemented and replay-landed.
+- Product default links, package repository/bugs metadata, Windows installer/admin copy, Windows resource metadata, chat setup/status/model-picker/customization copy, extension gallery wording, and safety/docs links now use Director-owned wording or Director-owned URLs unless explicitly allowlisted for OSS attribution or compatibility.
+- Added `docs/upgrade/director-commercial-name-allowlist.116.md` and `docs/upgrade/reports/116-stable-win32-x64-client/commercial-name-grep-report.md`.
+- `extensions` is now exposed as a read-only direct-reuse tool in Ask/Edit/Agent after the commercial/name gate; `installExtensions` remains hidden as a mutation.
+- Removed remaining product-specific Copilot documentation URLs and Copilot Free subscription comments from touched chat sources to reduce future grep noise.
+- Replay assets updated: `patches/replay/002-director-branding.116.patch`, `003`, `004`, `005`, `006`, `007`, `patches/series.116.json`, canonical manifest, expected contracts, product overrides/owned keys, director patch/materialize/contract reports, `tool-migration-report.md`, and `director-surface-inventory.md`.
+- Validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree dependency restore with `npm ci`
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`9 passing`)
+  - commercial/name grep gate: product/build scoped allowlisted hits `29`, chat forbidden commercial hits `0`, extensions forbidden commercial hits `0`, chat/extensions scoped allowlisted hits `729`
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 6 final clean replay/regression dry-run from the thin-layer plan; keep the commercial/name grep gate blocking for every subsequent wave.
+
 ## 2026-05-15 latest memory: Phase 4 edit tools internal refactor completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

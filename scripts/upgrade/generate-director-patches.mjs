@@ -234,6 +234,9 @@ function isProductBuildRelease(filePath) {
 
 function isTextPolish(filePath) {
   return [
+    'src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts',
+    'src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts',
+    'src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts',
     'src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts',
     'src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts',
     'src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts',
@@ -297,14 +300,19 @@ function isChatBuiltInMode(filePath) {
     'src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatActions.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts',
+    'src/vs/workbench/contrib/chat/browser/actions/chatLanguageModelActions.ts',
     'src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts',
+    'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts',
     'src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts',
     'src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts',
+    'src/vs/workbench/contrib/chat/browser/widget/input/permissionPickerActionItem.ts',
+    'src/vs/workbench/contrib/chat/browser/widget/input/sessionTargetPickerActionItem.ts',
     'src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts',
     'src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts',
+    'src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts',
     'src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts',
   ].includes(filePath);
 }

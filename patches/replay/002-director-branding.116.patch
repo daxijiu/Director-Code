@@ -1285,9 +1285,26 @@ index 3911dbe51fbe6bbd83628fb137229979d18f71d7..acdcb82032dd928ab065e8d119b8485c
  					},
  					'preLaunchTask': {
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
-index b81664d25197f450b1529d64f706cf6a42234118..9b0346188104ed6b3ecbf0294b462206a7d8dbd9 100644
+index b81664d25197f450b1529d64f706cf6a42234118..68bbcdf7977f47ecfccf320cbbf874a7918d818d 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
+@@ -148,14 +148,14 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
+ 					localize('extensions.autoUpdate.enabled', 'Download and install updates automatically only for enabled extensions.'),
+ 					localize('extensions.autoUpdate.false', 'Extensions are not automatically updated.'),
+ 				],
+-				description: localize('extensions.autoUpdate', "Controls the automatic update behavior of extensions. The updates are fetched from a Microsoft online service."),
++				description: localize('extensions.autoUpdate', "Controls the automatic update behavior of extensions. The updates are fetched from the configured extension gallery."),
+ 				default: true,
+ 				scope: ConfigurationScope.APPLICATION,
+ 				tags: ['usesOnlineServices']
+ 			},
+ 			'extensions.autoCheckUpdates': {
+ 				type: 'boolean',
+-				description: localize('extensionsCheckUpdates', "When enabled, automatically checks extensions for updates. If an extension has an update, it is marked as outdated in the Extensions view. The updates are fetched from a Microsoft online service."),
++				description: localize('extensionsCheckUpdates', "When enabled, automatically checks extensions for updates. If an extension has an update, it is marked as outdated in the Extensions view. The updates are fetched from the configured extension gallery."),
+ 				default: true,
+ 				scope: ConfigurationScope.APPLICATION,
+ 				tags: ['usesOnlineServices']
 @@ -368,24 +368,24 @@ CommandsRegistry.registerCommand({
  			{
  				name: 'options',
@@ -1318,7 +1335,7 @@ index b81664d25197f450b1529d64f706cf6a42234118..9b0346188104ed6b3ecbf0294b462206
  						},
  						'justification': {
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
-index 008f03ef857bc94b10e0fa5c4ee7b4c3c7338646..accfefd1831ac3a43f4747e25dbe27cc8e350fc1 100644
+index 008f03ef857bc94b10e0fa5c4ee7b4c3c7338646..0687b26dc7eaad0c6e0d35ef0b452cf072340645 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
 @@ -107,7 +107,7 @@ export class PromptExtensionInstallFailureAction extends Action {
@@ -1357,6 +1374,15 @@ index 008f03ef857bc94b10e0fa5c4ee7b4c3c7338646..accfefd1831ac3a43f4747e25dbe27cc
  			} else {
  				const message = new MarkdownString(localize('deprecated tooltip', "This extension is deprecated as it is no longer being maintained."));
  				if (this.extension.deprecationInfo.additionalInfo) {
+@@ -2858,7 +2858,7 @@ export class ExtensionStatusAction extends ExtensionAction {
+ 
+ 		// Unification
+ 		if (this.extension.enablementState === EnablementState.DisabledByUnification) {
+-			this.updateStatus({ icon: infoIcon, message: new MarkdownString(localize('extension disabled because of unification', "All GitHub Copilot functionality is now being served from the GitHub Copilot Chat extension. To temporarily opt out of this extension unification, toggle the {0} setting.", '`chat.extensionUnification.enabled`')) }, true);
++			this.updateStatus({ icon: infoIcon, message: new MarkdownString(localize('extension disabled because of unification', "Compatible AI functionality is now being served from the active chat extension. To temporarily opt out of this extension unification, toggle the {0} setting.", '`chat.extensionUnification.enabled`')) }, true);
+ 			return;
+ 		}
+ 
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts b/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
 index 383e16a9e88954a53e81e70baa796419c74b7859..eaa20f8affafb48a988aa47aabf61345b7f7b651 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts

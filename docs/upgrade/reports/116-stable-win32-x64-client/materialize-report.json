@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-15T04:35:31.701Z",
+  "generatedAt": "2026-05-15T05:09:30.736Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/116-stable-win32-x64-client.json",
@@ -60,43 +60,43 @@
     {
       "layer": "director",
       "patch": "patches/replay/002-director-branding.116.patch",
-      "size": 175187,
-      "sha256": "1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909",
+      "size": 177506,
+      "sha256": "2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/003-director-product-build-release.116.patch",
-      "size": 17420,
-      "sha256": "f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1",
+      "size": 20173,
+      "sha256": "49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/004-director-agent-engine.116.patch",
-      "size": 865214,
-      "sha256": "3fda04adb2b42956fe25c8073991bd73b8a5555a5def746ac9ad25cc29c549fd",
+      "size": 871404,
+      "sha256": "7e630ed6504fb86ffb771a27df6772b59d36e4f3092d54884205b88ef4b8f0da",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/005-director-chat-built-in-mode.116.patch",
-      "size": 58915,
-      "sha256": "d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753",
+      "size": 86040,
+      "sha256": "aa846ea56f5f3e623c7f0f03f99da8e682b5f98157e079a4dd8ccf370f0adff1",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/006-director-text-polish.116.patch",
-      "size": 13099,
-      "sha256": "9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141",
+      "size": 15764,
+      "sha256": "d6dd81baa0b435d6af48ceb782058b49f4d1ec19918e2585a6043a20342d3764",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/007-director-tool-layer.116.patch",
-      "size": 78796,
-      "sha256": "572317d8e51aee1cfeb59e29049b00e7aafd54efe64442e3e99ef8f7499b0e70",
+      "size": 79219,
+      "sha256": "b9600c1cc66db5d69185f17ce2c9af9b9749a27f0e20354a11d9549c485ec91d",
       "status": "passed"
     },
     {
@@ -135,7 +135,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "c24927b98c893a1074f3a5449acff006f77670ebed3880a282c466afb88300dc"
+      "fileManifestHash": "891f8f273ec5a71fe9038601faff2d7f5bc49707ac1c7e72a48a53003ffaadcb"
     }
   ],
   "checks": {

@@ -266,24 +266,24 @@
     "GitHub.copilot-chat"
   ],
   "checksumFailMoreInfoUrl": "https://go.microsoft.com/fwlink/?LinkId=828886",
-  "documentationUrl": "https://go.microsoft.com/fwlink/?LinkID=533484#vscode",
+  "documentationUrl": "https://daxijiu.github.io/Director-Code/",
   "extensionsGallery": {
     "serviceUrl": "https://open-vsx.org/vscode/gallery",
     "itemUrl": "https://open-vsx.org/vscode/item",
     "latestUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest",
     "controlUrl": "https://raw.githubusercontent.com/EclipseFdn/publish-extensions/refs/heads/master/extension-control/extensions.json"
   },
-  "introductoryVideosUrl": "https://go.microsoft.com/fwlink/?linkid=832146",
-  "keyboardShortcutsUrlLinux": "https://go.microsoft.com/fwlink/?linkid=832144",
-  "keyboardShortcutsUrlMac": "https://go.microsoft.com/fwlink/?linkid=832143",
-  "keyboardShortcutsUrlWin": "https://go.microsoft.com/fwlink/?linkid=832145",
+  "introductoryVideosUrl": "https://daxijiu.github.io/Director-Code/",
+  "keyboardShortcutsUrlLinux": "https://daxijiu.github.io/Director-Code/",
+  "keyboardShortcutsUrlMac": "https://daxijiu.github.io/Director-Code/",
+  "keyboardShortcutsUrlWin": "https://daxijiu.github.io/Director-Code/",
   "linkProtectionTrustedDomains": [
     "https://open-vsx.org"
   ],
-  "releaseNotesUrl": "https://go.microsoft.com/fwlink/?LinkID=533483#vscode",
-  "requestFeatureUrl": "https://go.microsoft.com/fwlink/?LinkID=533482",
-  "tipsAndTricksUrl": "https://go.microsoft.com/fwlink/?linkid=852118",
-  "twitterUrl": "https://go.microsoft.com/fwlink/?LinkID=533687",
+  "releaseNotesUrl": "https://github.com/daxijiu/Director-Code/releases",
+  "requestFeatureUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+  "tipsAndTricksUrl": "https://daxijiu.github.io/Director-Code/",
+  "twitterUrl": "https://github.com/daxijiu/Director-Code",
   "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
   "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
   "quality": "stable",

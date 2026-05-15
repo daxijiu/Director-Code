@@ -12,7 +12,7 @@ index 167a3a01dde146a325e206924545718866e6cce3..11f521d006a52845bc1f96bdb9c90f2f
  				productJsonContents = file.contents.toString();
  				this.emit('data', file);
 diff --git a/build/gulpfile.vscode.ts b/build/gulpfile.vscode.ts
-index b07b6400e23152b89acada2f7aa458e647bd1acc..42cf30474d247d466deb20b5919554f73981bbc9 100644
+index b07b6400e23152b89acada2f7aa458e647bd1acc..9e84a76bd351d2509af5f9877365528df8d69652 100644
 --- a/build/gulpfile.vscode.ts
 +++ b/build/gulpfile.vscode.ts
 @@ -384,7 +384,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
@@ -24,6 +24,20 @@ index b07b6400e23152b89acada2f7aa458e647bd1acc..42cf30474d247d466deb20b5919554f7
  			.pipe(es.through(function (file) {
  				productJsonContents = file.contents.toString();
  				this.emit('data', file);
+@@ -670,11 +670,11 @@ function patchWin32DependenciesTask(destinationFolderName: string) {
+ 			await rcedit(path.join(cwd, dep), {
+ 				'file-version': baseVersion,
+ 				'version-string': {
+-					'CompanyName': 'Microsoft Corporation',
++					'CompanyName': 'Director-Code Contributors',
+ 					'FileDescription': product.nameLong,
+ 					'FileVersion': packageJson.version,
+ 					'InternalName': basename,
+-					'LegalCopyright': 'Copyright (C) 2026 Microsoft. All rights reserved',
++					'LegalCopyright': 'Copyright (C) 2026 Director-Code Contributors',
+ 					'OriginalFilename': basename,
+ 					'ProductName': product.nameLong,
+ 					'ProductVersion': packageJson.version,
 diff --git a/build/gulpfile.vscode.win32.ts b/build/gulpfile.vscode.win32.ts
 index 517237212a5c33119c42aededb9f9e4c8f3642f5..de8645f133d8958b78b138a91e6465a488c9104c 100644
 --- a/build/gulpfile.vscode.win32.ts
@@ -116,7 +130,7 @@ index 517237212a5c33119c42aededb9f9e4c8f3642f5..de8645f133d8958b78b138a91e6465a4
  }
  
 diff --git a/build/win32/code.iss b/build/win32/code.iss
-index 1213e50078e2860adc578bbd3d4416e52a49c9b6..54b0ff1e9caf02a9daedeeea4a31ba94d00b9e74 100644
+index 1213e50078e2860adc578bbd3d4416e52a49c9b6..f920cd4233c499f887ddb45c954a3e43af853365 100644
 --- a/build/win32/code.iss
 +++ b/build/win32/code.iss
 @@ -8,10 +8,10 @@
@@ -149,12 +163,12 @@ index 1213e50078e2860adc578bbd3d4416e52a49c9b6..54b0ff1e9caf02a9daedeeea4a31ba94
    #if "user" == InstallTarget
      if not WizardSilent() and IsAdmin() then begin
 -      if MsgBox('This User Installer is not meant to be run as an Administrator. If you would like to install VS Code for all users in this system, download the System Installer instead from https://vscodium.com. Are you sure you want to continue?', mbError, MB_OKCANCEL) = IDCANCEL then begin
-+      if MsgBox('This User Installer is not meant to be run as an Administrator. If you would like to install VS Code for all users in this system, download the System Installer instead from https://github.com/daxijiu/Director-Code. Are you sure you want to continue?', mbError, MB_OKCANCEL) = IDCANCEL then begin
++      if MsgBox('This User Installer is not meant to be run as an Administrator. If you would like to install Director-Code for all users in this system, download the System Installer instead from https://github.com/daxijiu/Director-Code. Are you sure you want to continue?', mbError, MB_OKCANCEL) = IDCANCEL then begin
          Result := False;
        end;
      end;
 diff --git a/package.json b/package.json
-index fa2a2324bda1a71f84132ec00c8c0dfd054d950f..40e45e6e30021d36da641142d0b306197deae56d 100644
+index fa2a2324bda1a71f84132ec00c8c0dfd054d950f..92853ed22a683d8e7cbafc1ee5e32410798cfff0 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,9 +1,9 @@
@@ -169,8 +183,21 @@ index fa2a2324bda1a71f84132ec00c8c0dfd054d950f..40e45e6e30021d36da641142d0b30619
    },
    "license": "MIT",
    "main": "./out/main.js",
+@@ -250,10 +250,10 @@
+   },
+   "repository": {
+     "type": "git",
+-    "url": "https://github.com/microsoft/vscode.git"
++    "url": "https://github.com/daxijiu/Director-Code.git"
+   },
+   "bugs": {
+-    "url": "https://github.com/microsoft/vscode/issues"
++    "url": "https://github.com/daxijiu/Director-Code/issues"
+   },
+   "optionalDependencies": {
+     "windows-foreground-love": "0.6.1"
 diff --git a/product.json b/product.json
-index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..05cffe7f67a92de9fd0f6efad7b112d63cf518dc 100644
+index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1fe2aade8d 100644
 --- a/product.json
 +++ b/product.json
 @@ -1,37 +1,37 @@
@@ -340,12 +367,39 @@ index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..05cffe7f67a92de9fd0f6efad7b112d6
    },
    "trustedExtensionAuthAccess": {
      "github": [
-@@ -297,8 +284,8 @@
-   "requestFeatureUrl": "https://go.microsoft.com/fwlink/?LinkID=533482",
-   "tipsAndTricksUrl": "https://go.microsoft.com/fwlink/?linkid=852118",
-   "twitterUrl": "https://go.microsoft.com/fwlink/?LinkID=533687",
+@@ -279,26 +266,26 @@
+     "GitHub.copilot-chat"
+   ],
+   "checksumFailMoreInfoUrl": "https://go.microsoft.com/fwlink/?LinkId=828886",
+-  "documentationUrl": "https://go.microsoft.com/fwlink/?LinkID=533484#vscode",
++  "documentationUrl": "https://daxijiu.github.io/Director-Code/",
+   "extensionsGallery": {
+     "serviceUrl": "https://open-vsx.org/vscode/gallery",
+     "itemUrl": "https://open-vsx.org/vscode/item",
+     "latestUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest",
+     "controlUrl": "https://raw.githubusercontent.com/EclipseFdn/publish-extensions/refs/heads/master/extension-control/extensions.json"
+   },
+-  "introductoryVideosUrl": "https://go.microsoft.com/fwlink/?linkid=832146",
+-  "keyboardShortcutsUrlLinux": "https://go.microsoft.com/fwlink/?linkid=832144",
+-  "keyboardShortcutsUrlMac": "https://go.microsoft.com/fwlink/?linkid=832143",
+-  "keyboardShortcutsUrlWin": "https://go.microsoft.com/fwlink/?linkid=832145",
++  "introductoryVideosUrl": "https://daxijiu.github.io/Director-Code/",
++  "keyboardShortcutsUrlLinux": "https://daxijiu.github.io/Director-Code/",
++  "keyboardShortcutsUrlMac": "https://daxijiu.github.io/Director-Code/",
++  "keyboardShortcutsUrlWin": "https://daxijiu.github.io/Director-Code/",
+   "linkProtectionTrustedDomains": [
+     "https://open-vsx.org"
+   ],
+-  "releaseNotesUrl": "https://go.microsoft.com/fwlink/?LinkID=533483#vscode",
+-  "requestFeatureUrl": "https://go.microsoft.com/fwlink/?LinkID=533482",
+-  "tipsAndTricksUrl": "https://go.microsoft.com/fwlink/?linkid=852118",
+-  "twitterUrl": "https://go.microsoft.com/fwlink/?LinkID=533687",
 -  "updateUrl": "https://raw.githubusercontent.com/VSCodium/versions/refs/heads/master",
 -  "downloadUrl": "https://github.com/VSCodium/vscodium/releases",
++  "releaseNotesUrl": "https://github.com/daxijiu/Director-Code/releases",
++  "requestFeatureUrl": "https://github.com/daxijiu/Director-Code/issues/new",
++  "tipsAndTricksUrl": "https://daxijiu.github.io/Director-Code/",
++  "twitterUrl": "https://github.com/daxijiu/Director-Code",
 +  "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
 +  "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
    "quality": "stable",

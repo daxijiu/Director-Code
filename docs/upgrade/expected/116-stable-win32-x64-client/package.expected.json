@@ -250,10 +250,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/microsoft/vscode.git"
+    "url": "https://github.com/daxijiu/Director-Code.git"
   },
   "bugs": {
-    "url": "https://github.com/microsoft/vscode/issues"
+    "url": "https://github.com/daxijiu/Director-Code/issues"
   },
   "optionalDependencies": {
     "windows-foreground-love": "0.6.1"

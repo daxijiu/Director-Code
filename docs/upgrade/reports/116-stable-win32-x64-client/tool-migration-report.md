@@ -2,13 +2,13 @@
 
 Profile: `116-stable-win32-x64-client`
 
-Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 3 direct-reuse browser/Mermaid allowlist wave plus read/search/context/create/fetch/GitHub facade cutovers; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
+Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 3 direct-reuse browser/Mermaid allowlist wave plus read/search/context/create/fetch/GitHub facade cutovers; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing plus commercial/name grep gate and read-only extension search exposure
 
 This report is intentionally stable and sanitized. It contains no API keys, tokens, user paths, volatile timestamps, or machine-local runtime state.
 
 ## Source
 
-The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Thin-layer Phase 3 now directly reuses VS Code core browser tools and the retained Mermaid extension tool through Director registry policy, and cuts over the Director read/search/context/create/fetch/GitHub facades to VS Code/Copilot `toolReferenceName` spellings without keeping old snake_case model-facing aliases. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
+The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Thin-layer Phase 3 now directly reuses VS Code core browser tools and the retained Mermaid extension tool through Director registry policy, and cuts over the Director read/search/context/create/fetch/GitHub facades to VS Code/Copilot `toolReferenceName` spellings without keeping old snake_case model-facing aliases. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract. Phase 5 passes the product/gallery/marketplace commercial-name gate and exposes the VS Code core `extensions` search tool as read-only context in Ask/Edit/Agent; extension installation remains hidden.
 
 The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Phase 5 mode routing was wired. The Director bridge now chooses the registry-filtered list per request mode, while EditorInline intentionally receives no model-callable tools.
 
@@ -19,6 +19,7 @@ The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Pha
 Read-only only:
 
 - `changes`
+- `extensions`
 - `fetch`
 - `fileSearch`
 - `githubRepo`
@@ -39,6 +40,7 @@ Read/search context plus reviewable edit tools:
 - `changes`
 - `createDirectory`
 - `createFile`
+- `extensions`
 - `fileSearch`
 - `githubRepo`
 - `listDirectory`
@@ -64,6 +66,7 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `createFile`
 - `dragElement`
 - `changes`
+- `extensions`
 - `fetch`
 - `fileSearch`
 - `getTaskOutput`
@@ -156,11 +159,11 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `setArtifacts` | `artifacts` | `artifacts` | coordination | Agent | keep | Session artifact surfacing remains available to Agent. |
 | `setArtifactRules` | `artifactRules` | `artifactRules` | coordination | Agent | keep | Session artifact rule updates remain available to Agent. |
 | `vscode_resolveDebugEventDetails_internal` | `resolveDebugEventDetails` | `resolveDebugEventDetails` | read | none | defer | Debug details need a separate runtime policy review. |
-| `vscode_searchExtensions_internal` | `extensions` | `extensions` | read | none | defer | Extension marketplace search is outside the Phase 1/2 coding-context gate. |
+| `vscode_searchExtensions_internal` | `extensions` | `extensions` | read | Ask, Edit, Agent | keep | Read-only OpenVSX extension search is exposed after the Phase 5 product/gallery wording policy and commercial/name grep gate. It does not install extensions. |
 | `vscode_installExtensions` | `installExtensions` | `installExtensions` | write | none | hide | Extension installation is a product/workspace mutation and is not exposed by default. |
 | `renderMermaidDiagram` | `renderMermaidDiagram` | `renderMermaidDiagram` | read | Agent | keep | Directly reuses the retained `extensions/mermaid-chat-features` language model tool. Director does not reimplement Mermaid rendering. |
 
-Unreviewed raw tools from extension, MCP, user, browser automation, or future VS Code contributions are hidden from Director's model-facing tool list until a Director registry entry assigns a disposition and mode policy. `extensions` remains intentionally hidden until the Phase 5 product/gallery/marketplace policy and commercial/name grep gate are completed.
+Unreviewed raw tools from extension, MCP, user, browser automation, or future VS Code contributions are hidden from Director's model-facing tool list until a Director registry entry assigns a disposition and mode policy. Extension installation remains hidden; read-only extension search is exposed only after the Phase 5 commercial/name grep gate.
 
 ## Implementation Checkpoints
 
@@ -178,6 +181,7 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
+- `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`9 passing`; includes Phase 5 `extensions` Ask/Edit/Agent exposure and retained Agent-only `renderMermaidDiagram`)
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts` (`17 passing`)
 - `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts` (`87 passing`)

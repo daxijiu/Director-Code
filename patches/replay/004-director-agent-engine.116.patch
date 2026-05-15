@@ -312,7 +312,7 @@ index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f
 +	};
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
-index 0cff2561e1e8376f091b994dcdd285169de3278c..0df212865f3dbf4bf80a2ccfd28491c850a958f3 100644
+index 0cff2561e1e8376f091b994dcdd285169de3278c..58543cd9e55488c1bce275a0867b7570b82ad5a0 100644
 --- a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 @@ -70,6 +70,7 @@ import { Extensions as JSONExtensions, IJSONContributionRegistry } from '../../.
@@ -341,19 +341,72 @@ index 0cff2561e1e8376f091b994dcdd285169de3278c..0df212865f3dbf4bf80a2ccfd28491c8
  						},
  						{
  							key: 'chat.mcp.access.any', value: nls.localize('chat.mcp.access.any', "Allow access to any installed MCP server.")
-@@ -1418,7 +1419,7 @@ configurationRegistry.registerConfiguration({
+@@ -1232,7 +1233,7 @@ configurationRegistry.registerConfiguration({
+ 			title: nls.localize('chat.hookFilesLocations.title', "Hook File Locations",),
+ 			markdownDescription: nls.localize(
+ 				'chat.hookFilesLocations.description',
+-				"Specify paths to hook configuration files that define custom shell commands to execute at strategic points in an agent's workflow. [Learn More]({0}).\n\nRelative paths are resolved from the root folder(s) of your workspace. Supports Copilot hooks (`*.json`) and Claude Code hooks (`settings.json`, `settings.local.json`).",
++				"Specify paths to hook configuration files that define custom shell commands to execute at strategic points in an agent's workflow. [Learn More]({0}).\n\nRelative paths are resolved from the root folder(s) of your workspace. Supports standard hook files (`*.json`) and Claude Code hooks (`settings.json`, `settings.local.json`).",
+ 				HOOK_DOCUMENTATION_URL,
+ 			),
+ 			default: {
+@@ -1279,7 +1280,7 @@ configurationRegistry.registerConfiguration({
+ 		[PromptsConfig.USE_CLAUDE_HOOKS]: {
+ 			type: 'boolean',
+ 			title: nls.localize('chat.useClaudeHooks.title', "Use Claude Hooks",),
+-			markdownDescription: nls.localize('chat.useClaudeHooks.description', "Controls whether hooks from Claude configuration files can execute. When disabled, only Copilot-format hooks are used. Hooks are loaded from the files configured in `#chat.hookFilesLocations#`.",),
++			markdownDescription: nls.localize('chat.useClaudeHooks.description', "Controls whether hooks from Claude configuration files can execute. When disabled, only standard JSON hooks are used. Hooks are loaded from the files configured in `#chat.hookFilesLocations#`.",),
+ 			default: false,
+ 			restricted: true,
+ 			disallowConfigurationDefault: true,
+@@ -1417,8 +1418,8 @@ configurationRegistry.registerConfiguration({
+ 		},
  		[ChatConfiguration.AIDisabled]: {
  			type: 'boolean',
- 			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features provided by GitHub Copilot, including chat and inline suggestions."),
+-			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features provided by GitHub Copilot, including chat and inline suggestions."),
 -			default: true,
++			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in Director Code AI features, including chat and inline suggestions."),
 +			default: false,
  			scope: ConfigurationScope.WINDOW
  		},
  		'chat.allowAnonymousAccess': { // TODO@bpasero remove me eventually
+@@ -1432,7 +1433,7 @@ configurationRegistry.registerConfiguration({
+ 		},
+ 		[ChatConfiguration.GrowthNotificationEnabled]: {
+ 			type: 'boolean',
+-			description: nls.localize('chat.growthNotification', "Controls whether to show a growth notification in the agent sessions view to encourage new users to try Copilot."),
++			description: nls.localize('chat.growthNotification', "Controls whether to show a growth notification in the agent sessions view to encourage new users to try Director Code."),
+ 			default: false,
+ 			tags: ['experimental'],
+ 			experiment: {
+@@ -1461,7 +1462,7 @@ configurationRegistry.registerConfiguration({
+ 		},
+ 		'chat.extensionUnification.enabled': {
+ 			type: 'boolean',
+-			description: nls.localize('chat.extensionUnification.enabled', "Enables the unification of GitHub Copilot extensions. When enabled, all GitHub Copilot functionality is served from the GitHub Copilot Chat extension. When disabled, the GitHub Copilot and GitHub Copilot Chat extensions operate independently."),
++			description: nls.localize('chat.extensionUnification.enabled', "Enables upstream chat extension unification compatibility. When enabled, compatible chat extension functionality is served from a single chat extension. When disabled, compatible chat extensions operate independently."),
+ 			default: true,
+ 			tags: ['experimental'],
+ 			experiment: {
 diff --git a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
-index 1a4a5f55ae81744961d24b4af28879cf14813b1a..ef9e52f5f61f2ef05a7de783aa0b398ee9221962 100644
+index 1a4a5f55ae81744961d24b4af28879cf14813b1a..bf5bc2f0af61ffbde21a3c8f443bbbeaf291ff26 100644
 --- a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
 +++ b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
+@@ -83,12 +83,12 @@ export const globalAutoApproveDescription = localize2(
+ 		comment: [
+ 			'{Locked=\'](https://github.com/features/codespaces)\'}',
+ 			'{Locked=\'](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)\'}',
+-			'{Locked=\'](https://code.visualstudio.com/docs/copilot/security)\'}',
++			'{Locked=\'](https://daxijiu.github.io/Director-Code/security/)\'}',
+ 			'{Locked=\'**\'}',
+ 			'{Locked=\'[`chat.autoReply`](command:workbench.action.openSettings?%5B%22chat.autoReply%22%5D)\'}',
+ 		]
+ 	},
+-	'Global auto approve also known as "YOLO mode" disables manual approval completely for _all tools in all workspaces_, allowing the agent to act fully autonomously. This is extremely dangerous and is *never* recommended, even containerized environments like [Codespaces](https://github.com/features/codespaces) and [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) have user keys forwarded into the container that could be compromised.\n\n**This feature disables [critical security protections](https://code.visualstudio.com/docs/copilot/security) and makes it much easier for an attacker to compromise the machine.**\n\nNote: This setting only controls tool approval and does not prevent the agent from asking questions. To automatically answer agent questions, use the [`chat.autoReply`](command:workbench.action.openSettings?%5B%22chat.autoReply%22%5D) setting.'
++	'Global auto approve also known as "YOLO mode" disables manual approval completely for _all tools in all workspaces_, allowing the agent to act fully autonomously. This is extremely dangerous and is *never* recommended, even containerized environments like [Codespaces](https://github.com/features/codespaces) and [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) have user keys forwarded into the container that could be compromised.\n\n**This feature disables [critical security protections](https://daxijiu.github.io/Director-Code/security/) and makes it much easier for an attacker to compromise the machine.**\n\nNote: This setting only controls tool approval and does not prevent the agent from asking questions. To automatically answer agent questions, use the [`chat.autoReply`](command:workbench.action.openSettings?%5B%22chat.autoReply%22%5D) setting.'
+ );
+ 
+ export class LanguageModelToolsService extends Disposable implements ILanguageModelToolsService {
 @@ -119,6 +119,20 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  	/** Deduplicates _checkGlobalAutoApprove calls within this window */
  	private _pendingGlobalAutoApproveCheck: Promise<boolean> | undefined;
@@ -375,6 +428,15 @@ index 1a4a5f55ae81744961d24b4af28879cf14813b1a..ef9e52f5f61f2ef05a7de783aa0b398e
  	private readonly _isAgentModeEnabled: IObservable<boolean>;
  
  	constructor(
+@@ -172,7 +186,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 			VSCodeToolReference.vscode,
+ 			{
+ 				icon: ThemeIcon.fromId(Codicon.vscode.id),
+-				description: localize('copilot.toolSet.vscode.description', 'Use VS Code features'),
++				description: localize('copilot.toolSet.vscode.description', 'Use Director-Code features'),
+ 			}
+ 		));
+ 
 @@ -455,7 +469,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  		let request: IChatRequestModel | undefined;
  		if (dto.context?.sessionResource) {

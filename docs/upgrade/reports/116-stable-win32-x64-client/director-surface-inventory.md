@@ -4,7 +4,7 @@ Date: 2026-05-15
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 4 edit tools internal refactor wave
+Status: Phase 5 commercial/name grep gate and read-only extension search exposure wave
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -22,6 +22,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 - Phase 3 create facade cutover started after commit: `cdaf76ec Move read context tools into directorCode`
 - Phase 3 fetch/GitHub facade cutover started after commit: `122685ce Cut over create tool facades`
 - Phase 4 edit tools internal refactor started after commit: `4c6d2bbc Cut over fetch and GitHub tool facades`
+- Phase 5 commercial/name grep gate started after commit: `85e39cb8 Move edit tools into directorCode`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -43,6 +44,8 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 | `chat-editing-contract-report.md` | Chat Editing contract analysis and Phase 3 implementation notes. |
 | `edit-tools-report.md` | Reviewable edit tools implementation report. |
 | `mode-routing-report.md` | Ask/Edit/Agent/Inline routing report. |
+| `commercial-name-grep-report.md` | Phase 5 product/gallery/marketplace commercial-name grep gate report. |
+| `docs/upgrade/director-commercial-name-allowlist.116.md` | Phase 5 allowlist for legal attribution, OSS compatibility, package metadata, extension identity, Windows namespaces, and internal VS Code API/protocol names. |
 | `package-regression-report.md` | Phase 6 package/regression status and installer hashes. |
 | `tool-source-and-strategy-analysis.html` | Accepted 48-tool source/strategy report for the thin-layer plan. |
 | `tool-parity-analysis.html` | Earlier broad parity analysis retained as reference only. |
@@ -79,16 +82,16 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 
 | Stage | Patch | Files | Bytes | SHA-256 | Surface classification |
 | --- | --- | ---: | ---: | --- | --- |
-| `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 175187 | `1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909` | `declarative product config` plus user-visible text/resource replacement. |
-| `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 17420 | `f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1` | `declarative product config`. |
-| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 865214 | `3fda04adb2b42956fe25c8073991bd73b8a5555a5def746ac9ad25cc29c549fd` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
-| `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58915 | `d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753` | Mix of `declarative product config` and `must-touch upstream hook`. |
-| `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 3 | 13099 | `9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141` | `declarative product config` / user-visible text polish. |
-| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 78796 | `572317d8e51aee1cfeb59e29049b00e7aafd54efe64442e3e99ef8f7499b0e70` | `Director-owned logic`. |
+| `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 177506 | `2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca` | `declarative product config` plus user-visible text/resource replacement. |
+| `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 20173 | `49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b` | `declarative product config`. |
+| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 871404 | `7e630ed6504fb86ffb771a27df6772b59d36e4f3092d54884205b88ef4b8f0da` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
+| `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 34 | 87118 | `7516ac38ad601db2bb529a29440a96ad17d28a6dcdd818f52cbe09571ec78f45` | Mix of `declarative product config` and `must-touch upstream hook`. |
+| `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 6 | 16980 | `85c5cc08ef981379d7b09f3b53885aba649428f28c2cdc5ee5ae86bddcc77a9b` | `declarative product config` / user-visible text polish. |
+| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 79219 | `b9600c1cc66db5d69185f17ce2c9af9b9749a27f0e20354a11d9549c485ec91d` | `Director-owned logic`. |
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21321 | `c6278007133640563dabcb0d3439d3cc91eb403528942807df99af72ef418b3b` | `Director-owned logic`. |
 | `edit-tools` | `patches/replay/009-director-edit-tools.116.patch` | 3 | 45326 | `9e1d2be7be60aa045abb2fbed620c28c61b6bf68ff9997395c65b9e2bad3c84c` | `Director-owned logic`. |
 
-Total current Director changed file count: `231`.
+Total current Director changed file count: `244`.
 
 ## Director-Owned Logic Surface
 
@@ -118,11 +121,17 @@ The following files are existing upstream chat/agent files touched by Director. 
 | `src/vs/workbench/contrib/chat/common/participants/chatAgents.ts` | `004` | `must-touch upstream hook` | Makes dynamic agent re-registration/disposal safe for Director hot registration and context-key refresh. |
 | `src/vs/workbench/contrib/chat/browser/actions/chatActions.ts` | `005` | `declarative product config` plus thin hook | Allows Director settings command URL handling and changes inline-suggestions availability gating away from Copilot setup state. |
 | `src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts` | `005` | `declarative product config` | Replaces setup/getting-started commercial copy with Director wording. |
+| `src/vs/workbench/contrib/chat/browser/actions/chatLanguageModelActions.ts` | `005` | `declarative product config` | Replaces trusted-provider and commercial model action wording with Director-compatible copy. |
+| `src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts` | `005` | `declarative product config` | Replaces synced customization product identity with Director-Code wording. |
 | `src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts` | `005` | `declarative product config` | Director default agent/product identity behavior for Agent Sessions. |
 | `src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts` | `005` | `declarative product config` | Director status/title-bar wording and commercial-flow gating. |
+| `src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts` | `005` | `declarative product config` | Director Agent Customizations debug wording and product identity. |
+| `src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationListWidget.ts` | `005` | `declarative product config` | Replaces custom agents/skills/instructions/hooks/prompts documentation links with Director-owned documentation. |
 | `src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts` | `005` | `must-touch upstream hook` | Bridges Agent Customizations UI to Director settings and product identity. |
 | `src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationWorkspaceService.ts` | `005` | `declarative product config` | Director Agent Customizations behavior/copy. |
+| `src/vs/workbench/contrib/chat/browser/aiCustomization/mcpListWidget.ts` | `005` | `declarative product config` | Replaces managed/built-in/extension MCP wording and docs links with Director wording. |
 | `src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css` | `005` | `declarative product config` | Styling support for Director Agent Customizations entry. |
+| `src/vs/workbench/contrib/chat/browser/aiCustomization/pluginListWidget.ts` | `005` | `declarative product config` | Replaces Agent Customizations plugin docs links with Director-owned documentation. |
 | `src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts` | `005` | `must-touch upstream hook` | Selects Director auxiliary language model instead of hard-coded Copilot fast model for edit explanations. |
 | `src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts` | `005` | `declarative product config` | Director chat setup contribution visibility/copy. |
 | `src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts` | `005` | `declarative product config` | Director chat setup flow gating. |
@@ -133,12 +142,19 @@ The following files are existing upstream chat/agent files touched by Director. 
 | `src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts` | `005` | `declarative product config` | Director chat status entry wording and product gating. |
 | `src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts` | `005` | `declarative product config` | Removes Copilot subscription/quota language from user-visible chat output. |
 | `src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts` | `005` | `declarative product config` | Director wording/status display in thinking content. |
+| `src/vs/workbench/contrib/chat/browser/widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.ts` | `005` | `declarative product config` | Replaces terminal tool safety documentation link with Director-owned documentation. |
 | `src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts` | `005` | `declarative product config` plus mode hook | Director mode/setup behavior in chat widget. |
 | `src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts` | `005` | `must-touch upstream hook` | Shows unavailable models as Director configuration actions instead of Copilot upgrade/admin commercial actions. |
 | `src/vs/workbench/contrib/chat/browser/widget/input/chatStatusWidget.ts` | `005` | `declarative product config` | Director status widget wording and setup state. |
 | `src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts` | `005` | `declarative product config` | Director model picker entry behavior/copy. |
+| `src/vs/workbench/contrib/chat/browser/widget/input/permissionPickerActionItem.ts` | `005` | `declarative product config` | Replaces permission picker product wording and learn-more link with Director-owned wording/docs. |
+| `src/vs/workbench/contrib/chat/browser/widget/input/sessionTargetPickerActionItem.ts` | `005` | `declarative product config` | Replaces session target picker learn-more link with Director-owned documentation. |
 | `src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts` | `005` | `declarative product config` | Director quick chat setup/status behavior. |
 | `src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts` | `005` | `declarative product config` | Director Agent Customizations data/copy. |
+| `src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts` | `005` | `declarative product config` | Replaces chat session serialization issue text and issue URL with Director project wording. |
+| `src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts` | `006` | `declarative product config` | Replaces user-visible hook compatibility labels/comments with standard JSON hook wording while keeping imported format compatibility. |
+| `src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts` | `006` | `declarative product config` | Replaces hook schema product description with standard hook configuration wording. |
+| `src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts` | `006` | `declarative product config` | Removes product-specific documentation URLs from hook lifecycle comments while preserving compatibility target names. |
 | `src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts` | `006` | `declarative product config` | Replaces VS Code/Copilot-facing prompt validation wording with Director/VSCodium wording. |
 
 Associated tests touched by Director:
@@ -177,7 +193,9 @@ No final `010` stage is allowed in the canonical replay series.
 - Phase 3 create facade cutover is implemented and replay-landed: `create_file` and `create_directory` were removed as model-facing names and replaced by `createFile` and `createDirectory`. The implementations remain Director-owned reviewable edit primitives; `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` intentionally keep their Director-only names.
 - Phase 3 fetch/GitHub facade cutover is implemented and replay-landed: `vscode_fetchWebPage_internal` is no longer model-facing and is exposed as `fetch`, backed by the same VS Code URL/file fetch implementation and approval flow. `github_repo` is no longer model-facing and is exposed as `githubRepo`; it keeps Director's limited read-only repo context and returns controlled unsupported output for remote indexed search.
 - Phase 4 edit tools internal refactor is implemented and replay-landed: `directorChatEditingAdapter.ts`, `directorEditTools.ts`, and their tests now live under `src/vs/workbench/contrib/directorCode/`. `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts` remains as the thin registration hook.
-- `extensions` remains hidden until Phase 5 product/gallery/marketplace wording policy and commercial/name grep gate.
+- Phase 5 commercial/name grep gate is implemented: product default links, package repository/bugs metadata, Windows installer/resource metadata, chat setup/status/model-picker/customization copy, extension gallery wording, and safety/docs links now route to Director-owned wording or URLs unless explicitly allowlisted for OSS attribution or compatibility. The gate report is `commercial-name-grep-report.md`.
+- Phase 5 read-only extension search exposure is implemented: `extensions` now appears in Ask/Edit/Agent through the Director registry after the product/gallery wording gate; `installExtensions` remains hidden as a mutation.
+- Commercial/name grep is now a required gate for every subsequent wave. User-visible scoped unexplained hits must stay at `0`; allowlisted hits require an allowlist reason.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
 - No Phase 3 fetch/GitHub temporary legacy exception remains model-facing after this wave.
 - `artifacts/` must remain untracked.

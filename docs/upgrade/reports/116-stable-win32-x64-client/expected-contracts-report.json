@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "expected-contracts",
   "status": "passed",
-  "generatedAt": "2026-05-15T04:44:16.736Z",
+  "generatedAt": "2026-05-15T05:24:57.851Z",
   "mode": "validate",
   "checks": {
     "product": "passed",
@@ -19,16 +19,16 @@
       "source": "vscode.generated/layers/director/vscode/product.json",
       "expected": "docs/upgrade/expected/116-stable-win32-x64-client/product.expected.json",
       "status": "passed",
-      "sourceSha": "95ba25d531df9d3140ac6a450158df827add39c3d75c65784cde4a288ef0797a",
-      "expectedSha": "95ba25d531df9d3140ac6a450158df827add39c3d75c65784cde4a288ef0797a"
+      "sourceSha": "301dce4bd1baadddc5daf6f5ff496a4a8b07558fa56464bc0dfd758c47e90130",
+      "expectedSha": "301dce4bd1baadddc5daf6f5ff496a4a8b07558fa56464bc0dfd758c47e90130"
     },
     {
       "key": "package",
       "source": "vscode.generated/layers/director/vscode/package.json",
       "expected": "docs/upgrade/expected/116-stable-win32-x64-client/package.expected.json",
       "status": "passed",
-      "sourceSha": "afc8e222d7e079409be5802980f08576fa7f5bcb8fb06041f27e56f9b8143ed7",
-      "expectedSha": "afc8e222d7e079409be5802980f08576fa7f5bcb8fb06041f27e56f9b8143ed7"
+      "sourceSha": "259011dd50f1bef48311f33085e5d7c8cd376e94b4b92b0273801d681ea52181",
+      "expectedSha": "259011dd50f1bef48311f33085e5d7c8cd376e94b4b92b0273801d681ea52181"
     },
     {
       "key": "serverManifest",
