@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-15T05:23:18.767Z",
+  "generatedAt": "2026-05-15T08:59:40.024Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 244,
+  "changedFileCount": 258,
   "patches": [
     {
       "stage": "branding",
@@ -23,6 +23,19 @@
         "build/lib/electron.ts",
         "build/lib/policies/basePolicy.ts",
         "build/lib/policies/render.ts",
+        "build/win32/i18n/messages.de.isl",
+        "build/win32/i18n/messages.en.isl",
+        "build/win32/i18n/messages.es.isl",
+        "build/win32/i18n/messages.fr.isl",
+        "build/win32/i18n/messages.hu.isl",
+        "build/win32/i18n/messages.it.isl",
+        "build/win32/i18n/messages.ja.isl",
+        "build/win32/i18n/messages.ko.isl",
+        "build/win32/i18n/messages.pt-br.isl",
+        "build/win32/i18n/messages.ru.isl",
+        "build/win32/i18n/messages.tr.isl",
+        "build/win32/i18n/messages.zh-cn.isl",
+        "build/win32/i18n/messages.zh-tw.isl",
         "extensions/configuration-editing/src/configurationEditingMain.ts",
         "extensions/configuration-editing/src/settingsDocumentHelper.ts",
         "extensions/css-language-features/package.nls.json",
@@ -65,6 +78,7 @@
         "resources/linux/code.desktop",
         "resources/win32/VisualElementsManifest.xml",
         "src/main.ts",
+        "src/vs/base/node/nls.ts",
         "src/vs/code/electron-main/app.ts",
         "src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts",
         "src/vs/platform/contextkey/common/contextkeys.ts",
@@ -126,9 +140,9 @@
         "src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts",
         "src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts"
       ],
-      "fileCount": 106,
-      "size": 177506,
-      "sha256": "2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca"
+      "fileCount": 120,
+      "size": 185019,
+      "sha256": "79965c60accc02cef9527a42ffb6c252a81a9ae54009f285eb8e04d77b6c875c"
     },
     {
       "stage": "product-build-release",
@@ -143,8 +157,8 @@
         "resources/server/manifest.json"
       ],
       "fileCount": 7,
-      "size": 20173,
-      "sha256": "49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b"
+      "size": 20694,
+      "sha256": "f29b4e3a72ad72f73d47053688f5955405792b389cb746c7f958e001f9ef614d"
     },
     {
       "stage": "agent-engine",

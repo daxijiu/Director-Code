@@ -197,7 +197,7 @@ index fa2a2324bda1a71f84132ec00c8c0dfd054d950f..92853ed22a683d8e7cbafc1ee5e32410
    "optionalDependencies": {
      "windows-foreground-love": "0.6.1"
 diff --git a/product.json b/product.json
-index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1fe2aade8d 100644
+index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..8e5cb720407f42863faad60221e4f824168d37d7 100644
 --- a/product.json
 +++ b/product.json
 @@ -1,37 +1,37 @@
@@ -205,12 +205,12 @@ index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1f
 -  "nameShort": "VSCodium",
 -  "nameLong": "VSCodium",
 -  "applicationName": "codium",
+-  "dataFolderName": ".vscode-oss",
+-  "win32MutexName": "vscodium",
 +  "nameShort": "Director-Code",
 +  "nameLong": "Director-Code",
 +  "applicationName": "director-code",
--  "dataFolderName": ".vscode-oss",
 +  "dataFolderName": ".director-code",
--  "win32MutexName": "vscodium",
 +  "win32MutexName": "directorcode",
    "licenseName": "MIT",
 -  "licenseUrl": "https://github.com/VSCodium/vscodium/blob/master/LICENSE",
@@ -225,21 +225,25 @@ index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1f
 -  "win32DirName": "VSCodium",
 -  "win32NameVersion": "VSCodium",
 -  "win32RegValueName": "VSCodium",
+-  "win32x64AppId": "{{88DA3577-054F-4CA1-8122-7D820494CFFB}",
+-  "win32arm64AppId": "{{67DEE444-3D04-4258-B92A-BC1F0FF2CAE4}",
+-  "win32x64UserAppId": "{{2E1F05D1-C245-4562-81EE-28188DB6FD17}",
+-  "win32arm64UserAppId": "{{57FD70A5-1B8D-4875-9F40-C5553F094828}",
+-  "win32AppUserModelId": "VSCodium.VSCodium",
+-  "win32ShellNameShort": "VSCodium",
+-  "win32TunnelServiceMutex": "vscodium-tunnelservice",
+-  "win32TunnelMutex": "vscodium-tunnel",
+-  "darwinBundleIdentifier": "com.vscodium",
 +  "serverApplicationName": "director-code-server",
 +  "serverDataFolderName": ".director-code-server",
 +  "tunnelApplicationName": "director-code-tunnel",
 +  "win32DirName": "Director-Code",
 +  "win32NameVersion": "Director-Code",
 +  "win32RegValueName": "DirectorCode",
-   "win32x64AppId": "{{88DA3577-054F-4CA1-8122-7D820494CFFB}",
-   "win32arm64AppId": "{{67DEE444-3D04-4258-B92A-BC1F0FF2CAE4}",
-   "win32x64UserAppId": "{{2E1F05D1-C245-4562-81EE-28188DB6FD17}",
-   "win32arm64UserAppId": "{{57FD70A5-1B8D-4875-9F40-C5553F094828}",
--  "win32AppUserModelId": "VSCodium.VSCodium",
--  "win32ShellNameShort": "VSCodium",
--  "win32TunnelServiceMutex": "vscodium-tunnelservice",
--  "win32TunnelMutex": "vscodium-tunnel",
--  "darwinBundleIdentifier": "com.vscodium",
++  "win32x64AppId": "{{090D32AF-B850-4F8C-8EAB-21BAE98B32A2}",
++  "win32arm64AppId": "{{78331107-FA83-4537-8FDD-8F9909B808C7}",
++  "win32x64UserAppId": "{{268AD3D7-13D7-48BD-B05D-413FFCF6A1A9}",
++  "win32arm64UserAppId": "{{A5EC4F3F-B08C-4613-B1F6-0548C6B960BE}",
 +  "win32AppUserModelId": "DirectorCode.DirectorCode",
 +  "win32ShellNameShort": "Director-Code",
 +  "win32TunnelServiceMutex": "directorcode-tunnelservice",
@@ -368,7 +372,7 @@ index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1f
    },
    "trustedExtensionAuthAccess": {
      "github": [
-@@ -279,26 +266,26 @@
+@@ -279,29 +266,29 @@
      "GitHub.copilot-chat"
    ],
    "checksumFailMoreInfoUrl": "https://go.microsoft.com/fwlink/?LinkId=828886",
@@ -404,8 +408,13 @@ index 633aa7d3a525c8a962bbf0db27c6aaebd664dcf5..03ca4da4298db0f6463ea977abbfda1f
 +  "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
 +  "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
    "quality": "stable",
-   "win32AppId": "{{763CBF88-25C6-4B10-952F-326AE657F16B}",
-   "win32UserAppId": "{{0FD05EB4-651E-4E78-A062-515204B47A3A}",
+-  "win32AppId": "{{763CBF88-25C6-4B10-952F-326AE657F16B}",
+-  "win32UserAppId": "{{0FD05EB4-651E-4E78-A062-515204B47A3A}",
++  "win32AppId": "{{FEDDF97F-C8B6-41A4-9EB2-2C1A9508D15A}",
++  "win32UserAppId": "{{DB9D8238-04F1-414F-8444-40880ACC1ADF}",
+   "win32ContextMenu": {
+     "x64": {
+       "clsid": "D910D5E6-B277-4F4A-BDC5-759A34EEE25D"
 @@ -945,5 +932,6 @@
      "gruntfuggly.todo-tree": {
        "default": false

@@ -1087,6 +1087,21 @@ Remove-Item -Recurse -Force "$env:APPDATA\Director-Code\clp" -ErrorAction Silent
 - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe`
   - sha256: `53AB41750F9751C9CDE9FA8272BC728D74EE597A32EE9DB2D0DD4D4C2C0CDA11`
 
+### 116 安装/legacy 残留收口 (2026-05-15)
+
+**结论**:
+- Windows installer AppId/GUID 已从 VSCodium GUID 切换为 Director 专用 GUID；旧内部包可能需要手动卸载旧身份，但后续不会再与 VSCodium 安装/升级/卸载身份冲突。
+- Inno `UpdatingVisualStudioCode` 文案已在 13 个 installer i18n 文件中统一覆盖为 `Updating Director-Code...`；`.isl` 文件按 binary diff 生成 replay patch，避免非 UTF-8 语言文件在 replay 时损坏。
+- `utils.sh` legacy 默认值已改为 Director-Code / `director-code` / `daxijiu/Director-Code`，防止绕过 116 profile 的旧脚本路径产出 VSCodium/codium 元数据。
+- 用户已手动确认新 NLS 修复包安装 smoke 后 UI 文案不再错乱；本轮未重复做人工安装。
+
+**验证**:
+- `node scripts/upgrade/validate-series.mjs --profile 116-stable-win32-x64-client`
+- `node scripts/upgrade/validate-product-overrides.mjs --profile 116-stable-win32-x64-client`
+- `node scripts/upgrade/materialize-vscode.mjs --profile 116-stable-win32-x64-client --target vscode.generated --up-to-layer director --force`
+- `node scripts/upgrade/canonical-manifest.mjs --profile 116-stable-win32-x64-client`
+- `node scripts/upgrade/expected-contracts.mjs --profile 116-stable-win32-x64-client`
+
 ## 编码规范提醒
 
 - 所有 import 以 `.js` 结尾

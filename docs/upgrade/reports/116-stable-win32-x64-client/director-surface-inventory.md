@@ -84,8 +84,8 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 
 | Stage | Patch | Files | Bytes | SHA-256 | Surface classification |
 | --- | --- | ---: | ---: | --- | --- |
-| `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 177506 | `2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca` | `declarative product config` plus user-visible text/resource replacement. |
-| `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 20173 | `49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b` | `declarative product config`. |
+| `branding` | `patches/replay/002-director-branding.116.patch` | 120 | 185019 | `79965c60accc02cef9527a42ffb6c252a81a9ae54009f285eb8e04d77b6c875c` | `declarative product config` plus user-visible text/resource replacement. |
+| `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 20694 | `f29b4e3a72ad72f73d47053688f5955405792b389cb746c7f958e001f9ef614d` | `declarative product config`. |
 | `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 871404 | `7e630ed6504fb86ffb771a27df6772b59d36e4f3092d54884205b88ef4b8f0da` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
 | `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 34 | 87118 | `7516ac38ad601db2bb529a29440a96ad17d28a6dcdd818f52cbe09571ec78f45` | Mix of `declarative product config` and `must-touch upstream hook`. |
 | `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 6 | 16980 | `85c5cc08ef981379d7b09f3b53885aba649428f28c2cdc5ee5ae86bddcc77a9b` | `declarative product config` / user-visible text polish. |
@@ -93,7 +93,7 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21321 | `c6278007133640563dabcb0d3439d3cc91eb403528942807df99af72ef418b3b` | `Director-owned logic`. |
 | `edit-tools` | `patches/replay/009-director-edit-tools.116.patch` | 3 | 45326 | `9e1d2be7be60aa045abb2fbed620c28c61b6bf68ff9997395c65b9e2bad3c84c` | `Director-owned logic`. |
 
-Total current Director changed file count: `244`.
+Total current Director changed file count: `258`.
 
 ## Director-Owned Logic Surface
 

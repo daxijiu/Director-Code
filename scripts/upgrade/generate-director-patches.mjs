@@ -322,6 +322,7 @@ function isBranding(filePath) {
   if (filePath.startsWith('extensions/')) return true;
   if (filePath.startsWith('resources/linux/')) return true;
   if (filePath.startsWith('resources/win32/')) return true;
+  if (filePath.startsWith('build/win32/i18n/')) return true;
   if (filePath.startsWith('build/lib/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/extensions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/issue/')) return true;
@@ -337,6 +338,7 @@ function isBranding(filePath) {
   if (filePath.startsWith('src/vs/workbench/services/')) return true;
   return [
     'src/main.ts',
+    'src/vs/base/node/nls.ts',
     'src/vs/code/electron-main/app.ts',
     'src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts',
     'src/vs/platform/contextkey/common/contextkeys.ts',
@@ -374,6 +376,7 @@ function createDiffWorktree(vscodiumRoot, directorRoot, worktree) {
   run('git', ['-C', worktree, 'config', 'core.safecrlf', 'false']);
   run('git', ['-C', worktree, 'config', 'user.email', 'director-upgrade@example.invalid']);
   run('git', ['-C', worktree, 'config', 'user.name', 'Director Upgrade Tool']);
+  fs.writeFileSync(path.join(worktree, '.git', 'info', 'attributes'), 'build/win32/i18n/*.isl binary\n', 'utf8');
   run('git', ['-C', worktree, 'add', '-A']);
   run('git', ['-C', worktree, 'commit', '-q', '-m', 'vscodium baseline']);
 

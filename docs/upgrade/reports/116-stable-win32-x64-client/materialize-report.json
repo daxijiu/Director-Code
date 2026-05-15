@@ -4,10 +4,10 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-15T05:32:01.628Z",
+  "generatedAt": "2026-05-15T09:01:10.997Z",
   "command": [
     "--profile",
-    "docs/upgrade/profiles/116-stable-win32-x64-client.json",
+    "116-stable-win32-x64-client",
     "--target",
     "vscode.generated",
     "--up-to-layer",
@@ -60,15 +60,15 @@
     {
       "layer": "director",
       "patch": "patches/replay/002-director-branding.116.patch",
-      "size": 177506,
-      "sha256": "2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca",
+      "size": 185019,
+      "sha256": "79965c60accc02cef9527a42ffb6c252a81a9ae54009f285eb8e04d77b6c875c",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/003-director-product-build-release.116.patch",
-      "size": 20173,
-      "sha256": "49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b",
+      "size": 20694,
+      "sha256": "f29b4e3a72ad72f73d47053688f5955405792b389cb746c7f958e001f9ef614d",
       "status": "passed"
     },
     {
@@ -135,7 +135,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "ce079341e954adc3684050e58c3fd81013c77d2c0dc296e024de9c42eb1ebb88"
+      "fileManifestHash": "af6e0971a1620e70d95c294307fb7b809cad8a9ad54d26a89c6a998e92e0caf5"
     }
   ],
   "checks": {

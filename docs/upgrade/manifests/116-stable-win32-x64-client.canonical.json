@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T07:29:57.105Z",
-  "treeHash": "9159a028ca01a67f4610f49fb79bf7bfb5a250c69cc58621eee4d2ccbd1f0be9",
+  "generatedAt": "2026-05-15T09:01:41.880Z",
+  "treeHash": "6ab9c50801328d1a200dcdec7b78627a907e9a6ec50a014e94a9fe3db4779a99",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -3236,79 +3236,79 @@
     },
     {
       "path": "build/win32/i18n/messages.de.isl",
-      "sha256": "9a0ec36f24be4999df920b6488cf5b31d4189c5ea889177c1b4c8f2cbb326825",
+      "sha256": "5ce3d9b14f731643f812fb3d32a9350b495ace47c68d6a2c9deaa0724bf45329",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.en.isl",
-      "sha256": "c978189c7351f8c778eab5742f5b74e2980405d1d96f321c6c8f3ef9e3a8cd84",
+      "sha256": "154250387e5d99aa5cc7513431bc8dc79a5b2d94c39b892a604b2791d1d129a6",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.es.isl",
-      "sha256": "c7be9c5df256753b0118cc7105153f4e9419afdf19b2f08f3b449d8d8bd5cf11",
+      "sha256": "273ad3567751446a3a208bf3b6f15cc51d56934dedd2842c5e5b98faec8ff7f7",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.fr.isl",
-      "sha256": "eb41aca1a0371af7808969c11e94c452ad0b39a9823a2be2e99baeedeeb965fd",
+      "sha256": "d8e849aefe98af3caac69633ecd19f7eed426ece1529d34d48ee7952e4136ed4",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.hu.isl",
-      "sha256": "0d37b9340e58a266543999de3c89b3061f2094722cbdcb62d2aa7d79be2d5eee",
+      "sha256": "fc80fc439bd27ec0636b4881c8ae72beff8b36ea9345fb4093fd10c8ae883ac6",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.it.isl",
-      "sha256": "13bbe3a35d601edc1bc28b89b8a1973dbafe65d7e8cf03a40ebcee200060f95d",
+      "sha256": "e091965c9d60edcfafaa9c862049092aef68115083e62dc9b26710fdd2ea5614",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.ja.isl",
-      "sha256": "fb7a468ce28f7bc3ead5c36ff80fe00921bdb76cba541893f12e8cb205847f5d",
+      "sha256": "85419caaf8d98edc4a3d41766fe30d3b86e6600d50f85c1bbac6efb9a7b211ed",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.ko.isl",
-      "sha256": "4ecb51c8c9a7662b944a7b9ccebb873b6f1000a38ba7ff0cfb88c512dc962efb",
+      "sha256": "d96808f4400df8a7f7f292567671743837e5b0df309be7456f0ec04a0a41e464",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.pt-br.isl",
-      "sha256": "d36b2c441a7402f23e5d0f247c812ac0bed85835d1790646b4607ab210582a10",
+      "sha256": "460efe2b4d8c60357bf6a92747506ef40aa41e2e1d939197d5fc825b74513c3e",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.ru.isl",
-      "sha256": "93ec101bca1e138762bbc892ad9978425414687c4df6f52381c7661e559f9e80",
+      "sha256": "2576c1f07d728b7a68287e996ee5785e35feebcb9f05bcee85c8ff5bcde72f8c",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.tr.isl",
-      "sha256": "5cd444e63816897f994361df2584b90947073954a0767534f4565dc76773a51a",
+      "sha256": "15eb1ffd017bbd47d0690ee2c07e66c9300a7277ff11b2f7d84b9971ebfc6b6a",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.zh-cn.isl",
-      "sha256": "2cf90b95bcc35854af44d379fc19564d3255a6760a7a4c131df55f4dce45fe8f",
+      "sha256": "34de1d265840637a59a302cd76554aa7ab9d59dc2409ed315a38987a6702668b",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "build/win32/i18n/messages.zh-tw.isl",
-      "sha256": "7ee867e95f56dc23f9e63924a82f8dbaad97ceb7b4ce1af9b556e80a28be1bde",
+      "sha256": "ddb5a8deff455ba1ac3991ad8eb0b785c9dfd558e0117c997e77022aa5b66857",
       "mode": 33206,
       "type": "file"
     },
@@ -17426,7 +17426,7 @@
     },
     {
       "path": "product.json",
-      "sha256": "1cf1292afa981431f6b5ed7472437565a875c7e8cd4e2f5ea548df7d98b726f0",
+      "sha256": "dfb9e7f6f053392d9dc2c2294cb4463c7dba914b07cd03d9f6761b1e1b963795",
       "mode": 33206,
       "type": "file"
     },
@@ -18422,7 +18422,7 @@
     },
     {
       "path": "src/main.ts",
-      "sha256": "eb540b71dddce41cef42d880f87e880c14987821b37ef735b106b34b949be5f0",
+      "sha256": "013b77e4eb24976a56e9422e15a7901e65ba9f01d9c728b93f8119f267fb6f2b",
       "mode": 33206,
       "type": "file"
     },
@@ -20360,7 +20360,7 @@
     },
     {
       "path": "src/vs/base/node/nls.ts",
-      "sha256": "0917505fc724edf2d35c2deb99555b5502d7276f2a4602c714596255bf752558",
+      "sha256": "cdf2ac5a8eb9e44f4037eb26ca9c8c127c9ff9b73a74b996e608671fbbfc1a91",
       "mode": 33206,
       "type": "file"
     },

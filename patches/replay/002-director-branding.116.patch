@@ -85,6 +85,125 @@ index 86565046e65d38746c2c4e1edc3313ab806c4be1..28def030c1264337e2ac02852190dec1
  		<key>PayloadType</key>
  		<string>Configuration</string>
  		<key>PayloadUUID</key>
+diff --git a/build/win32/i18n/messages.de.isl b/build/win32/i18n/messages.de.isl
+index 8d065e6c10ac1f090d167ed05a30421ee3e19184..f088e1fafe50ceed5916eba2ec61fb0ef34799c7 100644
+GIT binary patch
+delta 33
+ocmbQv(#f*n1EXYUK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60MCjGtpET3
+
+delta 47
+zcmeBVna;A|1EYFaW^rj^jzVxrX-a0kf^&XKszP~YQHnxhb_q~Cvp6%gs6<as4*;Rs
+B5h?%x
+
+diff --git a/build/win32/i18n/messages.en.isl b/build/win32/i18n/messages.en.isl
+index 8174a3fdaf79b907837851e042bf055ef7a7fdd8..c944553e60f4742da61535a467aa79e3445b7c01 100644
+GIT binary patch
+delta 25
+gcmX@Wc9d;{3A3O}W>IQ#Nq&*8bAC#yo}L~T0C6%10ssI2
+
+delta 20
+bcmX@gc7Sbz2{TVvuycM&W@)aTo*owfM@9xC
+
+diff --git a/build/win32/i18n/messages.es.isl b/build/win32/i18n/messages.es.isl
+index c2c56d43b2d4b69173940fcff841fb949e04c1ac..a18900d2ded8937629810b1450920d6527069bd8 100644
+GIT binary patch
+delta 33
+ocmZ3*vYKUs5R+tRK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60KM)D1poj5
+
+delta 32
+ncmZ3@vWjJc5R-&sa!F}oPG(hNUP`_~Sg><`N@i)Uo}L~6v(pOA
+
+diff --git a/build/win32/i18n/messages.fr.isl b/build/win32/i18n/messages.fr.isl
+index 348d6be00495f85625a465a138f358004754b4e9..f6f2ee9c3dbeb7a2fd3799d65fd23f423632fa69 100644
+GIT binary patch
+delta 33
+ocmdnbvV~=XG?Qd#K}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60K&ElEC2ui
+
+delta 44
+zcmdnOvY%yxG?R*NW^t;*1BI;o(jtYFRE4n2;?l$%h2WCXl+1hu=lqmZJv}`DTLcdk
+
+diff --git a/build/win32/i18n/messages.hu.isl b/build/win32/i18n/messages.hu.isl
+index ef3862ad35b105b7869c93ba272994c9a26fd1c6..d6e44d8e0364d296cca73307721d3be3e94dfb81 100644
+GIT binary patch
+delta 33
+ocmX@YvYTat5|d<TK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60L1tUKL7v#
+
+delta 42
+xcmdnZa)f1r5|fgnLRe;TX=08-a7k%OX1;=ReoCrBT2W?k@!OJ@#i@FFdH_2$4|xCp
+
+diff --git a/build/win32/i18n/messages.it.isl b/build/win32/i18n/messages.it.isl
+index 37e8559e34f914baef7cc54975a64d791efbd4ba..484abc0b640d9b735013b73dbf7b5dac499de657 100644
+GIT binary patch
+delta 33
+ocmeBX>0sILo>4NiASJORGcR4iC9^0sxg@_x*Ev5WRZmY30L{Y-p8x;=
+
+delta 36
+rcmeBR>1NsRo>9gzJv}qOC@(QLHLoOJAth5GEZ8|eC9^bFPfrg3^;!(X
+
+diff --git a/build/win32/i18n/messages.ja.isl b/build/win32/i18n/messages.ja.isl
+index ef10366b46993f6dce5cb54016812784ef451fdc..16419e34ae16be2d820b85b94922d262528b357e 100644
+GIT binary patch
+delta 33
+ocmbQwGKpowPe#emf|SIP%)E33m&~Hn<dXa%UFZCiR6RXC0Mexk#{d8T
+
+delta 46
+zcmbQlGM{C`Pe!${%;M6-9EISL(v-}61?T*fRE4Gwy%7__nzl9_X<F2Dr)j&Mo*n?T
+CXcN!?
+
+diff --git a/build/win32/i18n/messages.ko.isl b/build/win32/i18n/messages.ko.isl
+index f938c75e289b10a1a2bec08db3a4028d68110bf2..307ed28487da5708c65870005a0ebee2f74d3159 100644
+GIT binary patch
+delta 33
+ocmaFJe3N;@0Y=Htf|SIP%)E33m&~Hn<dXa%UFZCiR6RXC0Nq9m6#xJL
+
+delta 41
+xcmcb~{E&IW0Y=5J%;M6-9EISL(v-}61?T*fRE2%tw=O+!=GZ!ggZK6H^Z;&55_13m
+
+diff --git a/build/win32/i18n/messages.pt-br.isl b/build/win32/i18n/messages.pt-br.isl
+index de0264f1d3831097190a4ec674f33472d38c3439..5b1b393a77533ec33f654399aad958717b58c504 100644
+GIT binary patch
+delta 33
+ocmbQhGJ$2ocSgz3f|SIP%)E33m&~Hn<dXa%UFZCiR6RXC0MI}Sv;Y7A
+
+delta 33
+ocmbQhGJ$2ocScFalG4PS%&Nq^lzfGJg|J}f{FKbnTs=KK0MD!osQ>@~
+
+diff --git a/build/win32/i18n/messages.ru.isl b/build/win32/i18n/messages.ru.isl
+index 2b1d906e55dd4230a2dd4bfd026598218df2957c..c2c8c438516befc62ec00b85c4f74190cef80d7c 100644
+GIT binary patch
+delta 33
+ocmZ3*vY2H97n5XYK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60K66o^#A|>
+
+delta 40
+wcmZ3?vWjH`7n8!dhi~6Kdj0h6i>C@<nZ>1vISRogr74;D3eNc{sd{>P0HCW9c>n+a
+
+diff --git a/build/win32/i18n/messages.tr.isl b/build/win32/i18n/messages.tr.isl
+index 5eff39c24a76a06715fd5b94722acf8641897bf0..48e38f4f6bbf72799079ddc8e064a4b92735445d 100644
+GIT binary patch
+delta 33
+ocmbQr(#^8r6Qg8kK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60MEV)uK)l5
+
+delta 43
+ycmeBXnaZ-^6QgoiW^rj^jzVxrX-a0kf^&XKszUmoyyVoJoYcI`%KRcdJv{(tn-E6;
+
+diff --git a/build/win32/i18n/messages.zh-cn.isl b/build/win32/i18n/messages.zh-cn.isl
+index 629bf9ea40135debd615a0e1844fb9b50567e478..708ffa682b48368256a210524a782e1399bdfc47 100644
+GIT binary patch
+delta 33
+ocmZ3+ypVZA2cu+YK}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60La4&Y5)KL
+
+delta 38
+ucmZ3;yo`B62cz88zgKSU_;cZqLRe;TX=08-a7k%OX1;=ReoCsIo*n>c6cD@s
+
+diff --git a/build/win32/i18n/messages.zh-tw.isl b/build/win32/i18n/messages.zh-tw.isl
+index 8ed1f5a5061d7ad51370d8c9eb81f15a0fd6056f..c9b7ac6767498249357dcfb985fb417d28f4873e 100644
+GIT binary patch
+delta 33
+ocmZ3^yoh;2C!=I&K}uptW?s62OJ-4Oa!G!Xu5*4$s-B)60LdQ<Z2$lO
+
+delta 38
+ucmZ3)yqtMMC!^fb{mYV;f8JiK5SCe7nwX;yTvD2nnXllSpOUJlrw0H(9S<o0
+
 diff --git a/extensions/configuration-editing/src/configurationEditingMain.ts b/extensions/configuration-editing/src/configurationEditingMain.ts
 index 6e38e9dd7865afb04d432baedbfdde227b29df4a..6f1e8767dc0707f718d34c143d08fffea3ae0d48 100644
 --- a/extensions/configuration-editing/src/configurationEditingMain.ts
@@ -962,7 +1081,7 @@ index 7e4d6dcd5cc5a3b385415ee02f220f0047d24bc6..ddec564e74700219f35e39d7bc862413
 +				ShortDisplayName="Director-Code" />
  </Application>
 diff --git a/src/main.ts b/src/main.ts
-index 497eb26bce199baf813b9793e9cc3589e25b0d5b..9b291282011f6613fca081a36288cf155611d766 100644
+index 497eb26bce199baf813b9793e9cc3589e25b0d5b..5e1cdd7e5b50231e01aad35218d7fa3575e6cdcd 100644
 --- a/src/main.ts
 +++ b/src/main.ts
 @@ -141,7 +141,8 @@ if (userLocale) {
@@ -975,7 +1094,7 @@ index 497eb26bce199baf813b9793e9cc3589e25b0d5b..9b291282011f6613fca081a36288cf15
  	});
  }
  
-@@ -427,16 +427,16 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
+@@ -427,16 +428,16 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
  
  		// Default argv content
  		const defaultArgvConfigContent = [
@@ -1036,7 +1155,7 @@ index 497eb26bce199baf813b9793e9cc3589e25b0d5b..9b291282011f6613fca081a36288cf15
  }
  
 diff --git a/src/vs/base/node/nls.ts b/src/vs/base/node/nls.ts
-index 0bb75a118ff53919dff69d40495259713e44e3ce..66b60b0e63a4710516893881ef91b2c3c9d697a4 100644
+index 0bb75a11b81b4fafe0121ef490d814f84efb82fb..66b60b0e648137bb755ae9093407feb286c8672f 100644
 --- a/src/vs/base/node/nls.ts
 +++ b/src/vs/base/node/nls.ts
 @@ -8,6 +8,8 @@ import { promises } from 'fs';
