@@ -32,7 +32,7 @@
     },
     {
       "path": "patches/replay/002-director-branding.116.patch",
-      "sha256": "2831c1129a58f83fbdd26331251878be4f89555ca8cc9b786adbe7ae6fd9c7ca",
+      "sha256": "05ebf3b56e26bd271c5b7bcd4c99eb8c170ec616c5846b791c7156f2e0e315d5",
       "enabled": true,
       "status": "enabled",
       "layer": "director",
@@ -54,7 +54,7 @@
     },
     {
       "path": "patches/replay/003-director-product-build-release.116.patch",
-      "sha256": "49c16023a461a799d04ac9a716f04158c5bbb8b2d2dc420d1ad659a51050b73b",
+      "sha256": "6c443b4fec9b2b8785445f7052d79d9adee0fa2bafa7c3d7bc96a6ff413bb6f2",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

@@ -965,7 +965,17 @@ diff --git a/src/main.ts b/src/main.ts
 index 497eb26bce199baf813b9793e9cc3589e25b0d5b..9b291282011f6613fca081a36288cf155611d766 100644
 --- a/src/main.ts
 +++ b/src/main.ts
-@@ -427,16 +427,19 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
+@@ -141,7 +141,8 @@ if (userLocale) {
+ 		osLocale,
+ 		commit: product.commit,
+ 		userDataPath,
+-		nlsMetadataPath: import.meta.dirname
++		nlsMetadataPath: import.meta.dirname,
++		languagePackTranslationsRoot: getLanguagePackTranslationsRoot()
+ 	});
+ }
+ 
+@@ -427,16 +427,16 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
  
  		// Default argv content
  		const defaultArgvConfigContent = [
@@ -979,15 +989,89 @@ index 497eb26bce199baf813b9793e9cc3589e25b0d5b..9b291282011f6613fca081a36288cf15
 -			'// NOTE: Changing this file requires a restart of VSCodium.',
 +			'// NOTE: Changing this file requires a restart of Director-Code.',
  			'{',
-+			'	// Display language',
-+			'	"locale": "zh-cn",',
-+			'',
  			'	// Use software rendering instead of hardware accelerated rendering.',
 -			'	// This can help in cases where you see rendering issues in VSCodium.',
 +			'	// This can help in cases where you see rendering issues in Director-Code.',
  			'	// "disable-hardware-acceleration": true',
  			'}'
  		];
+@@ -462,6 +463,29 @@ function getArgvConfigPath(): string {
+ 	return path.join(os.homedir(), dataFolderName!, 'argv.json');
+ }
+ 
++function getLanguagePackTranslationsRoot(): string | undefined {
++	const extensionsDir = args['extensions-dir'];
++	if (typeof extensionsDir === 'string') {
++		return path.resolve(extensionsDir);
++	}
++
++	const vscodePortable = process.env['VSCODE_PORTABLE'];
++	if (vscodePortable) {
++		return path.join(vscodePortable, 'extensions');
++	}
++
++	let dataFolderName = product.dataFolderName;
++	if (!dataFolderName) {
++		return undefined;
++	}
++
++	if (process.env['VSCODE_DEV']) {
++		dataFolderName = `${dataFolderName}-dev`;
++	}
++
++	return path.join(os.homedir(), dataFolderName, 'extensions');
++}
++
+ function configureCrashReporter(): void {
+ 	let crashReporterDirectory = args['crash-reporter-directory'];
+ 	let submitURL = '';
+@@ -735,7 +759,8 @@ async function resolveNlsConfiguration(): Promise<INLSConfiguration> {
+ 		osLocale,
+ 		commit: product.commit,
+ 		userDataPath,
+-		nlsMetadataPath: import.meta.dirname
++		nlsMetadataPath: import.meta.dirname,
++		languagePackTranslationsRoot: getLanguagePackTranslationsRoot()
+ 	});
+ }
+ 
+diff --git a/src/vs/base/node/nls.ts b/src/vs/base/node/nls.ts
+index 0bb75a118ff53919dff69d40495259713e44e3ce..66b60b0e63a4710516893881ef91b2c3c9d697a4 100644
+--- a/src/vs/base/node/nls.ts
++++ b/src/vs/base/node/nls.ts
+@@ -8,6 +8,8 @@ import { promises } from 'fs';
+ import { mark } from '../common/performance.js';
+ import { ILanguagePacks, INLSConfiguration } from '../../nls.js';
+ import { Promises } from './pfs.js';
++import { isEqualOrParent } from '../common/extpath.js';
++import { isWindows } from '../common/platform.js';
+ 
+ export interface IResolveNLSConfigurationContext {
+ 
+@@ -37,9 +39,14 @@ export interface IResolveNLSConfigurationContext {
+ 	 * Locale as defined by the OS (e.g. `app.getPreferredSystemLanguages()`).
+ 	 */
+ 	readonly osLocale: string;
++
++	/**
++	 * Optional root directory that language pack translation files must live under.
++	 */
++	readonly languagePackTranslationsRoot?: string;
+ }
+ 
+-export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPath, commit, nlsMetadataPath }: IResolveNLSConfigurationContext): Promise<INLSConfiguration> {
++export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPath, commit, nlsMetadataPath, languagePackTranslationsRoot }: IResolveNLSConfigurationContext): Promise<INLSConfiguration> {
+ 	mark('code/willGenerateNls');
+ 
+ 	if (
+@@ -70,6 +77,7 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
+ 			typeof languagePack.hash !== 'string' ||
+ 			!languagePack.translations ||
+ 			typeof mainLanguagePackPath !== 'string' ||
++			(languagePackTranslationsRoot && !isEqualOrParent(mainLanguagePackPath, languagePackTranslationsRoot, isWindows)) ||
+ 			!(await Promises.exists(mainLanguagePackPath))
+ 		) {
+ 			return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
 diff --git a/src/vs/code/electron-main/app.ts b/src/vs/code/electron-main/app.ts
 index bf445da3640782b00d89fd9d75be6dbe45cc478e..04544c73f37abf5dda748e02011d0a4d3592334f 100644
 --- a/src/vs/code/electron-main/app.ts

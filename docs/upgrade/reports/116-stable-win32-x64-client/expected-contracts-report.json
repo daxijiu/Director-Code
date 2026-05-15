@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "expected-contracts",
   "status": "passed",
-  "generatedAt": "2026-05-15T05:32:46.605Z",
+  "generatedAt": "2026-05-15T07:29:55.305Z",
   "mode": "validate",
   "checks": {
     "product": "passed",
@@ -19,8 +19,8 @@
       "source": "vscode.generated/layers/director/vscode/product.json",
       "expected": "docs/upgrade/expected/116-stable-win32-x64-client/product.expected.json",
       "status": "passed",
-      "sourceSha": "301dce4bd1baadddc5daf6f5ff496a4a8b07558fa56464bc0dfd758c47e90130",
-      "expectedSha": "301dce4bd1baadddc5daf6f5ff496a4a8b07558fa56464bc0dfd758c47e90130"
+      "sourceSha": "1cf1292afa981431f6b5ed7472437565a875c7e8cd4e2f5ea548df7d98b726f0",
+      "expectedSha": "1cf1292afa981431f6b5ed7472437565a875c7e8cd4e2f5ea548df7d98b726f0"
     },
     {
       "key": "package",

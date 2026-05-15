@@ -1064,6 +1064,29 @@ Remove-Item -Recurse -Force "$env:APPDATA\Director-Code\clp" -ErrorAction Silent
 - 每个外部 ACP Agent 通过 registerDynamicAgent 注册
 - 详细计划见 `.cursor/plan-04-phase2-acp.md`
 
+### 116 NLS 文字错乱热修复 (2026-05-15)
+
+**根因**: 1.116 包仍使用 `.vscode-oss` 作为 `dataFolderName`，并且默认 `argv.json` 模板强制 `"locale": "zh-cn"`；本机旧缓存 `%APPDATA%\Director-Code\languagepacks.json` 指向 1.110 的中文语言包，导致 1.116 NLS key 与旧翻译索引错位，界面文字显示成不相关内容。
+
+**修复**:
+1. `dataFolderName` 改为 `.director-code`，隔离 VSCodium/Code OSS 的用户扩展目录。
+2. 移除 `src/main.ts` 默认 `argv.json` 的 `"locale": "zh-cn"` 写入，新用户不再默认加载中文语言包。
+3. `resolveNLSConfiguration()` 增加 Director 扩展根目录约束，拒绝加载当前 Director 扩展目录之外的语言包翻译文件，避免旧 `.vscode-oss` 语言包污染。
+
+**验证**:
+- `validate-series`
+- `validate-product-overrides`
+- `compile-check-ts-native`
+- `canonical-manifest --write` 后复跑通过
+- `expected-contracts`
+- `scripts/build-director-116.ps1 -SkipReplay`
+
+**打包产物**:
+- `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe`
+  - sha256: `134A8073E0F76184B56E4C8E1989D0F77F565201FF67872D47C1D4BE289BD6FA`
+- `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe`
+  - sha256: `53AB41750F9751C9CDE9FA8272BC728D74EE597A32EE9DB2D0DD4D4C2C0CDA11`
+
 ## 编码规范提醒
 
 - 所有 import 以 `.js` 结尾

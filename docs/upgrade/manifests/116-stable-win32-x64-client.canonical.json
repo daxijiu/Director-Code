@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T05:32:48.103Z",
-  "treeHash": "5defe1f8cf691d2135f50a9b6954bde4c28c2e747d13e9c4887785729f0511a0",
+  "generatedAt": "2026-05-15T07:29:57.105Z",
+  "treeHash": "9159a028ca01a67f4610f49fb79bf7bfb5a250c69cc58621eee4d2ccbd1f0be9",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -17426,7 +17426,7 @@
     },
     {
       "path": "product.json",
-      "sha256": "301dce4bd1baadddc5daf6f5ff496a4a8b07558fa56464bc0dfd758c47e90130",
+      "sha256": "1cf1292afa981431f6b5ed7472437565a875c7e8cd4e2f5ea548df7d98b726f0",
       "mode": 33206,
       "type": "file"
     },
@@ -18422,7 +18422,7 @@
     },
     {
       "path": "src/main.ts",
-      "sha256": "9a77c15701fc4a932082c6593935d78d2226e7aac68dfc14cf00eace69b751d5",
+      "sha256": "eb540b71dddce41cef42d880f87e880c14987821b37ef735b106b34b949be5f0",
       "mode": 33206,
       "type": "file"
     },
@@ -20360,7 +20360,7 @@
     },
     {
       "path": "src/vs/base/node/nls.ts",
-      "sha256": "85a502cb0f456ddba4a09f57df2b6b5f958407fbac0ae057703169bf42ec7506",
+      "sha256": "0917505fc724edf2d35c2deb99555b5502d7276f2a4602c714596255bf752558",
       "mode": 33206,
       "type": "file"
     },

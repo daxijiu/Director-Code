@@ -2,7 +2,7 @@
   "nameShort": "Director-Code",
   "nameLong": "Director-Code",
   "applicationName": "director-code",
-  "dataFolderName": ".vscode-oss",
+  "dataFolderName": ".director-code",
   "win32MutexName": "directorcode",
   "licenseName": "MIT",
   "licenseUrl": "https://github.com/daxijiu/Director-Code/blob/master/LICENSE",
