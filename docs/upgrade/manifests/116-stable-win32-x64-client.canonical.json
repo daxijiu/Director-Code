@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T04:19:42.123Z",
-  "treeHash": "faf9a5d2805cc75788d5d2e45be9d2ae999821cfac62d4eab5565e766d0965b2",
+  "generatedAt": "2026-05-15T04:35:43.372Z",
+  "treeHash": "a57a47c82837662cdf90bed682d0081575a378bd0c9ffef5313785c06390d02d",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39698,7 +39698,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts",
-      "sha256": "4823e8950b41ed6dcdd3989a78108dd8fba2a1e1e20388bb47df80667721d35e",
+      "sha256": "8cb037a1a128bc5f200d472c38b05a146f17d13b9b13522aee5d39743cf9e5de",
       "mode": 33206,
       "type": "file"
     },
@@ -41827,18 +41827,6 @@
       "type": "file"
     },
     {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
-      "sha256": "edd19b131cbc757c81eb5daee94f6799f3dbb426f9ab03776de35be882967374",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts",
-      "sha256": "c17d2ca461cfb46e0e0e05ea6cbff3a95ad4a3c8190b7f4209fd13279e09a319",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
       "path": "src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts",
       "sha256": "d15ce6ce662089fffa3170ac9b8dca45277601f4bb39b636f2e8e368a63c46ac",
       "mode": 33206,
@@ -43093,12 +43081,6 @@
       "type": "file"
     },
     {
-      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts",
-      "sha256": "76b1f803c006c5c9dd0ad7db380b416137a0c5a48462eefe85504e4ad141b02c",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts",
       "sha256": "05bda586a7211ec28be7d6d06b51eadc0e0be7c7fe4ad23b535fb56b6b90b8c0",
       "mode": 33206,
@@ -43107,12 +43089,6 @@
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts",
       "sha256": "85c4156f3d32407344f3a6f4c600321bcbe146de6e17d11d419b58a8d2f56bb6",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts",
-      "sha256": "d7b7ddc28c367b587d6765303e0baa46588bfc3d8aff042fad1a3cde55ab41e8",
       "mode": 33206,
       "type": "file"
     },
@@ -45140,7 +45116,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts",
-      "sha256": "c6467cff9e076cc7b6368ec5d941df9ff34a071d5d8e71131dfba92095bacdb5",
+      "sha256": "4e36083c685ce879be1f5cd5cbd8c5aea7dda2a7ec3c70269611ab2a00c5dd13",
       "mode": 33206,
       "type": "file"
     },
@@ -45247,6 +45223,18 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts",
+      "sha256": "116b5f91b4ac2c1ee1b41da568b790d20543644c1ff7bb6dc52b1a2186f67e22",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts",
+      "sha256": "10e0e96e328e372f5db9ffc45f7c1037c62210fc884e238593a60f9729121e5a",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts",
       "sha256": "213626a4aaf505456f787760658651d89046dc14b18e6f2042fa881f6d8db0bb",
       "mode": 33206,
@@ -45339,6 +45327,18 @@
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts",
       "sha256": "fec13e04ae73d90acb76b3d7b4345068446f4c4e8523d50e0f8a189781482cdb",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts",
+      "sha256": "2b8d7ddc6ebac01ddd20e99d67c5392136e00153446430e1db7afec9732d726a",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts",
+      "sha256": "ab36f1b3c8a126c49d0e2fbbd86ff37e3b6eca76f1e03cbcb6fffa52dfdb3b71",
       "mode": 33206,
       "type": "file"
     },

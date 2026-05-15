@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-15T04:16:13.378Z",
+  "generatedAt": "2026-05-15T04:32:15.659Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -233,8 +233,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 81,
-      "size": 865222,
-      "sha256": "c7ee36dad520e7270cd5477ad9532a6924f75cfe9a3b71fcdaad53d6117e7b16"
+      "size": 865214,
+      "sha256": "3fda04adb2b42956fe25c8073991bd73b8a5555a5def746ac9ad25cc29c549fd"
     },
     {
       "stage": "chat-built-in-mode",
@@ -299,24 +299,24 @@
       "stage": "chat-editing",
       "path": "patches/replay/008-director-chat-editing.116.patch",
       "files": [
-        "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
-        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts"
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts",
+        "src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts"
       ],
       "fileCount": 2,
-      "size": 21221,
-      "sha256": "1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9"
+      "size": 21321,
+      "sha256": "c6278007133640563dabcb0d3439d3cc91eb403528942807df99af72ef418b3b"
     },
     {
       "stage": "edit-tools",
       "path": "patches/replay/009-director-edit-tools.116.patch",
       "files": [
         "src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts",
-        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts"
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts",
+        "src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts"
       ],
       "fileCount": 3,
-      "size": 45202,
-      "sha256": "b596361503e6e17bccadea70d36d96e0939364699f2a758a4aa0dfea3f4e32b9"
+      "size": 45326,
+      "sha256": "9e1d2be7be60aa045abb2fbed620c28c61b6bf68ff9997395c65b9e2bad3c84c"
     }
   ]
 }

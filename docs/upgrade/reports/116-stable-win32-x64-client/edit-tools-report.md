@@ -2,15 +2,15 @@
 
 Date: 2026-05-14
 
-Status: Phase 4 implementation in progress; generated-tree tests passed before clean replay validation.
+Status: Phase 4 internal refactor complete; clean replay validation passed.
 
 ## Tools
 
-Phase 4 adds these Director-owned model-facing tools:
+Phase 4 preserves these Director-owned model-facing tools:
 
 - `apply_patch`
-- `create_file`
-- `create_directory`
+- `createFile`
+- `createDirectory`
 - `replace_string_in_file`
 - `multi_replace_string_in_file`
 
@@ -20,7 +20,7 @@ They are allowed only in Edit and Agent registry policy. Ask and Inline do not r
 
 Text/file tools call `DirectorChatEditingAdapter.emitSingleFileTextEdit(...)`, so edits are emitted as `textEdit` start/progress/done parts bound by `chatSessionResource` and `chatRequestId`.
 
-`create_directory` uses the Phase 3 Director-owned directory review transaction:
+`createDirectory` uses the Director-owned directory review transaction:
 
 1. Resolve and validate the target inside the workspace.
 2. Reject existing target paths.
@@ -35,11 +35,18 @@ Text/file tools call `DirectorChatEditingAdapter.emitSingleFileTextEdit(...)`, s
 - Binary and large text files are rejected for text replacement tools.
 - `replace_string_in_file` rejects ambiguous matches unless `replaceAll` is explicit.
 - `multi_replace_string_in_file` rejects overlapping replacement ranges.
-- `create_file` rejects duplicate targets unless `overwrite` is explicitly true.
+- `createFile` rejects duplicate targets unless `overwrite` is explicitly true.
 - `apply_patch` supports conservative unified diff hunks, rejects mismatched hunks, rejects deletion in v1, and emits reviewable edits rather than writing files directly.
+
+## Ownership
+
+- Edit tool implementation: `src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts`
+- Chat Editing adapter: `src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts`
+- Thin registration hook: `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`
+- Tests: `src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts` and `src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts`
 
 ## Validation
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
-- `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
+- `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)

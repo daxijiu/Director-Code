@@ -1,5 +1,30 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 4 edit tools internal refactor completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 4 edit tools internal refactor is implemented and replay-landed.
+- Moved `directorChatEditingAdapter.ts` from `src/vs/workbench/contrib/chat/common/agentEngine/editing/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/editing/`.
+- Moved `directorEditTools.ts` from `src/vs/workbench/contrib/chat/common/agentEngine/editTools/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/`.
+- Moved Chat Editing adapter and edit-tool tests into `src/vs/workbench/contrib/directorCode/test/common/agentEngine/`.
+- `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts` remains as the thin upstream chat registration hook and imports the Director-owned implementation.
+- Model-facing edit names are unchanged: `apply_patch`, `createFile`, `createDirectory`, `replace_string_in_file`, and `multi_replace_string_in_file`.
+- `scripts/upgrade/generate-director-patches.mjs` now classifies moved `directorCode/common/agentEngine/editing/*` as `008` and `directorCode/common/agentEngine/editTools/*` as `009`, preserving the existing semantic replay stages.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/008-director-chat-editing.116.patch`, `patches/replay/009-director-edit-tools.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `chat-editing-contract-report.md`, `edit-tools-report.md`, `mode-routing-report.md`, `tool-migration-report.md`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree dependency restore with `npm ci`; first attempt hit Windows native rebuild file locks and the retry passed.
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 5 commercial/name grep gate and product/gallery/marketplace audit; keep `extensions` hidden unless that gate passes and product policy is documented.
+
 ## 2026-05-15 latest memory: Phase 3 fetch/GitHub facade cutover completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

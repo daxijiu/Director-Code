@@ -255,14 +255,18 @@ function isToolLayer(filePath) {
 function isChatEditing(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editing/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editing/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/directorCode/common/agentEngine/editing/')) return true;
   if (filePath === 'src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts') return true;
+  if (filePath === 'src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts') return true;
   return false;
 }
 
 function isEditTools(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/common/agentEngine/editTools/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentEngine/editTools/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/')) return true;
   if (filePath === 'src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts') return true;
+  if (filePath === 'src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts') return true;
   return false;
 }
 

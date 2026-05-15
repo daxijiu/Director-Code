@@ -11611,7 +11611,7 @@ index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..b5ea995d8b05dcaaba562061ea0cf7be3635d82a
+index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd5f555328
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 @@ -0,0 +1,653 @@
@@ -11648,7 +11648,7 @@ index 0000000000000000000000000000000000000000..b5ea995d8b05dcaaba562061ea0cf7be
 +import { IModelResolverService, normalizeModelResolverBaseURL } from '../../common/agentEngine/modelResolver.js';
 +import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../common/agentEngine/compact.js';
 +import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../common/agentEngine/directorChatModeRouting.js';
-+import { DirectorChatEditingAdapter, parseDirectorInlineReplacement } from '../../../chat/common/agentEngine/editing/directorChatEditingAdapter.js';
++import { DirectorChatEditingAdapter, parseDirectorInlineReplacement } from '../../common/agentEngine/editing/directorChatEditingAdapter.js';
 +import type {
 +	IChatAgentImplementation,
 +	IChatAgentRequest,

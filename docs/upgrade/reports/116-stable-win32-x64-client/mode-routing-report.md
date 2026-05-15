@@ -32,8 +32,8 @@ EditorInline is treated as a separate inline edit path. It receives selected edi
 
 - `004-director-agent-engine.116.patch`: mode routing, Agent participant mode registration, request plumbing, prompt shaping, context normalization, and mode routing tests.
 - `005-director-chat-built-in-mode.116.patch`: Agent Customizations Director Code bridge and settings management command wiring.
-- `008-director-chat-editing.116.patch`: inline replacement parser and inline `textEdit` emission adapter.
-- `009-director-edit-tools.116.patch`: browser-compatible edit tool test assertions touched during Phase 5.
+- `008-director-chat-editing.116.patch`: inline replacement parser and inline `textEdit` emission adapter, now implemented under `directorCode/common/agentEngine/editing`.
+- `009-director-edit-tools.116.patch`: reviewable edit tools, now implemented under `directorCode/common/agentEngine/editTools` with a thin chat contribution hook.
 
 ## Validation
 
@@ -41,6 +41,7 @@ EditorInline is treated as a separate inline edit path. It receives selected edi
 - Dependency restore after clean materialize: `npm ci`
 - TypeScript: `npm run compile-check-ts-native`
 - Transpile: `npm run gulp -- transpile-client-esbuild`
+- Director node tests: `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)
 - Director browser tests: `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`21 passing`)
 - Inline request parity smoke: `npm run test-browser-no-install -- --grep "hover mode sendRequest"` (`2 passing`)
 - Replay validators: `validate-series`, `validate-product-overrides`, `expected-contracts`

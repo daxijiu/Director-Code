@@ -1,8 +1,8 @@
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..932ef3ccab477f4f6c72eb7988add0c1d2d5ed65
+index 0000000000000000000000000000000000000000..58d58aede50ca8527c90fcef10700ec70720ed8a
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts
 @@ -0,0 +1,382 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -17,8 +17,8 @@ index 0000000000000000000000000000000000000000..932ef3ccab477f4f6c72eb7988add0c1
 +import { IRange } from '../../../../../../editor/common/core/range.js';
 +import { TextEdit } from '../../../../../../editor/common/languages.js';
 +import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
-+import { IChatProgress, IChatService } from '../../chatService/chatService.js';
-+import { IChatModel, IChatRequestModel } from '../../model/chatModel.js';
++import { IChatProgress, IChatService } from '../../../../chat/common/chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../../../chat/common/model/chatModel.js';
 +
 +export interface DirectorPanelChatEditBinding {
 +	readonly chatSessionResource: URI;
@@ -386,11 +386,11 @@ index 0000000000000000000000000000000000000000..932ef3ccab477f4f6c72eb7988add0c1
 +	const match = raw.match(/^\s*(`{3,}|~{3,})[^\r\n]*\r?\n([\s\S]*?)\r?\n\1\s*$/);
 +	return match?.[2];
 +}
-diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
+diff --git a/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..08ed6f10022a90003f01c98bd1bcd2d928d0f380
+index 0000000000000000000000000000000000000000..a4290fe400981438d1a1672cf697b4a65b04dc02
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts
++++ b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts
 @@ -0,0 +1,195 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -403,8 +403,8 @@ index 0000000000000000000000000000000000000000..08ed6f10022a90003f01c98bd1bcd2d9
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 +import { TextEdit } from '../../../../../../editor/common/languages.js';
 +import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
-+import { IChatProgress, IChatService } from '../../../common/chatService/chatService.js';
-+import { IChatModel, IChatRequestModel } from '../../../common/model/chatModel.js';
++import { IChatProgress, IChatService } from '../../../../chat/common/chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../../../chat/common/model/chatModel.js';
 +import { DirectorChatEditingAdapter, DirectorInternalSingleFileEditProbe, formatDirectorChatEditToolResult, parseDirectorInlineReplacement } from '../../../common/agentEngine/editing/directorChatEditingAdapter.js';
 +
 +suite('Director Chat Editing Adapter', () => {

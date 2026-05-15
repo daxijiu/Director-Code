@@ -167,19 +167,19 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 - Central registry: `src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts`
 - Read-only tools: `src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts`
 - Read-only tool registration hook: `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts`
-- Chat Editing adapter: `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`
-- Reviewable edit tools: `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts`
+- Chat Editing adapter: `src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts`
+- Reviewable edit tools: `src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts`
 - Reviewable edit tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`
 - Agent definitions and invocation mapping consume registry-filtered tools in `src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts`
 - Director Agent requests pass the Agent mode policy explicitly in `src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts`
-- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`, and `src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts`
+- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts`, `src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts`, and `src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts`
 
 ## Phase 1-5 Validation
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
-- `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts` (`14 passing`)
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts` (`17 passing`)
+- `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts` (`87 passing`)
 - `npm run test-browser-no-install -- --grep "Director VSCodeToolBridge"` (`3 passing`; upstream browser-test runner also logs known long-referrer warnings)
 - `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`21 passing`)

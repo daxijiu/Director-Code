@@ -27,7 +27,7 @@ In VS Code 116, `ChatModel` merges `textEdit` progress into `textEditGroup` resp
 
 The synthetic single-file edit probe is implemented as `DirectorInternalSingleFileEditProbe` in:
 
-- `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`
+- `src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts`
 
 It is not registered as a language model tool, command, setting, menu item, or user-visible chat tool. It exists only as an internal contract probe and test harness for Phase 4 edit tools.
 
@@ -74,4 +74,4 @@ Panel Chat Editing is not sufficient for EditorInline. Phase 5 must add a separa
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
-- `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`
+- Included in `npm run test-node -- --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts --run src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`21 passing`)

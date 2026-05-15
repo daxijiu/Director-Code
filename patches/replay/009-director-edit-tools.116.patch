@@ -1,6 +1,6 @@
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..6294f5bd8afd33f8deadeb7496d39eb85c91510d
+index 0000000000000000000000000000000000000000..965befdbdfa47c8d5e856820e9ebba77635cc5b7
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
 @@ -0,0 +1,61 @@
@@ -30,7 +30,7 @@ index 0000000000000000000000000000000000000000..6294f5bd8afd33f8deadeb7496d39eb8
 +	DirectorReplaceStringInFileTool,
 +	DirectorReplaceStringInFileToolData,
 +	rejectDirectorDirectoryCreationTransaction,
-+} from '../../../common/agentEngine/editTools/directorEditTools.js';
++} from '../../../../directorCode/common/agentEngine/editTools/directorEditTools.js';
 +import { ILanguageModelToolsService, IToolData, IToolImpl } from '../../../common/tools/languageModelToolsService.js';
 +
 +export class DirectorEditToolsContribution extends Disposable implements IWorkbenchContribution {
@@ -65,11 +65,11 @@ index 0000000000000000000000000000000000000000..6294f5bd8afd33f8deadeb7496d39eb8
 +registerWorkbenchContribution2(DirectorEditToolsContribution.ID, DirectorEditToolsContribution, WorkbenchPhase.AfterRestored);
 +
 +export { DirectorEditToolData };
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..ede72ec9c3577de111c9b7b3e15b931534b2841d
+index 0000000000000000000000000000000000000000..b3e7ada8c90ac51c587b578b8de5d87e2d40434c
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts
 @@ -0,0 +1,810 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -85,8 +85,8 @@ index 0000000000000000000000000000000000000000..ede72ec9c3577de111c9b7b3e15b9315
 +import { IFileService } from '../../../../../../platform/files/common/files.js';
 +import { IWorkspaceContextService } from '../../../../../../platform/workspace/common/workspace.js';
 +import { detectEncodingFromBuffer } from '../../../../../services/textfile/common/encoding.js';
-+import { IChatService } from '../../chatService/chatService.js';
-+import { CountTokensCallback, IToolData, IToolImpl, IToolInvocation, IToolResult, ToolDataSource, ToolProgress } from '../../tools/languageModelToolsService.js';
++import { IChatService } from '../../../../chat/common/chatService/chatService.js';
++import { CountTokensCallback, IToolData, IToolImpl, IToolInvocation, IToolResult, ToolDataSource, ToolProgress } from '../../../../chat/common/tools/languageModelToolsService.js';
 +import { DirectorChatEditingAdapter, DirectorPanelChatEditBinding, formatDirectorChatEditToolResult } from '../editing/directorChatEditingAdapter.js';
 +
 +export const DirectorApplyPatchToolId = 'director_apply_patch';
@@ -881,11 +881,11 @@ index 0000000000000000000000000000000000000000..ede72ec9c3577de111c9b7b3e15b9315
 +	}
 +	return starts[lineNumber - 1];
 +}
-diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
+diff --git a/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..4fa6c4e2dd9cf55137d2947152aa30658f8af0cb
+index 0000000000000000000000000000000000000000..e31d30408f88bf09076e332f71c202c751e95a4d
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
++++ b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts
 @@ -0,0 +1,206 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -907,9 +907,9 @@ index 0000000000000000000000000000000000000000..4fa6c4e2dd9cf55137d2947152aa3065
 +	DirectorReplaceStringInFileTool,
 +	DirectorMultiReplaceStringInFileTool,
 +} from '../../../common/agentEngine/editTools/directorEditTools.js';
-+import { IChatProgress, IChatService } from '../../../common/chatService/chatService.js';
-+import { IChatModel, IChatRequestModel } from '../../../common/model/chatModel.js';
-+import { IToolInvocation, IToolResult } from '../../../common/tools/languageModelToolsService.js';
++import { IChatProgress, IChatService } from '../../../../chat/common/chatService/chatService.js';
++import { IChatModel, IChatRequestModel } from '../../../../chat/common/model/chatModel.js';
++import { IToolInvocation, IToolResult } from '../../../../chat/common/tools/languageModelToolsService.js';
 +
 +suite('Director Edit Tools', () => {
 +
