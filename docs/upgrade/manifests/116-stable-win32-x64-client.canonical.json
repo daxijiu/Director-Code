@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-14T16:40:37.617Z",
-  "treeHash": "51e697bbe67f0eaa0ea0c9ebaa7611a74512cfe9c15326f392fd8b0629df0972",
+  "generatedAt": "2026-05-15T02:40:59.778Z",
+  "treeHash": "9fbb25466642bf43f7df36d7502814467e8c3e0206a6d412d8d239a544282566",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -41834,7 +41834,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
-      "sha256": "d0b55acc42af23e931552bf0a3833ff99d99dcf262d7cb670c96dd35f1b13338",
+      "sha256": "b53fc32d377cefc8b9b0f492881f4341bef622f0757cdb916ba6286862495869",
       "mode": 33206,
       "type": "file"
     },
@@ -42589,6 +42589,12 @@
       "type": "file"
     },
     {
+      "path": "src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts",
+      "sha256": "877bbb30cbd941dc6a864a4760fd11888e41068cc90c8c24d95136826535befc",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentHost/agentHostEditingSession.test.ts",
       "sha256": "954b8cf534a0e724c622c5fa8428642f5ecc1a3c91171fe9476b765e4eafc2ad",
       "mode": 33206,
@@ -43130,7 +43136,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
-      "sha256": "b33b6cbb46987284384f3e52885748f94d25e2f65b7e4312d39894d5253bd31d",
+      "sha256": "15e2519eff5ffe8d8c249590a29b27b468b2dc8220aae07e42e672fb568b184b",
       "mode": 33206,
       "type": "file"
     },
@@ -45194,7 +45200,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts",
-      "sha256": "92174eaa89fd81b46ba6c9c6c811364b0d7890e47b64da9112b75b42c6f5cfeb",
+      "sha256": "a4c52e40b5007ed1fa3123561e3a12115ac0ea74bef61ab0afef89ab7bba515a",
       "mode": 33206,
       "type": "file"
     },

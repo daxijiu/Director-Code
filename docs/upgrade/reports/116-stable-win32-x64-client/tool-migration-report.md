@@ -2,13 +2,13 @@
 
 Profile: `116-stable-win32-x64-client`
 
-Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
+Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 3 direct-reuse browser/Mermaid allowlist wave; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
 
 This report is intentionally stable and sanitized. It contains no API keys, tokens, user paths, volatile timestamps, or machine-local runtime state.
 
 ## Source
 
-The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
+The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. The first thin-layer Phase 3 implementation wave directly reuses VS Code core browser tools and the retained Mermaid extension tool through Director registry policy. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
 
 The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Phase 5 mode routing was wired. The Director bridge now chooses the registry-filtered list per request mode, while EditorInline intentionally receives no model-callable tools.
 
@@ -58,9 +58,11 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `apply_patch`
 - `artifactRules`
 - `artifacts`
+- `clickElement`
 - `createAndRunTask`
 - `create_directory`
 - `create_file`
+- `dragElement`
 - `file_search`
 - `get_changed_files`
 - `get_errors`
@@ -68,19 +70,28 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `getTerminalOutput`
 - `github_repo`
 - `grep_search`
+- `handleDialog`
+- `hoverElement`
 - `killTerminal`
 - `list_dir`
 - `multi_replace_string_in_file`
+- `navigatePage`
+- `openBrowserPage`
 - `read_file`
+- `readPage`
+- `renderMermaidDiagram`
 - `replace_string_in_file`
 - `runInTerminal`
+- `runPlaywrightCode`
 - `runSubagent`
 - `runTask`
+- `screenshotPage`
 - `sendToTerminal`
 - `task_complete`
 - `terminalLastCommand`
 - `terminalSelection`
 - `todo`
+- `typeInPage`
 - `usages`
 - `view_image`
 - `vscode_fetchWebPage_internal`
@@ -129,6 +140,16 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `run_task` | `runTask` | `runTask` | execute | Agent | keep | Task execution remains Agent-only. |
 | `create_and_run_task` | `createAndRunTask` | `createAndRunTask` | execute | Agent | keep | Task creation/execution remains Agent-only. |
 | `get_task_output` | `getTaskOutput` | `getTaskOutput` | read | Agent | keep | Task output context remains Agent-only. |
+| `open_browser_page` | `openBrowserPage` | `openBrowserPage` | execute | Agent | keep | Directly reuses the VS Code core browser open tool. Director injects pre-tool approval through the bridge so global auto-approve cannot bypass it. |
+| `read_page` | `readPage` | `readPage` | read | Agent | keep | Directly reuses the VS Code core page reader. Phase 3 conservatively injects Director session/page approval before invocation. |
+| `screenshot_page` | `screenshotPage` | `screenshotPage` | read | Agent | keep | Directly reuses the VS Code core screenshot tool. Phase 3 conservatively injects Director session/page approval before invocation. |
+| `navigate_page` | `navigatePage` | `navigatePage` | execute | Agent | keep | Directly reuses the VS Code core navigation tool with Director pre-approval and upstream network filtering. |
+| `click_element` | `clickElement` | `clickElement` | execute | Agent | keep | Directly reuses the VS Code core click tool. Director pre-approval is injected before invocation. |
+| `drag_element` | `dragElement` | `dragElement` | execute | Agent | keep | Directly reuses the VS Code core drag tool. Director pre-approval is injected before invocation. |
+| `hover_element` | `hoverElement` | `hoverElement` | execute | Agent | keep | Directly reuses the VS Code core hover tool. It remains Agent-only and registry-gated, with no extra mutation approval in this wave. |
+| `type_in_page` | `typeInPage` | `typeInPage` | execute | Agent | keep | Directly reuses the VS Code core typing/key tool. Director pre-approval is injected for input/submission risk. |
+| `run_playwright_code` | `runPlaywrightCode` | `runPlaywrightCode` | execute | Agent | keep | Directly reuses the VS Code core Playwright runner. Director pre-approval is injected; upstream result details already carry submitted code and result summary. |
+| `handle_dialog` | `handleDialog` | `handleDialog` | execute | Agent | keep | Directly reuses the VS Code core dialog handler. Director pre-approval is injected for modal and file-selection risk. |
 | `vscode_renameSymbol` | `rename` | `rename` | write | none | defer | Direct rename must wait for Phase 3/4 reviewable edit contract. |
 | `vscode_editFile_internal` |  | `vscode_editFile_internal` | write | none | hide | Internal edit tool depends on editing-session/last-request behavior and must not sit beside Director-native reviewable edit tools. |
 | `setup_tools_createNewWorkspace` | `new` | `new` | write | none | defer | Workspace scaffolding is mutation and needs a reviewed policy. |
@@ -137,8 +158,9 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `vscode_resolveDebugEventDetails_internal` | `resolveDebugEventDetails` | `resolveDebugEventDetails` | read | none | defer | Debug details need a separate runtime policy review. |
 | `vscode_searchExtensions_internal` | `extensions` | `extensions` | read | none | defer | Extension marketplace search is outside the Phase 1/2 coding-context gate. |
 | `vscode_installExtensions` | `installExtensions` | `installExtensions` | write | none | hide | Extension installation is a product/workspace mutation and is not exposed by default. |
+| `renderMermaidDiagram` | `renderMermaidDiagram` | `renderMermaidDiagram` | read | Agent | keep | Directly reuses the retained `extensions/mermaid-chat-features` language model tool. Director does not reimplement Mermaid rendering. |
 
-Unreviewed raw tools from extension, MCP, user, browser automation, or future VS Code contributions are hidden from Director's model-facing tool list until a Director registry entry assigns a disposition and mode policy.
+Unreviewed raw tools from extension, MCP, user, browser automation, or future VS Code contributions are hidden from Director's model-facing tool list until a Director registry entry assigns a disposition and mode policy. `extensions` remains intentionally hidden until the Phase 5 product/gallery/marketplace policy and commercial/name grep gate are completed.
 
 ## Implementation Checkpoints
 
@@ -148,14 +170,16 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 - Chat Editing adapter: `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`
 - Reviewable edit tools: `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts`
 - Reviewable edit tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`
-- Agent definitions and invocation mapping consume registry-filtered tools in `src/vs/workbench/contrib/chat/browser/agentEngine/toolBridge.ts`
-- Director Agent requests pass the Agent mode policy explicitly in `src/vs/workbench/contrib/chat/browser/agentEngine/directorCodeAgent.ts`
-- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`, and `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`
+- Agent definitions and invocation mapping consume registry-filtered tools in `src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts`
+- Director Agent requests pass the Agent mode policy explicitly in `src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts`
+- Regression tests: `src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatEditingAdapter.test.ts`, `src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts`, and `src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts`
 
 ## Phase 1-5 Validation
 
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
+- `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`9 passing`)
+- `npm run test-browser-no-install -- --grep "Director VSCodeToolBridge"` (`3 passing`; upstream browser-test runner also logs known long-referrer warnings)
 - `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`21 passing`)
 - `npm run test-browser-no-install -- --grep "hover mode sendRequest"` (`2 passing`)
 - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`

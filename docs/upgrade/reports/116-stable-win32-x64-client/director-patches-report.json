@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-14T16:38:35.281Z",
+  "generatedAt": "2026-05-15T02:37:07.790Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 230,
+  "changedFileCount": 231,
   "patches": [
     {
       "stage": "branding",
@@ -158,6 +158,7 @@
         "src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts",
         "src/vs/workbench/contrib/chat/common/participants/chatAgents.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts",
@@ -231,9 +232,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 80,
-      "size": 859908,
-      "sha256": "615d232fa74460d32b783aaae10f29808be44b7869837fe2d9d01a43849e50bc"
+      "fileCount": 81,
+      "size": 865235,
+      "sha256": "e286b769f1e1f26e510d70c924627d9640fbd40363c1362de1165d51ff0334ef"
     },
     {
       "stage": "chat-built-in-mode",
@@ -291,8 +292,8 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts"
       ],
       "fileCount": 5,
-      "size": 65900,
-      "sha256": "ab9b8d4395a20e1ba5c5d718c2b90d827b761be207ce706abf2155d2de53e400"
+      "size": 73000,
+      "sha256": "bd70b3ddccd2bb95b8ac36c602b29d179815d8754859fd73c77bae6ac772d9dd"
     },
     {
       "stage": "chat-editing",

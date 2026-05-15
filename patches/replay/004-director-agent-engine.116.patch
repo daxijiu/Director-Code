@@ -711,6 +711,106 @@ index 0000000000000000000000000000000000000000..ce6a2815d1171f4ebe498fc347ea0ac5
 +		assert.strictEqual(await apiKeyService.getApiKey(provider), 'sk-enter-test');
 +	});
 +});
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6cfbd95ed9021cc6a611bab2ba92c8d35410ea00
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
+@@ -0,0 +1,94 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { VSCodeToolBridge } from '../../../../directorCode/browser/agentEngine/toolBridge.js';
++import { ToolDataSource, type CountTokensCallback, type IToolData, type IToolInvocation, type IToolResult } from '../../../common/tools/languageModelToolsService.js';
++import { MockLanguageModelToolsService } from '../../common/tools/mockLanguageModelToolsService.js';
++
++suite('Director VSCodeToolBridge', () => {
++
++	const store = ensureNoDisposablesAreLeakedInTestSuite();
++
++	function tool(id: string, referenceName: string): IToolData {
++		return {
++			id,
++			toolReferenceName: referenceName,
++			displayName: referenceName,
++			modelDescription: `${referenceName} description`,
++			source: ToolDataSource.Internal,
++			inputSchema: {
++				type: 'object',
++				properties: {},
++			},
++		};
++	}
++
++	class CapturingToolsService extends MockLanguageModelToolsService {
++		public lastInvocation: IToolInvocation | undefined;
++
++		constructor(private readonly rawTools: IToolData[]) {
++			super();
++		}
++
++		override getTools(): Iterable<IToolData> {
++			return this.rawTools;
++		}
++
++		override async invokeTool(dto: IToolInvocation, _countTokens: CountTokensCallback, _token: CancellationToken): Promise<IToolResult> {
++			this.lastInvocation = dto;
++			return {
++				content: [{ kind: 'text', value: 'ok' }],
++			};
++		}
++	}
++
++	test('injects non-bypassable Director pre-approval for browser mutation tools', async () => {
++		const service = store.add(new CapturingToolsService([
++			tool('click_element', 'clickElement'),
++		]));
++		const bridge = new VSCodeToolBridge(service, URI.parse('chat-session://director/test'), 'request-1', CancellationToken.None);
++
++		const result = await bridge.invokeTool('clickElement', { pageId: 'page-1', element: 'button', ref: 'r1' });
++
++		assert.strictEqual(result, 'ok');
++		assert.strictEqual(service.lastInvocation?.toolId, 'click_element');
++		assert.strictEqual(service.lastInvocation?.preToolUseResult?.permissionDecision, 'ask');
++		assert.ok(/Director browser policy/.test(service.lastInvocation?.preToolUseResult?.permissionDecisionReason ?? ''));
++	});
++
++	test('injects Director session approval for browser page reads', async () => {
++		const service = store.add(new CapturingToolsService([
++			tool('read_page', 'readPage'),
++		]));
++		const bridge = new VSCodeToolBridge(service, URI.parse('chat-session://director/test'), 'request-1', CancellationToken.None);
++
++		await bridge.invokeTool('readPage', { pageId: 'page-1' });
++
++		assert.strictEqual(service.lastInvocation?.toolId, 'read_page');
++		assert.strictEqual(service.lastInvocation?.preToolUseResult?.permissionDecision, 'ask');
++		assert.ok(/reads or captures/.test(service.lastInvocation?.preToolUseResult?.permissionDecisionReason ?? ''));
++	});
++
++	test('does not add Director pre-approval to hover or Mermaid direct-reuse tools', async () => {
++		const service = store.add(new CapturingToolsService([
++			tool('hover_element', 'hoverElement'),
++			tool('renderMermaidDiagram', 'renderMermaidDiagram'),
++		]));
++		const bridge = new VSCodeToolBridge(service, URI.parse('chat-session://director/test'), 'request-1', CancellationToken.None);
++
++		assert.strictEqual(bridge.isReadOnlyTool('renderMermaidDiagram'), true);
++		assert.strictEqual(bridge.isReadOnlyTool('hoverElement'), false);
++
++		await bridge.invokeTool('hoverElement', { pageId: 'page-1', element: 'button', ref: 'r1' });
++		assert.strictEqual(service.lastInvocation?.preToolUseResult, undefined);
++
++		await bridge.invokeTool('renderMermaidDiagram', { markup: 'graph TD; A-->B;' });
++		assert.strictEqual(service.lastInvocation?.preToolUseResult, undefined);
++	});
++});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts b/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
 index cab5d1b1b52acc6eb413a50b26d89822ff561f0f..1520b8b236bfc573b10ecd187e6084a60352c90d 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
@@ -14807,10 +14907,10 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81efffd2ce
+index 0000000000000000000000000000000000000000..45200e902977f2e3d8ebdd2b0d32fac493d5faf1
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,243 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -14836,6 +14936,7 @@ index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81
 +	ILanguageModelToolsService,
 +	IToolInvocation,
 +	CountTokensCallback,
++	IExternalPreToolUseHookResult,
 +} from '../../../chat/common/tools/languageModelToolsService.js';
 +import type { ILanguageModelChatMetadata } from '../../../chat/common/languageModels.js';
 +
@@ -14929,6 +15030,7 @@ index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81
 +export class VSCodeToolBridge implements IToolExecutor {
 +	private readonly toolNameToId = new Map<string, string>();
 +	private readonly readOnlyTools = new Set<string>();
++	private readonly directorPreApprovalReasons = new Map<string, string>();
 +
 +	constructor(
 +		private readonly toolsService: ILanguageModelToolsService,
@@ -14942,6 +15044,9 @@ index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81
 +			this.toolNameToId.set(tool.modelName, tool.toolId);
 +			if (tool.isReadOnly) {
 +				this.readOnlyTools.add(tool.modelName);
++			}
++			if (tool.directorPreApprovalReason) {
++				this.directorPreApprovalReasons.set(tool.modelName, tool.directorPreApprovalReason);
 +			}
 +		}
 +	}
@@ -14961,6 +15066,10 @@ index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81
 +			} as any,
 +			chatRequestId: this.requestId,
 +		};
++		const directorPreApprovalReason = this.directorPreApprovalReasons.get(name);
++		if (directorPreApprovalReason) {
++			invocation.preToolUseResult = this.createDirectorPreApprovalResult(directorPreApprovalReason);
++		}
 +
 +		const countTokens: CountTokensCallback = async (_input: string) => {
 +			return Math.ceil(_input.length / 4);
@@ -14979,6 +15088,13 @@ index 0000000000000000000000000000000000000000..b724e308fe78633186878487090ace81
 +
 +	isReadOnlyTool(name: string): boolean {
 +		return this.readOnlyTools.has(name);
++	}
++
++	private createDirectorPreApprovalResult(reason: string): IExternalPreToolUseHookResult {
++		return {
++			permissionDecision: 'ask',
++			permissionDecisionReason: reason,
++		};
 +	}
 +
 +	// ========================================================================

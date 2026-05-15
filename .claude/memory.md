@@ -1,5 +1,28 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 direct-reuse tool allowlist wave 1 completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 direct-reuse wave 1 implemented and replay-landed.
+- Agent allowlist additions: VS Code core browser tools `clickElement`, `dragElement`, `handleDialog`, `hoverElement`, `navigatePage`, `openBrowserPage`, `readPage`, `runPlaywrightCode`, `screenshotPage`, `typeInPage`, plus retained extension tool `renderMermaidDiagram`.
+- `extensions` remains hidden until Phase 5 product/gallery/marketplace wording policy and commercial/name grep gate.
+- Director bridge now injects `preToolUseResult: ask` for browser mutation/interaction tools and conservative page read/screenshot access, so global VS Code auto-approve does not bypass Director policy on this path.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `tool-migration-report.md`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`; first attempts hit Windows native rebuild file locks, succeeded after stopping stale `node-gyp`/`MSBuild`/`link` processes.
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts` (`9 passing`)
+  - `npm run test-browser-no-install -- --grep "Director VSCodeToolBridge"` (`3 passing`; browser runner emitted known long-referrer warnings)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 3 read/search/context facade cutover (`readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, `viewImage`) with old snake_case names removed in the same wave.
+
 ## 2026-05-15 latest memory: Phase 3 tool facade research accepted
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
