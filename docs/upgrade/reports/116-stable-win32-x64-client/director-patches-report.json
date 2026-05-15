@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-15T03:39:20.753Z",
+  "generatedAt": "2026-05-15T03:54:31.181Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -292,8 +292,8 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts"
       ],
       "fileCount": 5,
-      "size": 77493,
-      "sha256": "612880fd1f56e8c728ef25b2f4d8667c5f3811dcdc04cb1730137742645ebf00"
+      "size": 77830,
+      "sha256": "4a8a8005746c81aac770af247bde7ae2cd89885f28804985646671ff12add9c9"
     },
     {
       "stage": "chat-editing",
@@ -315,8 +315,8 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts"
       ],
       "fileCount": 3,
-      "size": 45110,
-      "sha256": "094d248c40996cf246124287b469f7b80bb6a7e6d6a4b2e5484ac1f1d8b5b2db"
+      "size": 45202,
+      "sha256": "b596361503e6e17bccadea70d36d96e0939364699f2a758a4aa0dfea3f4e32b9"
     }
   ]
 }

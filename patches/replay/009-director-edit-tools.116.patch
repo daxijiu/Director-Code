@@ -67,7 +67,7 @@ index 0000000000000000000000000000000000000000..6294f5bd8afd33f8deadeb7496d39eb8
 +export { DirectorEditToolData };
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaedb9300428
+index 0000000000000000000000000000000000000000..ede72ec9c3577de111c9b7b3e15b931534b2841d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts
 @@ -0,0 +1,810 @@
@@ -125,7 +125,7 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +
 +export const DirectorCreateFileToolData: IToolData = {
 +	id: DirectorCreateFileToolId,
-+	toolReferenceName: 'create_file',
++	toolReferenceName: 'createFile',
 +	displayName: 'Create File',
 +	userDescription: 'Create a file through Chat Editing review.',
 +	modelDescription: 'Create a new workspace file by streaming a reviewable Chat Editing diff. Existing files are rejected unless overwrite is explicitly true.',
@@ -136,17 +136,17 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
-+			path: { type: 'string', description: 'Workspace-relative file path to create.' },
++			filePath: { type: 'string', description: 'Workspace-relative file path to create.' },
 +			content: { type: 'string', description: 'Initial text content.' },
 +			overwrite: { type: 'boolean', description: 'Set true to replace an existing file through the review UI.' },
 +		},
-+		required: ['path', 'content']
++		required: ['filePath', 'content']
 +	}
 +};
 +
 +export const DirectorCreateDirectoryToolData: IToolData = {
 +	id: DirectorCreateDirectoryToolId,
-+	toolReferenceName: 'create_directory',
++	toolReferenceName: 'createDirectory',
 +	displayName: 'Create Directory',
 +	userDescription: 'Create a directory after explicit chat review.',
 +	modelDescription: 'Create a workspace directory using Director-owned accept/reject review. The directory is not created until the user accepts the operation.',
@@ -157,9 +157,9 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
-+			path: { type: 'string', description: 'Workspace-relative directory path to create.' },
++			dirPath: { type: 'string', description: 'Workspace-relative directory path to create.' },
 +		},
-+		required: ['path']
++		required: ['dirPath']
 +	}
 +};
 +
@@ -465,13 +465,13 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +
 +	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
 +		const params = invocation.parameters as ToolParams;
-+		const path = stringParam(params, 'path');
++		const path = stringParam(params, 'filePath') ?? stringParam(params, 'path');
 +		const content = stringParam(params, 'content') ?? '';
 +		if (!path) {
-+			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path is required.' }));
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'filePath is required.' }));
 +		}
 +		if (content.length > DEFAULT_MAX_TEXT_BYTES) {
-+			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'File content is too large for create_file.' }));
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'File content is too large for createFile.' }));
 +		}
 +
 +		const target = this.adapter.resolveWorkspaceTarget({ path });
@@ -574,9 +574,9 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +
 +	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
 +		const params = invocation.parameters as ToolParams;
-+		const path = stringParam(params, 'path');
++		const path = stringParam(params, 'dirPath') ?? stringParam(params, 'path');
 +		if (!path) {
-+			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'path is required.' }));
++			return textResult(formatDirectorChatEditToolResult({ ok: false, reason: 'dirPath is required.' }));
 +		}
 +
 +		const binding = this.binding(invocation);
@@ -883,7 +883,7 @@ index 0000000000000000000000000000000000000000..eb337ff40a2cc86f135f474db3daaaed
 +}
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..9123bacad4581c718b751001933b3502ccaa72e1
+index 0000000000000000000000000000000000000000..4fa6c4e2dd9cf55137d2947152aa30658f8af0cb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts
 @@ -0,0 +1,206 @@
@@ -1039,12 +1039,12 @@ index 0000000000000000000000000000000000000000..9123bacad4581c718b751001933b3502
 +		assert.strictEqual(fakeChat.calls.length, 0);
 +	});
 +
-+	test('create_file rejects duplicate files before emitting progress', async () => {
++	test('createFile rejects duplicate files before emitting progress', async () => {
 +		const fakeFiles = fileService({ 'src/a.ts': 'old' });
 +		const fakeChat = modelAndCalls();
 +		const tool = new DirectorCreateFileTool(fakeFiles, fakeChat.chatService, workspaceService());
 +
-+		const result = await tool.invoke(invocation({ path: 'src/a.ts', content: 'new' }), async () => 0, undefined as any, CancellationToken.None);
++		const result = await tool.invoke(invocation({ filePath: 'src/a.ts', content: 'new' }), async () => 0, undefined as any, CancellationToken.None);
 +
 +		assert.ok(/already exists/.test(textOf(result)));
 +		assert.strictEqual(fakeChat.calls.length, 0);
@@ -1070,11 +1070,11 @@ index 0000000000000000000000000000000000000000..9123bacad4581c718b751001933b3502
 +		assert.strictEqual(editProgress.edits[0].text, 'const a = 2;\n');
 +	});
 +
-+	test('create_directory waits for accept before creating the folder', async () => {
++	test('createDirectory waits for accept before creating the folder', async () => {
 +		const fakeFiles = fileService();
 +		const fakeChat = modelAndCalls();
 +		const tool = new DirectorCreateDirectoryTool(fakeFiles, fakeChat.chatService, workspaceService());
-+		const resultPromise = tool.invoke(invocation({ path: 'src/new-dir' }), async () => 0, undefined as any, CancellationToken.None);
++		const resultPromise = tool.invoke(invocation({ dirPath: 'src/new-dir' }), async () => 0, undefined as any, CancellationToken.None);
 +
 +		await Promise.resolve();
 +		await Promise.resolve();

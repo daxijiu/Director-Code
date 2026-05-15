@@ -1,5 +1,26 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 create tool facade cutover completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 `createFile`/`createDirectory` facade cutover is implemented and replay-landed.
+- Model-facing edit tool names changed from `create_file` and `create_directory` to `createFile` and `createDirectory`.
+- The old snake_case create tool names are no longer in the Director registry/model-facing tests. Internal raw ids `director_create_file` and `director_create_directory` remain implementation details.
+- Schemas now use `createFile.filePath` plus `content`, and `createDirectory.dirPath`. Implementations keep a defensive internal fallback for old `path` payloads but do not expose old model names.
+- `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` remain Director-only model-facing names by plan.
+- Replay assets updated: `patches/replay/007-director-tool-layer.116.patch`, `patches/replay/009-director-edit-tools.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `tool-migration-report.md`, `mode-routing-report.md`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree dependency restore with `npm ci`
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts` (`14 passing`)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 3 fetch/GitHub facade handling; re-review the `github_repo` temporary legacy exception and fetch naming boundary.
+
 ## 2026-05-15 latest memory: Phase 3 read/search/context tool module extraction completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
