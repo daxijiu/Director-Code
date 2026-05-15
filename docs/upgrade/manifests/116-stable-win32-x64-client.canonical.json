@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T02:40:59.778Z",
-  "treeHash": "9fbb25466642bf43f7df36d7502814467e8c3e0206a6d412d8d239a544282566",
+  "generatedAt": "2026-05-15T03:11:49.047Z",
+  "treeHash": "226d1015e20aafa8a6825ffd340b6c7e996dfeeb3c0cda79f3d80c8301cfaf70",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -41828,13 +41828,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
-      "sha256": "295c37263473f5ce92ac3ed45e20edfa378a1264586e57766101c0d11b6f8ade",
+      "sha256": "db6075b85f93d0c6822c4a92d71e102b2d0e4ca94334b64124c03f451e867288",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
-      "sha256": "b53fc32d377cefc8b9b0f492881f4341bef622f0757cdb916ba6286862495869",
+      "sha256": "17bed0fcac9aa9f1ed2195c3d99b3cb5770be41ae7a2edd4600ce94af393049b",
       "mode": 33206,
       "type": "file"
     },
@@ -43058,7 +43058,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts",
-      "sha256": "2a9078c1c87fb9c066a36f332717382bd689ae99df454f28aac6aecea0672527",
+      "sha256": "bd6464307087d34c80fbf241e576c2568648f5108eb13a6436117be5dce151fe",
       "mode": 33206,
       "type": "file"
     },
@@ -43130,19 +43130,19 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
-      "sha256": "e9c82b9008ed7d3e9493102d6a4791fe36065675b6d2876cbef9dcb9f3b95336",
+      "sha256": "32858f447747b48eaf939a4f6efe994839c6195c8657f85bb0501d104d89270a",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
-      "sha256": "15e2519eff5ffe8d8c249590a29b27b468b2dc8220aae07e42e672fb568b184b",
+      "sha256": "e03348f91634744cb92d84c3a8dce6090fe1f3ab9c866e2e839e3f3ca125aba8",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts",
-      "sha256": "3bd0302e35105987079c82d0e336426095e95366be848d56baebed5b202f7f7b",
+      "sha256": "6327ea4c9fd0fffc028b2c24851886adb0d23bb7d50c16fa079324d23cee4c09",
       "mode": 33206,
       "type": "file"
     },

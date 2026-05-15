@@ -65,10 +65,10 @@ index 0000000000000000000000000000000000000000..5935fa5856a696f8f8fb31e1df3ccf6f
 +
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47eec7a1b227
+index 0000000000000000000000000000000000000000..f4229bb9ba02aaf1fe9e4185639e2e54c83ff134
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts
-@@ -0,0 +1,665 @@
+@@ -0,0 +1,725 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -106,7 +106,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorReadFileToolData: IToolData = {
 +	id: DirectorReadFileToolId,
-+	toolReferenceName: 'read_file',
++	toolReferenceName: 'readFile',
 +	displayName: 'Read File',
 +	userDescription: 'Read a text file from the current workspace.',
 +	modelDescription: 'Read a text file from the current workspace. Use workspace-relative paths. The result is truncated for large files and binary files are rejected.',
@@ -116,19 +116,18 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
-+			path: { type: 'string', description: 'Workspace-relative file path to read.' },
-+			filePath: { type: 'string', description: 'Alias for path.' },
++			filePath: { type: 'string', description: 'Workspace-relative file path to read.' },
 +			startLine: { type: 'number', description: 'Optional 1-based first line to include.' },
 +			endLine: { type: 'number', description: 'Optional 1-based last line to include.' },
 +			maxBytes: { type: 'number', description: 'Maximum bytes to return before truncating. Defaults to 200000.' },
 +		},
-+		required: ['path']
++		required: ['filePath']
 +	}
 +};
 +
 +export const DirectorListDirectoryToolData: IToolData = {
 +	id: DirectorListDirectoryToolId,
-+	toolReferenceName: 'list_dir',
++	toolReferenceName: 'listDirectory',
 +	displayName: 'List Directory',
 +	userDescription: 'List files and folders in a workspace directory.',
 +	modelDescription: 'List files and folders in a workspace directory. Use workspace-relative paths. The result is capped and sorted.',
@@ -147,7 +146,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorFileSearchToolData: IToolData = {
 +	id: DirectorFileSearchToolId,
-+	toolReferenceName: 'file_search',
++	toolReferenceName: 'fileSearch',
 +	displayName: 'File Search',
 +	userDescription: 'Find files in the current workspace by name or glob.',
 +	modelDescription: 'Find files in the current workspace by filename pattern. Searches are read-only, capped, and scoped to workspace folders.',
@@ -168,10 +167,10 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorGrepSearchToolData: IToolData = {
 +	id: DirectorGrepSearchToolId,
-+	toolReferenceName: 'grep_search',
-+	displayName: 'Grep Search',
++	toolReferenceName: 'textSearch',
++	displayName: 'Text Search',
 +	userDescription: 'Search file contents in the current workspace.',
-+	modelDescription: 'Search text in workspace files. Searches are read-only, capped, and scoped to workspace folders. Use include/exclude globs to narrow the search.',
++	modelDescription: 'Search text in workspace files. Searches are read-only, capped, and scoped to workspace folders. Use includePattern/excludePattern globs to narrow the search.',
 +	source: ToolDataSource.Internal,
 +	canRequestPreApproval: false,
 +	canRequestPostApproval: false,
@@ -179,10 +178,11 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		type: 'object',
 +		properties: {
 +			query: { type: 'string', description: 'Text or regular expression to search for.' },
-+			isRegExp: { type: 'boolean', description: 'Treat query as a regular expression.' },
++			isRegexp: { type: 'boolean', description: 'Treat query as a regular expression.' },
 +			isCaseSensitive: { type: 'boolean', description: 'Use case-sensitive matching.' },
-+			include: { type: 'string', description: 'Optional include glob pattern.' },
-+			exclude: { type: 'string', description: 'Optional exclude glob pattern.' },
++			includePattern: { type: 'string', description: 'Optional include glob pattern.' },
++			excludePattern: { type: 'string', description: 'Optional exclude glob pattern.' },
++			includeIgnoredFiles: { type: 'boolean', description: 'Include files that ignore files would normally exclude.' },
 +			maxResults: { type: 'number', description: 'Maximum file matches to return. Defaults to 50, hard limit 200.' },
 +		},
 +		required: ['query']
@@ -191,8 +191,8 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorGetErrorsToolData: IToolData = {
 +	id: DirectorGetErrorsToolId,
-+	toolReferenceName: 'get_errors',
-+	displayName: 'Get Problems',
++	toolReferenceName: 'problems',
++	displayName: 'Problems',
 +	userDescription: 'Read workspace diagnostics and problems.',
 +	modelDescription: 'Read current workspace diagnostics. Returns errors by default and optionally warnings. Does not run builds or mutate files.',
 +	source: ToolDataSource.Internal,
@@ -201,7 +201,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
-+			path: { type: 'string', description: 'Optional workspace-relative file or folder path to filter diagnostics.' },
++			filePaths: { type: 'array', items: { type: 'string' }, description: 'Optional workspace-relative files or folders to filter diagnostics.' },
 +			includeWarnings: { type: 'boolean', description: 'Include warnings as well as errors. Defaults to true.' },
 +			maxResults: { type: 'number', description: 'Maximum diagnostics to return. Defaults to 50, hard limit 200.' },
 +		}
@@ -210,8 +210,8 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorGetChangedFilesToolData: IToolData = {
 +	id: DirectorGetChangedFilesToolId,
-+	toolReferenceName: 'get_changed_files',
-+	displayName: 'Get Changed Files',
++	toolReferenceName: 'changes',
++	displayName: 'Changes',
 +	userDescription: 'Read current source-control changes.',
 +	modelDescription: 'Read the current SCM resource groups and changed files. Returns controlled not-supported text if no SCM provider is available.',
 +	source: ToolDataSource.Internal,
@@ -220,6 +220,8 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
++			repositoryPath: { type: 'string', description: 'Optional workspace-relative repository root path to filter SCM resources.' },
++			sourceControlState: { type: 'array', items: { type: 'string' }, description: 'Optional SCM state, group, or status labels to include.' },
 +			maxResults: { type: 'number', description: 'Maximum changed resources to return. Defaults to 50, hard limit 200.' },
 +		}
 +	}
@@ -227,7 +229,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +export const DirectorViewImageToolData: IToolData = {
 +	id: DirectorViewImageToolId,
-+	toolReferenceName: 'view_image',
++	toolReferenceName: 'viewImage',
 +	displayName: 'View Image',
 +	userDescription: 'Inspect an image file in the workspace.',
 +	modelDescription: 'Read an image file from the workspace and return image metadata with an image data part when supported. Use workspace-relative paths.',
@@ -237,9 +239,9 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	inputSchema: {
 +		type: 'object',
 +		properties: {
-+			path: { type: 'string', description: 'Workspace-relative image path.' },
++			filePath: { type: 'string', description: 'Workspace-relative image path.' },
 +		},
-+		required: ['path']
++		required: ['filePath']
 +	}
 +};
 +
@@ -280,7 +282,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
 +		const params = invocation.parameters as ToolParams;
-+		const resolved = resolveWorkspacePath(this.workspaceContextService, stringParam(params, 'path') ?? stringParam(params, 'filePath'));
++		const resolved = resolveWorkspacePath(this.workspaceContextService, stringParam(params, 'filePath') ?? stringParam(params, 'path'));
 +		if (!resolved.ok) {
 +			return textResult(resolved.message);
 +		}
@@ -288,7 +290,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		const content = await this.fileService.readFile(resolved.uri, undefined, token);
 +		const detected = detectEncodingFromBuffer({ buffer: content.value, bytesRead: content.value.byteLength });
 +		if (detected.seemsBinary) {
-+			return textResult(`Cannot read ${resolved.relativePath}: binary files are not returned by read_file.`);
++			return textResult(`Cannot read ${resolved.relativePath}: binary files are not returned by readFile.`);
 +		}
 +
 +		const maxBytes = boundedNumber(params.maxBytes, DEFAULT_MAX_TEXT_BYTES, HARD_MAX_TEXT_BYTES);
@@ -309,7 +311,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	}
 +
 +	async prepareToolInvocation(context: IToolInvocationPreparationContext): Promise<IPreparedToolInvocation | undefined> {
-+		return { invocationMessage: `Reading ${stringParam(context.parameters, 'path') ?? stringParam(context.parameters, 'filePath') ?? 'file'}` };
++		return { invocationMessage: `Reading ${stringParam(context.parameters, 'filePath') ?? stringParam(context.parameters, 'path') ?? 'file'}` };
 +	}
 +}
 +
@@ -350,12 +352,12 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		const params = invocation.parameters as ToolParams;
 +		const queryText = stringParam(params, 'query');
 +		if (!queryText) {
-+			return textResult('file_search requires a non-empty query.');
++			return textResult('fileSearch requires a non-empty query.');
 +		}
 +
 +		const roots = workspaceRoots(this.workspaceContextService);
 +		if (!roots.length) {
-+			return textResult('file_search is unavailable because no workspace folder is open.');
++			return textResult('fileSearch is unavailable because no workspace folder is open.');
 +		}
 +
 +		const maxResults = boundedNumber(params.maxResults, DEFAULT_MAX_RESULTS, HARD_MAX_RESULTS);
@@ -388,25 +390,31 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		const params = invocation.parameters as ToolParams;
 +		const queryText = stringParam(params, 'query');
 +		if (!queryText) {
-+			return textResult('grep_search requires a non-empty query.');
++			return textResult('textSearch requires a non-empty query.');
 +		}
 +
 +		const roots = workspaceRoots(this.workspaceContextService);
 +		if (!roots.length) {
-+			return textResult('grep_search is unavailable because no workspace folder is open.');
++			return textResult('textSearch is unavailable because no workspace folder is open.');
 +		}
 +
 +		const maxResults = boundedNumber(params.maxResults, DEFAULT_MAX_RESULTS, HARD_MAX_RESULTS);
++		const includeIgnoredFiles = booleanParam(params, 'includeIgnoredFiles') === true;
 +		const complete = await this.searchService.textSearch({
 +			type: QueryType.Text,
-+			folderQueries: roots.map(folder => ({ folder })),
++			folderQueries: roots.map(folder => ({
++				folder,
++				disregardIgnoreFiles: includeIgnoredFiles,
++				disregardGlobalIgnoreFiles: includeIgnoredFiles,
++				disregardParentIgnoreFiles: includeIgnoredFiles,
++			})),
 +			contentPattern: {
 +				pattern: queryText,
-+				isRegExp: booleanParam(params, 'isRegExp'),
++				isRegExp: booleanParam(params, 'isRegexp') ?? booleanParam(params, 'isRegExp'),
 +				isCaseSensitive: booleanParam(params, 'isCaseSensitive'),
 +			},
-+			includePattern: globExpression(stringParam(params, 'include')),
-+			excludePattern: globExpression(stringParam(params, 'exclude')),
++			includePattern: globExpression(stringParam(params, 'includePattern') ?? stringParam(params, 'include')),
++			excludePattern: globExpression(stringParam(params, 'excludePattern') ?? stringParam(params, 'exclude')),
 +			maxResults,
 +			previewOptions: { matchLines: 1 + (DEFAULT_GREP_CONTEXT_LINES * 2), charsPerLine: 240 },
 +		}, token);
@@ -433,16 +441,20 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		const params = invocation.parameters as ToolParams;
 +		const maxResults = boundedNumber(params.maxResults, DEFAULT_MAX_RESULTS, HARD_MAX_RESULTS);
 +		const includeWarnings = params.includeWarnings !== false;
-+		const filterPath = stringParam(params, 'path');
-+		const resolved = filterPath ? resolveWorkspacePath(this.workspaceContextService, filterPath) : undefined;
-+		if (resolved && !resolved.ok) {
-+			return textResult(resolved.message);
++		const filterPaths = stringArrayParam(params, 'filePaths') ?? (stringParam(params, 'path') ? [stringParam(params, 'path')!] : undefined);
++		const resolvedPaths: Array<Extract<ResolvedWorkspacePath, { ok: true }>> = [];
++		for (const filterPath of filterPaths ?? []) {
++			const resolved = resolveWorkspacePath(this.workspaceContextService, filterPath);
++			if (!resolved.ok) {
++				return textResult(resolved.message);
++			}
++			resolvedPaths.push(resolved);
 +		}
 +
 +		const severities = includeWarnings ? MarkerSeverity.Error | MarkerSeverity.Warning : MarkerSeverity.Error;
 +		const markers = this.markerService.read({ severities, take: maxResults, ignoreResourceFilters: true })
 +			.filter(marker => this.workspaceContextService.getWorkspaceFolder(marker.resource))
-+			.filter(marker => !resolved?.ok || extUriBiasedIgnorePathCase.isEqualOrParent(marker.resource, resolved.uri))
++			.filter(marker => !resolvedPaths.length || resolvedPaths.some(resolved => extUriBiasedIgnorePathCase.isEqualOrParent(marker.resource, resolved.uri)))
 +			.sort(compareMarkers)
 +			.slice(0, maxResults);
 +
@@ -460,11 +472,23 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	async invoke(invocation: IToolInvocation): Promise<IToolResult> {
 +		const params = invocation.parameters as ToolParams;
 +		const maxResults = boundedNumber(params.maxResults, DEFAULT_MAX_RESULTS, HARD_MAX_RESULTS);
++		const repositoryPath = stringParam(params, 'repositoryPath');
++		const resolvedRepositoryPath = repositoryPath ? resolveWorkspacePath(this.workspaceContextService, repositoryPath) : undefined;
++		if (resolvedRepositoryPath && !resolvedRepositoryPath.ok) {
++			return textResult(resolvedRepositoryPath.message);
++		}
++		const sourceControlStates = normalizedStringSet(params.sourceControlState);
 +		const rows: string[] = [];
 +
 +		for (const repository of this.scmService.repositories) {
++			if (resolvedRepositoryPath?.ok && !repositoryMatchesPath(repository, resolvedRepositoryPath.uri)) {
++				continue;
++			}
 +			for (const group of repository.provider.groups) {
 +				for (const resource of group.resources) {
++					if (sourceControlStates && !scmResourceMatchesState(resource, sourceControlStates)) {
++						continue;
++					}
 +					rows.push(formatScmResource(this.workspaceContextService, repository, resource));
 +					if (rows.length >= maxResults) {
 +						return textResult(`changedFiles: ${rows.length}\ntruncated: true\n\n${rows.join('\n')}`);
@@ -474,7 +498,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +		}
 +
 +		if (!rows.length && this.scmService.repositoryCount === 0) {
-+			return textResult('get_changed_files is available, but no SCM repositories are currently registered for this workspace.');
++			return textResult('changes is available, but no SCM repositories are currently registered for this workspace.');
 +		}
 +
 +		return textResult(`changedFiles: ${rows.length}\ntruncated: false\n\n${rows.join('\n') || '(no changed files)'}`);
@@ -489,7 +513,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
 +		const params = invocation.parameters as ToolParams;
-+		const resolved = resolveWorkspacePath(this.workspaceContextService, stringParam(params, 'path'));
++		const resolved = resolveWorkspacePath(this.workspaceContextService, stringParam(params, 'filePath') ?? stringParam(params, 'path'));
 +		if (!resolved.ok) {
 +			return textResult(resolved.message);
 +		}
@@ -523,7 +547,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +
 +		if (query) {
 +			const repoLabel = explicit ? `${explicit.owner}/${explicit.name}` : explicitRepo || 'workspace repository';
-+			return textResult(`github_repo resolved ${repoLabel}, but remote GitHub search is not supported in Director v1. Use grep_search for local workspace search.`);
++			return textResult(`github_repo resolved ${repoLabel}, but remote GitHub search is not supported in Director v1. Use textSearch for local workspace search.`);
 +		}
 +
 +		if (explicit) {
@@ -629,8 +653,28 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 +}
 +
++function stringArrayParam(params: unknown, key: string): string[] | undefined {
++	if (!params || typeof params !== 'object') {
++		return undefined;
++	}
++	const value = (params as Record<string, unknown>)[key];
++	if (!Array.isArray(value)) {
++		return undefined;
++	}
++	const result = value.filter((item): item is string => typeof item === 'string' && !!item.trim()).map(item => item.trim());
++	return result.length ? result : undefined;
++}
++
 +function booleanParam(params: ToolParams, key: string): boolean | undefined {
 +	return typeof params[key] === 'boolean' ? params[key] as boolean : undefined;
++}
++
++function normalizedStringSet(value: unknown): Set<string> | undefined {
++	const values = Array.isArray(value) ? value : typeof value === 'string' ? [value] : undefined;
++	const normalized = values
++		?.filter((item): item is string => typeof item === 'string' && !!item.trim())
++		.map(item => item.trim().toLowerCase());
++	return normalized?.length ? new Set(normalized) : undefined;
 +}
 +
 +function positiveNumber(value: unknown): number | undefined {
@@ -699,6 +743,22 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +	return `${status}\t${formatUri(workspaceContextService, resource.sourceUri)}\trepository: ${repo}`;
 +}
 +
++function repositoryMatchesPath(repository: ISCMRepository, uri: URI): boolean {
++	const rootUri = repository.provider.rootUri;
++	return !!rootUri && (extUriBiasedIgnorePathCase.isEqual(rootUri, uri) || extUriBiasedIgnorePathCase.isEqualOrParent(rootUri, uri));
++}
++
++function scmResourceMatchesState(resource: ISCMResource, states: Set<string>): boolean {
++	const group = resource.resourceGroup;
++	const values = [
++		group.id,
++		group.label,
++		resource.contextValue,
++		resource.decorations.tooltip,
++	].filter((item): item is string => typeof item === 'string' && !!item.trim());
++	return values.some(item => states.has(item.trim().toLowerCase()));
++}
++
 +function parseGitConfigRemotes(config: string): Array<{ name: string; url: string }> {
 +	const remotes: Array<{ name: string; url: string }> = [];
 +	let currentRemote: string | undefined;
@@ -736,7 +796,7 @@ index 0000000000000000000000000000000000000000..b77021572bc0630dbb86b2f79c3c47ee
 +}
 diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..45705ec36eed7bcc6d6f94aa502773b77809c633
+index 0000000000000000000000000000000000000000..4b0b34dfc6624f38da8434fab44863c7b5acfe48
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
 @@ -0,0 +1,244 @@
@@ -852,13 +912,13 @@ index 0000000000000000000000000000000000000000..45705ec36eed7bcc6d6f94aa502773b7
 +
 +	entry('vscode_fetchWebPage_internal', ['vscode_fetchWebPage_internal'], [], 'read', [DirectorToolMode.Ask, DirectorToolMode.Agent], 'pre-and-post-approval', 'keep', 'Keep existing web/file fetch capability reviewed by the backing VS Code confirmation flow.'),
 +	entry('usages', ['vscode_listCodeUsages'], ['usages'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Expose code usage lookup as read-only context in Ask/Edit/Agent.'),
-+	entry('read_file', ['director_read_file'], ['read_file'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace file read tool. Rejects paths outside the current workspace and truncates large text files.', { backing: 'director' }),
-+	entry('list_dir', ['director_list_dir'], ['list_dir'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace directory listing tool. Rejects paths outside the current workspace and caps result counts.', { backing: 'director' }),
-+	entry('file_search', ['director_file_search'], ['file_search'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace filename search tool backed by VS Code search services.', { backing: 'director' }),
-+	entry('grep_search', ['director_grep_search'], ['grep_search'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace text search tool backed by VS Code search services.', { backing: 'director' }),
-+	entry('get_errors', ['director_get_errors'], ['get_errors'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned diagnostics reader backed by VS Code markers.', { backing: 'director' }),
-+	entry('get_changed_files', ['director_get_changed_files'], ['get_changed_files'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned read-only SCM state tool backed by VS Code SCM resource groups.', { backing: 'director' }),
-+	entry('view_image', ['director_view_image'], ['view_image'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace image inspection tool with textual metadata fallback.', { backing: 'director', requiredCapabilities: ['image-data-part-or-textual-fallback'] }),
++	entry('readFile', ['director_read_file'], ['readFile'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace file read tool exposed with the VS Code/Copilot toolReferenceName. Rejects paths outside the current workspace and truncates large text files.', { backing: 'director' }),
++	entry('listDirectory', ['director_list_dir'], ['listDirectory'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace directory listing tool exposed with the VS Code/Copilot toolReferenceName. Rejects paths outside the current workspace and caps result counts.', { backing: 'director' }),
++	entry('fileSearch', ['director_file_search'], ['fileSearch'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace filename search tool exposed with the VS Code/Copilot toolReferenceName and backed by VS Code search services.', { backing: 'director' }),
++	entry('textSearch', ['director_grep_search'], ['textSearch'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace text search tool exposed with the VS Code/Copilot toolReferenceName and backed by VS Code search services.', { backing: 'director' }),
++	entry('problems', ['director_get_errors'], ['problems'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned diagnostics reader exposed with the VS Code/Copilot toolReferenceName and backed by VS Code markers.', { backing: 'director' }),
++	entry('changes', ['director_get_changed_files'], ['changes'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned read-only SCM state tool exposed with the VS Code/Copilot toolReferenceName and backed by VS Code SCM resource groups.', { backing: 'director' }),
++	entry('viewImage', ['director_view_image'], ['viewImage'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace image inspection tool exposed with the VS Code/Copilot toolReferenceName and textual metadata fallback.', { backing: 'director', requiredCapabilities: ['image-data-part-or-textual-fallback'] }),
 +	entry('github_repo', ['director_github_repo'], ['github_repo'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned minimal read-only GitHub repository context. Remote indexed search and PR/issue workflows are intentionally out of v1 scope.', { backing: 'director' }),
 +	entry('apply_patch', ['director_apply_patch'], ['apply_patch'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable unified diff application. Streams text edits through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +	entry('create_file', ['director_create_file'], ['create_file'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable file creation through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
@@ -986,10 +1046,10 @@ index 0000000000000000000000000000000000000000..45705ec36eed7bcc6d6f94aa502773b7
 +}
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b26d0c5140
+index 0000000000000000000000000000000000000000..9e8e7c2611bafb31624a6865dfd2e06cbc1a9b39
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,229 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1069,34 +1129,34 @@ index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b2
 +		};
 +	}
 +
-+	test('declares the Phase 2 read-only tool data set', () => {
++	test('declares the read-only facade tool data set', () => {
 +		assert.deepStrictEqual(DirectorReadOnlyToolData.map(tool => tool.toolReferenceName), [
-+			'read_file',
-+			'list_dir',
-+			'file_search',
-+			'grep_search',
-+			'get_errors',
-+			'get_changed_files',
-+			'view_image',
++			'readFile',
++			'listDirectory',
++			'fileSearch',
++			'textSearch',
++			'problems',
++			'changes',
++			'viewImage',
 +			'github_repo',
 +		]);
 +	});
 +
-+	test('read_file reads workspace text and rejects external paths', async () => {
++	test('readFile reads workspace text and rejects external paths', async () => {
 +		const fileService = {
 +			readFile: async () => content('one\ntwo\nthree\nfour'),
 +		} as unknown as IFileService;
 +		const tool = new DirectorReadFileTool(fileService, workspaceService());
 +
-+		const result = await tool.invoke(invocation({ path: 'src/app.ts', startLine: 2, endLine: 3 }), async () => 0, undefined as any, CancellationToken.None);
++		const result = await tool.invoke(invocation({ filePath: 'src/app.ts', startLine: 2, endLine: 3 }), async () => 0, undefined as any, CancellationToken.None);
 +		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('two\nthree'));
 +		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('lines: 2-3'));
 +
-+		const external = await tool.invoke(invocation({ path: '/outside/app.ts' }), async () => 0, undefined as any, CancellationToken.None);
++		const external = await tool.invoke(invocation({ filePath: '/outside/app.ts' }), async () => 0, undefined as any, CancellationToken.None);
 +		assert.ok(external.content[0].kind === 'text' && external.content[0].value.includes('outside the current workspace'));
 +	});
 +
-+	test('list_dir sorts directories before files and caps results', async () => {
++	test('listDirectory sorts directories before files and caps results', async () => {
 +		const stat = fileStat('src', URI.joinPath(root, 'src'), true, [
 +			fileStat('z.ts', URI.joinPath(root, 'src', 'z.ts'), false),
 +			fileStat('lib', URI.joinPath(root, 'src', 'lib'), true),
@@ -1114,7 +1174,7 @@ index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b2
 +		assert.ok(!text.includes('z.ts'));
 +	});
 +
-+	test('file_search and grep_search use workspace-scoped VS Code search queries', async () => {
++	test('fileSearch and textSearch use workspace-scoped VS Code search queries', async () => {
 +		const fileQueries: any[] = [];
 +		const textQueries: any[] = [];
 +		const searchService = {
@@ -1141,28 +1201,33 @@ index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b2
 +		assert.deepStrictEqual(fileQueries[0].excludePattern, { '**/node_modules/**': true });
 +		assert.ok(files.content[0].kind === 'text' && files.content[0].value.includes('src/app.ts'));
 +
-+		const grep = await new DirectorGrepSearchTool(searchService, workspaceService()).invoke(invocation({ query: 'value', isCaseSensitive: true }), async () => 0, undefined as any, CancellationToken.None);
++		const grep = await new DirectorGrepSearchTool(searchService, workspaceService()).invoke(invocation({ query: 'value', isRegexp: true, isCaseSensitive: true, includePattern: '**/*.ts', includeIgnoredFiles: true }), async () => 0, undefined as any, CancellationToken.None);
 +		assert.strictEqual(textQueries[0].type, QueryType.Text);
++		assert.strictEqual(textQueries[0].contentPattern.isRegExp, true);
 +		assert.strictEqual(textQueries[0].contentPattern.isCaseSensitive, true);
++		assert.deepStrictEqual(textQueries[0].includePattern, { '**/*.ts': true });
++		assert.strictEqual(textQueries[0].folderQueries[0].disregardIgnoreFiles, true);
 +		assert.ok(grep.content[0].kind === 'text' && grep.content[0].value.includes('src/app.ts:7:6'));
 +	});
 +
-+	test('get_errors returns workspace diagnostics only', async () => {
++	test('problems returns workspace diagnostics only', async () => {
 +		const markerService = {
 +			read: () => [
 +				{ owner: 'ts', resource: URI.joinPath(root, 'src', 'app.ts'), severity: MarkerSeverity.Error, message: 'broken', startLineNumber: 4, startColumn: 2, endLineNumber: 4, endColumn: 8 },
++				{ owner: 'ts', resource: URI.joinPath(root, 'test', 'app.ts'), severity: MarkerSeverity.Error, message: 'test broken', startLineNumber: 5, startColumn: 3, endLineNumber: 5, endColumn: 8 },
 +				{ owner: 'ts', resource: URI.file('/outside/app.ts'), severity: MarkerSeverity.Error, message: 'outside', startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
 +			],
 +		} as unknown as IMarkerService;
 +		const tool = new DirectorGetErrorsTool(markerService, workspaceService());
 +
-+		const result = await tool.invoke(invocation({}));
++		const result = await tool.invoke(invocation({ filePaths: ['src'] }));
 +		const text = result.content[0].kind === 'text' ? result.content[0].value : '';
 +		assert.ok(text.includes('src/app.ts:4:2'));
++		assert.ok(!text.includes('test/app.ts'));
 +		assert.ok(!text.includes('outside'));
 +	});
 +
-+	test('get_changed_files reads SCM resource groups without running Git', async () => {
++	test('changes reads SCM resource groups without running Git', async () => {
 +		const resource = {
 +			sourceUri: URI.joinPath(root, 'src', 'app.ts'),
 +			decorations: { tooltip: 'Modified' },
@@ -1180,18 +1245,18 @@ index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b2
 +		} as unknown as ISCMService;
 +		const tool = new DirectorGetChangedFilesTool(scmService, workspaceService());
 +
-+		const result = await tool.invoke(invocation({}));
++		const result = await tool.invoke(invocation({ repositoryPath: '.', sourceControlState: ['modified'] }));
 +		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('Modified\tsrc/app.ts'));
 +	});
 +
-+	test('view_image returns metadata and image data for workspace images', async () => {
++	test('viewImage returns metadata and image data for workspace images', async () => {
 +		const imageBytes = VSBuffer.fromByteArray([0, 1, 2, 3]);
 +		const fileService = {
 +			readFile: async () => content(imageBytes),
 +		} as unknown as IFileService;
 +		const tool = new DirectorViewImageTool(fileService, workspaceService());
 +
-+		const result = await tool.invoke(invocation({ path: 'image.png' }), async () => 0, undefined as any, CancellationToken.None);
++		const result = await tool.invoke(invocation({ filePath: 'image.png' }), async () => 0, undefined as any, CancellationToken.None);
 +		assert.strictEqual(result.content[0].kind, 'text');
 +		assert.strictEqual(result.content[1].kind, 'data');
 +		assert.strictEqual(result.content[1].kind === 'data' ? result.content[1].value.mimeType : undefined, 'image/png');
@@ -1216,10 +1281,10 @@ index 0000000000000000000000000000000000000000..5fb8302ffb263ca314744769122776b2
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5a2311794fe1f57cc5ec1973f204681c9b6555eb
+index 0000000000000000000000000000000000000000..1a4395da2aa8d5e8df1518519e5ecd940cbdbc7a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,183 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1283,25 +1348,28 @@ index 0000000000000000000000000000000000000000..5a2311794fe1f57cc5ec1973f204681c
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
 +	});
 +
-+	test('exposes Phase 2 read-only workspace tools in Ask/Edit/Agent only', () => {
++	test('exposes read-only facade workspace tools in Ask/Edit/Agent only', () => {
 +		const raw = [
-+			tool('director_read_file', 'read_file'),
-+			tool('director_list_dir', 'list_dir'),
-+			tool('director_file_search', 'file_search'),
-+			tool('director_grep_search', 'grep_search'),
-+			tool('director_get_errors', 'get_errors'),
-+			tool('director_get_changed_files', 'get_changed_files'),
-+			tool('director_view_image', 'view_image'),
++			tool('director_read_file', 'readFile'),
++			tool('director_list_dir', 'listDirectory'),
++			tool('director_file_search', 'fileSearch'),
++			tool('director_grep_search', 'textSearch'),
++			tool('director_get_errors', 'problems'),
++			tool('director_get_changed_files', 'changes'),
++			tool('director_view_image', 'viewImage'),
 +			tool('director_github_repo', 'github_repo'),
 +		];
 +
-+		const expected = ['file_search', 'get_changed_files', 'get_errors', 'github_repo', 'grep_search', 'list_dir', 'read_file', 'view_image'];
++		const expected = ['changes', 'fileSearch', 'github_repo', 'listDirectory', 'problems', 'readFile', 'textSearch', 'viewImage'];
 +
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
 +		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).every(item => item.definition.isReadOnly === true));
++		for (const oldName of ['read_file', 'list_dir', 'file_search', 'grep_search', 'get_errors', 'get_changed_files', 'view_image']) {
++			assert.ok(!getDirectorToolAllowlist(raw, DirectorToolMode.Agent).some(item => item.modelName === oldName), `${oldName} should not be model-facing after facade cutover`);
++		}
 +	});
 +
 +	test('exposes Phase 4 reviewable edit tools in Edit and Agent only', () => {

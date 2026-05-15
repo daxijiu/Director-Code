@@ -14,7 +14,7 @@ EditorInline is treated as a separate inline edit path. It receives selected edi
 
 | Request mode | Effective tools |
 |---|---|
-| Ask | Read-only context only: `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, `view_image`, `github_repo`, plus reviewed read helpers such as `usages` and `vscode_fetchWebPage_internal`. |
+| Ask | Read-only context only: `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, `viewImage`, `github_repo`, plus reviewed read helpers such as `usages` and `vscode_fetchWebPage_internal`. |
 | Edit | Ask read-only set plus reviewable edit tools: `apply_patch`, `create_file`, `create_directory`, `replace_string_in_file`, and `multi_replace_string_in_file`. |
 | Agent | Full reviewed Director registry, including Agent-only terminal/task/confirmation/todo/subagent tools and the reviewable edit tools. |
 | Inline | No model-callable tools. Inline edits use selected editor context plus the non-tool inline edit protocol. |

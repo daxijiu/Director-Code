@@ -1,5 +1,28 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 read/search/context facade cutover wave completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 read/search/context facade wave is implemented and replay-landed.
+- Model-facing read/search/context tool names changed from `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, and `view_image` to `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, and `viewImage`.
+- Old snake_case names for those seven tools are no longer in the Director registry/model-facing tests. Internal `director_*` tool ids remain as implementation details.
+- The implementations remain Director-owned and workspace guarded. Schema/behavior updates include `readFile.filePath`, `viewImage.filePath`, `textSearch.isRegexp/includePattern/excludePattern/includeIgnoredFiles`, `problems.filePaths`, and `changes.repositoryPath/sourceControlState`.
+- `github_repo` remains the only temporary legacy exception and must be re-reviewed in the next relevant Phase 3 wave.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `tool-migration-report.md`, `mode-routing-report.md`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`.
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts` (`87 passing`)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: continue Phase 3 with the remaining accepted facade/direct-reuse work, starting with `createFile`/`createDirectory` or fetch/GitHub facade handling according to the plan.
+
 ## 2026-05-15 latest memory: Phase 3 direct-reuse tool allowlist wave 1 completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

@@ -1387,7 +1387,7 @@ index 0000000000000000000000000000000000000000..65bb9c720979665bbdfa648061c8243f
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..22d4d7debec86171caa3105886d4812f93afd0b2
+index 0000000000000000000000000000000000000000..32ba5b2e6860e47c48e538169e782ef1624cf376
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 @@ -0,0 +1,275 @@
@@ -1461,7 +1461,7 @@ index 0000000000000000000000000000000000000000..22d4d7debec86171caa3105886d4812f
 +				role: "assistant",
 +				content: [
 +					{ type: "text", text: "Let me check that file." },
-+					{ type: "tool_use", id: "tool-1", name: "read_file", input: { path: "test.ts" } },
++					{ type: "tool_use", id: "tool-1", name: "readFile", input: { filePath: "test.ts" } },
 +				],
 +			};
 +
@@ -1483,19 +1483,19 @@ index 0000000000000000000000000000000000000000..22d4d7debec86171caa3105886d4812f
 +
 +		test("AgentToolDefinition has required fields", () => {
 +			const tool: AgentToolDefinition = {
-+				name: "read_file",
++				name: "readFile",
 +				description: "Read a file from disk",
 +				inputSchema: {
 +					type: "object",
 +					properties: {
-+						path: { type: "string", description: "File path" },
++						filePath: { type: "string", description: "File path" },
 +					},
-+					required: ["path"],
++					required: ["filePath"],
 +				},
 +			};
 +
-+			assert.strictEqual(tool.name, "read_file");
-+			assert.ok(tool.inputSchema.properties.path);
++			assert.strictEqual(tool.name, "readFile");
++			assert.ok(tool.inputSchema.properties.filePath);
 +		});
 +
 +		test("tool with isReadOnly flag", () => {
@@ -4648,7 +4648,7 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b606dea21
+index 0000000000000000000000000000000000000000..4f238538e010f5056061b811581882aae427b819
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 @@ -0,0 +1,777 @@
@@ -4717,15 +4717,15 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			const event: AgentToolUseEvent = {
 +				type: 'tool_use',
 +				id: 'call_123',
-+				name: 'read_file',
-+				input: { path: '/test.ts' },
++				name: 'readFile',
++				input: { filePath: '/test.ts' },
 +			};
 +
 +			const progress = agentEventToProgress(event);
 +			assert.strictEqual(progress.length, 1);
 +			assert.strictEqual(progress[0].kind, 'progressMessage');
 +			const value = (progress[0] as any).content.value;
-+			assert.ok(value.includes('read_file'), 'progress message should mention tool name');
++			assert.ok(value.includes('readFile'), 'progress message should mention tool name');
 +			assert.ok(value.includes('Using tool'), 'progress message should say "Using tool"');
 +		});
 +
@@ -4733,7 +4733,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			const event: AgentToolResultEvent = {
 +				type: 'tool_result',
 +				tool_use_id: 'call_123',
-+				tool_name: 'read_file',
++				tool_name: 'readFile',
 +				content: 'console.log("hello world");',
 +				is_error: false,
 +			};
@@ -4741,7 +4741,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			const progress = agentEventToProgress(event);
 +			assert.strictEqual(progress.length, 1);
 +			const value = (progress[0] as any).content.value;
-+			assert.ok(value.includes('read_file'), 'should include tool name');
++			assert.ok(value.includes('readFile'), 'should include tool name');
 +			assert.ok(value.includes('result'), 'should say "result"');
 +			assert.ok(!value.includes('error'), 'should not say "error"');
 +		});
@@ -4802,7 +4802,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +					role: 'assistant',
 +					content: [
 +						{ type: 'text', text: 'Let me read that file.' },
-+						{ type: 'tool_use', id: 'call_1', name: 'read_file', input: { path: 'a.ts' } } as any,
++						{ type: 'tool_use', id: 'call_1', name: 'readFile', input: { filePath: 'a.ts' } } as any,
 +					],
 +				},
 +			};
@@ -4816,7 +4816,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +				type: 'system',
 +				subtype: 'init',
 +				model: 'claude-sonnet-4-6',
-+				tools: ['read_file', 'write_file', 'grep'],
++				tools: ['readFile', 'write_file', 'grep'],
 +			};
 +
 +			const progress = agentEventToProgress(event);
@@ -5150,8 +5150,8 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			const event: AgentToolUseEvent = {
 +				type: 'tool_use',
 +				id: 'call_abc',
-+				name: 'read_file',
-+				input: { path: '/test.ts' },
++				name: 'readFile',
++				input: { filePath: '/test.ts' },
 +			};
 +			assert.strictEqual(event.type, 'tool_use');
 +			assert.ok(event.id);
@@ -5162,7 +5162,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			const event: AgentToolResultEvent = {
 +				type: 'tool_result',
 +				tool_use_id: 'call_abc',
-+				tool_name: 'read_file',
++				tool_name: 'readFile',
 +				content: 'file contents',
 +			};
 +			assert.strictEqual(event.type, 'tool_result');
@@ -5225,7 +5225,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +		test('simulated single-turn text produces correct progress sequence', () => {
 +			// In real flow: text_delta events render the text, then assistant event is for history only
 +			const events: AgentEvent[] = [
-+				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['read_file'] },
++				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['readFile'] },
 +				{ type: 'text_delta', text: 'Hello! How can I help?' } as AgentEvent,
 +				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Hello! How can I help?' }] } },
 +				{ type: 'result', subtype: 'success', usage: createMockUsage(), cost: 0.001, numTurns: 1 },
@@ -5245,11 +5245,11 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +
 +		test('simulated tool-use turn produces correct progress sequence', () => {
 +			const events: AgentEvent[] = [
-+				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['read_file', 'write_file'] },
++				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['readFile', 'write_file'] },
 +				{ type: 'text_delta', text: 'Let me read the file.' } as AgentEvent,
 +				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Let me read the file.' }] } },
-+				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'src/app.ts' } },
-+				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'const app = express();' },
++				{ type: 'tool_use', id: 'c1', name: 'readFile', input: { filePath: 'src/app.ts' } },
++				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'readFile', content: 'const app = express();' },
 +				{ type: 'text_delta', text: 'The file creates an Express app.' } as AgentEvent,
 +				{ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'The file creates an Express app.' }] } },
 +				{ type: 'result', subtype: 'success', usage: { input_tokens: 2000, output_tokens: 500 }, cost: 0.01, numTurns: 2 },
@@ -5260,8 +5260,8 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			// init → progressMessage(shimmer)
 +			// text_delta1 → markdownContent
 +			// assistant1 → nothing (text already streamed)
-+			// tool_use → progressMessage("Using tool: read_file")
-+			// tool_result → progressMessage("Tool read_file result: ...")
++			// tool_use → progressMessage("Using tool: readFile")
++			// tool_result → progressMessage("Tool readFile result: ...")
 +			// text_delta2 → markdownContent
 +			// assistant2 → nothing (text already streamed)
 +			// result → nothing
@@ -5270,7 +5270,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +			assert.strictEqual(allProgress[0].kind, 'progressMessage'); // init
 +			assert.strictEqual(allProgress[1].kind, 'markdownContent'); // first response via streaming
 +			assert.strictEqual(allProgress[2].kind, 'progressMessage'); // tool use
-+			assert.ok((allProgress[2] as any).content.value.includes('read_file'));
++			assert.ok((allProgress[2] as any).content.value.includes('readFile'));
 +			assert.strictEqual(allProgress[3].kind, 'progressMessage'); // tool result
 +			assert.strictEqual(allProgress[4].kind, 'markdownContent'); // final response via streaming
 +		});
@@ -5323,14 +5323,14 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +
 +		test('simulated streaming turn: init → text_delta × N → tool_use → tool_result → text_delta × N → result', () => {
 +			const events: AgentEvent[] = [
-+				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['read_file'] },
++				{ type: 'system', subtype: 'init', model: 'claude-sonnet-4-6', tools: ['readFile'] },
 +				// Streaming text deltas (instead of a single assistant event)
 +				{ type: 'text_delta', text: 'Let me ' } as any,
 +				{ type: 'text_delta', text: 'read that ' } as any,
 +				{ type: 'text_delta', text: 'file.' } as any,
 +				// Tool use
-+				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'app.ts' } },
-+				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'const x = 1;' },
++				{ type: 'tool_use', id: 'c1', name: 'readFile', input: { filePath: 'app.ts' } },
++				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'readFile', content: 'const x = 1;' },
 +				// More streaming text
 +				{ type: 'text_delta', text: 'The file ' } as any,
 +				{ type: 'text_delta', text: 'contains x.' } as any,
@@ -5383,11 +5383,11 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +		test('simulated streaming with 2 tools produces all tool events', () => {
 +			// Simulates: text + tool_1 + tool_2 → all tools should appear
 +			const events: AgentEvent[] = [
-+				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['read_file', 'grep'] },
++				{ type: 'system', subtype: 'init', model: 'gpt-4o', tools: ['readFile', 'grep'] },
 +				{ type: 'text_delta', text: 'Let me search.' } as any,
 +				// Tool 1
-+				{ type: 'tool_use', id: 'c1', name: 'read_file', input: { path: 'a.ts' } },
-+				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'read_file', content: 'file A' },
++				{ type: 'tool_use', id: 'c1', name: 'readFile', input: { filePath: 'a.ts' } },
++				{ type: 'tool_result', tool_use_id: 'c1', tool_name: 'readFile', content: 'file A' },
 +				// Tool 2
 +				{ type: 'tool_use', id: 'c2', name: 'grep', input: { pattern: 'foo' } },
 +				{ type: 'tool_result', tool_use_id: 'c2', tool_name: 'grep', content: 'match found' },
@@ -5416,7 +5416,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +		test('tool_call_delta from OpenAI format with multiple indexed tools', () => {
 +			// Verify that the progress bridge handles multiple tool calls correctly
 +			// when tool_use events come from AgentEngine (after stream consumption)
-+			const toolUse1: AgentEvent = { type: 'tool_use', id: 'call_1', name: 'read_file', input: { path: 'a.ts' } };
++			const toolUse1: AgentEvent = { type: 'tool_use', id: 'call_1', name: 'readFile', input: { filePath: 'a.ts' } };
 +			const toolUse2: AgentEvent = { type: 'tool_use', id: 'call_2', name: 'write_file', input: { path: 'b.ts', content: 'x' } };
 +
 +			const p1 = agentEventToProgress(toolUse1);
@@ -5424,7 +5424,7 @@ index 0000000000000000000000000000000000000000..d99521119fa4be5478647e89fbe39b2b
 +
 +			assert.strictEqual(p1.length, 1);
 +			assert.strictEqual(p2.length, 1);
-+			assert.ok((p1[0] as any).content.value.includes('read_file'));
++			assert.ok((p1[0] as any).content.value.includes('readFile'));
 +			assert.ok((p2[0] as any).content.value.includes('write_file'));
 +		});
 +	});
