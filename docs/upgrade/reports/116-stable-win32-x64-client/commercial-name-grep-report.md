@@ -67,7 +67,7 @@ rg -n "Microsoft online service|Trusted by Microsoft|GitHub Copilot functionalit
 
 ## Validation Summary
 
-Latest scoped scan after clean materialization and Phase 5 cleanup:
+Latest scoped scan after clean materialization, Phase 5 cleanup, and Phase 6 full validation:
 
 | Check | Result |
 | --- | ---: |

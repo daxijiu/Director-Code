@@ -4,7 +4,7 @@ Date: 2026-05-15
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 5 commercial/name grep gate and read-only extension search exposure wave
+Status: Phase 6 replay consolidation and next-version dry-run wave
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -23,6 +23,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 - Phase 3 fetch/GitHub facade cutover started after commit: `122685ce Cut over create tool facades`
 - Phase 4 edit tools internal refactor started after commit: `4c6d2bbc Cut over fetch and GitHub tool facades`
 - Phase 5 commercial/name grep gate started after commit: `85e39cb8 Move edit tools into directorCode`
+- Phase 6 replay consolidation started after commit: `ede7c7bf Add commercial name grep gate`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -46,6 +47,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 | `mode-routing-report.md` | Ask/Edit/Agent/Inline routing report. |
 | `commercial-name-grep-report.md` | Phase 5 product/gallery/marketplace commercial-name grep gate report. |
 | `docs/upgrade/director-commercial-name-allowlist.116.md` | Phase 5 allowlist for legal attribution, OSS compatibility, package metadata, extension identity, Windows namespaces, and internal VS Code API/protocol names. |
+| `docs/upgrade/reports/117-stable-win32-x64-client/thin-layer-upgrade-dry-run-report.md` | Phase 6 next-version dry-run report. Currently blocked by missing VSCodium `1.117*` through `1.120*` stable target tag. |
 | `package-regression-report.md` | Phase 6 package/regression status and installer hashes. |
 | `tool-source-and-strategy-analysis.html` | Accepted 48-tool source/strategy report for the thin-layer plan. |
 | `tool-parity-analysis.html` | Earlier broad parity analysis retained as reference only. |
@@ -196,6 +198,8 @@ No final `010` stage is allowed in the canonical replay series.
 - Phase 5 commercial/name grep gate is implemented: product default links, package repository/bugs metadata, Windows installer/resource metadata, chat setup/status/model-picker/customization copy, extension gallery wording, and safety/docs links now route to Director-owned wording or URLs unless explicitly allowlisted for OSS attribution or compatibility. The gate report is `commercial-name-grep-report.md`.
 - Phase 5 read-only extension search exposure is implemented: `extensions` now appears in Ask/Edit/Agent through the Director registry after the product/gallery wording gate; `installExtensions` remains hidden as a mutation.
 - Commercial/name grep is now a required gate for every subsequent wave. User-visible scoped unexplained hits must stay at `0`; allowlisted hits require an allowlist reason.
+- Phase 6 replay consolidation full validation is implemented: clean 116 replay, replay/product/canonical/expected validators, `npm ci`, native compile check, client esbuild, and the planned browser test grep group passed.
+- Phase 6 next-version dry-run is documented at `docs/upgrade/reports/117-stable-win32-x64-client/thin-layer-upgrade-dry-run-report.md`; it is blocked before materialization because VS Code `1.117.0` exists but VSCodium has no matching `1.117*`, `1.118*`, `1.119*`, or `1.120*` stable tag in the upstream tag query.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
 - No Phase 3 fetch/GitHub temporary legacy exception remains model-facing after this wave.
 - `artifacts/` must remain untracked.

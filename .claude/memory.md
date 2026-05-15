@@ -1,5 +1,27 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 6 replay consolidation completed; next-version dry-run blocked by upstream availability
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 6 replay consolidation is complete for the 116 profile.
+- Final replay consolidation status: `patches/series.116.json` has no `010` stage, no temporary local patch entry, and enabled Director semantic stages remain `002` through `009`.
+- Full 116 validation passed from a clean replayed Director tree:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree dependency restore with `npm ci` passed on retry after a transient Windows native dependency file lock.
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`23 passing`; upstream browser runner logged known long-referrer warnings)
+  - commercial/name grep gate after clean replay: product/build scoped allowlisted hits `29`, chat forbidden commercial hits `0`, extensions forbidden commercial hits `0`, chat/extensions scoped allowlisted hits `729`
+- Canonical manifest and materialize report were corrected to match the clean replay output for the final Phase 5 follow-up edits.
+- Next-version dry-run report added at `docs/upgrade/reports/117-stable-win32-x64-client/thin-layer-upgrade-dry-run-report.md`.
+- Dry-run status: blocked before target materialization. VS Code `1.117.0` exists (`10c8e557c8b9f9ed0a87f61f1c9a44bde731c409`), but upstream VSCodium returned no `1.117*`, `1.118*`, `1.119*`, or `1.120*` stable tags. No 117 release profile or series was added.
+- `artifacts/` remains untracked and must not be committed by default.
+- Remaining external follow-up: when VSCodium publishes a matching 1.117+ stable tag, create a dry-run-only target profile and run the documented 117 materialization/conflict comparison.
+
 ## 2026-05-15 latest memory: Phase 5 commercial/name grep gate completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

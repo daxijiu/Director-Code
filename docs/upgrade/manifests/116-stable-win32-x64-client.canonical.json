@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T05:24:52.360Z",
-  "treeHash": "e952f17711dcbbb3e5485e83bcc9ef55b7c147a48fe7e4e169c528b7a94d2c32",
+  "generatedAt": "2026-05-15T05:32:48.103Z",
+  "treeHash": "5defe1f8cf691d2135f50a9b6954bde4c28c2e747d13e9c4887785729f0511a0",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -40604,13 +40604,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts",
-      "sha256": "39b9ff3242546a61c1bcc569e2791720c1bf8e522b30cf3b1d3bf4ce50381441",
+      "sha256": "ba310fb9f21bd34ef49c62db06533f2262d5249c4a872f03ab491d37b886af6c",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts",
-      "sha256": "f4145c6a2c85e5aac5bdfa5d132bed91fa69b20a6679dee03618759edba7580e",
+      "sha256": "dce8752f575bc6af8d8850a92ca76674cdfffa0075481316fe4ba05bc3b64552",
       "mode": 33206,
       "type": "file"
     },
@@ -42194,7 +42194,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts",
-      "sha256": "056c3a6a974a1dfc8aa453da5817b3931e336f15d6c39f225a370094eed2fc10",
+      "sha256": "f6ea3d6b5d1e0adea6b0bc8c0c90fa384b310803e6c4448a433dbe7a811c8c1c",
       "mode": 33206,
       "type": "file"
     },
