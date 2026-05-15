@@ -1,5 +1,27 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 fetch/GitHub facade cutover completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 `fetch`/`githubRepo` facade cutover is implemented and replay-landed.
+- Model-facing `vscode_fetchWebPage_internal` changed to `fetch`, backed by the existing VS Code URL/file fetch implementation and its pre/post approval behavior. The `fetch` schema requires `urls` and accepts optional `query` only as caller intent text; it does not imply Copilot-style web search.
+- Model-facing `github_repo` changed to `githubRepo`. The implementation remains Director-owned minimal read-only repository context and returns controlled unsupported output for remote indexed GitHub search.
+- The old fetch/GitHub legacy names are no longer model-facing; remaining raw ids are internal implementation details or negative test assertions.
+- Replay assets updated: `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `tool-migration-report.md`, `mode-routing-report.md`, and `director-surface-inventory.md`.
+- Clean replay validation passed:
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree dependency restore with `npm ci`
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts` (`17 passing`)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: continue Phase 3/5 remaining final-tool disposition work from the plan, especially hidden `extensions` preparation and product/gallery/marketplace grep gate before any model-facing exposure.
+
 ## 2026-05-15 latest memory: Phase 3 create tool facade cutover completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

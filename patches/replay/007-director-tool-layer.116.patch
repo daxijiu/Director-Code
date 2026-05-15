@@ -65,10 +65,10 @@ index 0000000000000000000000000000000000000000..c66f7505700ce6c7260f9a104c73e993
 +
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..c1d28356dd279c9476f4e4d2b0547d998d36dc91
+index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde05aa4e598
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,230 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -157,7 +157,7 @@ index 0000000000000000000000000000000000000000..c1d28356dd279c9476f4e4d2b0547d99
 +			'problems',
 +			'changes',
 +			'viewImage',
-+			'github_repo',
++			'githubRepo',
 +		]);
 +	});
 +
@@ -281,7 +281,7 @@ index 0000000000000000000000000000000000000000..c1d28356dd279c9476f4e4d2b0547d99
 +		assert.strictEqual(result.content[1].kind === 'data' ? result.content[1].value.mimeType : undefined, 'image/png');
 +	});
 +
-+	test('github_repo infers sanitized GitHub remotes and reports v1 search fallback', async () => {
++	test('githubRepo infers sanitized GitHub remotes and reports v1 search fallback', async () => {
 +		const config = '[remote "origin"]\n\turl = https://token@github.com/example/project.git\n';
 +		const fileService = {
 +			readFile: async () => content(config),
@@ -296,14 +296,15 @@ index 0000000000000000000000000000000000000000..c1d28356dd279c9476f4e4d2b0547d99
 +
 +		const search = await tool.invoke(invocation({ repo: 'example/project', query: 'Symbol' }), async () => 0, undefined as any, CancellationToken.None);
 +		assert.ok(search.content[0].kind === 'text' && search.content[0].value.includes('remote GitHub search is not supported'));
++		assert.ok(search.content[0].kind === 'text' && search.content[0].value.includes('githubRepo resolved example/project'));
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f7cbc274b41c86097c0b7939999bafc191318f2b
+index 0000000000000000000000000000000000000000..034856c99b973654b2c8fa11d1f14adfee8f1714
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,189 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -345,10 +346,13 @@ index 0000000000000000000000000000000000000000..f7cbc274b41c86097c0b7939999bafc1
 +
 +		const askTools = getDirectorToolAllowlist(raw, DirectorToolMode.Ask);
 +
-+		assert.deepStrictEqual(askTools.map(item => item.modelName), ['usages', 'vscode_fetchWebPage_internal']);
++		assert.deepStrictEqual(askTools.map(item => item.modelName), ['fetch', 'usages']);
 +		assert.ok(askTools.every(item => item.definition.isReadOnly === true));
++		assert.deepStrictEqual(askTools.find(item => item.modelName === 'fetch')?.definition.inputSchema.required, ['urls']);
++		assert.ok(askTools.find(item => item.modelName === 'fetch')?.definition.inputSchema.properties.query);
 +		assert.ok(!askTools.some(item => item.modelName === 'runInTerminal'));
 +		assert.ok(!askTools.some(item => item.modelName === 'rename'));
++		assert.ok(!askTools.some(item => item.modelName === 'vscode_fetchWebPage_internal'));
 +	});
 +
 +	test('preserves existing terminal and task tools for Agent mode', () => {
@@ -376,17 +380,17 @@ index 0000000000000000000000000000000000000000..f7cbc274b41c86097c0b7939999bafc1
 +			tool('director_get_errors', 'problems'),
 +			tool('director_get_changed_files', 'changes'),
 +			tool('director_view_image', 'viewImage'),
-+			tool('director_github_repo', 'github_repo'),
++			tool('director_github_repo', 'githubRepo'),
 +		];
 +
-+		const expected = ['changes', 'fileSearch', 'github_repo', 'listDirectory', 'problems', 'readFile', 'textSearch', 'viewImage'];
++		const expected = ['changes', 'fileSearch', 'githubRepo', 'listDirectory', 'problems', 'readFile', 'textSearch', 'viewImage'];
 +
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
 +		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
 +		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).every(item => item.definition.isReadOnly === true));
-+		for (const oldName of ['read_file', 'list_dir', 'file_search', 'grep_search', 'get_errors', 'get_changed_files', 'view_image']) {
++		for (const oldName of ['read_file', 'list_dir', 'file_search', 'grep_search', 'get_errors', 'get_changed_files', 'view_image', 'github_repo']) {
 +			assert.ok(!getDirectorToolAllowlist(raw, DirectorToolMode.Agent).some(item => item.modelName === oldName), `${oldName} should not be model-facing after facade cutover`);
 +		}
 +	});
@@ -492,7 +496,7 @@ index 0000000000000000000000000000000000000000..f7cbc274b41c86097c0b7939999bafc1
 +});
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad758c1824f
+index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83ba8479570
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts
 @@ -0,0 +1,725 @@
@@ -674,7 +678,7 @@ index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad7
 +
 +export const DirectorGithubRepoToolData: IToolData = {
 +	id: DirectorGithubRepoToolId,
-+	toolReferenceName: 'github_repo',
++	toolReferenceName: 'githubRepo',
 +	displayName: 'GitHub Repository Context',
 +	userDescription: 'Read minimal GitHub repository context.',
 +	modelDescription: 'Return minimal read-only GitHub repository context from an explicit owner/repo, GitHub URL, or workspace Git remotes. Remote indexed search and PR/issue mutation are intentionally not supported in v1.',
@@ -974,7 +978,7 @@ index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad7
 +
 +		if (query) {
 +			const repoLabel = explicit ? `${explicit.owner}/${explicit.name}` : explicitRepo || 'workspace repository';
-+			return textResult(`github_repo resolved ${repoLabel}, but remote GitHub search is not supported in Director v1. Use textSearch for local workspace search.`);
++			return textResult(`githubRepo resolved ${repoLabel}, but remote GitHub search is not supported in Director v1. Use textSearch for local workspace search.`);
 +		}
 +
 +		if (explicit) {
@@ -988,7 +992,7 @@ index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad7
 +
 +		const repos = await this.readWorkspaceGithubRemotes(token);
 +		if (!repos.length) {
-+			return textResult('github_repo could not infer a GitHub repository from workspace .git/config files. Pass repo as owner/repo or a GitHub URL, or use local workspace tools.');
++			return textResult('githubRepo could not infer a GitHub repository from workspace .git/config files. Pass repo as owner/repo or a GitHub URL, or use local workspace tools.');
 +		}
 +
 +		return textResult(JSON.stringify({
@@ -1223,10 +1227,10 @@ index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..616fa233db1ac6e092fbc5010c4dd0e5e08f9db7
+index 0000000000000000000000000000000000000000..e906442932821c47609cb18b161dba12fd052bbb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,260 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1337,7 +1341,23 @@ index 0000000000000000000000000000000000000000..616fa233db1ac6e092fbc5010c4dd0e5
 +	entry('task_complete', ['task_complete'], [], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task completion signaling available to the Agent loop.'),
 +	entry('runSubagent', ['runSubagent'], ['runSubagent'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Keep subagent orchestration restricted to Agent mode.'),
 +
-+	entry('vscode_fetchWebPage_internal', ['vscode_fetchWebPage_internal'], [], 'read', [DirectorToolMode.Ask, DirectorToolMode.Agent], 'pre-and-post-approval', 'keep', 'Keep existing web/file fetch capability reviewed by the backing VS Code confirmation flow.'),
++	entry('fetch', ['vscode_fetchWebPage_internal'], ['fetch'], 'read', [DirectorToolMode.Ask, DirectorToolMode.Agent], 'pre-and-post-approval', 'keep', 'Expose the current VS Code URL/file fetch capability as fetch. The optional query field is accepted only as caller intent text and does not perform Copilot-style web search.', {
++		inputSchema: {
++			type: 'object',
++			properties: {
++				urls: {
++					type: 'array',
++					items: { type: 'string' },
++					description: 'Array of HTTP(S) or file URLs to fetch. This is retrieval only, not web search.',
++				},
++				query: {
++					type: 'string',
++					description: 'Optional caller intent text. Director does not perform web search with this field.',
++				},
++			},
++			required: ['urls'],
++		}
++	}),
 +	entry('usages', ['vscode_listCodeUsages'], ['usages'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Expose code usage lookup as read-only context in Ask/Edit/Agent.'),
 +	entry('readFile', ['director_read_file'], ['readFile'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace file read tool exposed with the VS Code/Copilot toolReferenceName. Rejects paths outside the current workspace and truncates large text files.', { backing: 'director' }),
 +	entry('listDirectory', ['director_list_dir'], ['listDirectory'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace directory listing tool exposed with the VS Code/Copilot toolReferenceName. Rejects paths outside the current workspace and caps result counts.', { backing: 'director' }),
@@ -1346,7 +1366,7 @@ index 0000000000000000000000000000000000000000..616fa233db1ac6e092fbc5010c4dd0e5
 +	entry('problems', ['director_get_errors'], ['problems'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned diagnostics reader exposed with the VS Code/Copilot toolReferenceName and backed by VS Code markers.', { backing: 'director' }),
 +	entry('changes', ['director_get_changed_files'], ['changes'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned read-only SCM state tool exposed with the VS Code/Copilot toolReferenceName and backed by VS Code SCM resource groups.', { backing: 'director' }),
 +	entry('viewImage', ['director_view_image'], ['viewImage'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned workspace image inspection tool exposed with the VS Code/Copilot toolReferenceName and textual metadata fallback.', { backing: 'director', requiredCapabilities: ['image-data-part-or-textual-fallback'] }),
-+	entry('github_repo', ['director_github_repo'], ['github_repo'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned minimal read-only GitHub repository context. Remote indexed search and PR/issue workflows are intentionally out of v1 scope.', { backing: 'director' }),
++	entry('githubRepo', ['director_github_repo'], ['githubRepo'], 'read', READ_CONTEXT_MODES, 'none', 'keep', 'Director-owned minimal read-only GitHub repository context exposed with the VS Code/Copilot toolReferenceName. Remote indexed search and PR/issue workflows are intentionally out of v1 scope.', { backing: 'director' }),
 +	entry('apply_patch', ['director_apply_patch'], ['apply_patch'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable unified diff application. Streams text edits through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +	entry('createFile', ['director_create_file'], ['createFile'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable file creation exposed with the VS Code/Copilot toolReferenceName through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +	entry('createDirectory', ['director_create_directory'], ['createDirectory'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned directory creation review transaction exposed with the VS Code/Copilot toolReferenceName. Creates folders only after explicit accept.', { backing: 'director', requiredCapabilities: ['director-directory-review-transaction'] }),

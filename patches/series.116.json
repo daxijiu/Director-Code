@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
-  "generatedAt": "2026-05-15T03:54:36.758Z",
+  "generatedAt": "2026-05-15T04:16:19.130Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -142,7 +142,7 @@
     },
     {
       "path": "patches/replay/007-director-tool-layer.116.patch",
-      "sha256": "4a8a8005746c81aac770af247bde7ae2cd89885f28804985646671ff12add9c9",
+      "sha256": "572317d8e51aee1cfeb59e29049b00e7aafd54efe64442e3e99ef8f7499b0e70",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

@@ -2,13 +2,13 @@
 
 Profile: `116-stable-win32-x64-client`
 
-Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 3 direct-reuse browser/Mermaid allowlist wave plus read/search/context and create facade cutovers; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
+Phase: 1 tool registry and mode policy gate; Phase 2 read-only workspace tools and GitHub v1 gate; Phase 3 direct-reuse browser/Mermaid allowlist wave plus read/search/context/create/fetch/GitHub facade cutovers; Phase 4 reviewable edit tools gate; Phase 5 runtime mode routing gate
 
 This report is intentionally stable and sanitized. It contains no API keys, tokens, user paths, volatile timestamps, or machine-local runtime state.
 
 ## Source
 
-The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Thin-layer Phase 3 now directly reuses VS Code core browser tools and the retained Mermaid extension tool through Director registry policy, and cuts over the Director read/search/context/create facades to VS Code/Copilot `toolReferenceName` spellings without keeping old snake_case model-facing aliases. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
+The Phase 1 registry was built from the current Director 116 raw tool registrations before Director registry filtering, plus the fixed scope in `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`. Phase 2 adds Director-owned read-only workspace tools and keeps GitHub v1 intentionally small and controlled. Thin-layer Phase 3 now directly reuses VS Code core browser tools and the retained Mermaid extension tool through Director registry policy, and cuts over the Director read/search/context/create/fetch/GitHub facades to VS Code/Copilot `toolReferenceName` spellings without keeping old snake_case model-facing aliases. Phase 4 adds Director-owned reviewable edit tools built on the Phase 3 Chat Editing contract.
 
 The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Phase 5 mode routing was wired. The Director bridge now chooses the registry-filtered list per request mode, while EditorInline intentionally receives no model-callable tools.
 
@@ -19,15 +19,15 @@ The runtime-effective lists for Ask/Edit/Agent/Inline were revalidated after Pha
 Read-only only:
 
 - `changes`
+- `fetch`
 - `fileSearch`
-- `github_repo`
+- `githubRepo`
 - `listDirectory`
 - `problems`
 - `readFile`
 - `textSearch`
 - `usages`
 - `viewImage`
-- `vscode_fetchWebPage_internal`
 
 Ask excludes edit, create/delete, terminal, task, shell, workspace mutation, and MCP/user/extension mutation tools by default.
 
@@ -40,7 +40,7 @@ Read/search context plus reviewable edit tools:
 - `createDirectory`
 - `createFile`
 - `fileSearch`
-- `github_repo`
+- `githubRepo`
 - `listDirectory`
 - `multi_replace_string_in_file`
 - `problems`
@@ -64,10 +64,11 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `createFile`
 - `dragElement`
 - `changes`
+- `fetch`
 - `fileSearch`
 - `getTaskOutput`
 - `getTerminalOutput`
-- `github_repo`
+- `githubRepo`
 - `handleDialog`
 - `hoverElement`
 - `killTerminal`
@@ -94,7 +95,6 @@ Existing Agent behavior preserved through reviewed registry entries:
 - `typeInPage`
 - `usages`
 - `viewImage`
-- `vscode_fetchWebPage_internal`
 - `vscode_get_confirmation`
 - `vscode_get_confirmation_with_options`
 - `vscode_get_modified_files_confirmation`
@@ -115,7 +115,7 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `manage_todo_list` | `todo` | `todo` | coordination | Agent | keep | Director planning state remains available to Agent. |
 | `task_complete` |  | `task_complete` | coordination | Agent | keep | Director completion signaling remains available to Agent. |
 | `runSubagent` | `runSubagent` | `runSubagent` | execute | Agent | keep | Subagent orchestration is Agent-only. |
-| `vscode_fetchWebPage_internal` |  | `vscode_fetchWebPage_internal` | read | Ask, Agent | keep | Read-only fetch remains guarded by backing confirmation policy. |
+| `vscode_fetchWebPage_internal` |  | `fetch` | read | Ask, Agent | keep | Reuses VS Code core URL/file fetch under the VS Code/Copilot `fetch` name. Schema requires `urls` and accepts optional `query` only as caller intent text; Director does not imply or perform Copilot-style web search. Existing pre/post approval behavior is preserved. |
 | `vscode_listCodeUsages` | `usages` | `usages` | read | Ask, Edit, Agent | keep | Code usage lookup is safe read/search context. |
 | `director_read_file` | `readFile` | `readFile` | read | Ask, Edit, Agent | keep | Director-owned workspace text-file reader exposed with the VS Code/Copilot name. Schema uses `filePath`, rejects external paths and binary content, supports line ranges, and truncates large output. |
 | `director_list_dir` | `listDirectory` | `listDirectory` | read | Ask, Edit, Agent | keep | Director-owned workspace directory listing exposed with the VS Code/Copilot name. Rejects external paths and caps sorted results. |
@@ -124,7 +124,7 @@ No model-callable tools in v1. Inline must use selected editor context and the l
 | `director_get_errors` | `problems` | `problems` | read | Ask, Edit, Agent | keep | Director-owned diagnostics reader exposed with the VS Code/Copilot name. Supports `filePaths`, uses VS Code marker service, and does not run builds. |
 | `director_get_changed_files` | `changes` | `changes` | read | Ask, Edit, Agent | keep | Director-owned SCM reader exposed with the VS Code/Copilot name. Supports `repositoryPath` and `sourceControlState`, uses VS Code SCM resource groups, and returns controlled unavailable text if no SCM provider exists. |
 | `director_view_image` | `viewImage` | `viewImage` | read | Ask, Edit, Agent | keep | Director-owned image inspection exposed with the VS Code/Copilot name. Schema uses `filePath` and returns metadata plus an image data part where the bridge/model can consume it, with textual fallback. |
-| `director_github_repo` | `github_repo` | `github_repo` | read | Ask, Edit, Agent | keep | Director-owned minimal GitHub repo context. Infers sanitized GitHub remotes or accepts owner/repo; remote indexed search and PR/issue mutation are not supported in v1. |
+| `director_github_repo` | `githubRepo` | `githubRepo` | read | Ask, Edit, Agent | keep | Director-owned minimal GitHub repo context exposed with the VS Code/Copilot name. Infers sanitized GitHub remotes or accepts owner/repo; remote indexed search and PR/issue mutation are not supported in v1 and return controlled limited output. |
 | `director_apply_patch` | `apply_patch` | `apply_patch` | write | Edit, Agent | keep | Director-owned unified diff application. Emits reviewable `textEdit` progress and returns controlled patch-conflict errors. |
 | `director_create_file` | `createFile` | `createFile` | write | Edit, Agent | keep | Director-owned file creation exposed with the VS Code/Copilot name. Schema uses `filePath` and `content`; the old `create_file` model-facing name is removed. Rejects duplicate files unless overwrite is explicit and emits reviewable `textEdit` progress. |
 | `director_create_directory` | `createDirectory` | `createDirectory` | write | Edit, Agent | keep | Director-owned directory creation review transaction exposed with the VS Code/Copilot name. Schema uses `dirPath`; the old `create_directory` model-facing name is removed. Emits accept/reject chat commands and does not create the folder until accept. |
@@ -179,6 +179,7 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 - `npm run compile-check-ts-native`
 - `npm run gulp -- transpile-client-esbuild`
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorEditTools.test.ts` (`14 passing`)
+- `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts` (`17 passing`)
 - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts` (`87 passing`)
 - `npm run test-browser-no-install -- --grep "Director VSCodeToolBridge"` (`3 passing`; upstream browser-test runner also logs known long-referrer warnings)
 - `npm run test-browser-no-install -- --grep "Director (Tool Registry|Read-Only Workspace Tools|Chat Editing Adapter|Edit Tools|Chat Mode Routing)"` (`21 passing`)

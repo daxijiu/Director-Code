@@ -4,7 +4,7 @@ Date: 2026-05-15
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 3 create tool facade cutover wave
+Status: Phase 3 fetch/GitHub facade cutover wave
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -20,6 +20,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 - Phase 3 read/search/context facade cutover started after commit: `3ca931ce Expose browser and Mermaid direct-reuse tools`
 - Phase 3 read/search/context tool module extraction started after commit: `806fe3f1 Cut over read context tool facades`
 - Phase 3 create facade cutover started after commit: `cdaf76ec Move read context tools into directorCode`
+- Phase 3 fetch/GitHub facade cutover started after commit: `122685ce Cut over create tool facades`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -82,7 +83,7 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 | `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 865222 | `c7ee36dad520e7270cd5477ad9532a6924f75cfe9a3b71fcdaad53d6117e7b16` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
 | `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58915 | `d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753` | Mix of `declarative product config` and `must-touch upstream hook`. |
 | `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 3 | 13099 | `9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141` | `declarative product config` / user-visible text polish. |
-| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 77830 | `4a8a8005746c81aac770af247bde7ae2cd89885f28804985646671ff12add9c9` | `Director-owned logic`. |
+| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 78796 | `572317d8e51aee1cfeb59e29049b00e7aafd54efe64442e3e99ef8f7499b0e70` | `Director-owned logic`. |
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21221 | `1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9` | `Director-owned logic`. |
 | `edit-tools` | `patches/replay/009-director-edit-tools.116.patch` | 3 | 45202 | `b596361503e6e17bccadea70d36d96e0939364699f2a758a4aa0dfea3f4e32b9` | `Director-owned logic`. |
 
@@ -171,10 +172,11 @@ No final `010` stage is allowed in the canonical replay series.
 - Phase 2 Agent Engine extraction is complete for common/runtime/provider/browser UI code. Remaining chat-path Director business logic is intentionally the Phase 3/4 tool/edit surface.
 - Phase 3 hard-gate report has been accepted at `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md`; tool facade and allowlist implementation may now proceed in the accepted waves.
 - Phase 3 direct-reuse wave 1 is implemented and replay-landed: `clickElement`, `dragElement`, `handleDialog`, `hoverElement`, `navigatePage`, `openBrowserPage`, `readPage`, `runPlaywrightCode`, `screenshotPage`, `typeInPage`, and `renderMermaidDiagram` are Agent allowlisted through registry policy. Browser mutation/interaction tools and conservative page read/screenshot access get Director-injected `preToolUseResult: ask` in `toolBridge.ts`; global VS Code auto-approve does not bypass this Director bridge path.
-- Phase 3 read/search/context facade wave 2 is implemented and replay-landed: `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, and `view_image` were removed as model-facing names and replaced by `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, and `viewImage`. Implementations remain Director-owned and workspace guarded. `github_repo` remains the only temporary legacy exception and must be re-reviewed in the next relevant wave.
+- Phase 3 read/search/context facade wave 2 is implemented and replay-landed: `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, and `view_image` were removed as model-facing names and replaced by `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, and `viewImage`. Implementations remain Director-owned and workspace guarded. The temporary GitHub legacy exception from that wave is resolved by the later fetch/GitHub facade cutover.
 - Phase 3 read/search/context tool module extraction is implemented and replay-landed: `directorReadOnlyTools.ts` and `directorToolRegistry.ts` now live under `src/vs/workbench/contrib/directorCode/common/agentEngine/`. `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` remains as the thin upstream chat registration hook.
 - Phase 3 create facade cutover is implemented and replay-landed: `create_file` and `create_directory` were removed as model-facing names and replaced by `createFile` and `createDirectory`. The implementations remain Director-owned reviewable edit primitives; `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` intentionally keep their Director-only names.
+- Phase 3 fetch/GitHub facade cutover is implemented and replay-landed: `vscode_fetchWebPage_internal` is no longer model-facing and is exposed as `fetch`, backed by the same VS Code URL/file fetch implementation and approval flow. `github_repo` is no longer model-facing and is exposed as `githubRepo`; it keeps Director's limited read-only repo context and returns controlled unsupported output for remote indexed search.
 - `extensions` remains hidden until Phase 5 product/gallery/marketplace wording policy and commercial/name grep gate.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
-- The next Phase 3 tool wave must re-review the `github_repo` temporary legacy exception and fetch naming boundary.
+- No Phase 3 fetch/GitHub temporary legacy exception remains model-facing after this wave.
 - `artifacts/` must remain untracked.
