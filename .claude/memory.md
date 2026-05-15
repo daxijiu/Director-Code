@@ -1,5 +1,15 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-16 latest memory: Director architecture boundary principle accepted
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- User accepted the architecture direction: Director should be treated as `Director-owned core + thin VS Code bridge + replayed brand/product layer`.
+- Current implementation is considered structurally OK: core runtime logic is already concentrated mostly under `src/vs/workbench/contrib/directorCode/**`; the many branding/product touched files are shallow and should not be confused with deep VS Code logic fork risk.
+- Future work should default new behavior into Director-owned modules or future Director-owned built-in extensions. Upstream VS Code directories should keep only thin registration hooks, model/chat/tool surface adapters, command/menu wiring, and small compatibility shims.
+- Copilot is the reference shape: deeply integrated UX, but product logic mostly lives in an extension-like island plus privileged workbench/API entry points. Director should keep moving toward that shape.
+- Wave 2 Provider/Model Registry + UI must follow this rule: Director Provider Registry, provider instances, secret/OAuth policy, provider manager UI, and model visibility state are Director-owned; VS Code Models Management / Model Picker should be reused through provider-group metadata and minimal hooks.
+- Claude SDK, ACP, and Codex adapters should be plugin-like or adapter-like islands. Workbench changes should stay limited to session registration, permissions/tool policy, UI entry points, and bridge plumbing.
+- When an upstream VS Code surface needs changes, prefer a small hook into Director-owned services over embedding Director business logic directly in upstream files.
+
 ## 2026-05-16 latest memory: Phase 2 Wave 1 Plan Mode completed and packaged
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Phase 2 Wave 1 Plan Mode is implemented, replay-landed, committed, pushed, and packaged. Commit: `1940758b` (`feat: add director plan mode wave 1`).

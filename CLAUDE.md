@@ -1,5 +1,15 @@
 # CLAUDE.md - Director-Code replay source guide
 
+## 2026-05-16 Director Architecture Boundary Principle
+
+- Long-term Director architecture is `Director-owned core + thin VS Code bridge + replayed brand/product layer`.
+- New behavior should default into `src/vs/workbench/contrib/directorCode/**` or a future Director-owned built-in extension. VS Code upstream directories should only hold registration hooks, model/chat/tool surface adapters, command/menu wiring, and small compatibility shims.
+- Do not judge upgrade risk only by touched file count: branding/product edits touch many files but are shallow; the important metric is whether runtime logic stays concentrated in Director-owned modules and whether upstream chat/API/model files remain thin.
+- Copilot is the reference shape: deeply integrated user experience, but most product logic lives in an extension-like island plus privileged workbench/API entry points. Director should keep moving toward the same shape.
+- Wave 2 Provider/Model work must follow this boundary: Director Provider Registry, secret/OAuth policy, provider manager UI, provider instances, and model visibility state are Director-owned; VS Code model management/model picker files should be reused through provider-group metadata and minimal hooks.
+- External agent adapters such as Claude SDK, ACP, and Codex should be plugin-like or adapter-like islands. Workbench changes for them should stay limited to session registration, permissions/tool policy, UI entry points, and bridge plumbing.
+- When an upstream VS Code surface must be changed, prefer a small hook that calls Director-owned services over embedding Director business logic directly in upstream files.
+
 ## 2026-05-16 Phase 2 Wave 1 Plan Mode Update
 
 - Phase 2 Wave 1 Plan Mode is complete, replay-backed, packaged, committed, and pushed as `1940758b` (`feat: add director plan mode wave 1`) on `refactor/112-replay-baseline`.

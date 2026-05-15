@@ -24,10 +24,19 @@ Phase 2 不再定义为单纯的 ACP 接入，而拆成五个 wave：
 核心判断：
 
 - Plan Mode 是下一步最小、最清晰的工程切口。
-- Provider / Model Registry + UI 应在正式开放多外部 Agent 入口前完成。
+- Provider / Model Registry + UI 应在正式开放多外部 Agent 入口前完成；该 wave 以 Director Provider Manager 加 VS Code Models Management 对齐为目标，而不是从零重做完整模型管理页。
 - Claude Code 不强行 ACP 化，优先走 TypeScript `@anthropic-ai/claude-agent-sdk` 专用 adapter。
 - ACP 用作通用外部 Agent 协议层，覆盖 OpenCode、Hermes、Gemini、Codex ACP wrapper 等。
 - Codex 单独作为最后的决策 wave，通过实测决定长期接入路径。
+
+架构边界原则：
+
+- Phase 2 长期形态固定为 `Director-owned core + thin VS Code bridge + replayed brand/product layer`。
+- 新功能默认进入 `src/vs/workbench/contrib/directorCode/**` 或后续 Director-owned built-in extension；VS Code 上游目录只保留注册 hook、chat/model/tool surface adapter、命令/菜单接线和少量兼容 shim。
+- 不用 touched file count 单独判断上游升级风险：品牌化和产品包装会触碰很多文件但改动浅；更重要的指标是 runtime 逻辑是否集中在 Director-owned 模块，以及 upstream chat/API/model 文件是否保持薄桥接。
+- Copilot 是参考形态：用户体验可以和 VS Code 深度融合，但产品逻辑尽量集中在 extension-like island，加少量 privileged workbench/API entry points。Director 后续也按这个方向继续收敛。
+- Wave 2 Provider/Model、Wave 3 Claude SDK、Wave 4 ACP、Wave 5 Codex 都必须遵循该边界：registry、adapter、secret/OAuth、session policy 和业务逻辑归 Director；VS Code 侧只做必要入口和桥接。
+- 必须修改 VS Code 上游 surface 时，优先添加调用 Director-owned service 的小 hook，不在上游文件内堆 Director 业务逻辑。
 
 ## Wave 1: Director Plan Mode Foundation
 
@@ -424,19 +433,73 @@ Replay patch ownership：
 
 ## Wave 2: Provider / Model Registry + UI
 
-目标：替换当前单全局 provider/model 状态，建立多 provider、多模型可见性的正式用户界面。
+目标：替换当前单全局 provider/model 状态，建立多 provider、多模型可见性的正式用户界面。Director 负责 provider 连接、认证和实例管理；模型浏览、分组、pin/隐藏和 Chat picker 尽量复用或贴近新版 VS Code Models Management / Model Picker 结构。
+
+本地参考来源：
+
+- OpenCode 本地源码：`E:\Projects\sub-projects\opencode`
+  - `packages/app/src/components/settings-providers.tsx`
+  - `packages/app/src/components/settings-models.tsx`
+  - `packages/app/src/components/dialog-custom-provider-form.ts`
+  - `packages/app/src/context/models.tsx`
+  - `packages/opencode/src/provider/provider.ts`
+- VS Code main 本地源码：`E:\Projects\sub-projects\vscode`
+  - `src/vs/workbench/contrib/chat/browser/chatManagement/chatManagement.contribution.ts`
+  - `src/vs/workbench/contrib/chat/browser/chatManagement/chatManagementEditor.ts`
+  - `src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts`
+  - `src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsViewModel.ts`
+  - `src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts`
+  - `src/vs/workbench/contrib/chat/common/languageModelsConfiguration.ts`
+
+116 / 121 使用原则：
+
+- VS Code 参考来自本地 `E:\Projects\sub-projects\vscode`，当前为 VS Code `1.121.0` main；但 Wave 2 不以 backport 121 大块代码为目标。
+- 当前 116 generated tree 已经有 `ILanguageModelsProviderGroup`、`LanguageModelsConfigurationService`、`getLanguageModelGroups`、`ModelsManagementEditor`、`ChatModelsWidget`、`ChatModelsViewModel`、`MANAGE_CHAT_COMMAND_ID` 和 Chat model picker 的 Manage Models 入口。
+- Wave 2 第一目标是接入和轻改 116 已存在的 model-management surface；121 main 只作为未来升级兼容和行为差异参考。
+- 只有当 116 缺失某个必要且很小的行为时，才允许择要移植 121 逻辑；不得把 121 模型管理页整块 backport 到 116。
+
+具体实现分层：
+
+| 层级 | 对象 | 处理方式 |
+| --- | --- | --- |
+| 几乎直接用 | 116 已存在的 `ILanguageModelsProviderGroup`、`LanguageModelsConfigurationService`、`getLanguageModelGroups`、`ModelsManagementEditor`、`ChatModelsWidget`、`ChatModelsViewModel`、`MANAGE_CHAT_COMMAND_ID`、Chat model picker Manage Models 入口 | 保持上游模型管理文件尽量原样；Director 通过 provider group / language model metadata 供数，不复制 121 大块代码 |
+| 少量修改后使用 | 116 的模型管理入口、Add/Configure Models flow、模型 picker 分组/展示、AI Customizations 中的 Models section、上游 BYOK/entitlement/商业文案触点 | 用薄 hook 接到 Director Provider Manager；清理或替换 Copilot/BYOK/entitlement、微软/GitHub 登录升级入口和相关链接 |
+| Director 原创实现 | Provider Registry、Provider Manager UI、provider instance 存储与迁移、Secret/OAuth 绑定、custom OpenAI-compatible 表单、连接测试、模型发现、模型可见性/默认/最近使用状态、Director provider instance 到 VS Code provider group 的 adapter | 放在 `directorCode` ownership 下；上游 chat/model 文件只保留必要 hook |
+| 只作参考 | OpenCode providers/settings/models/custom provider 交互和数据形态、OpenCode runtime provider loader、VS Code 121 main 的后续行为 | OpenCode 只参考产品形态和 compatible provider 表单；不照搬 runtime loader。VS Code 121 只用于确认未来合并方向和避免自创不兼容范式 |
+
+已定实现决策：
+
+- Director Provider Registry 是唯一长期真相；VS Code `ILanguageModelsProviderGroup` / `chatLanguageModels.json` 只作为模型管理和 picker 的投影/桥接，不保存 secret，不作为主配置。
+- Provider Registry 使用 Director-owned profile JSON 持久化，不使用 VS Code settings 或 `chatLanguageModels.json` 作为主存储。
+- v1 使用单一 `director-code` language model vendor，多 provider instance 映射成多个 provider group；不在 v1 为 OpenAI、Anthropic、OpenRouter 等注册多个 VS Code vendor。
+- OAuth v1 每个 OAuth provider 只支持一个账号实例：OpenAI OAuth 一个、Anthropic OAuth 一个；API key provider 和 OpenAI-compatible endpoint 可以有多个实例。
+- Director 只管理 provider instance 下的模型 enabled/hidden/default；VS Code 已有 recent/pin/model picker 状态能复用则复用，Director adapter 只负责过滤隐藏模型并提供 group metadata。
+- 默认模型 v1 使用一个全局默认 provider instance + model；不先做 Ask/Edit/Agent/Plan 分模式默认。
+- Provider Manager 复用或重做当前 Director Code Settings 的 provider 区域；不新增完全独立入口。Models Management 继续使用 VS Code 已有 Manage Models 页面。
+- API key 来源 v1 支持 SecretStorage 保存 key 和 env var 引用；用户可以填实际 key，也可以填环境变量名。
+- Provider instance 创建时允许用户填写稳定 slug/id，创建后不可改；`displayName` 可以修改。
+- VS Code model-management hook 使用薄改：`managementCommand` / Configure 动作必须能把当前 group 或 providerInstanceId 传给 Director Provider Manager，打开对应实例页；不能只打开无上下文总列表。
+- Director 模式下 Manage/Add Models 不受 Copilot entitlement、BYOK、Free/Pro/Business/Enterprise gating 限制；相关入口统一转 Director provider flow，Copilot 优先排序和升级/登录 CTA 不参与 Director 模型选择。
+- 旧配置采用懒迁移：当新 Provider Registry 为空且存在 `directorCode.ai.provider/model/baseURL/authVariant` 时，生成一个默认 provider instance。迁移后 UI 只写新 registry；旧 key 保留一版只读 fallback，不再作为正常写入目标。
+- OpenAI-compatible v1 手动模型列表是必需能力；API discovery 只做 best-effort，不阻塞保存、启用或调用手动模型。
+
+执行前硬门槛：
+
+- 刷新或新增 Provider / Model UI 调研报告，补入本地 OpenCode 和本地 VS Code main 的源码证据。
+- 报告必须明确 116 目标树中直接复用、薄 hook 修改、Director 原创实现、仅作参考的清单，尤其是 provider group、model picker grouping、Manage Models 入口、Copilot/BYOK/entitlement 行为和文案替换点、旧配置懒迁移路径。
+- 报告通过后再进入代码实现。
 
 范围：
 
-- 设计并实现 Provider Registry。
-- 支持多个 provider instance 同时存在。
-- 每个 provider 可启用/停用。
-- 每个 provider 可配置 URL、API key、OAuth 登录、注销、重置。
-- 新增或重做 Provider Manager UI。
-- 新增 Model Catalog UI。
-- 每个 provider 拥有自己的模型列表。
-- 用户可控制模型显示/隐藏。
-- Chat 模型选择列表按 provider 分组。
+- 设计并实现 Director Provider Registry。Provider 是实例，不是单 enum；同一个 kind 可以有多个实例。
+- 明确支持 OpenAI API key、OpenAI OAuth 作为两个不同 provider instance；OpenAI-compatible endpoint 可以添加多个实例。
+- 每个 provider instance 可启用/停用，并可独立配置 URL、API key、OAuth 登录、注销、重置、headers、连接测试和模型刷新。
+- 新增或重做 Director Provider Manager UI。该 UI 参考 OpenCode 的 providers/settings/custom-provider flow，负责连接、认证、实例、diagnostics，不承担外部 Agent session 管理。
+- OpenAI-compatible 自定义 provider 的第一版能力至少包含不可变 `providerId`、可改 `displayName`、`baseURL`、SecretStorage API key 或 env var 引用、headers、手动模型列表，并支持后续 API discovery。
+- 模型状态以 `(providerInstanceId, modelId)` 为稳定 key，支持可见/隐藏、display name、capabilities、context window、pricing/source metadata、recent/pinned/default。
+- 模型管理 UI 优先复用 116 已存在的 `ModelsManagementEditor` / `ChatModelsWidget` / `ChatModelsViewModel`；121 main 仅用于核对未来行为，不作为默认移植来源。
+- 对外暴露到 VS Code language model service 时，Director provider instance 映射为单一 `director-code` vendor 下的 VS Code `ILanguageModelsProviderGroup` 风格 group；Chat picker 按 group / provider instance 分组。
+- Chat 模型选择列表只显示启用 provider 下可见模型，并保留 VS Code main 已有的 manage/pin/recent/grouping 语义。
 - 迁移旧配置：`directorCode.ai.provider`、`directorCode.ai.model`、`directorCode.ai.baseURL`、`directorCode.ai.authVariant`。
 - 修复当前 provider UI 已知问题：
   - 模型刷新结果不回填 UI。
@@ -448,22 +511,38 @@ Replay patch ownership：
 - 不实现外部 Agent 管理。
 - 不把 Claude Code、ACP agent 放进 LLM provider registry。
 - 不强行一次性迁移为普通 VS Code extension。
+- 不在 v1 支持同一 OAuth provider 多账号切换。
+- 不在 v1 支持 Ask/Edit/Agent/Plan 分模式默认模型。
+- 不直接照搬 OpenCode runtime/provider loader；OpenCode 只作为 UI 和 provider/model 数据形态参考。
+- 不把 Copilot/BYOK/entitlement、微软/GitHub 登录升级流程或相关链接带入 Director UI。
 
 建议验收：
 
 - 多个 provider 可以同时启用。
 - 每个 provider 可以独立设置 URL/API key/OAuth。
+- OpenAI API key 与 OpenAI OAuth 可作为两个实例同时存在。
+- 至少两个 OpenAI-compatible endpoint 可以同时存在并各自拥有模型列表。
 - 模型可按 provider 独立启用或隐藏。
-- Chat 模型选择器只显示启用模型，并按 provider 聚合。
-- 旧用户配置可迁移为默认 provider instance。
+- Chat 模型选择器只显示启用模型，并按 provider group / provider instance 聚合。
+- Manage Models 入口可打开模型管理 UI，且用户能搜索、查看 provider 分组、pin/recent 或等价选择状态。
+- 从模型管理页或 picker 对某个 provider group 点击 Configure，会打开 Director Provider Manager 的对应 provider instance。
+- Manage/Add Models 在 Director 模式下不受 Copilot entitlement / BYOK / subscription gating 限制。
+- Provider instance 的 `providerId` 创建后不可修改；修改 `displayName` 不会破坏模型可见性、recent/pin 或默认模型状态。
+- API key 可保存到 SecretStorage，也可保存为 env var 引用；Provider Registry JSON 不包含明文 key、OAuth token 或 secret payload。
+- OAuth v1 每个 provider kind 只绑定一个账号实例；API key 和 compatible provider 仍可多实例并存。
+- 全局默认 provider instance + model 可被保存、读取并驱动 Director Agent 默认模型选择。
+- 旧用户配置可懒迁移为默认 provider instance，迁移后新 UI 不再写旧单全局配置 key。
 - OAuth 登录/注销/重置不依赖单全局 active provider。
+- 用户可添加 custom OpenAI-compatible provider，并配置 baseURL、API key/env secret、headers 和至少一个手动模型；API discovery 失败不阻塞保存和使用。
+- VS Code main 模型管理页中 Copilot/BYOK/entitlement 相关入口、文案和链接已被移除或替换为 Director-owned provider flow。
 - replay validation 和相关 UI smoke 通过。
 
-插件化方向：
+实现策略：
 
-- 第一阶段仍建议 workbench 内部实现 Provider Registry 和 UI。
-- 后续可把 OpenAI-compatible 等 provider adapter 抽到 built-in extension。
-- VS Code `LanguageModelChatProvider` API 和 `oai-compatible-copilot` 证明插件路径可行，但 Director 当前仍需要内部 secret、OAuth、mode/tool policy、Chat Editing 等桥接能力。
+- 第一阶段仍以 workbench 内部 Director Provider Registry 为长期真相，避免把 secret、OAuth、mode/tool policy、Chat Editing 等能力拆散到不成熟的普通扩展路径。
+- 模型管理层尽量复用 116 当前已有的 provider group / Models Management / Model Picker 设计；121 只用于确认未来兼容，不作为默认 backport 内容。
+- Adapter 层先支持 Director-owned OpenAI key、OpenAI OAuth、OpenAI-compatible custom provider，再逐步扩展 Anthropic、OpenRouter、Ollama、company proxy 等。
+- 后续可把稳定的 OpenAI-compatible 等 provider adapter 抽到 built-in extension，但 Provider Registry、secret/OAuth policy 和 user-facing management flow 仍由 Director 控制。
 
 ## Wave 3: Claude SDK Adapter
 
@@ -614,7 +693,6 @@ bash scripts/upgrade/materialize-vscode.sh \
 
 ## 当前开放问题
 
-1. Wave 2 Provider Registry 是否需要支持多个同 kind provider，例如两个 OpenAI-compatible endpoint。
-2. Wave 3 Claude SDK 是否以用户本机 Claude Code auth 为主，还是同时支持 Anthropic API key。
-3. Wave 4 第一个 ACP smoke 对象选择 Hermes 还是 OpenCode。
-4. Wave 5 Codex 是否接受先走 ACP wrapper 做 baseline。
+1. Wave 3 Claude SDK 是否以用户本机 Claude Code auth 为主，还是同时支持 Anthropic API key。
+2. Wave 4 第一个 ACP smoke 对象选择 Hermes 还是 OpenCode。
+3. Wave 5 Codex 是否接受先走 ACP wrapper 做 baseline。
