@@ -1,5 +1,21 @@
 # AGENTS.md - Director-Code replay source guide
 
+## 2026-05-16 Phase 2 Wave 1 Plan Mode Update
+
+- Phase 2 Wave 1 Plan Mode is complete, replay-backed, packaged, committed, and pushed as `1940758b` (`feat: add director plan mode wave 1`) on `refactor/112-replay-baseline`.
+- Plan Mode is implemented as Director Agent/session state, not a new top-level `ChatModeKind`. The default remains full Agent mode; users enter/exit Plan from the Chat input secondary UI while the top-level chat mode stays Agent.
+- Plan drafts are written to workspace-local `.director/plans/*.md` through Director-owned host code. The plan file has YAML frontmatter, a short human-readable id, stable sections, and host-managed status transitions.
+- Plan completion is driven by the Plan-only `director_present_plan` tool. The host rejects invalid payloads, unknown fields, and `planMarkdown` that attempts to carry frontmatter/status/path/cwd/root/write-target metadata; one Plan-only correction attempt is allowed.
+- Review UI is Director-owned minimal Chat review: Execute / Reject / Revise. Execute starts a new same-session Agent request with approved plan context; it only leaves Plan after the new Agent request is sent or queued-then-sent. Revise keeps Plan mode and sends feedback into the same planning session flow.
+- Plan tool policy exposes only read context tools, `fetch`, and `director_present_plan`; edit tools, terminal/task tools, extension search, subagents, and mutation tools remain hidden from Plan.
+- Replay ownership: runtime/agent loop and Plan service/tool code are in `patches/replay/004-director-agent-engine.116.patch`; tool policy/schema changes are in `patches/replay/007-director-tool-layer.116.patch`; `patches/series.116.json` and 116 reports were refreshed.
+- Validation completed after clean replay materialization: `validate-series`, `validate-product-overrides`, `expected-contracts`, `compile-check-ts-native`, `transpile-client`, and Director browser tests (`100 passing`). Full package build via `scripts/build-director-116.ps1` passed without `-SkipReplay`.
+- Installer artifacts from the Wave 1 build:
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `21155405981C5BADED22883A7962101195C3AFABCAFA60EA1F85D642796E40B2`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `4DEC8AC60533F5E2979B059863872A0D20AB67F27F7D9657959400C6D0A0DD64`
+- Interactive installer/manual smoke was not run automatically to avoid modifying the user's installed app/profile. Treat user-side installer/manual acceptance as the remaining external check for this package.
+- Next planned Phase 2 wave is Wave 2 Provider / Model Registry + UI. Before code, refresh or add the Provider/Model UI research report with local OpenCode and VS Code main evidence, then decide the minimum 116 backport/adaptation surface.
+
 ## 2026-05-14 Phase 6 Package Regression Update
 
 - Phase 6 non-destructive package/regression pass is complete and should be committed/pushed as its own wave.

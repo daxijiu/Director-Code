@@ -1,5 +1,31 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-16 latest memory: Phase 2 Wave 1 Plan Mode completed and packaged
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Phase 2 Wave 1 Plan Mode is implemented, replay-landed, committed, pushed, and packaged. Commit: `1940758b` (`feat: add director plan mode wave 1`).
+- Plan Mode is a Director Agent/session state, not a top-level `ChatModeKind`. The default remains full Agent mode; users enter/exit Plan from the Chat input secondary UI.
+- Plan drafts are written by host code to workspace-local `.director/plans/*.md` with YAML frontmatter, short readable ids, stable sections, and host-managed statuses.
+- Plan completion requires the Plan-only `director_present_plan` tool. Invalid schema, unknown fields, and `planMarkdown` containing frontmatter/status/path/cwd/root/write-target metadata are rejected and trigger at most one correction attempt.
+- Review flow is Director-owned minimal Chat UI with Execute / Reject / Revise. Execute sends a new same-session Agent request with approved plan context and only exits Plan once that request is sent or queued-then-sent. Revise keeps planning and feeds user feedback back into the Plan flow.
+- Plan tool allowlist: read context tools, `fetch`, and `director_present_plan` only. Edit, terminal/task, extension, subagent, and mutation tools are hidden from Plan.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, `director-patches-report.json`, `materialize-report.json`, `expected-contracts-report.json`, and `docs/upgrade/116-phase2-waves-plan.md`.
+- Validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean materialize with `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - clean generated tree dependency restore with `npm ci` passed on retry after a transient Windows native dependency file lock.
+  - `npm run compile-check-ts-native`
+  - `npm run transpile-client`
+  - `npm run test-browser -- --grep Director` (`100 passing`; upstream browser runner logged known long-referrer warnings)
+  - full package build with `scripts/build-director-116.ps1` without `-SkipReplay`
+- Installer artifacts:
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `21155405981C5BADED22883A7962101195C3AFABCAFA60EA1F85D642796E40B2`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `4DEC8AC60533F5E2979B059863872A0D20AB67F27F7D9657959400C6D0A0DD64`
+- Interactive installer/manual smoke was not run automatically to avoid modifying the user's installed app/profile.
+- Next wave: Phase 2 Wave 2 Provider / Model Registry + UI. Before code, refresh or add the Provider/Model UI research report with local OpenCode and local VS Code main evidence, then settle the minimum VS Code 116 model-management backport/adaptation surface.
+- Note: after the Wave 1 push, `docs/upgrade/116-phase2-waves-plan.md` has separate uncommitted Wave 2 plan refinements in the working tree; do not accidentally mix or revert them without user intent.
+
 ## 2026-05-15 latest memory: Phase 6 replay consolidation completed; next-version dry-run blocked by upstream availability
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
