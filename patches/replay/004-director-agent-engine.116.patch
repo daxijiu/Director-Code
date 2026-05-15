@@ -311,6 +311,37 @@ index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f
 +		enabledApiProposals: proposals
 +	};
 +}
+diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8ab07f36b18eab99b469135093691bfaf4a45b27
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts
+@@ -0,0 +1,25 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
++import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../../common/contributions.js';
++import { DirectorPresentPlanTool, DirectorPresentPlanToolData } from '../../../directorCode/common/agentEngine/directorPlanTools.js';
++import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
++
++class DirectorPlanToolsContribution extends Disposable implements IWorkbenchContribution {
++	static readonly ID = 'workbench.contrib.directorPlanTools';
++
++	constructor(
++		@ILanguageModelToolsService toolsService: ILanguageModelToolsService,
++		@IInstantiationService instantiationService: IInstantiationService,
++	) {
++		super();
++
++		this._register(toolsService.registerTool(DirectorPresentPlanToolData, instantiationService.createInstance(DirectorPresentPlanTool)));
++	}
++}
++
++registerWorkbenchContribution2(DirectorPlanToolsContribution.ID, DirectorPlanToolsContribution, WorkbenchPhase.AfterRestored);
 diff --git a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 index 0cff2561e1e8376f091b994dcdd285169de3278c..58543cd9e55488c1bce275a0867b7570b82ad5a0 100644
 --- a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
@@ -4357,10 +4388,10 @@ index 0000000000000000000000000000000000000000..6f8c6ea17c6517c6a2096a7d034856de
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..0ca5602a691a292c6664bf88e5f76ad6662b937f
+index 0000000000000000000000000000000000000000..88d0335363949ea9706d57fb58f740e00908f311
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,52 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4405,9 +4436,11 @@ index 0000000000000000000000000000000000000000..0ca5602a691a292c6664bf88e5f76ad6
 +		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Inline), 1);
 +		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Ask), 6);
 +		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Agent), 25);
++		assert.strictEqual(getDirectorModeMaxTurns(25, DirectorToolMode.Plan), 25);
 +		assert.ok(/Do not edit files/.test(getDirectorModeSystemPrompt(DirectorToolMode.Ask) ?? ''));
 +		assert.ok(/reviewable edit tools/.test(getDirectorModeSystemPrompt(DirectorToolMode.Edit) ?? ''));
 +		assert.ok(/exact replacement text/.test(getDirectorModeSystemPrompt(DirectorToolMode.Inline) ?? ''));
++		assert.ok(/director_present_plan/.test(getDirectorModeSystemPrompt(DirectorToolMode.Plan) ?? ''));
 +		assert.strictEqual(getDirectorModeSystemPrompt(DirectorToolMode.Agent), undefined);
 +	});
 +});
@@ -4707,6 +4740,99 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +			assert.strictEqual(o3!.maxOutputTokens, 100_000);
 +		});
 +	});
++});
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..89556621307e863895a283e60f9e825d89f04f3e
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
+@@ -0,0 +1,87 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { URI } from '../../../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { createApprovedPlanExecutionPrompt, renderDirectorPlanFile, validateDirectorPresentPlanInput, type DirectorPlanRecord } from '../../../../directorCode/common/agentEngine/directorPlanMode.js';
++
++suite('Director Plan Mode', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('validates director_present_plan input shape', () => {
++		const valid = validateDirectorPresentPlanInput({
++			title: 'Add plan mode',
++			summary: 'Implement the planning flow.',
++			planMarkdown: '1. Read files\n2. Implement changes',
++			assumptions: ['Workspace is open'],
++			validation: ['Run tests'],
++			risks: ['UI may need polish'],
++			openQuestions: ['None'],
++		});
++		assert.strictEqual(valid.ok, true);
++		if (valid.ok) {
++			assert.deepStrictEqual(valid.value.assumptions, ['Workspace is open']);
++		}
++
++		assert.strictEqual(validateDirectorPresentPlanInput({
++			title: 'Bad',
++			summary: 'Bad',
++			planMarkdown: '---\nstatus: Draft\n---\nDo work',
++		}).ok, false);
++		assert.strictEqual(validateDirectorPresentPlanInput({
++			title: 'Bad',
++			summary: 'Bad',
++			planMarkdown: 'Do work',
++			path: '.director/plans/foo.md',
++		}).ok, false);
++	});
++
++	test('renders stable workspace-local plan file sections', () => {
++		const plan = samplePlan();
++		const content = renderDirectorPlanFile(plan);
++
++		assert.ok(content.startsWith('---\nstatus: Draft\n'));
++		assert.ok(content.includes('planId: "20260516-120000-abcd1234"'));
++		assert.ok(content.includes('workspaceRoot: "E:\\\\Projects\\\\Example"'));
++		assert.ok(content.includes('planFile: ".director/plans/20260516-120000-abcd1234-plan.md"'));
++		assert.ok(content.includes('## Proposed Steps\n1. Inspect files\n2. Implement'));
++		assert.ok(content.includes('## Feedback History\n- Use a smaller UI'));
++	});
++
++	test('approved execution prompt carries plan context into Agent mode', () => {
++		const prompt = createApprovedPlanExecutionPrompt(samplePlan());
++
++		assert.ok(prompt.includes('Execute the approved Director plan below.'));
++		assert.ok(prompt.includes('Continue in full Agent mode.'));
++		assert.ok(prompt.includes('Plan file: .director/plans/20260516-120000-abcd1234-plan.md'));
++		assert.ok(prompt.includes('## Proposed Steps'));
++	});
++
++	function samplePlan(): DirectorPlanRecord {
++		return {
++			planId: '20260516-120000-abcd1234',
++			title: 'Plan Mode',
++			summary: 'Add a reviewable planning loop.',
++			planMarkdown: '1. Inspect files\n2. Implement',
++			assumptions: ['Workspace is open'],
++			validation: ['Run targeted tests'],
++			risks: ['Button UI is minimal'],
++			openQuestions: ['None'],
++			feedbackHistory: ['Use a smaller UI'],
++			created: '2026-05-16T12:00:00.000Z',
++			updated: '2026-05-16T12:00:10.000Z',
++			sourceSession: 'chat-session://director/test',
++			sourceRequest: 'request-1',
++			workspaceRoot: 'E:\\Projects\\Example',
++			planFile: '.director/plans/20260516-120000-abcd1234-plan.md',
++			planUri: URI.file('E:/Projects/Example/.director/plans/20260516-120000-abcd1234-plan.md'),
++			nonce: 'nonce-1',
++			status: 'Draft',
++			statusReason: '',
++		};
++	}
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 new file mode 100644
@@ -10941,10 +11067,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72eac47ef0db
+index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef348434dac273f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,278 @@
+@@ -0,0 +1,504 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -10959,7 +11085,9 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +
 +import { Disposable } from '../../../../../base/common/lifecycle.js';
 +import { toDisposable } from '../../../../../base/common/lifecycle.js';
++import { URI } from '../../../../../base/common/uri.js';
 +import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../../platform/configuration/common/configurationRegistry.js';
++import { CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 +import { IInstantiationService, ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
 +import { registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
 +import { Registry } from '../../../../../platform/registry/common/platform.js';
@@ -10968,6 +11096,7 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +import { IChatAgentService } from '../../../chat/common/participants/chatAgents.js';
 +import type { IChatAgentData } from '../../../chat/common/participants/chatAgents.js';
 +import { ChatAgentLocation, ChatModeKind } from '../../../chat/common/constants.js';
++import type { IChatRequestModeInfo } from '../../../chat/common/model/chatModel.js';
 +import { DirectorCodeAgent } from './directorCodeAgent.js';
 +import { DirectorCodeModelProvider } from './directorCodeModelProvider.js';
 +import { ILanguageModelsService } from '../../../chat/common/languageModels.js';
@@ -10976,11 +11105,14 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +import { EditorExtensions, IEditorFactoryRegistry } from '../../../../common/editor.js';
 +import { IEditorService } from '../../../../services/editor/common/editorService.js';
 +import { Action2, MenuId, registerAction2 } from '../../../../../platform/actions/common/actions.js';
-+import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
++import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
 +import { localize, localize2 } from '../../../../../nls.js';
++import { INotificationService } from '../../../../../platform/notification/common/notification.js';
++import { IQuickInputService } from '../../../../../platform/quickinput/common/quickInput.js';
 +import { CHAT_CONFIG_MENU_ID } from '../../../chat/browser/actions/chatActions.js';
-+import { ChatViewId } from '../../../chat/browser/chat.js';
++import { ChatViewId, IChatWidgetService } from '../../../chat/browser/chat.js';
 +import { ChatContextKeys } from '../../../chat/common/actions/chatContextKeys.js';
++import { ChatSendResult, IChatService } from '../../../chat/common/chatService/chatService.js';
 +import {
 +	DirectorCodeSettingsEditor,
 +	DirectorCodeSettingsEditorInput,
@@ -10990,8 +11122,19 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +import { IOAuthService, OAuthService } from '../../common/agentEngine/oauthService.js';
 +import { IAuthStateService, AuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
++import {
++	createApprovedPlanExecutionPrompt,
++	createPlanRevisionPrompt,
++	DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
++	DIRECTOR_PLAN_REJECT_COMMAND_ID,
++	DIRECTOR_PLAN_REVISE_COMMAND_ID,
++	DIRECTOR_PLAN_TOGGLE_COMMAND_ID,
++	DirectorPlanModeService,
++	IDirectorPlanModeService,
++} from '../../common/agentEngine/directorPlanMode.js';
 +import '../../../chat/browser/agentEngine/directorReadOnlyTools.contribution.js';
 +import '../../../chat/browser/agentEngine/editTools/directorEditTools.contribution.js';
++import '../../../chat/browser/agentEngine/directorPlanTools.contribution.js';
 +
 +// ============================================================================
 +// Service Registration
@@ -11001,6 +11144,7 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +registerSingleton(IOAuthService, new SyncDescriptor(OAuthService, [], true));
 +registerSingleton(IAuthStateService, new SyncDescriptor(AuthStateService, [], true));
 +registerSingleton(IModelResolverService, new SyncDescriptor(ModelResolverService, [], true));
++registerSingleton(IDirectorPlanModeService, new SyncDescriptor(DirectorPlanModeService, [], true));
 +
 +// ============================================================================
 +// Configuration Registration
@@ -11103,6 +11247,43 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +// ============================================================================
 +
 +const OPEN_SETTINGS_COMMAND_ID = 'director-code.openSettings';
++const DIRECTOR_PLAN_EXIT_COMMAND_ID = 'director.plan.exitMode';
++const DIRECTOR_PLAN_MODE_ACTIVE_CONTEXT = new RawContextKey<boolean>('directorCode.planModeActive', false);
++const AGENT_MODE_INFO: IChatRequestModeInfo = {
++	kind: ChatModeKind.Agent,
++	isBuiltin: true,
++	modeInstructions: undefined,
++	modeId: 'agent',
++	applyCodeBlockSuggestionId: undefined,
++};
++
++async function toggleDirectorPlanMode(accessor: ServicesAccessor): Promise<void> {
++	const chatWidgetService = accessor.get(IChatWidgetService);
++	const planModeService = accessor.get(IDirectorPlanModeService);
++	const chatService = accessor.get(IChatService);
++	const notificationService = accessor.get(INotificationService);
++	const widget = chatWidgetService.lastFocusedWidget;
++	const sessionResource = widget?.viewModel?.sessionResource;
++	if (!sessionResource) {
++		return;
++	}
++
++	const state = planModeService.getSessionState(sessionResource);
++	if (state.mode === 'plan') {
++		await chatService.cancelCurrentRequestForSession(sessionResource, 'director-plan-mode-toggle');
++		await planModeService.cancelPlanMode(sessionResource, 'User switched back to Agent mode.');
++		notificationService.info(localize('directorCode.planMode.exited', "Director Plan Mode is off."));
++		return;
++	}
++
++	const entered = planModeService.enterPlanMode(sessionResource);
++	if (!entered.ok) {
++		notificationService.warn(entered.message);
++		return;
++	}
++	widget.input.setChatMode(ChatModeKind.Agent, false);
++	notificationService.info(localize('directorCode.planMode.entered', "Director Plan Mode is on. Send your next Agent message to produce a reviewable plan."));
++}
 +
 +registerAction2(class extends Action2 {
 +	constructor() {
@@ -11141,6 +11322,165 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +	}
 +});
 +
++registerAction2(class extends Action2 {
++	constructor() {
++		super({
++			id: DIRECTOR_PLAN_TOGGLE_COMMAND_ID,
++			title: localize2('directorCode.enterPlanMode', "Enter Plan Mode"),
++			shortTitle: localize('directorCode.togglePlanMode.short', "Plan"),
++			category: localize2('directorCode', "Director Code"),
++			f1: false,
++			precondition: ContextKeyExpr.and(
++				ChatContextKeys.enabled,
++				ChatContextKeys.requestInProgress.negate(),
++				ChatContextKeys.location.isEqualTo(ChatAgentLocation.Chat),
++				ChatContextKeys.chatModeKind.isEqualTo(ChatModeKind.Agent),
++			),
++			menu: [
++				{
++					id: MenuId.ChatInputSecondary,
++					when: ContextKeyExpr.and(
++						ChatContextKeys.enabled,
++						ChatContextKeys.location.isEqualTo(ChatAgentLocation.Chat),
++						ChatContextKeys.chatModeKind.isEqualTo(ChatModeKind.Agent),
++						ChatContextKeys.inQuickChat.negate(),
++						DIRECTOR_PLAN_MODE_ACTIVE_CONTEXT.toNegated(),
++					),
++					order: 11,
++					group: 'navigation',
++				},
++			],
++		});
++	}
++
++	async run(accessor: ServicesAccessor) {
++		await toggleDirectorPlanMode(accessor);
++	}
++});
++
++registerAction2(class extends Action2 {
++	constructor() {
++		super({
++			id: DIRECTOR_PLAN_EXIT_COMMAND_ID,
++			title: localize2('directorCode.exitPlanMode', "Exit Plan Mode"),
++			shortTitle: localize('directorCode.exitPlanMode.short', "Agent"),
++			category: localize2('directorCode', "Director Code"),
++			f1: false,
++			precondition: ContextKeyExpr.and(
++				ChatContextKeys.enabled,
++				ChatContextKeys.requestInProgress.negate(),
++				ChatContextKeys.location.isEqualTo(ChatAgentLocation.Chat),
++				ChatContextKeys.chatModeKind.isEqualTo(ChatModeKind.Agent),
++			),
++			menu: [
++				{
++					id: MenuId.ChatInputSecondary,
++					when: ContextKeyExpr.and(
++						ChatContextKeys.enabled,
++						ChatContextKeys.location.isEqualTo(ChatAgentLocation.Chat),
++						ChatContextKeys.chatModeKind.isEqualTo(ChatModeKind.Agent),
++						ChatContextKeys.inQuickChat.negate(),
++						DIRECTOR_PLAN_MODE_ACTIVE_CONTEXT,
++					),
++					order: 11,
++					group: 'navigation',
++				},
++			],
++		});
++	}
++
++	async run(accessor: ServicesAccessor) {
++		await toggleDirectorPlanMode(accessor);
++	}
++});
++
++CommandsRegistry.registerCommand(DIRECTOR_PLAN_EXECUTE_COMMAND_ID, async (accessor, sessionResource: URI, planId: string, nonce: string) => {
++	const planModeService = accessor.get(IDirectorPlanModeService);
++	const chatService = accessor.get(IChatService);
++	const chatWidgetService = accessor.get(IChatWidgetService);
++	const notificationService = accessor.get(INotificationService);
++	const plan = planModeService.prepareExecution(sessionResource, planId, nonce);
++	if (!plan) {
++		notificationService.warn(localize('directorCode.plan.execute.missing', "This plan review is no longer active."));
++		return;
++	}
++
++	const widget = chatWidgetService.getWidgetBySessionResource(sessionResource);
++	widget?.input.setChatMode(ChatModeKind.Agent, false);
++	const result = await chatService.sendRequest(sessionResource, createApprovedPlanExecutionPrompt(plan), {
++		agentIdSilent: AGENT_ID,
++		modeInfo: AGENT_MODE_INFO,
++		location: ChatAgentLocation.Chat,
++		isSystemInitiated: true,
++		systemInitiatedLabel: localize('directorCode.plan.execute.label', "Execute approved plan"),
++	});
++
++	const sent = ChatSendResult.isSent(result)
++		? result
++		: ChatSendResult.isQueued(result)
++			? await result.deferred
++			: result;
++	if (ChatSendResult.isSent(sent)) {
++		await planModeService.markExecutionSent(sessionResource, planId, nonce);
++		notificationService.info(localize('directorCode.plan.execute.sent', "Executing approved plan."));
++	} else if (ChatSendResult.isRejected(sent)) {
++		notificationService.warn(localize('directorCode.plan.execute.rejected', "Could not start execution: {0}", sent.reason));
++	} else {
++		notificationService.warn(localize('directorCode.plan.execute.stillQueued', "Execution is still queued."));
++	}
++});
++
++CommandsRegistry.registerCommand(DIRECTOR_PLAN_REJECT_COMMAND_ID, async (accessor, sessionResource: URI, planId: string, nonce: string) => {
++	const planModeService = accessor.get(IDirectorPlanModeService);
++	const notificationService = accessor.get(INotificationService);
++	const plan = await planModeService.rejectPlan(sessionResource, planId, nonce, 'User rejected the plan.');
++	if (!plan) {
++		notificationService.warn(localize('directorCode.plan.reject.missing', "This plan review is no longer active."));
++		return;
++	}
++	notificationService.info(localize('directorCode.plan.reject.done', "Plan rejected."));
++});
++
++CommandsRegistry.registerCommand(DIRECTOR_PLAN_REVISE_COMMAND_ID, async (accessor, sessionResource: URI, planId: string, nonce: string) => {
++	const planModeService = accessor.get(IDirectorPlanModeService);
++	const chatService = accessor.get(IChatService);
++	const chatWidgetService = accessor.get(IChatWidgetService);
++	const quickInputService = accessor.get(IQuickInputService);
++	const notificationService = accessor.get(INotificationService);
++	const currentPlan = planModeService.getPlanForReview(sessionResource, planId, nonce);
++	if (!currentPlan) {
++		notificationService.warn(localize('directorCode.plan.revise.missing', "This plan review is no longer active."));
++		return;
++	}
++
++	const feedback = await quickInputService.input({
++		prompt: localize('directorCode.plan.revise.prompt', "Add feedback for the plan"),
++		placeHolder: localize('directorCode.plan.revise.placeholder', "What should change before execution?"),
++	});
++	if (!feedback?.trim()) {
++		return;
++	}
++
++	const plan = await planModeService.beginRevision(sessionResource, planId, nonce, feedback.trim());
++	if (!plan) {
++		notificationService.warn(localize('directorCode.plan.revise.inactive', "Could not revise this plan because it is no longer active."));
++		return;
++	}
++
++	const widget = chatWidgetService.getWidgetBySessionResource(sessionResource);
++	widget?.input.setChatMode(ChatModeKind.Agent, false);
++	const result = await chatService.sendRequest(sessionResource, createPlanRevisionPrompt(plan, feedback.trim()), {
++		agentIdSilent: AGENT_ID,
++		modeInfo: AGENT_MODE_INFO,
++		location: ChatAgentLocation.Chat,
++		isSystemInitiated: true,
++		systemInitiatedLabel: localize('directorCode.plan.revise.label', "Revise plan"),
++	});
++	if (ChatSendResult.isRejected(result)) {
++		notificationService.warn(localize('directorCode.plan.revise.rejected', "Could not send plan feedback: {0}", result.reason));
++	}
++});
++
 +// ============================================================================
 +// Agent + Model Provider Registration
 +// ============================================================================
@@ -11157,6 +11497,9 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +		@IChatAgentService agentService: IChatAgentService,
 +		@IInstantiationService instantiationService: IInstantiationService,
 +		@ILanguageModelsService languageModelsService: ILanguageModelsService,
++		@IDirectorPlanModeService planModeService: IDirectorPlanModeService,
++		@IChatWidgetService chatWidgetService: IChatWidgetService,
++		@IContextKeyService contextKeyService: IContextKeyService,
 +	) {
 +		super();
 +
@@ -11214,6 +11557,15 @@ index 0000000000000000000000000000000000000000..5c1c9158f40914c0a6263d39be3a72ea
 +		// Step 2: Register provider (now safe — vendor is known)
 +		const modelProvider = instantiationService.createInstance(DirectorCodeModelProvider);
 +		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
++
++		const planModeActiveContext = DIRECTOR_PLAN_MODE_ACTIVE_CONTEXT.bindTo(contextKeyService);
++		const updatePlanModeContext = () => {
++			const sessionResource = chatWidgetService.lastFocusedWidget?.viewModel?.sessionResource;
++			planModeActiveContext.set(!!sessionResource && planModeService.getSessionState(sessionResource).mode === 'plan');
++		};
++		this._register(planModeService.onDidChangeSessionState(updatePlanModeContext));
++		this._register(chatWidgetService.onDidChangeFocusedSession(updatePlanModeContext));
++		updatePlanModeContext();
 +	}
 +
 +}
@@ -11673,10 +12025,10 @@ index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd5f555328
+index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc8759b3a31fb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,653 @@
+@@ -0,0 +1,805 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -11692,6 +12044,7 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 + */
 +
 +import { CancellationToken } from '../../../../../base/common/cancellation.js';
++import { MarkdownString } from '../../../../../base/common/htmlContent.js';
 +import { Disposable } from '../../../../../base/common/lifecycle.js';
 +import type { IRange } from '../../../../../editor/common/core/range.js';
 +import { Selection } from '../../../../../editor/common/core/selection.js';
@@ -11722,6 +12075,17 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +import { ChatAgentLocation, type ChatModeKind } from '../../../chat/common/constants.js';
 +import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
 +import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
++import {
++	createDirectorPlanReviewMarkdown,
++	createPlanModeUserPrompt,
++	DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
++	DIRECTOR_PLAN_REJECT_COMMAND_ID,
++	DIRECTOR_PLAN_REVISE_COMMAND_ID,
++	DIRECTOR_PRESENT_PLAN_TOOL_NAME,
++	IDirectorPlanModeService,
++	type DirectorPlanRecord,
++	type DirectorPresentPlanResult,
++} from '../../common/agentEngine/directorPlanMode.js';
 +import { agentEventToProgress } from './progressBridge.js';
 +import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';
 +import { VSCodeToolBridge, getAgentToolDefinitions, waitForAgentToolRegistryReady } from './toolBridge.js';
@@ -11789,6 +12153,7 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +		@IInstantiationService private readonly instantiationService: IInstantiationService,
 +		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 +		@ITextModelService private readonly textModelService: ITextModelService,
++		@IDirectorPlanModeService private readonly planModeService: IDirectorPlanModeService,
 +	) {
 +		super();
 +	}
@@ -11812,11 +12177,23 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
 +			const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
 +			const modeKind = this.resolveRequestModeKind(request);
-+			const directorMode = getDirectorToolModeForRequest({
++			const routedDirectorMode = getDirectorToolModeForRequest({
 +				location: request.location,
 +				locationData: request.locationData,
 +				modeKind,
 +			});
++			const directorMode = routedDirectorMode === DirectorToolMode.Agent && this.planModeService.getSessionState(request.sessionResource).mode === 'plan'
++				? DirectorToolMode.Plan
++				: routedDirectorMode;
++			if (directorMode === DirectorToolMode.Plan) {
++				const readiness = this.planModeService.canUsePlanMode();
++				if (!readiness.ok) {
++					return {
++						errorDetails: { message: readiness.message },
++						timings: { totalElapsed: Date.now() - startTime },
++					};
++				}
++			}
 +
 +			// 1b. Override model if user selected one from the Chat UI model picker
 +			if (request.userSelectedModelId) {
@@ -11944,44 +12321,178 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +					timings: { totalElapsed: Date.now() - startTime },
 +				};
 +			}
-+			const userMessage = inlineContext
++			const planRequestContext = directorMode === DirectorToolMode.Plan
++				? this.planModeService.beginPlanRequest(request.sessionResource, request.requestId, request.message)
++				: undefined;
++			const baseUserMessage = inlineContext
 +				? this.createInlineEditPrompt(request, inlineContext)
 +				: requestToUserMessage(request);
++			const userMessage = directorMode === DirectorToolMode.Plan
++				? createPlanModeUserPrompt(baseUserMessage, planRequestContext)
++				: baseUserMessage;
 +
 +			try {
 +				// 10. Run the agentic loop
 +				let firstProgressSent = false;
 +				let firstProgressTime: number | undefined;
 +				let inlineResponseText = '';
++				let nextUserMessage = userMessage;
 +
-+				for await (const event of engine.submitMessage(userMessage)) {
-+					if (token.isCancellationRequested) {
-+						break;
-+					}
++				while (!token.isCancellationRequested) {
++					let restartPlanMessage: string | undefined;
 +
-+					if (directorMode === DirectorToolMode.Inline) {
-+						inlineResponseText += this.extractEventText(event);
-+					}
-+
-+					const progressParts = directorMode === DirectorToolMode.Inline
-+						? []
-+						: agentEventToProgress(event);
-+					if (progressParts.length > 0) {
-+						if (!firstProgressSent) {
-+							firstProgressTime = Date.now() - startTime;
-+							firstProgressSent = true;
++					for await (const event of engine.submitMessage(nextUserMessage)) {
++						if (token.isCancellationRequested) {
++							break;
 +						}
-+						progress(progressParts);
-+					}
 +
-+					// Handle final result event
-+					if (event.type === 'result') {
-+						const resultEvent = event as any;
-+						if (resultEvent.subtype === 'error') {
++						if (directorMode === DirectorToolMode.Inline) {
++							inlineResponseText += this.extractEventText(event);
++						}
++
++						const progressParts = directorMode === DirectorToolMode.Inline
++							? []
++							: agentEventToProgress(event);
++						if (progressParts.length > 0) {
++							if (!firstProgressSent) {
++								firstProgressTime = Date.now() - startTime;
++								firstProgressSent = true;
++							}
++							progress(progressParts);
++						}
++
++						if (directorMode === DirectorToolMode.Plan && event.type === 'tool_result' && event.tool_name === DIRECTOR_PRESENT_PLAN_TOOL_NAME) {
++							const presentResult = this.parseDirectorPresentPlanResult(event.content);
++							if (presentResult?.ok) {
++								const plan = this.planModeService.getSessionState(request.sessionResource).activePlan;
++								if (!plan) {
++									return {
++										errorDetails: { message: 'Plan was presented, but the active plan record was not found.' },
++										timings: {
++											firstProgress: firstProgressTime,
++											totalElapsed: Date.now() - startTime,
++										},
++										metadata: { subtype: 'plan_missing_record' },
++									};
++								}
++								firstProgressTime ??= Date.now() - startTime;
++								firstProgressSent = true;
++								progress(this.createDirectorPlanReviewProgress(request.sessionResource, plan));
++								return {
++									timings: {
++										firstProgress: firstProgressTime,
++										totalElapsed: Date.now() - startTime,
++									},
++									metadata: {
++										subtype: 'plan_awaiting_decision',
++										planId: plan.planId,
++										planFile: plan.planFile,
++									},
++								};
++							}
++							if (presentResult?.fatal) {
++								return {
++									errorDetails: { message: presentResult.message },
++									timings: {
++										firstProgress: firstProgressTime,
++										totalElapsed: Date.now() - startTime,
++									},
++									metadata: { subtype: 'plan_present_invalid' },
++								};
++							}
++						}
++
++						// Handle final result event
++						if (event.type === 'result') {
++							const resultEvent = event as any;
++							if (resultEvent.subtype === 'error') {
++								return {
++									errorDetails: {
++										message: resultEvent.error || 'Agent encountered an error',
++									},
++									timings: {
++										firstProgress: firstProgressTime,
++										totalElapsed: Date.now() - startTime,
++									},
++									metadata: {
++										usage: resultEvent.usage,
++										cost: resultEvent.cost,
++										numTurns: resultEvent.numTurns,
++									},
++								};
++							}
++
++							if (directorMode === DirectorToolMode.Plan) {
++								const correction = this.planModeService.recordMissingPresentPlan(request.sessionResource);
++								if (correction.fatal) {
++									return {
++										errorDetails: { message: correction.message },
++										timings: {
++											firstProgress: firstProgressTime,
++											totalElapsed: Date.now() - startTime,
++										},
++										metadata: {
++											usage: resultEvent.usage,
++											cost: resultEvent.cost,
++											numTurns: resultEvent.numTurns,
++											subtype: 'plan_missing_present_tool',
++										},
++									};
++								}
++								restartPlanMessage = correction.message;
++								progress([{
++									kind: 'markdownContent',
++									content: new MarkdownString(correction.message),
++								}]);
++								break;
++							}
++
++							if (directorMode === DirectorToolMode.Inline && inlineContext) {
++								const replacement = parseDirectorInlineReplacement(inlineResponseText);
++								if (!replacement.ok) {
++									return {
++										errorDetails: { message: replacement.reason },
++										timings: {
++											firstProgress: firstProgressTime,
++											totalElapsed: Date.now() - startTime,
++										},
++										metadata: {
++											usage: resultEvent.usage,
++											cost: resultEvent.cost,
++											numTurns: resultEvent.numTurns,
++											subtype: 'inline_edit_parse_error',
++										},
++									};
++								}
++
++								const editAdapter = this.instantiationService.createInstance(DirectorChatEditingAdapter);
++								const editResult = await editAdapter.emitInlineTextEdit({
++									chatSessionResource: request.sessionResource,
++									chatRequestId: request.requestId,
++									targetUri: inlineContext.uri,
++									range: inlineContext.selection,
++									replacementText: replacement.text,
++								}, token);
++								if (!editResult.ok) {
++									return {
++										errorDetails: { message: editResult.reason },
++										timings: {
++											firstProgress: firstProgressTime,
++											totalElapsed: Date.now() - startTime,
++										},
++										metadata: {
++											usage: resultEvent.usage,
++											cost: resultEvent.cost,
++											numTurns: resultEvent.numTurns,
++											subtype: 'inline_edit_emit_error',
++										},
++									};
++								}
++
++								firstProgressTime ??= Date.now() - startTime;
++							}
++
 +							return {
-+								errorDetails: {
-+									message: resultEvent.error || 'Agent encountered an error',
-+								},
 +								timings: {
 +									firstProgress: firstProgressTime,
 +									totalElapsed: Date.now() - startTime,
@@ -11990,68 +12501,17 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +									usage: resultEvent.usage,
 +									cost: resultEvent.cost,
 +									numTurns: resultEvent.numTurns,
++									subtype: resultEvent.subtype,
 +								},
 +							};
 +						}
-+
-+						if (directorMode === DirectorToolMode.Inline && inlineContext) {
-+							const replacement = parseDirectorInlineReplacement(inlineResponseText);
-+							if (!replacement.ok) {
-+								return {
-+									errorDetails: { message: replacement.reason },
-+									timings: {
-+										firstProgress: firstProgressTime,
-+										totalElapsed: Date.now() - startTime,
-+									},
-+									metadata: {
-+										usage: resultEvent.usage,
-+										cost: resultEvent.cost,
-+										numTurns: resultEvent.numTurns,
-+										subtype: 'inline_edit_parse_error',
-+									},
-+								};
-+							}
-+
-+							const editAdapter = this.instantiationService.createInstance(DirectorChatEditingAdapter);
-+							const editResult = await editAdapter.emitInlineTextEdit({
-+								chatSessionResource: request.sessionResource,
-+								chatRequestId: request.requestId,
-+								targetUri: inlineContext.uri,
-+								range: inlineContext.selection,
-+								replacementText: replacement.text,
-+							}, token);
-+							if (!editResult.ok) {
-+								return {
-+									errorDetails: { message: editResult.reason },
-+									timings: {
-+										firstProgress: firstProgressTime,
-+										totalElapsed: Date.now() - startTime,
-+									},
-+									metadata: {
-+										usage: resultEvent.usage,
-+										cost: resultEvent.cost,
-+										numTurns: resultEvent.numTurns,
-+										subtype: 'inline_edit_emit_error',
-+									},
-+								};
-+							}
-+
-+							firstProgressTime ??= Date.now() - startTime;
-+						}
-+
-+						return {
-+							timings: {
-+								firstProgress: firstProgressTime,
-+								totalElapsed: Date.now() - startTime,
-+							},
-+							metadata: {
-+								usage: resultEvent.usage,
-+								cost: resultEvent.cost,
-+								numTurns: resultEvent.numTurns,
-+								subtype: resultEvent.subtype,
-+							},
-+						};
 +					}
++
++					if (restartPlanMessage) {
++						nextUserMessage = restartPlanMessage;
++						continue;
++					}
++					break;
 +				}
 +			} finally {
 +				cancelListener.dispose();
@@ -12101,6 +12561,50 @@ index 0000000000000000000000000000000000000000..adefe44a2be3e1a3e056417282af34fd
 +		}
 +
 +		return [];
++	}
++
++	private parseDirectorPresentPlanResult(content: string): DirectorPresentPlanResult | undefined {
++		try {
++			const value = JSON.parse(content) as DirectorPresentPlanResult;
++			if (typeof value?.ok === 'boolean' && typeof value.message === 'string') {
++				return value;
++			}
++		} catch {
++			// Ignore non-JSON tool results; the normal agent loop will continue.
++		}
++		return undefined;
++	}
++
++	private createDirectorPlanReviewProgress(sessionResource: IChatAgentRequest['sessionResource'], plan: DirectorPlanRecord): IChatProgress[] {
++		return [
++			{
++				kind: 'markdownContent',
++				content: createDirectorPlanReviewMarkdown(plan),
++			},
++			{
++				kind: 'command',
++				command: {
++					id: DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
++					title: '$(play) Execute',
++					tooltip: 'Execute this approved plan in Agent mode',
++					arguments: [sessionResource, plan.planId, plan.nonce],
++				},
++				additionalCommands: [
++					{
++						id: DIRECTOR_PLAN_REJECT_COMMAND_ID,
++						title: '$(close) Reject',
++						tooltip: 'Reject this plan',
++						arguments: [sessionResource, plan.planId, plan.nonce],
++					},
++					{
++						id: DIRECTOR_PLAN_REVISE_COMMAND_ID,
++						title: '$(comment-discussion) Revise',
++						tooltip: 'Add feedback and revise this plan',
++						arguments: [sessionResource, plan.planId, plan.nonce],
++					},
++				],
++			},
++		];
 +	}
 +
 +	private resolveRequestModeKind(request: IChatAgentRequest): ChatModeKind | undefined {
@@ -16012,10 +16516,10 @@ index 0000000000000000000000000000000000000000..55ee18b44e70102235550226531beca1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..a627f34fb47309fd5218096f5c758e125c5289ed
+index 0000000000000000000000000000000000000000..09fef8bdd8352378372c44496a5914f53dac6b9f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,211 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16051,6 +16555,7 @@ index 0000000000000000000000000000000000000000..a627f34fb47309fd5218096f5c758e12
 +		readonly type: 'object';
 +		readonly properties: Record<string, any>;
 +		readonly required?: readonly string[];
++		readonly additionalProperties?: boolean;
 +	};
 +	/** Whether this tool only reads data (can be run concurrently). */
 +	readonly isReadOnly?: boolean;
@@ -17431,10 +17936,10 @@ index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a0
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..a395c7d4f32178071cb4c31f2bec92dc5edcdf68
+index 0000000000000000000000000000000000000000..91300edd82f96e52b5a636b6e5472590eac182fa
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,83 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -17472,6 +17977,8 @@ index 0000000000000000000000000000000000000000..a395c7d4f32178071cb4c31f2bec92dc
 +			return Math.max(1, Math.min(configuredMaxTurns, 6));
 +		case DirectorToolMode.Inline:
 +			return 1;
++		case DirectorToolMode.Plan:
++			return configuredMaxTurns;
 +		default:
 +			return configuredMaxTurns;
 +	}
@@ -17501,11 +18008,703 @@ index 0000000000000000000000000000000000000000..a395c7d4f32178071cb4c31f2bec92dc
 +				'Do not include explanations, markdown prose, file names, or tool calls.',
 +				'If the replacement is multiple lines, a single fenced code block containing only the replacement is allowed.',
 +			].join('\n');
++		case DirectorToolMode.Plan:
++			return [
++				'You are Director Code in Plan Mode.',
++				'Research and plan the requested change without modifying project files or running terminal/task/browser automation.',
++				'Use read-only tools proactively when they help you understand the workspace, repository, errors, or external context.',
++				'You must finish by calling director_present_plan. Do not end with final markdown only.',
++				'If information is missing, include assumptions and openQuestions in director_present_plan instead of asking a normal chat question.',
++				'The planMarkdown argument is only the Proposed Steps body. Do not include YAML frontmatter, status/path/cwd/root metadata, or write target fields.',
++				'After calling director_present_plan, stop; the host will present Execute, Reject, and Revise actions.',
++			].join('\n');
 +		case DirectorToolMode.Agent:
 +		default:
 +			return undefined;
 +	}
 +}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..de1bc0dc312ba5a834c8937d89d3894e5e5cf9e2
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
+@@ -0,0 +1,598 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { VSBuffer } from '../../../../../base/common/buffer.js';
++import { CancellationToken } from '../../../../../base/common/cancellation.js';
++import { Emitter, Event } from '../../../../../base/common/event.js';
++import { MarkdownString } from '../../../../../base/common/htmlContent.js';
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { dirname, joinPath, relativePath } from '../../../../../base/common/resources.js';
++import { URI } from '../../../../../base/common/uri.js';
++import { generateUuid } from '../../../../../base/common/uuid.js';
++import { IFileService } from '../../../../../platform/files/common/files.js';
++import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
++import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
++
++export const DIRECTOR_PRESENT_PLAN_TOOL_NAME = 'director_present_plan';
++export const DIRECTOR_PLAN_EXECUTE_COMMAND_ID = 'director.plan.execute';
++export const DIRECTOR_PLAN_REJECT_COMMAND_ID = 'director.plan.reject';
++export const DIRECTOR_PLAN_REVISE_COMMAND_ID = 'director.plan.revise';
++export const DIRECTOR_PLAN_TOGGLE_COMMAND_ID = 'director.plan.toggleMode';
++
++export type DirectorPlanSessionPhase = 'inactive' | 'planning' | 'awaitingDecision' | 'executing' | 'rejected' | 'cancelled';
++export type DirectorPlanFileStatus = 'Draft' | 'Approved' | 'Rejected' | 'Cancelled';
++
++export interface DirectorPresentPlanInput {
++	readonly title: string;
++	readonly summary: string;
++	readonly planMarkdown: string;
++	readonly feedbackSummary?: string;
++	readonly assumptions: readonly string[];
++	readonly validation: readonly string[];
++	readonly risks: readonly string[];
++	readonly openQuestions: readonly string[];
++}
++
++export interface DirectorPlanRecord {
++	readonly planId: string;
++	readonly title: string;
++	readonly summary: string;
++	readonly planMarkdown: string;
++	readonly assumptions: readonly string[];
++	readonly validation: readonly string[];
++	readonly risks: readonly string[];
++	readonly openQuestions: readonly string[];
++	readonly feedbackHistory: readonly string[];
++	readonly created: string;
++	readonly updated: string;
++	readonly sourceSession: string;
++	readonly sourceRequest: string;
++	readonly workspaceRoot: string;
++	readonly planFile: string;
++	readonly planUri: URI;
++	readonly nonce: string;
++	readonly status: DirectorPlanFileStatus;
++	readonly statusReason: string;
++}
++
++export interface DirectorPlanSessionState {
++	readonly mode: 'agent' | 'plan';
++	readonly phase: DirectorPlanSessionPhase;
++	readonly activeRequestId?: string;
++	readonly activePlan?: DirectorPlanRecord;
++	readonly missingPresentPlanCorrections: number;
++	readonly invalidPresentPlanCorrections: number;
++}
++
++export interface DirectorPlanRequestContext {
++	readonly revisionOf?: DirectorPlanRecord;
++	readonly feedback?: string;
++}
++
++export interface DirectorPresentPlanResult {
++	readonly ok: boolean;
++	readonly plan?: DirectorPlanRecord;
++	readonly message: string;
++	readonly fatal?: boolean;
++}
++
++export const IDirectorPlanModeService = createDecorator<IDirectorPlanModeService>('directorPlanModeService');
++
++export interface IDirectorPlanModeService {
++	readonly _serviceBrand: undefined;
++	readonly onDidChangeSessionState: Event<URI>;
++
++	getSessionState(sessionResource: URI): DirectorPlanSessionState;
++	canUsePlanMode(): { readonly ok: true } | { readonly ok: false; readonly message: string };
++	enterPlanMode(sessionResource: URI): { readonly ok: true } | { readonly ok: false; readonly message: string };
++	cancelPlanMode(sessionResource: URI, reason: string, token?: CancellationToken): Promise<void>;
++	beginPlanRequest(sessionResource: URI, requestId: string, feedback?: string): DirectorPlanRequestContext | undefined;
++	recordMissingPresentPlan(sessionResource: URI): { readonly fatal: boolean; readonly message: string };
++	presentPlan(sessionResource: URI, requestId: string, input: unknown, token: CancellationToken): Promise<DirectorPresentPlanResult>;
++	getPlanForReview(sessionResource: URI, planId: string, nonce: string): DirectorPlanRecord | undefined;
++	prepareExecution(sessionResource: URI, planId: string, nonce: string): DirectorPlanRecord | undefined;
++	markExecutionSent(sessionResource: URI, planId: string, nonce: string, token?: CancellationToken): Promise<DirectorPlanRecord | undefined>;
++	rejectPlan(sessionResource: URI, planId: string, nonce: string, reason: string, token?: CancellationToken): Promise<DirectorPlanRecord | undefined>;
++	beginRevision(sessionResource: URI, planId: string, nonce: string, feedback: string, token?: CancellationToken): Promise<DirectorPlanRecord | undefined>;
++}
++
++const DEFAULT_STATE: DirectorPlanSessionState = {
++	mode: 'agent',
++	phase: 'inactive',
++	missingPresentPlanCorrections: 0,
++	invalidPresentPlanCorrections: 0,
++};
++
++const ALLOWED_PRESENT_PLAN_KEYS = new Set([
++	'title',
++	'summary',
++	'planMarkdown',
++	'feedbackSummary',
++	'assumptions',
++	'validation',
++	'risks',
++	'openQuestions',
++]);
++
++const FORBIDDEN_PLAN_MARKDOWN_RE = /(^\s*---\s*$)|(^\s*(status|planId|created|updated|sourceSession|sourceRequest|workspaceRoot|planFile|statusReason|path|cwd|root|targetPath|filePath)\s*:)|(\.director[\\/]+plans[\\/])/im;
++
++export class DirectorPlanModeService extends Disposable implements IDirectorPlanModeService {
++	declare readonly _serviceBrand: undefined;
++
++	private readonly sessions = new Map<string, DirectorPlanSessionState>();
++
++	private readonly _onDidChangeSessionState = this._register(new Emitter<URI>());
++	readonly onDidChangeSessionState: Event<URI> = this._onDidChangeSessionState.event;
++
++	constructor(
++		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
++		@IFileService private readonly fileService: IFileService,
++	) {
++		super();
++	}
++
++	getSessionState(sessionResource: URI): DirectorPlanSessionState {
++		return this.sessions.get(sessionResource.toString()) ?? DEFAULT_STATE;
++	}
++
++	canUsePlanMode(): { readonly ok: true } | { readonly ok: false; readonly message: string } {
++		const workspace = this.workspaceContextService.getWorkspace();
++		if (workspace.folders.length === 0) {
++			return { ok: false, message: 'Plan Mode requires an open workspace folder.' };
++		}
++		return { ok: true };
++	}
++
++	enterPlanMode(sessionResource: URI): { readonly ok: true } | { readonly ok: false; readonly message: string } {
++		const readiness = this.canUsePlanMode();
++		if (!readiness.ok) {
++			return readiness;
++		}
++
++		this.setSessionState(sessionResource, {
++			...this.getSessionState(sessionResource),
++			mode: 'plan',
++			phase: this.getSessionState(sessionResource).phase === 'inactive' ? 'planning' : this.getSessionState(sessionResource).phase,
++		});
++		return { ok: true };
++	}
++
++	async cancelPlanMode(sessionResource: URI, reason: string, token: CancellationToken = CancellationToken.None): Promise<void> {
++		const state = this.getSessionState(sessionResource);
++		let activePlan = state.activePlan;
++		if (activePlan && activePlan.status === 'Draft') {
++			activePlan = await this.writePlanWithStatus(activePlan, 'Cancelled', reason, token);
++		}
++		this.setSessionState(sessionResource, {
++			mode: 'agent',
++			phase: 'cancelled',
++			activePlan,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++	}
++
++	beginPlanRequest(sessionResource: URI, requestId: string, feedback?: string): DirectorPlanRequestContext | undefined {
++		const previous = this.getSessionState(sessionResource);
++		const revisionOf = previous.phase === 'awaitingDecision' ? previous.activePlan : undefined;
++		const revisionFeedback = revisionOf ? feedback : undefined;
++		const feedbackHistory = revisionFeedback ? [...(revisionOf?.feedbackHistory ?? []), revisionFeedback] : revisionOf?.feedbackHistory;
++		const activePlan = feedbackHistory && revisionOf
++			? { ...revisionOf, feedbackHistory, status: 'Draft' as const, statusReason: '' }
++			: revisionOf;
++
++		this.setSessionState(sessionResource, {
++			...previous,
++			mode: 'plan',
++			phase: 'planning',
++			activeRequestId: requestId,
++			activePlan,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++
++		if (revisionOf || revisionFeedback) {
++			return { revisionOf, feedback: revisionFeedback };
++		}
++		return undefined;
++	}
++
++	recordMissingPresentPlan(sessionResource: URI): { readonly fatal: boolean; readonly message: string } {
++		const state = this.getSessionState(sessionResource);
++		const nextCount = state.missingPresentPlanCorrections + 1;
++		this.setSessionState(sessionResource, {
++			...state,
++			missingPresentPlanCorrections: nextCount,
++		});
++		if (nextCount > 1) {
++			return {
++				fatal: true,
++				message: 'Plan Mode ended without calling director_present_plan after one correction attempt.',
++			};
++		}
++		return {
++			fatal: false,
++			message: 'You are in Plan Mode. Update the plan and call director_present_plan before ending this turn. Do not answer with final markdown only.',
++		};
++	}
++
++	async presentPlan(sessionResource: URI, requestId: string, input: unknown, token: CancellationToken): Promise<DirectorPresentPlanResult> {
++		const state = this.getSessionState(sessionResource);
++		if (state.mode !== 'plan' || state.phase !== 'planning' || state.activeRequestId !== requestId) {
++			return {
++				ok: false,
++				fatal: true,
++				message: 'director_present_plan can only be used by the active Plan Mode request.',
++			};
++		}
++
++		const validation = validateDirectorPresentPlanInput(input);
++		if (!validation.ok) {
++			const nextCount = state.invalidPresentPlanCorrections + 1;
++			this.setSessionState(sessionResource, {
++				...state,
++				invalidPresentPlanCorrections: nextCount,
++			});
++			return {
++				ok: false,
++				fatal: nextCount > 1,
++				message: nextCount > 1
++					? `Invalid director_present_plan input after one correction attempt: ${validation.message}`
++					: `Invalid director_present_plan input: ${validation.message}. Re-submit with the exact schema and no file/path/status metadata in planMarkdown.`,
++			};
++		}
++
++		const workspaceFolder = this.workspaceContextService.getWorkspace().folders[0];
++		if (!workspaceFolder) {
++			return {
++				ok: false,
++				fatal: true,
++				message: 'Plan Mode requires an open workspace folder.',
++			};
++		}
++
++		const previous = state.activePlan;
++		const now = new Date().toISOString();
++		const planId = previous?.planId ?? createPlanId(now);
++		const planFile = previous?.planFile ?? `.director/plans/${planId}-${slugify(validation.value.title)}.md`;
++		const planUri = previous?.planUri ?? joinPath(workspaceFolder.uri, planFile);
++		const plan: DirectorPlanRecord = {
++			planId,
++			title: validation.value.title,
++			summary: validation.value.summary,
++			planMarkdown: validation.value.planMarkdown,
++			assumptions: validation.value.assumptions,
++			validation: validation.value.validation,
++			risks: validation.value.risks,
++			openQuestions: validation.value.openQuestions,
++			feedbackHistory: validation.value.feedbackSummary
++				? [...(previous?.feedbackHistory ?? []), validation.value.feedbackSummary]
++				: previous?.feedbackHistory ?? [],
++			created: previous?.created ?? now,
++			updated: now,
++			sourceSession: sessionResource.toString(),
++			sourceRequest: requestId,
++			workspaceRoot: workspaceFolder.uri.fsPath,
++			planFile,
++			planUri,
++			nonce: generateUuid(),
++			status: 'Draft',
++			statusReason: '',
++		};
++
++		await this.writePlan(plan, token);
++		this.setSessionState(sessionResource, {
++			mode: 'plan',
++			phase: 'awaitingDecision',
++			activePlan: plan,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++
++		return {
++			ok: true,
++			plan,
++			message: `Plan ${plan.planId} written to ${plan.planFile}.`,
++		};
++	}
++
++	getPlanForReview(sessionResource: URI, planId: string, nonce: string): DirectorPlanRecord | undefined {
++		const plan = this.getSessionState(sessionResource).activePlan;
++		if (!plan || plan.planId !== planId || plan.nonce !== nonce) {
++			return undefined;
++		}
++		return plan;
++	}
++
++	prepareExecution(sessionResource: URI, planId: string, nonce: string): DirectorPlanRecord | undefined {
++		const state = this.getSessionState(sessionResource);
++		if (state.phase !== 'awaitingDecision') {
++			return undefined;
++		}
++		return this.getPlanForReview(sessionResource, planId, nonce);
++	}
++
++	async markExecutionSent(sessionResource: URI, planId: string, nonce: string, token: CancellationToken = CancellationToken.None): Promise<DirectorPlanRecord | undefined> {
++		const plan = this.getPlanForReview(sessionResource, planId, nonce);
++		if (!plan) {
++			return undefined;
++		}
++		const updated = await this.writePlanWithStatus(plan, 'Approved', 'User approved execution.', token);
++		this.setSessionState(sessionResource, {
++			mode: 'agent',
++			phase: 'executing',
++			activePlan: updated,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++		return updated;
++	}
++
++	async rejectPlan(sessionResource: URI, planId: string, nonce: string, reason: string, token: CancellationToken = CancellationToken.None): Promise<DirectorPlanRecord | undefined> {
++		const plan = this.getPlanForReview(sessionResource, planId, nonce);
++		if (!plan) {
++			return undefined;
++		}
++		const updated = await this.writePlanWithStatus(plan, 'Rejected', reason, token);
++		this.setSessionState(sessionResource, {
++			mode: 'agent',
++			phase: 'rejected',
++			activePlan: updated,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++		return updated;
++	}
++
++	async beginRevision(sessionResource: URI, planId: string, nonce: string, feedback: string, token: CancellationToken = CancellationToken.None): Promise<DirectorPlanRecord | undefined> {
++		const plan = this.getPlanForReview(sessionResource, planId, nonce);
++		if (!plan) {
++			return undefined;
++		}
++		const updated = await this.writePlanWithStatus({
++			...plan,
++			feedbackHistory: [...plan.feedbackHistory, feedback],
++			updated: new Date().toISOString(),
++		}, 'Draft', '', token);
++		this.setSessionState(sessionResource, {
++			mode: 'plan',
++			phase: 'planning',
++			activePlan: updated,
++			missingPresentPlanCorrections: 0,
++			invalidPresentPlanCorrections: 0,
++		});
++		return updated;
++	}
++
++	private async writePlanWithStatus(plan: DirectorPlanRecord, status: DirectorPlanFileStatus, statusReason: string, token: CancellationToken): Promise<DirectorPlanRecord> {
++		const updated = {
++			...plan,
++			status,
++			statusReason,
++			updated: new Date().toISOString(),
++		};
++		await this.writePlan(updated, token);
++		return updated;
++	}
++
++	private async writePlan(plan: DirectorPlanRecord, token: CancellationToken): Promise<void> {
++		const folder = dirname(plan.planUri);
++		await this.fileService.createFolder(folder);
++		await this.fileService.writeFile(plan.planUri, VSBuffer.fromString(renderDirectorPlanFile(plan)));
++		if (token.isCancellationRequested) {
++			throw new Error('Plan write was cancelled.');
++		}
++	}
++
++	private setSessionState(sessionResource: URI, state: DirectorPlanSessionState): void {
++		this.sessions.set(sessionResource.toString(), state);
++		this._onDidChangeSessionState.fire(sessionResource);
++	}
++}
++
++export function validateDirectorPresentPlanInput(input: unknown): { readonly ok: true; readonly value: DirectorPresentPlanInput } | { readonly ok: false; readonly message: string } {
++	if (!input || typeof input !== 'object' || Array.isArray(input)) {
++		return { ok: false, message: 'input must be an object' };
++	}
++	const value = input as Record<string, unknown>;
++	for (const key of Object.keys(value)) {
++		if (!ALLOWED_PRESENT_PLAN_KEYS.has(key)) {
++			return { ok: false, message: `unexpected field "${key}"` };
++		}
++	}
++
++	const title = stringField(value, 'title');
++	const summary = stringField(value, 'summary');
++	const planMarkdown = stringField(value, 'planMarkdown');
++	if (!title || !summary || !planMarkdown) {
++		return { ok: false, message: 'title, summary, and planMarkdown are required strings' };
++	}
++	if (FORBIDDEN_PLAN_MARKDOWN_RE.test(planMarkdown)) {
++		return { ok: false, message: 'planMarkdown must not include frontmatter, status/path/cwd/root metadata, or plan file targets' };
++	}
++
++	const assumptions = stringArrayField(value, 'assumptions');
++	const validation = stringArrayField(value, 'validation');
++	const risks = stringArrayField(value, 'risks');
++	const openQuestions = stringArrayField(value, 'openQuestions');
++	if (!assumptions.ok) { return assumptions; }
++	if (!validation.ok) { return validation; }
++	if (!risks.ok) { return risks; }
++	if (!openQuestions.ok) { return openQuestions; }
++
++	const feedbackSummary = value.feedbackSummary === undefined ? undefined : stringField(value, 'feedbackSummary');
++	if (value.feedbackSummary !== undefined && feedbackSummary === undefined) {
++		return { ok: false, message: 'feedbackSummary must be a string' };
++	}
++
++	return {
++		ok: true,
++		value: {
++			title,
++			summary,
++			planMarkdown,
++			feedbackSummary,
++			assumptions: assumptions.value,
++			validation: validation.value,
++			risks: risks.value,
++			openQuestions: openQuestions.value,
++		},
++	};
++}
++
++export function renderDirectorPlanFile(plan: DirectorPlanRecord): string {
++	const frontmatter = [
++		'---',
++		`status: ${plan.status}`,
++		`planId: ${yamlString(plan.planId)}`,
++		`created: ${yamlString(plan.created)}`,
++		`updated: ${yamlString(plan.updated)}`,
++		`sourceSession: ${yamlString(plan.sourceSession)}`,
++		`sourceRequest: ${yamlString(plan.sourceRequest)}`,
++		`workspaceRoot: ${yamlString(plan.workspaceRoot)}`,
++		`planFile: ${yamlString(plan.planFile)}`,
++		`statusReason: ${yamlString(plan.statusReason)}`,
++		'---',
++		'',
++	].join('\n');
++
++	return frontmatter + [
++		`# ${plan.title}`,
++		'',
++		'## Request',
++		`Source request: ${plan.sourceRequest}`,
++		'',
++		'## Summary',
++		plan.summary,
++		'',
++		'## Current Understanding',
++		'See the structured assumptions and proposed steps below.',
++		'',
++		'## Assumptions',
++		renderList(plan.assumptions),
++		'',
++		'## Open Questions',
++		renderList(plan.openQuestions),
++		'',
++		'## Proposed Steps',
++		plan.planMarkdown,
++		'',
++		'## Validation',
++		renderList(plan.validation),
++		'',
++		'## Risks',
++		renderList(plan.risks),
++		'',
++		'## Feedback History',
++		renderList(plan.feedbackHistory),
++		'',
++	].join('\n');
++}
++
++export function createDirectorPlanReviewMarkdown(plan: DirectorPlanRecord): MarkdownString {
++	const md = new MarkdownString(undefined, { isTrusted: false });
++	md.appendMarkdown([
++		`### ${escapeMarkdown(plan.title)}`,
++		'',
++		plan.summary,
++		'',
++		`Plan file: \`${plan.planFile}\``,
++		'',
++		plan.openQuestions.length > 0
++			? `Open questions:\n${plan.openQuestions.map(item => `- ${item}`).join('\n')}`
++			: '',
++	].filter(Boolean).join('\n'));
++	return md;
++}
++
++export function createApprovedPlanExecutionPrompt(plan: DirectorPlanRecord): string {
++	return [
++		'Execute the approved Director plan below.',
++		'',
++		'Continue in full Agent mode. Use the existing conversation context, but do not expose Plan Mode restrictions.',
++		'Read or verify relevant files before editing, then implement the approved plan with normal Agent tools.',
++		'',
++		`Plan ID: ${plan.planId}`,
++		`Plan file: ${plan.planFile}`,
++		'',
++		renderDirectorPlanFile(plan),
++	].join('\n');
++}
++
++export function createPlanRevisionPrompt(plan: DirectorPlanRecord, feedback: string): string {
++	return [
++		'Revise the current Director plan using the feedback below.',
++		'',
++		`Plan ID: ${plan.planId}`,
++		`Plan file: ${plan.planFile}`,
++		'',
++		'Feedback:',
++		feedback,
++		'',
++		'Update the plan and call director_present_plan again. Do not edit project files.',
++	].join('\n');
++}
++
++export function createPlanModeUserPrompt(userMessage: string, context: DirectorPlanRequestContext | undefined): string {
++	if (!context?.revisionOf && !context?.feedback) {
++		return userMessage;
++	}
++	const parts = [
++		context.revisionOf
++			? `You are revising Director plan ${context.revisionOf.planId} at ${context.revisionOf.planFile}.`
++			: 'You are revising the active Director plan.',
++		context.feedback ? `User feedback:\n${context.feedback}` : undefined,
++		'Update the plan and call director_present_plan again. Do not edit project files.',
++		'',
++		`User request:\n${userMessage}`,
++	];
++	return parts.filter(Boolean).join('\n');
++}
++
++function stringField(value: Record<string, unknown>, key: string): string | undefined {
++	const raw = value[key];
++	return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
++}
++
++function stringArrayField(value: Record<string, unknown>, key: string): { readonly ok: true; readonly value: readonly string[] } | { readonly ok: false; readonly message: string } {
++	const raw = value[key];
++	if (raw === undefined) {
++		return { ok: true, value: [] };
++	}
++	if (!Array.isArray(raw) || !raw.every(item => typeof item === 'string')) {
++		return { ok: false, message: `${key} must be an array of strings` };
++	}
++	return { ok: true, value: raw.map(item => item.trim()).filter(Boolean) };
++}
++
++function createPlanId(nowIso: string): string {
++	const stamp = nowIso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z').replace('T', '-').replace('Z', '');
++	const short = generateUuid().replace(/-/g, '').slice(0, 8);
++	return `${stamp}-${short}`;
++}
++
++function slugify(title: string): string {
++	const slug = title.toLowerCase()
++		.replace(/[^a-z0-9]+/g, '-')
++		.replace(/^-+|-+$/g, '')
++		.slice(0, 48);
++	return slug || 'plan';
++}
++
++function yamlString(value: string): string {
++	return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
++}
++
++function renderList(items: readonly string[]): string {
++	return items.length > 0 ? items.map(item => `- ${item}`).join('\n') : '- None';
++}
++
++function escapeMarkdown(value: string): string {
++	return value.replace(/([\\`*_{}[\]()#+\-.!|>])/g, '\\$1');
++}
++
++export function relativePlanFile(workspaceRoot: URI, planUri: URI): string {
++	return relativePath(workspaceRoot, planUri) ?? planUri.fsPath;
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..eab57bdb4c17e29dc7a98fd63db62ec9354887bb
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts
+@@ -0,0 +1,72 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { CancellationToken } from '../../../../../base/common/cancellation.js';
++import { MarkdownString } from '../../../../../base/common/htmlContent.js';
++import { CountTokensCallback, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../../../chat/common/tools/languageModelToolsService.js';
++import { DIRECTOR_PRESENT_PLAN_TOOL_NAME, IDirectorPlanModeService } from './directorPlanMode.js';
++
++export const DirectorPresentPlanToolId = DIRECTOR_PRESENT_PLAN_TOOL_NAME;
++
++export const DirectorPresentPlanToolData: IToolData = {
++	id: DirectorPresentPlanToolId,
++	toolReferenceName: DIRECTOR_PRESENT_PLAN_TOOL_NAME,
++	displayName: 'Present Plan',
++	userDescription: 'Present a Director plan for user review.',
++	modelDescription: 'Present the completed Plan Mode proposal to the user. This is the only Plan Mode write path. It writes a workspace-local .director/plans/*.md file and returns review metadata. Do not include file paths, status frontmatter, cwd, root, or write targets in planMarkdown.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		additionalProperties: false,
++		properties: {
++			title: { type: 'string', description: 'Short human-readable plan title.' },
++			summary: { type: 'string', description: 'Concise summary of the plan.' },
++			planMarkdown: { type: 'string', description: 'Markdown body for the Proposed Steps section only. Do not include frontmatter, status/path/cwd/root metadata, or output file targets.' },
++			feedbackSummary: { type: 'string', description: 'Optional summary of user feedback incorporated in this revision.' },
++			assumptions: { type: 'array', items: { type: 'string' }, description: 'Assumptions the plan depends on.' },
++			validation: { type: 'array', items: { type: 'string' }, description: 'Validation or test steps expected after execution.' },
++			risks: { type: 'array', items: { type: 'string' }, description: 'Risks or known tradeoffs.' },
++			openQuestions: { type: 'array', items: { type: 'string' }, description: 'Open questions for the user to answer through the review UI.' },
++		},
++		required: ['title', 'summary', 'planMarkdown'],
++	},
++};
++
++export class DirectorPresentPlanTool implements IToolImpl {
++	constructor(
++		@IDirectorPlanModeService private readonly planModeService: IDirectorPlanModeService,
++	) { }
++
++	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		if (!invocation.context?.sessionResource) {
++			return {
++				content: [{ kind: 'text', value: JSON.stringify({ ok: false, fatal: true, message: 'director_present_plan requires chat session context.' }) }],
++			};
++		}
++		const result = await this.planModeService.presentPlan(
++			invocation.context.sessionResource,
++			invocation.chatRequestId ?? '',
++			invocation.parameters,
++			token,
++		);
++		return {
++			content: [{ kind: 'text', value: JSON.stringify(result) }],
++		};
++	}
++
++	async prepareToolInvocation(_context: IToolInvocationPreparationContext, _token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
++		return {
++			invocationMessage: new MarkdownString('Presenting the plan for review'),
++			pastTenseMessage: new MarkdownString('Presented the plan for review'),
++		};
++	}
++}
++
++export const DirectorPlanToolData = [
++	DirectorPresentPlanToolData,
++] as const;
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..67b5725995aabe5ae3d2118fe6c253d4df25d2f6

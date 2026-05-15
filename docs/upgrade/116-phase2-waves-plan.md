@@ -54,7 +54,7 @@ Phase 2 不再定义为单纯的 ACP 接入，而拆成五个 wave：
 - Plan 文件写入必须与普通 edit tools 分离，不能借用通用 `createFile` / `apply_patch` 之类 edit tool 绕过 Plan 限制。
 - Plan prompt / reminder 明确要求先理解、必要时把待确认事项写入计划的 Open Questions、输出可执行计划、等待用户决策。
 - Plan response 支持执行 / 拒绝 / 补充内容三个用户动作。
-- 用户选择执行后退出 Plan，进入完整 Agent 模式，并用 approved plan context 开始执行。
+- 用户选择执行后进入 `executing` 临时态；只有新的 Agent request `sent` 或 queued 后最终 `sent`，才退出 Plan、进入完整 Agent 模式，并用 approved plan context 开始执行。
 - 补充 mode routing 和 tool policy 测试。
 - 形成 replay-backed patch，并跑 profile-scoped replay validation。
 
@@ -119,7 +119,7 @@ Wave 1 验收：
 - 点击“执行”后先进入 `executing` 临时态并 disable review 按钮与 `Agent Mode` chip/toggle；只有 Agent request sent 或 queued 后最终 sent，才把 chip/session 切到 Agent 并清除 Plan state。如果 rejected，则保持/恢复 Plan + `awaitingDecision` 并生成新 nonce。
 - `shortPlanId` 如果极小概率撞名，host 必须重新生成并再次检测，直到目标文件不存在。
 - `director_present_plan` schema 类型固定：`title`、`summary`、`planMarkdown`、`feedbackSummary` 为 string；`assumptions`、`validation`、`risks`、`openQuestions` 为 string array，缺省为空数组。
-- 计划文件模板新增 `## Summary`。Host 负责生成固定模板：结构化字段填充 `Summary`、`Assumptions`、`Open Questions`、`Validation`、`Risks` 与 review UI；`planMarkdown` 作为正文草案填充 `Current Understanding` / `Proposed Steps` 的主体内容。模型不能通过 `planMarkdown` 提供 frontmatter、status、path 或任意写入目标。
+- 计划文件模板新增 `## Summary`。Host 负责生成固定模板：结构化字段填充 `Summary`、`Assumptions`、`Open Questions`、`Validation`、`Risks` 与 review UI；`planMarkdown` 作为正文草案原样写入 `Proposed Steps`，host 不负责把一个 string 拆分到 `Current Understanding` 与 `Proposed Steps`。模型不能通过 `planMarkdown` 提供 frontmatter、status、path 或任意写入目标。
 - `executing` 临时态期间，除 disable review 按钮外，也 disable `Agent Mode` chip/toggle；只有新 Agent request sent/queued-sent 后自动切 Agent，若 rejected 则恢复 Plan + `awaitingDecision`。
 - Plan v1 的 turn budget 继承现有 Agent max-turn 配置，但始终使用 Plan allowlist，并必须以 `director_present_plan` 或一次纠偏失败收口。
 
@@ -316,8 +316,8 @@ Plan 完成触发方式：
 - Wave 1 固定新增一个 Plan-only 的 Director 内部工具：`director_present_plan`。
 - 该工具只在 `DirectorToolMode.Plan` 暴露，语义接近 VS Code Claude 的 `ExitPlanMode`。
 - 工具输入使用固定 schema：必填 `title`、`summary`、`planMarkdown`；可选 `assumptions`、`validation`、`risks`、`openQuestions`、`feedbackSummary`。`title`、`summary`、`planMarkdown`、`feedbackSummary` 为 string；`assumptions`、`validation`、`risks`、`openQuestions` 为 string array，缺省为空数组。schema 固定 `additionalProperties: false`，host-side validator 必须拒绝 path、cwd、root、status 或任意写入目标。
-- 数据真相固定为：`planMarkdown` 是模型提交的正文草案；host 生成最终 `.director/plans/*.md` 模板、frontmatter 和固定章节。结构化字段优先填充固定章节与 review UI：`summary` 写入 `Summary`，数组字段写入对应章节，`planMarkdown` 填充 `Current Understanding` / `Proposed Steps` 的主体内容。当结构化字段与 `planMarkdown` 对同一内容表达冲突时，以结构化字段为准。
-- `planMarkdown` 不能携带 frontmatter、status、path、cwd、root 或任意写入目标；如出现这些内容，host-side validator 必须拒绝或剥离后进入纠偏流程，不能照单写入计划文件。
+- 数据真相固定为：`planMarkdown` 是模型提交的正文草案；host 生成最终 `.director/plans/*.md` 模板、frontmatter 和固定章节。结构化字段优先填充固定章节与 review UI：`summary` 写入 `Summary`，数组字段写入对应章节，`planMarkdown` 原样写入 `Proposed Steps`。Host 不做 `planMarkdown` 章节拆分；当结构化字段与 `planMarkdown` 对同一内容表达冲突时，以结构化字段为准。
+- `planMarkdown` 不能携带 frontmatter、status、path、cwd、root 或任意写入目标；如出现这些内容，host-side validator 必须直接拒绝本次 `director_present_plan` tool call，并使用一次 Plan-only 纠偏提示要求模型重新提交合法计划，不能剥离、修补或照单写入计划文件。
 - Host 在工具执行时写入或更新 `.director/plans/*.md`，然后展示 minimal plan review flow。
 - `director_present_plan` 成功后不是普通可继续的 tool result。Tool bridge / Agent engine 必须支持 stop/sentinel 语义：记录计划已呈现、进入 `awaitingDecision`、停止当前 Plan LLM loop，等待用户结构化动作。
 - 如果模型在 Plan 回合没有调用 `director_present_plan`，host 不解析 final markdown 为 plan，也不静默进入审批；而是返回一条 Plan-only 纠偏提示，要求模型把计划写入/更新并调用 `director_present_plan`。该自动纠偏最多执行 1 次；第二次仍未调用则结束当前 Plan turn 并显示错误，不进入审批。
@@ -396,7 +396,7 @@ Replay patch ownership：
 - 计划文件 metadata 使用 YAML frontmatter；状态更新只改 frontmatter 的 `status`、`statusReason`、`updated` 等字段，不写普通 `Status:` 行。
 - `director_present_plan` 的结构化字段类型固定；数组字段缺省为空数组。
 - `director_present_plan` 的结构化字段优先填充 review UI 和固定章节；当结构化字段与 `planMarkdown` 冲突时，以结构化字段为准。
-- `planMarkdown` 中出现 frontmatter、status、path、cwd、root 或任意写入目标时，不会被照单写入计划文件。
+- `planMarkdown` 中出现 frontmatter、status、path、cwd、root 或任意写入目标时，会拒绝本次 `director_present_plan` tool call，触发一次 Plan-only 纠偏提示，且不会写入或更新计划文件。
 - review UI 在 Chat 中直接显示 `summary`、可读的 `planMarkdown` 主体和计划文件链接，不要求用户打开文件才能审批。
 - `Agent Mode` chip/toggle 只在 Director Agent session + 顶层 `ChatModeKind.Agent` 下显示；Ask/Edit/Inline 不显示或不可用。
 - empty workspace 下 `Plan` 选项 disabled，并提示用户打开文件夹。
