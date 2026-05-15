@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "116-stable-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-15T03:11:49.047Z",
-  "treeHash": "226d1015e20aafa8a6825ffd340b6c7e996dfeeb3c0cda79f3d80c8301cfaf70",
+  "generatedAt": "2026-05-15T03:42:54.986Z",
+  "treeHash": "0ed912f4fb817d6fc359c9b924ea35666996b4ced25f47cbf126741819f616b9",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -39692,7 +39692,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts",
-      "sha256": "8d92c33b08396f080eb0673b4af79f36494bf91577898593d75b224ad5216497",
+      "sha256": "b28dc82b8f8dd893cfa8e1b2422066514fe111f1d9c96821153ce13dc718c3a1",
       "mode": 33206,
       "type": "file"
     },
@@ -41827,18 +41827,6 @@
       "type": "file"
     },
     {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
-      "sha256": "db6075b85f93d0c6822c4a92d71e102b2d0e4ca94334b64124c03f451e867288",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
-      "path": "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
-      "sha256": "17bed0fcac9aa9f1ed2195c3d99b3cb5770be41ae7a2edd4600ce94af393049b",
-      "mode": 33206,
-      "type": "file"
-    },
-    {
       "path": "src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts",
       "sha256": "edd19b131cbc757c81eb5daee94f6799f3dbb426f9ab03776de35be882967374",
       "mode": 33206,
@@ -43112,7 +43100,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts",
-      "sha256": "7f0370d8bab975622785edd3ddb9e2f5d4cc4093bbd202f8c7a949374faad365",
+      "sha256": "05bda586a7211ec28be7d6d06b51eadc0e0be7c7fe4ad23b535fb56b6b90b8c0",
       "mode": 33206,
       "type": "file"
     },
@@ -43130,13 +43118,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
-      "sha256": "32858f447747b48eaf939a4f6efe994839c6195c8657f85bb0501d104d89270a",
+      "sha256": "14dac9d4180fce5d06232c0ddf5c89a3f6a3f64be5948a26b76e11abe9e7b2ef",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
-      "sha256": "e03348f91634744cb92d84c3a8dce6090fe1f3ab9c866e2e839e3f3ca125aba8",
+      "sha256": "def3083d0ec4887bd1fdc9598617d2415a3213cc8a1cb9dcb47dddd3df067543",
       "mode": 33206,
       "type": "file"
     },
@@ -45152,7 +45140,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts",
-      "sha256": "5b9d00b0955b62cf7fa83c075f8302ea2154dad2d9b129b1043366fb77fdd514",
+      "sha256": "c6467cff9e076cc7b6368ec5d941df9ff34a071d5d8e71131dfba92095bacdb5",
       "mode": 33206,
       "type": "file"
     },
@@ -45200,7 +45188,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts",
-      "sha256": "a4c52e40b5007ed1fa3123561e3a12115ac0ea74bef61ab0afef89ab7bba515a",
+      "sha256": "0c9177d4e9256d71c4c064a718992260a44d384dcfad618174580100c5d1d9b5",
       "mode": 33206,
       "type": "file"
     },
@@ -45242,7 +45230,19 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts",
-      "sha256": "564fbaf8d76b167aa9bd74ee6fbff8582764363307c412cfa63355f6739f56ef",
+      "sha256": "3a36123e9fe89e21df14bbc4132754f195783a66b68dd1ffd1bf71a60e9cd3f2",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts",
+      "sha256": "1d73054dee907914f96f0295f3e58e66e03da6b67b65dbbf593aebca85a58960",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts",
+      "sha256": "4db6cc6158e7cd42c8f038c2018b6b4cf77be60f79a956b18d1bfc9edf70c86c",
       "mode": 33206,
       "type": "file"
     },

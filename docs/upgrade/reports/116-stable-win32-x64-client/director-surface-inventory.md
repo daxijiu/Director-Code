@@ -4,7 +4,7 @@ Date: 2026-05-15
 
 Profile: `116-stable-win32-x64-client`
 
-Status: Phase 3 read/search/context facade cutover wave
+Status: Phase 3 read/search/context tool module extraction wave
 
 Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 
@@ -18,6 +18,7 @@ Source plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`
 - Phase 2 wave 4 started after commit: `7bd45f2b Move agent runtime modules into directorCode`
 - Phase 3 direct-reuse wave 1 started after commit: `633217b3 Accept tool facade research gate`
 - Phase 3 read/search/context facade cutover started after commit: `3ca931ce Expose browser and Mermaid direct-reuse tools`
+- Phase 3 read/search/context tool module extraction started after commit: `806fe3f1 Cut over read context tool facades`
 - Release source of truth remains replay/profile/expected-contracts/canonical manifest, not `vscode.generated`.
 - Active profile: `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - Canonical manifest: `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
@@ -77,10 +78,10 @@ Source: `docs/upgrade/reports/116-stable-win32-x64-client/director-patches-repor
 | --- | --- | ---: | ---: | --- | --- |
 | `branding` | `patches/replay/002-director-branding.116.patch` | 106 | 175187 | `1ea3bb542ab1bf4997017bd68b2df2000921d9b46a81fbbf04c4e2d66cac5909` | `declarative product config` plus user-visible text/resource replacement. |
 | `product-build-release` | `patches/replay/003-director-product-build-release.116.patch` | 7 | 17420 | `f8a8ef9e9227401c1261f1ca2a6faaa8ce8db9d7a6b80863848bae196e6137a1` | `declarative product config`. |
-| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 865253 | `08f5adacc5ae002879b1351316f5e8ae159b0b0c578a79eca600700402007f5f` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
+| `agent-engine` | `patches/replay/004-director-agent-engine.116.patch` | 81 | 865222 | `c7ee36dad520e7270cd5477ad9532a6924f75cfe9a3b71fcdaad53d6117e7b16` | Mix of `Director-owned logic` and `must-touch upstream hook`. |
 | `chat-built-in-mode` | `patches/replay/005-director-chat-built-in-mode.116.patch` | 24 | 58915 | `d900858ce4b5b9f68cef83f731ef98b4824e9db1372b1cdfee1de93f44f18753` | Mix of `declarative product config` and `must-touch upstream hook`. |
 | `text-polish` | `patches/replay/006-director-text-polish.116.patch` | 3 | 13099 | `9955b9a6e8fb2462aa3be9a806e22c423f2111847f54e056f36dfe6ed0b18141` | `declarative product config` / user-visible text polish. |
-| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 77400 | `acd0389b6f8751f7cee9cc7cf4a17b132330ff4c2be4d1af628b2f66f827db31` | `Director-owned logic`. |
+| `tool-layer` | `patches/replay/007-director-tool-layer.116.patch` | 5 | 77493 | `612880fd1f56e8c728ef25b2f4d8667c5f3811dcdc04cb1730137742645ebf00` | `Director-owned logic`. |
 | `chat-editing` | `patches/replay/008-director-chat-editing.116.patch` | 2 | 21221 | `1c49de79e6faa1f7ded7b10ec7d8b6ad7c7be4da05ab0aedf2c8dab91c4b72e9` | `Director-owned logic`. |
 | `edit-tools` | `patches/replay/009-director-edit-tools.116.patch` | 3 | 45110 | `094d248c40996cf246124287b469f7b80bb6a7e6d6a4b2e5484ac1f1d8b5b2db` | `Director-owned logic`. |
 
@@ -92,14 +93,13 @@ These files are Director business logic. Agent Engine common/browser code now li
 
 | Current path group | Stage | Planned semantic stage | Notes |
 | --- | --- | --- | --- |
-| `src/vs/workbench/contrib/chat/common/agentEngine/{directorReadOnlyTools,directorToolRegistry}.ts` and edit/editing subdirs | `007`, `008`, `009` | Same semantic stage as implementation | Remaining chat-path common code is now tool/edit-layer implementation and registry code. Phase 3/4 own its next migration/cutover decisions. |
+| `src/vs/workbench/contrib/chat/common/agentEngine/editing/*` and `editTools/*` | `008`, `009` | Same semantic stage as implementation | Remaining chat-path common code is now only the reviewable editing adapter and edit-tool implementation surface. Phase 3/4 own its next migration/cutover decisions. |
 | `src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 1 moved the shared Agent Engine protocol/types out of the upstream chat tree. Phase 2 wave 2 removed its temporary back-reference to chat-path provider types. |
 | `src/vs/workbench/contrib/directorCode/common/agentEngine/{apiKeyService,authStateService,fetchUtils,geminiAuth,modelCatalog,modelResolver,oauthLoginController,oauthService,settingsWriteQueue}.ts` and `providers/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 2 moved the provider/BYOK/OAuth/model resolver/settings group into Director-owned common code. Browser, common, and tests now import this group through `directorCode/common/agentEngine`. |
-| `src/vs/workbench/contrib/directorCode/common/agentEngine/{agentEngine,builtInModeUtil,compact,directorChatModeRouting,retry,tokens}.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 3 moved the remaining Agent loop/runtime helpers into Director-owned common code. `directorChatModeRouting` explicitly imports upstream chat mode/request types and the still chat-path `directorToolRegistry` hook. |
+| `src/vs/workbench/contrib/directorCode/common/agentEngine/{agentEngine,builtInModeUtil,compact,directorChatModeRouting,retry,tokens}.ts` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 3 moved the remaining Agent loop/runtime helpers into Director-owned common code. `directorChatModeRouting` explicitly imports upstream chat mode/request types and the Director-owned registry in the same module. |
+| `src/vs/workbench/contrib/directorCode/common/agentEngine/{directorReadOnlyTools,directorToolRegistry}.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Phase 3 follow-up moved the read/search/context tool implementation and registry out of the upstream chat tree after the facade cutover. The patch generator explicitly keeps these `directorCode/` files in the tool-layer semantic stage. The registry still imports upstream `IToolData`/tool service types as integration contracts only. |
 | `src/vs/workbench/contrib/directorCode/browser/agentEngine/*` | `004-director-agent-engine.116.patch` | `004-director-agent-engine.116.patch` | Phase 2 wave 4 moved the browser Agent contribution, Director Agent registration, settings UI, widgets, message normalization, progress bridge, tool bridge, provider UI, and settings CSS into Director-owned browser code. Phase 3 wave 1 extends `toolBridge.ts` so Director can inject non-bypassable pre-tool approval while still directly invoking VS Code core browser tools. |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read-only tool contribution. Phase 3 wave 2 keeps contribution placement but exposes the updated read/search/context facade tool names. |
-| `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director read/search/context implementations. Phase 3 wave 2 cuts model-facing names to `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, and `viewImage`; old snake_case names are no longer exposed to the model. |
-| `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts` | `007-director-tool-layer.116.patch` | `007-director-tool-layer.116.patch` | Director registry, mode allowlist, backing classification, and confirmation policy. Phase 3 wave 1 adds Agent-only direct reuse for VS Code browser tools and retained `renderMermaidDiagram`, while keeping `extensions` hidden. Phase 3 wave 2 maps read/search/context raw Director tool ids to the new VS Code/Copilot `toolReferenceName` facade names. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts` | `008-director-chat-editing.116.patch` | `008-director-chat-editing.116.patch` | Shared reviewable Chat Editing adapter. |
 | `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts` | `009-director-edit-tools.116.patch` | `009-director-edit-tools.116.patch` | Director edit tool contribution. |
 | `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts` | `009-director-edit-tools.116.patch` | `009-director-edit-tools.116.patch` | Director-owned reviewable edit primitive implementations. |
@@ -171,6 +171,7 @@ No final `010` stage is allowed in the canonical replay series.
 - Phase 3 hard-gate report has been accepted at `docs/upgrade/reports/116-stable-win32-x64-client/tool-facade-research.md`; tool facade and allowlist implementation may now proceed in the accepted waves.
 - Phase 3 direct-reuse wave 1 is implemented and replay-landed: `clickElement`, `dragElement`, `handleDialog`, `hoverElement`, `navigatePage`, `openBrowserPage`, `readPage`, `runPlaywrightCode`, `screenshotPage`, `typeInPage`, and `renderMermaidDiagram` are Agent allowlisted through registry policy. Browser mutation/interaction tools and conservative page read/screenshot access get Director-injected `preToolUseResult: ask` in `toolBridge.ts`; global VS Code auto-approve does not bypass this Director bridge path.
 - Phase 3 read/search/context facade wave 2 is implemented and replay-landed: `read_file`, `list_dir`, `file_search`, `grep_search`, `get_errors`, `get_changed_files`, and `view_image` were removed as model-facing names and replaced by `readFile`, `listDirectory`, `fileSearch`, `textSearch`, `problems`, `changes`, and `viewImage`. Implementations remain Director-owned and workspace guarded. `github_repo` remains the only temporary legacy exception and must be re-reviewed in the next relevant wave.
+- Phase 3 read/search/context tool module extraction is implemented and replay-landed: `directorReadOnlyTools.ts` and `directorToolRegistry.ts` now live under `src/vs/workbench/contrib/directorCode/common/agentEngine/`. `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` remains as the thin upstream chat registration hook.
 - `extensions` remains hidden until Phase 5 product/gallery/marketplace wording policy and commercial/name grep gate.
 - `languageModelToolsService.ts` and `chatAgents.ts` are true upstream service hooks. They need careful extraction boundaries, not wholesale movement.
 - Phase 3 owns tool implementation moves that also require model-facing name cutover, including `createFile` and `createDirectory`.

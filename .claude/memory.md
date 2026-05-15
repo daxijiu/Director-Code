@@ -1,5 +1,28 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-15 latest memory: Phase 3 read/search/context tool module extraction completed
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.
+- Phase 3 read/search/context tool module extraction is implemented and replay-landed.
+- `directorReadOnlyTools.ts` and `directorToolRegistry.ts` moved from `src/vs/workbench/contrib/chat/common/agentEngine/` to `src/vs/workbench/contrib/directorCode/common/agentEngine/`.
+- `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts` remains as the thin upstream chat registration hook and imports the Director-owned implementation.
+- Director Agent code, tool bridge, mode routing, and tests now import the registry/read-only tools through `directorCode/common/agentEngine`.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/007-director-tool-layer.116.patch`, `patches/series.116.json`, canonical manifest, director patch/materialize/contract reports, `tool-migration-report.md`, and `director-surface-inventory.md`.
+- `scripts/upgrade/generate-director-patches.mjs` now classifies the moved `directorCode/common/agentEngine/directorReadOnlyTools.ts` and `directorToolRegistry.ts` as `tool-layer`, preserving the plan's semantic replay stage.
+- Clean replay validation passed:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `bash scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - clean generated tree required `npm ci`; first attempt hit a Windows native rebuild file lock and passed after stopping stale `MSBuild`/`link` processes.
+  - `npm run compile-check-ts-native`
+  - `npm run gulp -- transpile-client-esbuild`
+  - `npm run test-node -- --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts` (`20 passing`)
+- `artifacts/` remains untracked and must not be committed by default.
+- Next wave: Phase 3 `createFile`/`createDirectory` facade cutover from `create_file`/`create_directory`; keep `apply_patch`, `replace_string_in_file`, and `multi_replace_string_in_file` unchanged.
+
 ## 2026-05-15 latest memory: Phase 3 read/search/context facade cutover wave completed
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - Active plan: `docs/upgrade/director-thin-layer-refactor-plan-v2.md`.

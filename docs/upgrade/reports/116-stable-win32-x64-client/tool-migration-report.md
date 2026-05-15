@@ -164,9 +164,9 @@ Unreviewed raw tools from extension, MCP, user, browser automation, or future VS
 
 ## Implementation Checkpoints
 
-- Central registry: `src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts`
-- Read-only tools: `src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts`
-- Read-only tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts`
+- Central registry: `src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts`
+- Read-only tools: `src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts`
+- Read-only tool registration hook: `src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts`
 - Chat Editing adapter: `src/vs/workbench/contrib/chat/common/agentEngine/editing/directorChatEditingAdapter.ts`
 - Reviewable edit tools: `src/vs/workbench/contrib/chat/common/agentEngine/editTools/directorEditTools.ts`
 - Reviewable edit tool registration: `src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts`

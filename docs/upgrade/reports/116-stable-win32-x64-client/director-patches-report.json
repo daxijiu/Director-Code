@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-15T03:08:07.876Z",
+  "generatedAt": "2026-05-15T03:39:20.753Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -233,8 +233,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 81,
-      "size": 865253,
-      "sha256": "08f5adacc5ae002879b1351316f5e8ae159b0b0c578a79eca600700402007f5f"
+      "size": 865222,
+      "sha256": "c7ee36dad520e7270cd5477ad9532a6924f75cfe9a3b71fcdaad53d6117e7b16"
     },
     {
       "stage": "chat-built-in-mode",
@@ -286,14 +286,14 @@
       "path": "patches/replay/007-director-tool-layer.116.patch",
       "files": [
         "src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts",
-        "src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
-        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts"
+        "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts"
       ],
       "fileCount": 5,
-      "size": 77400,
-      "sha256": "acd0389b6f8751f7cee9cc7cf4a17b132330ff4c2be4d1af628b2f66f827db31"
+      "size": 77493,
+      "sha256": "612880fd1f56e8c728ef25b2f4d8667c5f3811dcdc04cb1730137742645ebf00"
     },
     {
       "stage": "chat-editing",

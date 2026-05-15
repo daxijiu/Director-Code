@@ -4295,7 +4295,7 @@ index 0000000000000000000000000000000000000000..6f8c6ea17c6517c6a2096a7d034856de
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..d3f39bc40136cafa5756e678add912db4503edd5
+index 0000000000000000000000000000000000000000..0ca5602a691a292c6664bf88e5f76ad6662b937f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 @@ -0,0 +1,50 @@
@@ -4309,7 +4309,7 @@ index 0000000000000000000000000000000000000000..d3f39bc40136cafa5756e678add912db
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 +import { Selection } from '../../../../../../editor/common/core/selection.js';
 +import { ChatAgentLocation, ChatModeKind } from '../../../common/constants.js';
-+import { DirectorToolMode } from '../../../common/agentEngine/directorToolRegistry.js';
++import { DirectorToolMode } from '../../../../directorCode/common/agentEngine/directorToolRegistry.js';
 +import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../../../directorCode/common/agentEngine/directorChatModeRouting.js';
 +
 +suite('Director Chat Mode Routing', () => {
@@ -11611,7 +11611,7 @@ index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5bd418338de84086febc8f461241aff8e99dda78
+index 0000000000000000000000000000000000000000..b5ea995d8b05dcaaba562061ea0cf7be3635d82a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 @@ -0,0 +1,653 @@
@@ -11659,7 +11659,7 @@ index 0000000000000000000000000000000000000000..5bd418338de84086febc8f461241aff8
 +import type { IChatProgressResponseContent } from '../../../chat/common/model/chatModel.js';
 +import { ChatAgentLocation, type ChatModeKind } from '../../../chat/common/constants.js';
 +import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
-+import { DirectorToolMode } from '../../../chat/common/agentEngine/directorToolRegistry.js';
++import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
 +import { agentEventToProgress } from './progressBridge.js';
 +import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';
 +import { VSCodeToolBridge, getAgentToolDefinitions, waitForAgentToolRegistryReady } from './toolBridge.js';
@@ -14907,7 +14907,7 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..45200e902977f2e3d8ebdd2b0d32fac493d5faf1
+index 0000000000000000000000000000000000000000..41cbdf7d95ff7522b79bbe7e14a5340a9a37629e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 @@ -0,0 +1,243 @@
@@ -14931,7 +14931,7 @@ index 0000000000000000000000000000000000000000..45200e902977f2e3d8ebdd2b0d32fac4
 +import { URI } from '../../../../../base/common/uri.js';
 +import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
 +import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
-+import { DirectorToolMode, getDirectorToolAllowlist } from '../../../chat/common/agentEngine/directorToolRegistry.js';
++import { DirectorToolMode, getDirectorToolAllowlist } from '../../common/agentEngine/directorToolRegistry.js';
 +import type {
 +	ILanguageModelToolsService,
 +	IToolInvocation,
@@ -17369,7 +17369,7 @@ index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a0
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..79fd40984eb7e07d5e8462faff46bf49964c4376
+index 0000000000000000000000000000000000000000..a395c7d4f32178071cb4c31f2bec92dc5edcdf68
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
 @@ -0,0 +1,71 @@
@@ -17380,7 +17380,7 @@ index 0000000000000000000000000000000000000000..79fd40984eb7e07d5e8462faff46bf49
 +
 +import { ChatAgentLocation, ChatModeKind } from '../../../chat/common/constants.js';
 +import type { IChatLocationData } from '../../../chat/common/chatService/chatService.js';
-+import { DirectorToolMode } from '../../../chat/common/agentEngine/directorToolRegistry.js';
++import { DirectorToolMode } from './directorToolRegistry.js';
 +
 +export interface DirectorChatModeRoutingInput {
 +	readonly location: ChatAgentLocation;

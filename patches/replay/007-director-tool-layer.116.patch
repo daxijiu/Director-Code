@@ -1,6 +1,6 @@
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5935fa5856a696f8f8fb31e1df3ccf6fb0a2726f
+index 0000000000000000000000000000000000000000..c66f7505700ce6c7260f9a104c73e993cab45135
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts
 @@ -0,0 +1,59 @@
@@ -29,7 +29,7 @@ index 0000000000000000000000000000000000000000..5935fa5856a696f8f8fb31e1df3ccf6f
 +	DirectorReadFileToolData,
 +	DirectorViewImageTool,
 +	DirectorViewImageToolData,
-+} from '../../common/agentEngine/directorReadOnlyTools.js';
++} from '../../../directorCode/common/agentEngine/directorReadOnlyTools.js';
 +import { ILanguageModelToolsService, IToolData, IToolImpl } from '../../common/tools/languageModelToolsService.js';
 +
 +class DirectorReadOnlyToolsContribution extends Disposable implements IWorkbenchContribution {
@@ -63,11 +63,435 @@ index 0000000000000000000000000000000000000000..5935fa5856a696f8f8fb31e1df3ccf6f
 +	WorkbenchPhase.AfterRestored,
 +);
 +
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f4229bb9ba02aaf1fe9e4185639e2e54c83ff134
+index 0000000000000000000000000000000000000000..c1d28356dd279c9476f4e4d2b0547d998d36dc91
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorReadOnlyTools.ts
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
+@@ -0,0 +1,229 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { VSBuffer } from '../../../../../../base/common/buffer.js';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { IFileContent, IFileService, IFileStat } from '../../../../../../platform/files/common/files.js';
++import { IMarkerService, MarkerSeverity } from '../../../../../../platform/markers/common/markers.js';
++import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
++import { ISCMService } from '../../../../scm/common/scm.js';
++import { ISearchService, QueryType, TextSearchMatch } from '../../../../../services/search/common/search.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { IToolInvocation } from '../../../common/tools/languageModelToolsService.js';
++import {
++	DirectorFileSearchTool,
++	DirectorGetChangedFilesTool,
++	DirectorGetErrorsTool,
++	DirectorGithubRepoTool,
++	DirectorGrepSearchTool,
++	DirectorListDirectoryTool,
++	DirectorReadFileTool,
++	DirectorReadOnlyToolData,
++	DirectorViewImageTool,
++} from '../../../../directorCode/common/agentEngine/directorReadOnlyTools.js';
++
++suite('Director Read-Only Tools', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	const root = URI.file('/workspace');
++	const folder = { uri: root, name: 'workspace', index: 0 } as IWorkspaceFolder;
++
++	function workspaceService(): IWorkspaceContextService {
++		return {
++			getWorkspace: () => ({ id: 'test', folders: [folder] }),
++			getWorkspaceFolder: (resource: URI) => resource.path.startsWith(root.path) ? folder : null,
++		} as unknown as IWorkspaceContextService;
++	}
++
++	function content(value: string | VSBuffer): IFileContent {
++		const buffer = typeof value === 'string' ? VSBuffer.fromString(value) : value;
++		return {
++			resource: root,
++			name: 'file',
++			value: buffer,
++			mtime: 1,
++			ctime: 1,
++			etag: '1',
++			size: buffer.byteLength,
++			readonly: false,
++			locked: false,
++			executable: false,
++		};
++	}
++
++	function fileStat(name: string, resource: URI, isDirectory: boolean, children?: IFileStat[]): IFileStat {
++		return {
++			name,
++			resource,
++			isFile: !isDirectory,
++			isDirectory,
++			isSymbolicLink: false,
++			children,
++			size: 1,
++		};
++	}
++
++	function invocation(parameters: Record<string, unknown>): IToolInvocation {
++		return {
++			callId: 'call',
++			toolId: 'tool',
++			parameters,
++			context: undefined,
++		};
++	}
++
++	test('declares the read-only facade tool data set', () => {
++		assert.deepStrictEqual(DirectorReadOnlyToolData.map(tool => tool.toolReferenceName), [
++			'readFile',
++			'listDirectory',
++			'fileSearch',
++			'textSearch',
++			'problems',
++			'changes',
++			'viewImage',
++			'github_repo',
++		]);
++	});
++
++	test('readFile reads workspace text and rejects external paths', async () => {
++		const fileService = {
++			readFile: async () => content('one\ntwo\nthree\nfour'),
++		} as unknown as IFileService;
++		const tool = new DirectorReadFileTool(fileService, workspaceService());
++
++		const result = await tool.invoke(invocation({ filePath: 'src/app.ts', startLine: 2, endLine: 3 }), async () => 0, undefined as any, CancellationToken.None);
++		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('two\nthree'));
++		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('lines: 2-3'));
++
++		const external = await tool.invoke(invocation({ filePath: '/outside/app.ts' }), async () => 0, undefined as any, CancellationToken.None);
++		assert.ok(external.content[0].kind === 'text' && external.content[0].value.includes('outside the current workspace'));
++	});
++
++	test('listDirectory sorts directories before files and caps results', async () => {
++		const stat = fileStat('src', URI.joinPath(root, 'src'), true, [
++			fileStat('z.ts', URI.joinPath(root, 'src', 'z.ts'), false),
++			fileStat('lib', URI.joinPath(root, 'src', 'lib'), true),
++			fileStat('a.ts', URI.joinPath(root, 'src', 'a.ts'), false),
++		]);
++		const fileService = {
++			resolve: async () => stat,
++		} as unknown as IFileService;
++		const tool = new DirectorListDirectoryTool(fileService, workspaceService());
++
++		const result = await tool.invoke(invocation({ path: 'src', maxResults: 2 }));
++		const text = result.content[0].kind === 'text' ? result.content[0].value : '';
++		assert.ok(text.includes('truncated: true'));
++		assert.ok(text.indexOf('lib/') < text.indexOf('a.ts'));
++		assert.ok(!text.includes('z.ts'));
++	});
++
++	test('fileSearch and textSearch use workspace-scoped VS Code search queries', async () => {
++		const fileQueries: any[] = [];
++		const textQueries: any[] = [];
++		const searchService = {
++			fileSearch: async (query: any) => {
++				fileQueries.push(query);
++				return { results: [{ resource: URI.joinPath(root, 'src', 'app.ts') }], limitHit: false, messages: [] };
++			},
++			textSearch: async (query: any) => {
++				textQueries.push(query);
++				return {
++					results: [{
++						resource: URI.joinPath(root, 'src', 'app.ts'),
++						results: [new TextSearchMatch('const value = 1;', { startLineNumber: 7, startColumn: 6, endLineNumber: 7, endColumn: 11 })],
++					}],
++					limitHit: false,
++					messages: [],
++				};
++			},
++		} as unknown as ISearchService;
++
++		const files = await new DirectorFileSearchTool(searchService, workspaceService()).invoke(invocation({ query: '*.ts', exclude: '**/node_modules/**' }), async () => 0, undefined as any, CancellationToken.None);
++		assert.strictEqual(fileQueries[0].type, QueryType.File);
++		assert.strictEqual(fileQueries[0].folderQueries[0].folder.toString(), root.toString());
++		assert.deepStrictEqual(fileQueries[0].excludePattern, { '**/node_modules/**': true });
++		assert.ok(files.content[0].kind === 'text' && files.content[0].value.includes('src/app.ts'));
++
++		const grep = await new DirectorGrepSearchTool(searchService, workspaceService()).invoke(invocation({ query: 'value', isRegexp: true, isCaseSensitive: true, includePattern: '**/*.ts', includeIgnoredFiles: true }), async () => 0, undefined as any, CancellationToken.None);
++		assert.strictEqual(textQueries[0].type, QueryType.Text);
++		assert.strictEqual(textQueries[0].contentPattern.isRegExp, true);
++		assert.strictEqual(textQueries[0].contentPattern.isCaseSensitive, true);
++		assert.deepStrictEqual(textQueries[0].includePattern, { '**/*.ts': true });
++		assert.strictEqual(textQueries[0].folderQueries[0].disregardIgnoreFiles, true);
++		assert.ok(grep.content[0].kind === 'text' && grep.content[0].value.includes('src/app.ts:7:6'));
++	});
++
++	test('problems returns workspace diagnostics only', async () => {
++		const markerService = {
++			read: () => [
++				{ owner: 'ts', resource: URI.joinPath(root, 'src', 'app.ts'), severity: MarkerSeverity.Error, message: 'broken', startLineNumber: 4, startColumn: 2, endLineNumber: 4, endColumn: 8 },
++				{ owner: 'ts', resource: URI.joinPath(root, 'test', 'app.ts'), severity: MarkerSeverity.Error, message: 'test broken', startLineNumber: 5, startColumn: 3, endLineNumber: 5, endColumn: 8 },
++				{ owner: 'ts', resource: URI.file('/outside/app.ts'), severity: MarkerSeverity.Error, message: 'outside', startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
++			],
++		} as unknown as IMarkerService;
++		const tool = new DirectorGetErrorsTool(markerService, workspaceService());
++
++		const result = await tool.invoke(invocation({ filePaths: ['src'] }));
++		const text = result.content[0].kind === 'text' ? result.content[0].value : '';
++		assert.ok(text.includes('src/app.ts:4:2'));
++		assert.ok(!text.includes('test/app.ts'));
++		assert.ok(!text.includes('outside'));
++	});
++
++	test('changes reads SCM resource groups without running Git', async () => {
++		const resource = {
++			sourceUri: URI.joinPath(root, 'src', 'app.ts'),
++			decorations: { tooltip: 'Modified' },
++			contextValue: 'modified',
++			resourceGroup: undefined as any,
++		};
++		const group = { id: 'workingTree', label: 'Changes', resources: [resource] };
++		resource.resourceGroup = group;
++		const scmService = {
++			repositoryCount: 1,
++			repositories: [{
++				id: 'repo',
++				provider: { label: 'Git', rootUri: root, groups: [group] },
++			}],
++		} as unknown as ISCMService;
++		const tool = new DirectorGetChangedFilesTool(scmService, workspaceService());
++
++		const result = await tool.invoke(invocation({ repositoryPath: '.', sourceControlState: ['modified'] }));
++		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('Modified\tsrc/app.ts'));
++	});
++
++	test('viewImage returns metadata and image data for workspace images', async () => {
++		const imageBytes = VSBuffer.fromByteArray([0, 1, 2, 3]);
++		const fileService = {
++			readFile: async () => content(imageBytes),
++		} as unknown as IFileService;
++		const tool = new DirectorViewImageTool(fileService, workspaceService());
++
++		const result = await tool.invoke(invocation({ filePath: 'image.png' }), async () => 0, undefined as any, CancellationToken.None);
++		assert.strictEqual(result.content[0].kind, 'text');
++		assert.strictEqual(result.content[1].kind, 'data');
++		assert.strictEqual(result.content[1].kind === 'data' ? result.content[1].value.mimeType : undefined, 'image/png');
++	});
++
++	test('github_repo infers sanitized GitHub remotes and reports v1 search fallback', async () => {
++		const config = '[remote "origin"]\n\turl = https://token@github.com/example/project.git\n';
++		const fileService = {
++			readFile: async () => content(config),
++		} as unknown as IFileService;
++		const tool = new DirectorGithubRepoTool(fileService, workspaceService());
++
++		const inferred = await tool.invoke(invocation({}), async () => 0, undefined as any, CancellationToken.None);
++		const text = inferred.content[0].kind === 'text' ? inferred.content[0].value : '';
++		assert.ok(text.includes('"repository": "example/project"'));
++		assert.ok(text.includes('"url": "https://github.com/example/project.git"'));
++		assert.ok(!text.includes('token@'));
++
++		const search = await tool.invoke(invocation({ repo: 'example/project', query: 'Symbol' }), async () => 0, undefined as any, CancellationToken.None);
++		assert.ok(search.content[0].kind === 'text' && search.content[0].value.includes('remote GitHub search is not supported'));
++	});
++});
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4487ee4e618fce458fd4af5caf3a75adba6a6d08
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
+@@ -0,0 +1,183 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { ToolDataSource, type IToolData } from '../../../common/tools/languageModelToolsService.js';
++import { createDirectorRawToolSnapshot, DirectorToolMode, getDirectorToolAllowlist } from '../../../../directorCode/common/agentEngine/directorToolRegistry.js';
++
++suite('Director Tool Registry', () => {
++
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	function tool(id: string, referenceName: string | undefined, modelDescription = `${referenceName ?? id} description`): IToolData {
++		return {
++			id,
++			toolReferenceName: referenceName,
++			displayName: referenceName ?? id,
++			modelDescription,
++			source: ToolDataSource.Internal,
++			inputSchema: {
++				type: 'object',
++				properties: {
++					value: { type: 'string' },
++				},
++				required: ['value'],
++			},
++		};
++	}
++
++	test('computes an Ask allowlist with read-only tools only', () => {
++		const raw = [
++			tool('vscode_listCodeUsages', 'usages'),
++			tool('run_in_terminal', 'runInTerminal'),
++			tool('vscode_renameSymbol', 'rename'),
++			tool('vscode_fetchWebPage_internal', undefined),
++		];
++
++		const askTools = getDirectorToolAllowlist(raw, DirectorToolMode.Ask);
++
++		assert.deepStrictEqual(askTools.map(item => item.modelName), ['usages', 'vscode_fetchWebPage_internal']);
++		assert.ok(askTools.every(item => item.definition.isReadOnly === true));
++		assert.ok(!askTools.some(item => item.modelName === 'runInTerminal'));
++		assert.ok(!askTools.some(item => item.modelName === 'rename'));
++	});
++
++	test('preserves existing terminal and task tools for Agent mode', () => {
++		const raw = [
++			tool('run_in_terminal', 'runInTerminal'),
++			tool('run_task', 'runTask'),
++			tool('create_and_run_task', 'createAndRunTask'),
++			tool('get_task_output', 'getTaskOutput'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++		const names = agentTools.map(item => item.modelName);
++
++		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runTask']);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
++	});
++
++	test('exposes read-only facade workspace tools in Ask/Edit/Agent only', () => {
++		const raw = [
++			tool('director_read_file', 'readFile'),
++			tool('director_list_dir', 'listDirectory'),
++			tool('director_file_search', 'fileSearch'),
++			tool('director_grep_search', 'textSearch'),
++			tool('director_get_errors', 'problems'),
++			tool('director_get_changed_files', 'changes'),
++			tool('director_view_image', 'viewImage'),
++			tool('director_github_repo', 'github_repo'),
++		];
++
++		const expected = ['changes', 'fileSearch', 'github_repo', 'listDirectory', 'problems', 'readFile', 'textSearch', 'viewImage'];
++
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
++		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).every(item => item.definition.isReadOnly === true));
++		for (const oldName of ['read_file', 'list_dir', 'file_search', 'grep_search', 'get_errors', 'get_changed_files', 'view_image']) {
++			assert.ok(!getDirectorToolAllowlist(raw, DirectorToolMode.Agent).some(item => item.modelName === oldName), `${oldName} should not be model-facing after facade cutover`);
++		}
++	});
++
++	test('exposes Phase 4 reviewable edit tools in Edit and Agent only', () => {
++		const raw = [
++			tool('director_apply_patch', 'apply_patch'),
++			tool('director_create_file', 'create_file'),
++			tool('director_create_directory', 'create_directory'),
++			tool('director_replace_string_in_file', 'replace_string_in_file'),
++			tool('director_multi_replace_string_in_file', 'multi_replace_string_in_file'),
++		];
++
++		const expected = ['apply_patch', 'create_directory', 'create_file', 'multi_replace_string_in_file', 'replace_string_in_file'];
++
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
++		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).every(item => item.definition.isReadOnly === false));
++	});
++
++	test('hides internal edit and deferred mutation tools from Agent mode', () => {
++		const raw = [
++			tool('vscode_editFile_internal', undefined),
++			tool('vscode_renameSymbol', 'rename'),
++			tool('setup_tools_createNewWorkspace', 'new'),
++			tool('manage_todo_list', 'todo'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++
++		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['todo']);
++	});
++
++	test('exposes direct-reuse browser tools in Agent mode with Director approval policy', () => {
++		const raw = [
++			tool('open_browser_page', 'openBrowserPage'),
++			tool('read_page', 'readPage'),
++			tool('screenshot_page', 'screenshotPage'),
++			tool('navigate_page', 'navigatePage'),
++			tool('click_element', 'clickElement'),
++			tool('drag_element', 'dragElement'),
++			tool('hover_element', 'hoverElement'),
++			tool('type_in_page', 'typeInPage'),
++			tool('run_playwright_code', 'runPlaywrightCode'),
++			tool('handle_dialog', 'handleDialog'),
++		];
++
++		const expected = ['clickElement', 'dragElement', 'handleDialog', 'hoverElement', 'navigatePage', 'openBrowserPage', 'readPage', 'runPlaywrightCode', 'screenshotPage', 'typeInPage'];
++
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), []);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++		for (const name of ['clickElement', 'dragElement', 'handleDialog', 'navigatePage', 'openBrowserPage', 'runPlaywrightCode', 'typeInPage']) {
++			const resolved = agentTools.find(item => item.modelName === name);
++			assert.ok(resolved?.directorPreApprovalReason, `${name} should require Director pre-approval`);
++			assert.strictEqual(resolved?.entry.confirmationPolicy, 'director-pre-approval');
++			assert.strictEqual(resolved?.definition.isReadOnly, false);
++		}
++		for (const name of ['readPage', 'screenshotPage']) {
++			const resolved = agentTools.find(item => item.modelName === name);
++			assert.ok(resolved?.directorPreApprovalReason, `${name} should require Director session approval`);
++			assert.strictEqual(resolved?.entry.confirmationPolicy, 'director-session-approval');
++			assert.strictEqual(resolved?.definition.isReadOnly, true);
++		}
++		assert.strictEqual(agentTools.find(item => item.modelName === 'hoverElement')?.directorPreApprovalReason, undefined);
++	});
++
++	test('allows retained Mermaid extension tool in Agent mode only', () => {
++		const raw = [
++			tool('renderMermaidDiagram', 'renderMermaidDiagram'),
++			tool('vscode_searchExtensions_internal', 'extensions'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), []);
++		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['renderMermaidDiagram']);
++		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
++		assert.strictEqual(agentTools[0].entry.backing, 'vscode-extension');
++		assert.strictEqual(agentTools[0].definition.isReadOnly, true);
++	});
++
++	test('marks unreviewed raw tools as hidden by default in snapshots', () => {
++		const raw = [
++			tool('unreviewed_tool', 'unreviewedTool'),
++			tool('vscode_editFile_internal', undefined),
++		];
++
++		const snapshot = createDirectorRawToolSnapshot(raw);
++
++		assert.strictEqual(snapshot.find(item => item.id === 'unreviewed_tool')?.disposition, 'unreviewed');
++		assert.strictEqual(snapshot.find(item => item.id === 'vscode_editFile_internal')?.disposition, 'hide');
++	});
++});
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..79e01157f4fc8dad6e600dcff2587ad758c1824f
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts
 @@ -0,0 +1,725 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -85,7 +509,7 @@ index 0000000000000000000000000000000000000000..f4229bb9ba02aaf1fe9e4185639e2e54
 +import { ISCMRepository, ISCMResource, ISCMService } from '../../../scm/common/scm.js';
 +import { detectEncodingFromBuffer } from '../../../../services/textfile/common/encoding.js';
 +import { IFileMatch, ITextSearchMatch, ISearchService, QueryType, resultIsMatch } from '../../../../services/search/common/search.js';
-+import { CountTokensCallback, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../tools/languageModelToolsService.js';
++import { CountTokensCallback, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../../../chat/common/tools/languageModelToolsService.js';
 +
 +export const DirectorReadFileToolId = 'director_read_file';
 +export const DirectorListDirectoryToolId = 'director_list_dir';
@@ -794,11 +1218,11 @@ index 0000000000000000000000000000000000000000..f4229bb9ba02aaf1fe9e4185639e2e54
 +function sanitizeRemoteUrl(value: string): string {
 +	return value.replace(/^(https?:\/\/)([^/@]+@)/, '$1');
 +}
-diff --git a/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..4b0b34dfc6624f38da8434fab44863c7b5acfe48
+index 0000000000000000000000000000000000000000..e25fe93493d0e7abf212e99b02b4203edfd8d84b
 --- /dev/null
-+++ b/src/vs/workbench/contrib/chat/common/agentEngine/directorToolRegistry.ts
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 @@ -0,0 +1,244 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
@@ -806,8 +1230,8 @@ index 0000000000000000000000000000000000000000..4b0b34dfc6624f38da8434fab44863c7
 + *--------------------------------------------------------------------------------------------*/
 +
 +import type { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
-+import type { AgentToolDefinition } from '../../../directorCode/common/agentEngine/agentEngineTypes.js';
-+import type { IToolData } from '../tools/languageModelToolsService.js';
++import type { IToolData } from '../../../chat/common/tools/languageModelToolsService.js';
++import type { AgentToolDefinition } from './agentEngineTypes.js';
 +
 +export const enum DirectorToolMode {
 +	Ask = 'ask',
@@ -1044,427 +1468,3 @@ index 0000000000000000000000000000000000000000..4b0b34dfc6624f38da8434fab44863c7
 +		properties: {},
 +	};
 +}
-diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..9e8e7c2611bafb31624a6865dfd2e06cbc1a9b39
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts
-@@ -0,0 +1,229 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+import assert from 'assert';
-+import { VSBuffer } from '../../../../../../base/common/buffer.js';
-+import { CancellationToken } from '../../../../../../base/common/cancellation.js';
-+import { URI } from '../../../../../../base/common/uri.js';
-+import { IFileContent, IFileService, IFileStat } from '../../../../../../platform/files/common/files.js';
-+import { IMarkerService, MarkerSeverity } from '../../../../../../platform/markers/common/markers.js';
-+import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
-+import { ISCMService } from '../../../../scm/common/scm.js';
-+import { ISearchService, QueryType, TextSearchMatch } from '../../../../../services/search/common/search.js';
-+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-+import { IToolInvocation } from '../../../common/tools/languageModelToolsService.js';
-+import {
-+	DirectorFileSearchTool,
-+	DirectorGetChangedFilesTool,
-+	DirectorGetErrorsTool,
-+	DirectorGithubRepoTool,
-+	DirectorGrepSearchTool,
-+	DirectorListDirectoryTool,
-+	DirectorReadFileTool,
-+	DirectorReadOnlyToolData,
-+	DirectorViewImageTool,
-+} from '../../../common/agentEngine/directorReadOnlyTools.js';
-+
-+suite('Director Read-Only Tools', () => {
-+
-+	ensureNoDisposablesAreLeakedInTestSuite();
-+
-+	const root = URI.file('/workspace');
-+	const folder = { uri: root, name: 'workspace', index: 0 } as IWorkspaceFolder;
-+
-+	function workspaceService(): IWorkspaceContextService {
-+		return {
-+			getWorkspace: () => ({ id: 'test', folders: [folder] }),
-+			getWorkspaceFolder: (resource: URI) => resource.path.startsWith(root.path) ? folder : null,
-+		} as unknown as IWorkspaceContextService;
-+	}
-+
-+	function content(value: string | VSBuffer): IFileContent {
-+		const buffer = typeof value === 'string' ? VSBuffer.fromString(value) : value;
-+		return {
-+			resource: root,
-+			name: 'file',
-+			value: buffer,
-+			mtime: 1,
-+			ctime: 1,
-+			etag: '1',
-+			size: buffer.byteLength,
-+			readonly: false,
-+			locked: false,
-+			executable: false,
-+		};
-+	}
-+
-+	function fileStat(name: string, resource: URI, isDirectory: boolean, children?: IFileStat[]): IFileStat {
-+		return {
-+			name,
-+			resource,
-+			isFile: !isDirectory,
-+			isDirectory,
-+			isSymbolicLink: false,
-+			children,
-+			size: 1,
-+		};
-+	}
-+
-+	function invocation(parameters: Record<string, unknown>): IToolInvocation {
-+		return {
-+			callId: 'call',
-+			toolId: 'tool',
-+			parameters,
-+			context: undefined,
-+		};
-+	}
-+
-+	test('declares the read-only facade tool data set', () => {
-+		assert.deepStrictEqual(DirectorReadOnlyToolData.map(tool => tool.toolReferenceName), [
-+			'readFile',
-+			'listDirectory',
-+			'fileSearch',
-+			'textSearch',
-+			'problems',
-+			'changes',
-+			'viewImage',
-+			'github_repo',
-+		]);
-+	});
-+
-+	test('readFile reads workspace text and rejects external paths', async () => {
-+		const fileService = {
-+			readFile: async () => content('one\ntwo\nthree\nfour'),
-+		} as unknown as IFileService;
-+		const tool = new DirectorReadFileTool(fileService, workspaceService());
-+
-+		const result = await tool.invoke(invocation({ filePath: 'src/app.ts', startLine: 2, endLine: 3 }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('two\nthree'));
-+		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('lines: 2-3'));
-+
-+		const external = await tool.invoke(invocation({ filePath: '/outside/app.ts' }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.ok(external.content[0].kind === 'text' && external.content[0].value.includes('outside the current workspace'));
-+	});
-+
-+	test('listDirectory sorts directories before files and caps results', async () => {
-+		const stat = fileStat('src', URI.joinPath(root, 'src'), true, [
-+			fileStat('z.ts', URI.joinPath(root, 'src', 'z.ts'), false),
-+			fileStat('lib', URI.joinPath(root, 'src', 'lib'), true),
-+			fileStat('a.ts', URI.joinPath(root, 'src', 'a.ts'), false),
-+		]);
-+		const fileService = {
-+			resolve: async () => stat,
-+		} as unknown as IFileService;
-+		const tool = new DirectorListDirectoryTool(fileService, workspaceService());
-+
-+		const result = await tool.invoke(invocation({ path: 'src', maxResults: 2 }));
-+		const text = result.content[0].kind === 'text' ? result.content[0].value : '';
-+		assert.ok(text.includes('truncated: true'));
-+		assert.ok(text.indexOf('lib/') < text.indexOf('a.ts'));
-+		assert.ok(!text.includes('z.ts'));
-+	});
-+
-+	test('fileSearch and textSearch use workspace-scoped VS Code search queries', async () => {
-+		const fileQueries: any[] = [];
-+		const textQueries: any[] = [];
-+		const searchService = {
-+			fileSearch: async (query: any) => {
-+				fileQueries.push(query);
-+				return { results: [{ resource: URI.joinPath(root, 'src', 'app.ts') }], limitHit: false, messages: [] };
-+			},
-+			textSearch: async (query: any) => {
-+				textQueries.push(query);
-+				return {
-+					results: [{
-+						resource: URI.joinPath(root, 'src', 'app.ts'),
-+						results: [new TextSearchMatch('const value = 1;', { startLineNumber: 7, startColumn: 6, endLineNumber: 7, endColumn: 11 })],
-+					}],
-+					limitHit: false,
-+					messages: [],
-+				};
-+			},
-+		} as unknown as ISearchService;
-+
-+		const files = await new DirectorFileSearchTool(searchService, workspaceService()).invoke(invocation({ query: '*.ts', exclude: '**/node_modules/**' }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.strictEqual(fileQueries[0].type, QueryType.File);
-+		assert.strictEqual(fileQueries[0].folderQueries[0].folder.toString(), root.toString());
-+		assert.deepStrictEqual(fileQueries[0].excludePattern, { '**/node_modules/**': true });
-+		assert.ok(files.content[0].kind === 'text' && files.content[0].value.includes('src/app.ts'));
-+
-+		const grep = await new DirectorGrepSearchTool(searchService, workspaceService()).invoke(invocation({ query: 'value', isRegexp: true, isCaseSensitive: true, includePattern: '**/*.ts', includeIgnoredFiles: true }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.strictEqual(textQueries[0].type, QueryType.Text);
-+		assert.strictEqual(textQueries[0].contentPattern.isRegExp, true);
-+		assert.strictEqual(textQueries[0].contentPattern.isCaseSensitive, true);
-+		assert.deepStrictEqual(textQueries[0].includePattern, { '**/*.ts': true });
-+		assert.strictEqual(textQueries[0].folderQueries[0].disregardIgnoreFiles, true);
-+		assert.ok(grep.content[0].kind === 'text' && grep.content[0].value.includes('src/app.ts:7:6'));
-+	});
-+
-+	test('problems returns workspace diagnostics only', async () => {
-+		const markerService = {
-+			read: () => [
-+				{ owner: 'ts', resource: URI.joinPath(root, 'src', 'app.ts'), severity: MarkerSeverity.Error, message: 'broken', startLineNumber: 4, startColumn: 2, endLineNumber: 4, endColumn: 8 },
-+				{ owner: 'ts', resource: URI.joinPath(root, 'test', 'app.ts'), severity: MarkerSeverity.Error, message: 'test broken', startLineNumber: 5, startColumn: 3, endLineNumber: 5, endColumn: 8 },
-+				{ owner: 'ts', resource: URI.file('/outside/app.ts'), severity: MarkerSeverity.Error, message: 'outside', startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
-+			],
-+		} as unknown as IMarkerService;
-+		const tool = new DirectorGetErrorsTool(markerService, workspaceService());
-+
-+		const result = await tool.invoke(invocation({ filePaths: ['src'] }));
-+		const text = result.content[0].kind === 'text' ? result.content[0].value : '';
-+		assert.ok(text.includes('src/app.ts:4:2'));
-+		assert.ok(!text.includes('test/app.ts'));
-+		assert.ok(!text.includes('outside'));
-+	});
-+
-+	test('changes reads SCM resource groups without running Git', async () => {
-+		const resource = {
-+			sourceUri: URI.joinPath(root, 'src', 'app.ts'),
-+			decorations: { tooltip: 'Modified' },
-+			contextValue: 'modified',
-+			resourceGroup: undefined as any,
-+		};
-+		const group = { id: 'workingTree', label: 'Changes', resources: [resource] };
-+		resource.resourceGroup = group;
-+		const scmService = {
-+			repositoryCount: 1,
-+			repositories: [{
-+				id: 'repo',
-+				provider: { label: 'Git', rootUri: root, groups: [group] },
-+			}],
-+		} as unknown as ISCMService;
-+		const tool = new DirectorGetChangedFilesTool(scmService, workspaceService());
-+
-+		const result = await tool.invoke(invocation({ repositoryPath: '.', sourceControlState: ['modified'] }));
-+		assert.ok(result.content[0].kind === 'text' && result.content[0].value.includes('Modified\tsrc/app.ts'));
-+	});
-+
-+	test('viewImage returns metadata and image data for workspace images', async () => {
-+		const imageBytes = VSBuffer.fromByteArray([0, 1, 2, 3]);
-+		const fileService = {
-+			readFile: async () => content(imageBytes),
-+		} as unknown as IFileService;
-+		const tool = new DirectorViewImageTool(fileService, workspaceService());
-+
-+		const result = await tool.invoke(invocation({ filePath: 'image.png' }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.strictEqual(result.content[0].kind, 'text');
-+		assert.strictEqual(result.content[1].kind, 'data');
-+		assert.strictEqual(result.content[1].kind === 'data' ? result.content[1].value.mimeType : undefined, 'image/png');
-+	});
-+
-+	test('github_repo infers sanitized GitHub remotes and reports v1 search fallback', async () => {
-+		const config = '[remote "origin"]\n\turl = https://token@github.com/example/project.git\n';
-+		const fileService = {
-+			readFile: async () => content(config),
-+		} as unknown as IFileService;
-+		const tool = new DirectorGithubRepoTool(fileService, workspaceService());
-+
-+		const inferred = await tool.invoke(invocation({}), async () => 0, undefined as any, CancellationToken.None);
-+		const text = inferred.content[0].kind === 'text' ? inferred.content[0].value : '';
-+		assert.ok(text.includes('"repository": "example/project"'));
-+		assert.ok(text.includes('"url": "https://github.com/example/project.git"'));
-+		assert.ok(!text.includes('token@'));
-+
-+		const search = await tool.invoke(invocation({ repo: 'example/project', query: 'Symbol' }), async () => 0, undefined as any, CancellationToken.None);
-+		assert.ok(search.content[0].kind === 'text' && search.content[0].value.includes('remote GitHub search is not supported'));
-+	});
-+});
-diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..1a4395da2aa8d5e8df1518519e5ecd940cbdbc7a
---- /dev/null
-+++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,183 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+import assert from 'assert';
-+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-+import { ToolDataSource, type IToolData } from '../../../common/tools/languageModelToolsService.js';
-+import { createDirectorRawToolSnapshot, DirectorToolMode, getDirectorToolAllowlist } from '../../../common/agentEngine/directorToolRegistry.js';
-+
-+suite('Director Tool Registry', () => {
-+
-+	ensureNoDisposablesAreLeakedInTestSuite();
-+
-+	function tool(id: string, referenceName: string | undefined, modelDescription = `${referenceName ?? id} description`): IToolData {
-+		return {
-+			id,
-+			toolReferenceName: referenceName,
-+			displayName: referenceName ?? id,
-+			modelDescription,
-+			source: ToolDataSource.Internal,
-+			inputSchema: {
-+				type: 'object',
-+				properties: {
-+					value: { type: 'string' },
-+				},
-+				required: ['value'],
-+			},
-+		};
-+	}
-+
-+	test('computes an Ask allowlist with read-only tools only', () => {
-+		const raw = [
-+			tool('vscode_listCodeUsages', 'usages'),
-+			tool('run_in_terminal', 'runInTerminal'),
-+			tool('vscode_renameSymbol', 'rename'),
-+			tool('vscode_fetchWebPage_internal', undefined),
-+		];
-+
-+		const askTools = getDirectorToolAllowlist(raw, DirectorToolMode.Ask);
-+
-+		assert.deepStrictEqual(askTools.map(item => item.modelName), ['usages', 'vscode_fetchWebPage_internal']);
-+		assert.ok(askTools.every(item => item.definition.isReadOnly === true));
-+		assert.ok(!askTools.some(item => item.modelName === 'runInTerminal'));
-+		assert.ok(!askTools.some(item => item.modelName === 'rename'));
-+	});
-+
-+	test('preserves existing terminal and task tools for Agent mode', () => {
-+		const raw = [
-+			tool('run_in_terminal', 'runInTerminal'),
-+			tool('run_task', 'runTask'),
-+			tool('create_and_run_task', 'createAndRunTask'),
-+			tool('get_task_output', 'getTaskOutput'),
-+		];
-+
-+		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
-+		const names = agentTools.map(item => item.modelName);
-+
-+		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runTask']);
-+		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
-+		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
-+	});
-+
-+	test('exposes read-only facade workspace tools in Ask/Edit/Agent only', () => {
-+		const raw = [
-+			tool('director_read_file', 'readFile'),
-+			tool('director_list_dir', 'listDirectory'),
-+			tool('director_file_search', 'fileSearch'),
-+			tool('director_grep_search', 'textSearch'),
-+			tool('director_get_errors', 'problems'),
-+			tool('director_get_changed_files', 'changes'),
-+			tool('director_view_image', 'viewImage'),
-+			tool('director_github_repo', 'github_repo'),
-+		];
-+
-+		const expected = ['changes', 'fileSearch', 'github_repo', 'listDirectory', 'problems', 'readFile', 'textSearch', 'viewImage'];
-+
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
-+		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).every(item => item.definition.isReadOnly === true));
-+		for (const oldName of ['read_file', 'list_dir', 'file_search', 'grep_search', 'get_errors', 'get_changed_files', 'view_image']) {
-+			assert.ok(!getDirectorToolAllowlist(raw, DirectorToolMode.Agent).some(item => item.modelName === oldName), `${oldName} should not be model-facing after facade cutover`);
-+		}
-+	});
-+
-+	test('exposes Phase 4 reviewable edit tools in Edit and Agent only', () => {
-+		const raw = [
-+			tool('director_apply_patch', 'apply_patch'),
-+			tool('director_create_file', 'create_file'),
-+			tool('director_create_directory', 'create_directory'),
-+			tool('director_replace_string_in_file', 'replace_string_in_file'),
-+			tool('director_multi_replace_string_in_file', 'multi_replace_string_in_file'),
-+		];
-+
-+		const expected = ['apply_patch', 'create_directory', 'create_file', 'multi_replace_string_in_file', 'replace_string_in_file'];
-+
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
-+		assert.ok(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).every(item => item.definition.isReadOnly === false));
-+	});
-+
-+	test('hides internal edit and deferred mutation tools from Agent mode', () => {
-+		const raw = [
-+			tool('vscode_editFile_internal', undefined),
-+			tool('vscode_renameSymbol', 'rename'),
-+			tool('setup_tools_createNewWorkspace', 'new'),
-+			tool('manage_todo_list', 'todo'),
-+		];
-+
-+		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
-+
-+		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['todo']);
-+	});
-+
-+	test('exposes direct-reuse browser tools in Agent mode with Director approval policy', () => {
-+		const raw = [
-+			tool('open_browser_page', 'openBrowserPage'),
-+			tool('read_page', 'readPage'),
-+			tool('screenshot_page', 'screenshotPage'),
-+			tool('navigate_page', 'navigatePage'),
-+			tool('click_element', 'clickElement'),
-+			tool('drag_element', 'dragElement'),
-+			tool('hover_element', 'hoverElement'),
-+			tool('type_in_page', 'typeInPage'),
-+			tool('run_playwright_code', 'runPlaywrightCode'),
-+			tool('handle_dialog', 'handleDialog'),
-+		];
-+
-+		const expected = ['clickElement', 'dragElement', 'handleDialog', 'hoverElement', 'navigatePage', 'openBrowserPage', 'readPage', 'runPlaywrightCode', 'screenshotPage', 'typeInPage'];
-+
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), []);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Agent).map(item => item.modelName), expected);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
-+
-+		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
-+		for (const name of ['clickElement', 'dragElement', 'handleDialog', 'navigatePage', 'openBrowserPage', 'runPlaywrightCode', 'typeInPage']) {
-+			const resolved = agentTools.find(item => item.modelName === name);
-+			assert.ok(resolved?.directorPreApprovalReason, `${name} should require Director pre-approval`);
-+			assert.strictEqual(resolved?.entry.confirmationPolicy, 'director-pre-approval');
-+			assert.strictEqual(resolved?.definition.isReadOnly, false);
-+		}
-+		for (const name of ['readPage', 'screenshotPage']) {
-+			const resolved = agentTools.find(item => item.modelName === name);
-+			assert.ok(resolved?.directorPreApprovalReason, `${name} should require Director session approval`);
-+			assert.strictEqual(resolved?.entry.confirmationPolicy, 'director-session-approval');
-+			assert.strictEqual(resolved?.definition.isReadOnly, true);
-+		}
-+		assert.strictEqual(agentTools.find(item => item.modelName === 'hoverElement')?.directorPreApprovalReason, undefined);
-+	});
-+
-+	test('allows retained Mermaid extension tool in Agent mode only', () => {
-+		const raw = [
-+			tool('renderMermaidDiagram', 'renderMermaidDiagram'),
-+			tool('vscode_searchExtensions_internal', 'extensions'),
-+		];
-+
-+		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
-+
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Ask).map(item => item.modelName), []);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Edit).map(item => item.modelName), []);
-+		assert.deepStrictEqual(agentTools.map(item => item.modelName), ['renderMermaidDiagram']);
-+		assert.deepStrictEqual(getDirectorToolAllowlist(raw, DirectorToolMode.Inline).map(item => item.modelName), []);
-+		assert.strictEqual(agentTools[0].entry.backing, 'vscode-extension');
-+		assert.strictEqual(agentTools[0].definition.isReadOnly, true);
-+	});
-+
-+	test('marks unreviewed raw tools as hidden by default in snapshots', () => {
-+		const raw = [
-+			tool('unreviewed_tool', 'unreviewedTool'),
-+			tool('vscode_editFile_internal', undefined),
-+		];
-+
-+		const snapshot = createDirectorRawToolSnapshot(raw);
-+
-+		assert.strictEqual(snapshot.find(item => item.id === 'unreviewed_tool')?.disposition, 'unreviewed');
-+		assert.strictEqual(snapshot.find(item => item.id === 'vscode_editFile_internal')?.disposition, 'hide');
-+	});
-+});
