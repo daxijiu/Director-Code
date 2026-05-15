@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-15T18:01:08.772Z",
+  "generatedAt": "2026-05-15T20:26:08.361Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 262,
+  "changedFileCount": 265,
   "patches": [
     {
       "stage": "branding",
@@ -199,6 +199,7 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts",
+        "src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts",
@@ -230,6 +231,7 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts",
@@ -250,9 +252,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 85,
-      "size": 921166,
-      "sha256": "079a5d1f94866444a6cb154bdc58418442281088a0a0085ec9b8c8d8a512e4ba"
+      "fileCount": 87,
+      "size": 964410,
+      "sha256": "9bbf47300bd2a5782a37ab0030e07e6e581b9827eddf37511f6a41b1a07b17db"
     },
     {
       "stage": "chat-built-in-mode",
@@ -272,6 +274,7 @@
         "src/vs/workbench/contrib/chat/browser/aiCustomization/media/aiCustomizationManagement.css",
         "src/vs/workbench/contrib/chat/browser/aiCustomization/pluginListWidget.ts",
         "src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts",
+        "src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts",
         "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts",
         "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts",
         "src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupGrowthSession.ts",
@@ -293,9 +296,9 @@
         "src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts",
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts"
       ],
-      "fileCount": 34,
-      "size": 87118,
-      "sha256": "7516ac38ad601db2bb529a29440a96ad17d28a6dcdd818f52cbe09571ec78f45"
+      "fileCount": 35,
+      "size": 92544,
+      "sha256": "c27f3a731074b904679a9e5e2bd644a1f640c16b25a73fa4eddf9ca8034bdb1c"
     },
     {
       "stage": "text-polish",

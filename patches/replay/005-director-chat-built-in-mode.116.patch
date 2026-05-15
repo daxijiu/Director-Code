@@ -604,6 +604,111 @@ index e752209f42896da4ab7f3a188b4810a156a09f4a..784eefa8e2362ec9329269ab932d1bca
  				undefined,
  				[{ role: ChatMessageRole.User, content: [{ type: 'text', value: prompt }] }],
  				{},
+diff --git a/src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts b/src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts
+index 211d1697c6e1d7c1fb06e784407c59baf762f9b7..73e90730f23926c5ce58c5f1f8ec259186bc3f65 100644
+--- a/src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts
++++ b/src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts
+@@ -753,7 +753,17 @@ class ActionsColumnRenderer extends ModelsTableColumnRenderer<IActionsColumnTemp
+ 		const { vendorEntry } = entry;
+ 		const primaryActions: IAction[] = [];
+ 		const secondaryActions: IAction[] = [];
+-		if (vendorEntry.vendor.configuration) {
++		if (vendorEntry.vendor.managementCommand) {
++			primaryActions.push(toAction({
++				id: 'manageVendor',
++				label: localize('models.manageProvider', 'Manage {0}...', vendorEntry.group.name),
++				class: ThemeIcon.asClassName(Codicon.gear),
++				run: async () => {
++					await this.commandService.executeCommand(vendorEntry.vendor.managementCommand!, vendorEntry.vendor.vendor, vendorEntry.group.name, vendorEntry.group.directorProviderInstanceId);
++					this.viewModel.refresh();
++				}
++			}));
++		} else if (vendorEntry.vendor.configuration) {
+ 			secondaryActions.push(toAction({
+ 				id: 'configureAction',
+ 				label: localize('models.configure', 'Configure...'),
+@@ -774,16 +784,6 @@ class ActionsColumnRenderer extends ModelsTableColumnRenderer<IActionsColumnTemp
+ 					await this.languageModelsService.removeLanguageModelsProviderGroup(vendorEntry.vendor.vendor, vendorEntry.group.name);
+ 				}
+ 			}));
+-		} else if (vendorEntry.vendor.managementCommand) {
+-			primaryActions.push(toAction({
+-				id: 'manageVendor',
+-				label: localize('models.manageProvider', 'Manage {0}...', vendorEntry.group.name),
+-				class: ThemeIcon.asClassName(Codicon.gear),
+-				run: async () => {
+-					await this.commandService.executeCommand(vendorEntry.vendor.managementCommand!, vendorEntry.vendor.vendor);
+-					this.viewModel.refresh();
+-				}
+-			}));
+ 		}
+ 		templateData.actionBar.setActions(primaryActions, secondaryActions);
+ 	}
+@@ -1181,6 +1181,7 @@ export class ChatModelsWidget extends Disposable {
+ 
+ 			const actions: IAction[] = [];
+ 			let configureGroup: string | undefined;
++			let configureProviderInstanceId: unknown;
+ 			let configureVendor: ILanguageModelProviderDescriptor | undefined;
+ 
+ 			if (selectedModelEntries.length) {
+@@ -1212,9 +1213,11 @@ export class ChatModelsWidget extends Disposable {
+ 
+ 				// Show configure action if all models are from the same group
+ 				configureGroup = selectedModelEntries[0].model.provider.group.name;
++				configureProviderInstanceId = selectedModelEntries[0].model.provider.group.directorProviderInstanceId;
+ 				configureVendor = selectedModelEntries[0].model.provider.vendor;
+ 				if (selectedModelEntries.some(entry => entry.model.provider.vendor.isDefault || entry.model.provider.group.name !== configureGroup)) {
+ 					configureGroup = undefined;
++					configureProviderInstanceId = undefined;
+ 					configureVendor = undefined;
+ 				}
+ 			} else if (selectedEntries.length === 1) {
+@@ -1233,6 +1236,7 @@ export class ChatModelsWidget extends Disposable {
+ 						}));
+ 					}
+ 					configureGroup = entry.vendorEntry.group.name;
++					configureProviderInstanceId = entry.vendorEntry.group.directorProviderInstanceId;
+ 					configureVendor = entry.vendorEntry.vendor;
+ 				}
+ 			}
+@@ -1247,7 +1251,7 @@ export class ChatModelsWidget extends Disposable {
+ 							id: 'configureVendor',
+ 							label: localize('models.configureContextMenu', 'Configure'),
+ 							run: async () => {
+-								await this.commandService.executeCommand(configureVendor.managementCommand!, configureVendor.vendor);
++								await this.commandService.executeCommand(configureVendor.managementCommand!, configureVendor.vendor, configureGroup, configureProviderInstanceId);
+ 								await this.viewModel.refresh();
+ 							}
+ 						}));
+@@ -1308,10 +1312,12 @@ export class ChatModelsWidget extends Disposable {
+ 
+ 	private updateAddModelsButton(): void {
+ 		const configurableVendors = this.languageModelsService.getVendors().filter(vendor => vendor.managementCommand || vendor.configuration);
++		const hasDirectorVendor = configurableVendors.some(vendor => vendor.vendor === 'director-code');
+ 
+ 		const entitlement = this.chatEntitlementService.entitlement;
+ 		const isManagedEntitlement = entitlement === ChatEntitlement.Business || entitlement === ChatEntitlement.Enterprise;
+-		const supportsAddingModels = this.chatEntitlementService.isInternal
++		const supportsAddingModels = hasDirectorVendor
++			|| this.chatEntitlementService.isInternal
+ 			|| (isManagedEntitlement && this.chatEntitlementService.clientByokEnabled)
+ 			|| (entitlement !== ChatEntitlement.Unknown
+ 				&& entitlement !== ChatEntitlement.Available
+@@ -1336,7 +1342,12 @@ export class ChatModelsWidget extends Disposable {
+ 	}
+ 
+ 	private async addModelsForVendor(vendor: ILanguageModelProviderDescriptor): Promise<void> {
+-		this.languageModelsService.configureLanguageModelsProviderGroup(vendor.vendor);
++		if (vendor.managementCommand) {
++			await this.commandService.executeCommand(vendor.managementCommand, vendor.vendor);
++			await this.viewModel.refresh();
++			return;
++		}
++		await this.languageModelsService.configureLanguageModelsProviderGroup(vendor.vendor);
+ 	}
+ 
+ 	public layout(height: number, width: number): void {
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
 index b1832fcb44f5d53a95d60d4762fae5caba7784a5..44503b5bfacd6f9b8dda507bbf1e632eeed755ec 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts

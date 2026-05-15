@@ -1,5 +1,24 @@
 # CLAUDE.md - Director-Code replay source guide
 
+## 2026-05-16 Phase 2 Wave 2 Provider Registry Update
+
+- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push.
+- Director Provider Registry is now the canonical source for provider instances and is persisted as profile data in `directorCodeProviders.json`; VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
+- Model ids exposed to VS Code now use `director-code/<providerInstanceId>/<modelId>`, allowing multiple instances of the same provider or compatible endpoint.
+- Director Agent and Director language model provider resolve model/default/auth through provider instances, including SecretStorage API keys, env var API key references, OpenAI/Anthropic OAuth, base URL, custom headers, manual model lists, and legacy global-config lazy migration.
+- Director Code Settings now contains the Provider Manager instance UI. The old single global provider/model/baseURL write path is no longer the normal UI path.
+- VS Code Models Management remains reused, with a thin Director hook for Manage/Add actions and a Director entitlement bypass for the `director-code` vendor.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/005-director-chat-built-in-mode.116.patch`, `patches/series.116.json`, `director-patches-report.json`, and `docs/upgrade/116-phase2-waves-plan.md`.
+- Reports/scripts added:
+  - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-wave2-provider-registry-report.md`
+  - `scripts/smoke/director-provider-oauth-smoke.ps1`
+- Validation passed after clean replay materialization: `validate-series`, `validate-product-overrides`, `expected-contracts`, `compile-check-ts-native`, `transpile-client`, provider registry/model/auth/api-key node tests, API-key browser DOM test, and full package build via `scripts/build-director-116.ps1`.
+- Packaged artifacts:
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `E600290AF3AFD9B2AA758DD2894160FA0C6AD8258DC802AC0E88B6C781FA72E2`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `DE2EB15C35827716B115F83F747A58B7C4141D82BFC8EC7978155166DF57289D`
+- Manual API/OAuth smoke is intentionally deferred until after package/push. Use `scripts/smoke/director-provider-oauth-smoke.ps1` with a temp user data dir.
+- Next wave: Phase 2 Wave 3 Claude SDK Adapter unless user chooses to manually smoke Wave 2 first.
+
 ## 2026-05-16 Director Architecture Boundary Principle
 
 - Long-term Director architecture is `Director-owned core + thin VS Code bridge + replayed brand/product layer`.

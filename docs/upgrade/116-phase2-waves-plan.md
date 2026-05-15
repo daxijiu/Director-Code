@@ -488,6 +488,7 @@ Replay patch ownership：
 - 刷新或新增 Provider / Model UI 调研报告，补入本地 OpenCode 和本地 VS Code main 的源码证据。
 - 报告必须明确 116 目标树中直接复用、薄 hook 修改、Director 原创实现、仅作参考的清单，尤其是 provider group、model picker grouping、Manage Models 入口、Copilot/BYOK/entitlement 行为和文案替换点、旧配置懒迁移路径。
 - 报告通过后再进入代码实现。
+- Wave 2 收口报告固定为 `docs/upgrade/reports/116-stable-win32-x64-client/phase2-wave2-provider-registry-report.md`。
 
 范围：
 
@@ -536,6 +537,7 @@ Replay patch ownership：
 - 用户可添加 custom OpenAI-compatible provider，并配置 baseURL、API key/env secret、headers 和至少一个手动模型；API discovery 失败不阻塞保存和使用。
 - VS Code main 模型管理页中 Copilot/BYOK/entitlement 相关入口、文案和链接已被移除或替换为 Director-owned provider flow。
 - replay validation 和相关 UI smoke 通过。
+- 需要真实 API key / OAuth 账号的 smoke 使用 `scripts/smoke/director-provider-oauth-smoke.ps1` 在打包和推送后由用户执行。
 
 实现策略：
 

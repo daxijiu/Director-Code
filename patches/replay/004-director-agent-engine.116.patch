@@ -555,10 +555,10 @@ index 302ccc33a8cfaad86e701961839893a7bf20ba61..b3c8541cc50c4f08ef93db6c622ae9ff
  	private _agentCompletionProviders = new Map<string, (query: string, token: CancellationToken) => Promise<IChatAgentCompletionItem[]>>();
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..ce6a2815d1171f4ebe498fc347ea0ac594a42841
+index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80aa1c2752
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts
-@@ -0,0 +1,245 @@
+@@ -0,0 +1,268 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -586,6 +586,7 @@ index 0000000000000000000000000000000000000000..ce6a2815d1171f4ebe498fc347ea0ac5
 +	type IResolvedAuthState,
 +} from '../../../../directorCode/common/agentEngine/authStateService.js';
 +import { DEFAULT_AUTH_VARIANT, type AuthVariantName } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
++import type { IDirectorProviderInstance } from '../../../../directorCode/common/agentEngine/providerRegistry.js';
 +
 +class MockApiKeyService extends Disposable implements IApiKeyService {
 +	declare readonly _serviceBrand: undefined;
@@ -610,6 +611,24 @@ index 0000000000000000000000000000000000000000..ce6a2815d1171f4ebe498fc347ea0ac5
 +
 +	async hasApiKey(provider: ProviderName): Promise<boolean> {
 +		return this.store.has(provider);
++	}
++
++	async getInstanceApiKey(providerInstanceId: string): Promise<string | undefined> {
++		return this.store.get(`instance:${providerInstanceId}`);
++	}
++
++	async setInstanceApiKey(providerInstanceId: string, provider: ProviderName, key: string): Promise<void> {
++		this.store.set(`instance:${providerInstanceId}`, key);
++		this._onDidChangeApiKey.fire({ provider, scope: 'provider-instance', changeKind: 'set', providerInstanceId, secretKey: `mock.instance.${providerInstanceId}` });
++	}
++
++	async deleteInstanceApiKey(providerInstanceId: string, provider: ProviderName = 'openai-compatible'): Promise<void> {
++		this.store.delete(`instance:${providerInstanceId}`);
++		this._onDidChangeApiKey.fire({ provider, scope: 'provider-instance', changeKind: 'delete', providerInstanceId, secretKey: `mock.instance.${providerInstanceId}` });
++	}
++
++	async hasInstanceApiKey(providerInstanceId: string): Promise<boolean> {
++		return this.store.has(`instance:${providerInstanceId}`);
 +	}
 +
 +	async testConnection(_provider: ProviderName, _apiKey: string, _baseURL?: string, model?: string): Promise<IConnectionTestResult> {
@@ -675,6 +694,10 @@ index 0000000000000000000000000000000000000000..ce6a2815d1171f4ebe498fc347ea0ac5
 +			identityKey: `mock:${provider}:missing`,
 +			metadata: { reason: `No API key configured for ${provider}.` },
 +		};
++	}
++
++	async resolveInstanceAuth(instance: IDirectorProviderInstance, model: string): Promise<IResolvedAuthState> {
++		return this.resolveAuth(instance.kind, model, instance.authVariant, instance.baseURL);
 +	}
 +}
 +
@@ -3156,10 +3179,10 @@ index 0000000000000000000000000000000000000000..9a33ad528945ede5a0706ef63dd8af3a
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..91f36b8025ba3f7c99986f315783962ceb3d20a1
+index 0000000000000000000000000000000000000000..fba7f9af6f86251af155a15a1c918432610fa1e9
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts
-@@ -0,0 +1,218 @@
+@@ -0,0 +1,237 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -3214,6 +3237,25 @@ index 0000000000000000000000000000000000000000..91f36b8025ba3f7c99986f315783962c
 +
 +	async hasApiKey(provider: ProviderName): Promise<boolean> {
 +		const key = this._store.get(provider);
++		return key !== undefined && key.length > 0;
++	}
++
++	async getInstanceApiKey(providerInstanceId: string): Promise<string | undefined> {
++		return this._store.get(`instance:${providerInstanceId}`);
++	}
++
++	async setInstanceApiKey(providerInstanceId: string, provider: ProviderName, key: string): Promise<void> {
++		this._store.set(`instance:${providerInstanceId}`, key);
++		this._onDidChangeApiKey.fire({ provider, scope: 'provider-instance', changeKind: 'set', providerInstanceId, secretKey: `mock.instance.${providerInstanceId}` });
++	}
++
++	async deleteInstanceApiKey(providerInstanceId: string, provider: ProviderName = 'openai-compatible'): Promise<void> {
++		this._store.delete(`instance:${providerInstanceId}`);
++		this._onDidChangeApiKey.fire({ provider, scope: 'provider-instance', changeKind: 'delete', providerInstanceId, secretKey: `mock.instance.${providerInstanceId}` });
++	}
++
++	async hasInstanceApiKey(providerInstanceId: string): Promise<boolean> {
++		const key = this._store.get(`instance:${providerInstanceId}`);
 +		return key !== undefined && key.length > 0;
 +	}
 +
@@ -4446,10 +4488,10 @@ index 0000000000000000000000000000000000000000..88d0335363949ea9706d57fb58f740e0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e650074545789f8ab
+index 0000000000000000000000000000000000000000..c351aa6ffba7f78843c9365e9c880035a7b62b06
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
-@@ -0,0 +1,291 @@
+@@ -0,0 +1,329 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -4483,6 +4525,7 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +import type { IAuthStateService, IResolvedAuthState } from '../../../../directorCode/common/agentEngine/authStateService.js';
 +import type { IModelResolverService, IResolvedModel } from '../../../../directorCode/common/agentEngine/modelResolver.js';
 +import type { ProviderName } from '../../../../directorCode/common/agentEngine/apiKeyService.js';
++import { type IDirectorProviderInstance, type IDirectorProviderRegistryService, type IDirectorProviderRegistryState } from '../../../../directorCode/common/agentEngine/providerRegistry.js';
 +import { createProvider } from '../../../../directorCode/common/agentEngine/providers/providerFactory.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import { estimateTokens } from '../../../../directorCode/common/agentEngine/tokens.js';
@@ -4501,6 +4544,10 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +			authVariant,
 +			identityKey: `missing:${provider}:${authVariant}`,
 +		};
++	}
++
++	async resolveInstanceAuth(instance: IDirectorProviderInstance, model: string): Promise<IResolvedAuthState> {
++		return this.resolveAuth(instance.kind, model, instance.authVariant);
 +	}
 +
 +	dispose(): void {
@@ -4522,6 +4569,39 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +	}
 +
 +	clearCache(): void { }
++}
++
++class TestProviderRegistryService implements IDirectorProviderRegistryService {
++	declare readonly _serviceBrand: undefined;
++	readonly onDidChangeProviderRegistry: Event<IDirectorProviderRegistryState> = Event.None;
++
++	private readonly state: IDirectorProviderRegistryState = {
++		version: 1,
++		defaultProviderId: 'anthropic-api-key',
++		defaultModelId: 'claude-sonnet-4-6',
++		instances: [{
++			id: 'anthropic-api-key',
++			kind: 'anthropic',
++			displayName: 'Anthropic',
++			enabled: true,
++			authKind: 'api-key',
++			authVariant: DEFAULT_AUTH_VARIANT,
++			apiKeySource: { kind: 'secret' },
++			models: getModelsForProvider('anthropic').map(model => ({ id: model.id, displayName: model.name, enabled: true, hidden: false, family: model.family, maxInputTokens: model.maxInputTokens, maxOutputTokens: model.maxOutputTokens })),
++			defaultModelId: 'claude-sonnet-4-6',
++			createdAt: 1,
++			updatedAt: 1,
++		}],
++	};
++
++	async getState(): Promise<IDirectorProviderRegistryState> { return this.state; }
++	async saveState(_state: IDirectorProviderRegistryState): Promise<void> { }
++	async upsertInstance(_instance: IDirectorProviderInstance, _defaultModelId?: string): Promise<IDirectorProviderRegistryState> { return this.state; }
++	async removeInstance(_instanceId: string): Promise<IDirectorProviderRegistryState> { return this.state; }
++	async setDefault(_instanceId: string, _modelId: string): Promise<IDirectorProviderRegistryState> { return this.state; }
++	async getDefaultSelection() { return { instance: this.state.instances[0]!, modelId: 'claude-sonnet-4-6' }; }
++	async getInstance(instanceId: string) { return this.state.instances.find(instance => instance.id === instanceId); }
++	async getProjectionGroups() { return [{ name: 'Anthropic', providerInstanceId: 'anthropic-api-key' }]; }
 +}
 +
 +async function setConfigAndFire(configService: TestConfigurationService, key: string, value: unknown): Promise<void> {
@@ -4595,7 +4675,7 @@ index 0000000000000000000000000000000000000000..c30599b7a809f66101dc861e65007454
 +			});
 +			const authStateService = new TestAuthStateService();
 +			const modelResolverService = new TestModelResolverService();
-+			const provider = new DirectorCodeModelProvider(configService, authStateService, modelResolverService);
++			const provider = new DirectorCodeModelProvider(configService, authStateService, modelResolverService, new TestProviderRegistryService());
 +			let changes = 0;
 +			const listener = provider.onDidChange(() => changes++);
 +
@@ -10303,6 +10383,97 @@ index 0000000000000000000000000000000000000000..2e4c065f088c3723764ce1e34ae8db98
 +		}
 +	});
 +});
+diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6bf16a016e0e296bd433264b349ffbfe51ad113e
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
+@@ -0,0 +1,85 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
++import {
++	createLegacyMigratedState,
++	makeDirectorModelIdentifier,
++	normalizeDirectorProviderRegistryState,
++	parseDirectorModelIdentifier,
++	sanitizeProviderInstanceId,
++} from '../../../../directorCode/common/agentEngine/providerRegistry.js';
++import { OPENAI_CODEX_AUTH_VARIANT } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
++
++suite('AgentEngine - ProviderRegistry', () => {
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('sanitizes provider instance ids for stable model identifiers', () => {
++		assert.strictEqual(sanitizeProviderInstanceId(' OpenAI Work/Profile '), 'openai-work-profile');
++		assert.strictEqual(makeDirectorModelIdentifier('OpenAI Work', 'gpt-4o'), 'director-code/openai-work/gpt-4o');
++		assert.deepStrictEqual(parseDirectorModelIdentifier('director-code/openai-work/gpt-4o'), {
++			providerInstanceId: 'openai-work',
++			modelId: 'gpt-4o',
++		});
++	});
++
++	test('creates a legacy API-key instance from old global settings', () => {
++		const config = new TestConfigurationService({
++			'directorCode.ai.provider': 'openai-compatible',
++			'directorCode.ai.model': 'deepseek-chat',
++			'directorCode.ai.baseURL': 'https://api.deepseek.com',
++			'directorCode.ai.authVariant': 'default',
++		});
++
++		const state = createLegacyMigratedState(config);
++		assert.strictEqual(state.instances.length, 1);
++		assert.strictEqual(state.instances[0].kind, 'openai-compatible');
++		assert.strictEqual(state.instances[0].authKind, 'api-key');
++		assert.strictEqual(state.instances[0].baseURL, 'https://api.deepseek.com');
++		assert.strictEqual(state.defaultModelId, 'deepseek-chat');
++		assert.ok(JSON.stringify(state).includes('deepseek-chat'));
++		assert.ok(!JSON.stringify(state).includes('sk-'));
++	});
++
++	test('creates a distinct OpenAI OAuth instance from old auth variant', () => {
++		const config = new TestConfigurationService({
++			'directorCode.ai.provider': 'openai',
++			'directorCode.ai.model': 'gpt-4o',
++			'directorCode.ai.authVariant': OPENAI_CODEX_AUTH_VARIANT,
++		});
++
++		const state = createLegacyMigratedState(config);
++		assert.strictEqual(state.instances[0].kind, 'openai');
++		assert.strictEqual(state.instances[0].authKind, 'oauth');
++		assert.strictEqual(state.instances[0].authVariant, OPENAI_CODEX_AUTH_VARIANT);
++		assert.strictEqual(state.defaultProviderId, 'openai-oauth');
++	});
++
++	test('normalizes hidden and disabled model entries without dropping the provider', () => {
++		const state = normalizeDirectorProviderRegistryState({
++			version: 1,
++			defaultProviderId: 'OpenAI Work',
++			instances: [{
++				id: 'OpenAI Work',
++				kind: 'openai',
++				displayName: 'OpenAI Work',
++				enabled: true,
++				authKind: 'api-key',
++				authVariant: 'default',
++				models: [
++					{ id: 'gpt-4o', hidden: true },
++					{ id: 'o3', enabled: false },
++				],
++			}],
++		});
++
++		assert.ok(state);
++		assert.strictEqual(state!.instances[0].id, 'openai-work');
++		assert.strictEqual(state!.instances[0].models[0].hidden, true);
++		assert.strictEqual(state!.instances[0].models[1].enabled, false);
++	});
++});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..18ab3bbec5b8d52738a992416c7f4c9250b172d7
@@ -11067,10 +11238,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef348434dac273f
+index 0000000000000000000000000000000000000000..4874967da1b86e5f216846f904c7c0abb29b6b30
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,504 @@
+@@ -0,0 +1,564 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -11100,6 +11271,7 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +import { DirectorCodeAgent } from './directorCodeAgent.js';
 +import { DirectorCodeModelProvider } from './directorCodeModelProvider.js';
 +import { ILanguageModelsService } from '../../../chat/common/languageModels.js';
++import { ILanguageModelsConfigurationService, type ILanguageModelsProviderGroup } from '../../../chat/common/languageModelsConfiguration.js';
 +import { SyncDescriptor } from '../../../../../platform/instantiation/common/descriptors.js';
 +import { IEditorPaneRegistry, EditorPaneDescriptor } from '../../../../browser/editor.js';
 +import { EditorExtensions, IEditorFactoryRegistry } from '../../../../common/editor.js';
@@ -11122,6 +11294,7 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +import { IOAuthService, OAuthService } from '../../common/agentEngine/oauthService.js';
 +import { IAuthStateService, AuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
++import { DIRECTOR_LANGUAGE_MODEL_VENDOR, IDirectorProviderRegistryService, DirectorProviderRegistryService } from '../../common/agentEngine/providerRegistry.js';
 +import {
 +	createApprovedPlanExecutionPrompt,
 +	createPlanRevisionPrompt,
@@ -11145,6 +11318,7 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +registerSingleton(IAuthStateService, new SyncDescriptor(AuthStateService, [], true));
 +registerSingleton(IModelResolverService, new SyncDescriptor(ModelResolverService, [], true));
 +registerSingleton(IDirectorPlanModeService, new SyncDescriptor(DirectorPlanModeService, [], true));
++registerSingleton(IDirectorProviderRegistryService, new SyncDescriptor(DirectorProviderRegistryService, [], true));
 +
 +// ============================================================================
 +// Configuration Registration
@@ -11313,10 +11487,10 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +			],
 +		});
 +	}
-+	async run(accessor: ServicesAccessor) {
++	async run(accessor: ServicesAccessor, _vendor?: string, _providerGroupName?: string, providerInstanceId?: string) {
 +		const editorService = accessor.get(IEditorService);
 +		return editorService.openEditor(
-+			new DirectorCodeSettingsEditorInput(),
++			new DirectorCodeSettingsEditorInput(typeof providerInstanceId === 'string' ? providerInstanceId : undefined),
 +			{ pinned: true },
 +		);
 +	}
@@ -11487,8 +11661,64 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +
 +const AGENT_ID = 'director-code';
 +const EXTENSION_ID = new ExtensionIdentifier('director-code.agent');
-+const VENDOR = 'director-code';
-+const DIRECTOR_CODE_PROVIDER_DESCRIPTOR = { vendor: VENDOR, displayName: 'Director Code', configuration: undefined, managementCommand: OPEN_SETTINGS_COMMAND_ID, when: undefined };
++const VENDOR = DIRECTOR_LANGUAGE_MODEL_VENDOR;
++const DIRECTOR_CODE_PROVIDER_CONFIGURATION = {
++	type: 'object',
++	properties: {
++		directorProviderInstanceId: {
++			type: 'string',
++			description: 'Director provider instance id. This field is maintained by Director Code.',
++		},
++	},
++};
++const DIRECTOR_CODE_PROVIDER_DESCRIPTOR = { vendor: VENDOR, displayName: 'Director Code', configuration: DIRECTOR_CODE_PROVIDER_CONFIGURATION, managementCommand: OPEN_SETTINGS_COMMAND_ID, when: undefined } as any;
++
++class DirectorProviderGroupProjection extends Disposable {
++	private syncPromise: Promise<void> = Promise.resolve();
++
++	constructor(
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
++		@ILanguageModelsConfigurationService private readonly languageModelsConfigurationService: ILanguageModelsConfigurationService,
++	) {
++		super();
++		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => this.queueSync()));
++		this.queueSync();
++	}
++
++	private queueSync(): void {
++		this.syncPromise = this.syncPromise.then(() => this.sync()).catch(() => undefined);
++	}
++
++	private async sync(): Promise<void> {
++		const projectionGroups = await this.providerRegistryService.getProjectionGroups();
++		const desired = new Map(projectionGroups.map(group => [group.providerInstanceId, group]));
++		const existing = this.languageModelsConfigurationService.getLanguageModelsProviderGroups()
++			.filter(group => group.vendor === VENDOR);
++
++		for (const group of existing) {
++			const providerInstanceId = typeof group.directorProviderInstanceId === 'string' ? group.directorProviderInstanceId : undefined;
++			if (!providerInstanceId || !desired.has(providerInstanceId)) {
++				await this.languageModelsConfigurationService.removeLanguageModelsProviderGroup(group);
++			}
++		}
++
++		const refreshedExisting = this.languageModelsConfigurationService.getLanguageModelsProviderGroups()
++			.filter(group => group.vendor === VENDOR);
++		for (const desiredGroup of desired.values()) {
++			const existingGroup = refreshedExisting.find(group => group.directorProviderInstanceId === desiredGroup.providerInstanceId);
++			const target: ILanguageModelsProviderGroup = {
++				name: desiredGroup.name,
++				vendor: VENDOR,
++				directorProviderInstanceId: desiredGroup.providerInstanceId,
++			};
++			if (!existingGroup) {
++				await this.languageModelsConfigurationService.addLanguageModelsProviderGroup(target);
++			} else if (existingGroup.name !== target.name || existingGroup.directorProviderInstanceId !== target.directorProviderInstanceId) {
++				await this.languageModelsConfigurationService.updateLanguageModelsProviderGroup(existingGroup, target);
++			}
++		}
++	}
++}
 +
 +class DirectorCodeAgentContribution extends Disposable implements IWorkbenchContribution {
 +	static readonly ID = 'workbench.contrib.directorCodeAgent';
@@ -11557,6 +11787,7 @@ index 0000000000000000000000000000000000000000..952a541bb4b3c570a97ba81f3ef34843
 +		// Step 2: Register provider (now safe — vendor is known)
 +		const modelProvider = instantiationService.createInstance(DirectorCodeModelProvider);
 +		this._register(languageModelsService.registerLanguageModelProvider(VENDOR, modelProvider));
++		this._register(instantiationService.createInstance(DirectorProviderGroupProjection));
 +
 +		const planModeActiveContext = DIRECTOR_PLAN_MODE_ACTIVE_CONTEXT.bindTo(contextKeyService);
 +		const updatePlanModeContext = () => {
@@ -12025,10 +12256,10 @@ index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc8759b3a31fb
+index 0000000000000000000000000000000000000000..225e0e878e0cf626b03fb84bc6b6f1770ba816a9
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,805 @@
+@@ -0,0 +1,816 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12061,6 +12292,7 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
 +import { findModelById, getDefaultModelForAuthVariant, isOpenAICodexModel } from '../../common/agentEngine/modelCatalog.js';
 +import { IModelResolverService, normalizeModelResolverBaseURL } from '../../common/agentEngine/modelResolver.js';
++import { IDirectorProviderRegistryService, parseDirectorModelIdentifier, type IDirectorProviderInstance } from '../../common/agentEngine/providerRegistry.js';
 +import { createCompactModelAvailabilityKey, resolveCompactModel } from '../../common/agentEngine/compact.js';
 +import { getDirectorModeMaxTurns, getDirectorModeSystemPrompt, getDirectorToolModeForRequest } from '../../common/agentEngine/directorChatModeRouting.js';
 +import { DirectorChatEditingAdapter, parseDirectorInlineReplacement } from '../../common/agentEngine/editing/directorChatEditingAdapter.js';
@@ -12095,10 +12327,6 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +// Configuration keys
 +// ============================================================================
 +
-+const CONFIG_PROVIDER = 'directorCode.ai.provider';
-+const CONFIG_MODEL = 'directorCode.ai.model';
-+const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
-+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 +const CONFIG_COMPACT_MODEL = 'directorCode.ai.compactModel';
 +const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 +const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
@@ -12154,6 +12382,7 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 +		@ITextModelService private readonly textModelService: ITextModelService,
 +		@IDirectorPlanModeService private readonly planModeService: IDirectorPlanModeService,
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
 +	) {
 +		super();
 +	}
@@ -12167,11 +12396,16 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +		const startTime = Date.now();
 +
 +		try {
-+			// 1. Read configuration
-+			let providerName = this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic';
-+			let modelId = this.configService.getValue<string>(CONFIG_MODEL) || 'claude-sonnet-4-6';
-+			const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+			let configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
++			// 1. Resolve provider instance from the Director Provider Registry.
++			let selection = await this.providerRegistryService.getDefaultSelection();
++			if (!selection) {
++				return {
++					errorDetails: { message: 'No Director provider instance is configured.' },
++					timings: { totalElapsed: Date.now() - startTime },
++				};
++			}
++			let providerInstance: IDirectorProviderInstance = selection.instance;
++			let modelId = selection.modelId;
 +			const configuredCompactModel = this.configService.getValue<string>(CONFIG_COMPACT_MODEL) || '';
 +			const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
 +			const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
@@ -12197,23 +12431,30 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +
 +			// 1b. Override model if user selected one from the Chat UI model picker
 +			if (request.userSelectedModelId) {
-+				// userSelectedModelId format: "director-code/claude-sonnet-4-6"
-+				const shortId = request.userSelectedModelId.replace('director-code/', '');
-+				const modelDef = findModelById(shortId);
-+				if (modelDef) {
-+					modelId = modelDef.id;
-+					providerName = modelDef.provider;
-+					if (modelDef.apiType === 'openai-codex') {
-+						configuredAuthVariant = OPENAI_CODEX_AUTH_VARIANT;
++				const parsed = parseDirectorModelIdentifier(request.userSelectedModelId);
++				if (parsed) {
++					const selectedInstance = await this.providerRegistryService.getInstance(parsed.providerInstanceId);
++					if (selectedInstance) {
++						providerInstance = selectedInstance;
++						modelId = parsed.modelId;
++					}
++				} else {
++					// Legacy identifier format: "director-code/<modelId>".
++					const shortId = request.userSelectedModelId.replace('director-code/', '');
++					const modelDef = findModelById(shortId);
++					if (modelDef) {
++						modelId = modelDef.id;
++						const state = await this.providerRegistryService.getState();
++						providerInstance = state.instances.find(instance => instance.enabled && instance.kind === modelDef.provider) ?? providerInstance;
 +					}
 +				}
 +			}
 +
 +			// 2. Resolve auth state via the unified API-key/OAuth facade
-+			const provider = providerName as ProviderName;
-+			const authVariant = normalizeAuthVariantForProvider(provider, configuredAuthVariant);
++			const provider = providerInstance.kind;
++			const authVariant = normalizeAuthVariantForProvider(provider, providerInstance.authVariant);
 +			modelId = modelForAuthVariant(provider, modelId, authVariant);
-+			const resolved = await this.authStateService.resolveAuth(provider, modelId, authVariant, baseURL);
++			const resolved = await this.authStateService.resolveInstanceAuth(providerInstance, modelId);
 +			if (resolved.source === 'missing' || !resolved.auth) {
 +				return {
 +					errorDetails: {
@@ -12226,11 +12467,11 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +			const availableModels = await this.modelResolverService.resolveModels(
 +				provider,
 +				resolved.accessToken ?? resolved.apiKey,
-+				resolved.baseURL ?? baseURL,
++				resolved.baseURL,
 +				resolved.identityKey,
 +				resolved.authVariant,
 +			);
-+			const normalizedBaseURL = normalizeModelResolverBaseURL(provider, resolved.baseURL ?? baseURL, resolved.authVariant);
++			const normalizedBaseURL = normalizeModelResolverBaseURL(provider, resolved.baseURL, resolved.authVariant);
 +			const compactModelResolution = resolveCompactModel({
 +				provider,
 +				authVariant: resolved.authVariant,
@@ -12248,6 +12489,7 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +				auth: resolved.auth,
 +				baseURL: resolved.baseURL,
 +				capabilities: resolved.capabilities,
++				headers: providerInstance.headers,
 +				geminiKeyInUrl: this.configService.getValue<boolean>(CONFIG_GEMINI_KEY_IN_URL) === true,
 +			});
 +
@@ -12836,10 +13078,10 @@ index 0000000000000000000000000000000000000000..8efd480bcff20e4572d56e2c29ccc875
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9e913bfbc
+index 0000000000000000000000000000000000000000..95940ea2a09acbe7ac03da74039844a818d47e88
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts
-@@ -0,0 +1,420 @@
+@@ -0,0 +1,433 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12882,9 +13124,18 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +import { OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type NormalizedContentBlock, type NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
 +import {
 +	findModelById,
++	findModelByIdForProvider,
 +	getDefaultModelForAuthVariant,
 +	isOpenAICodexModel,
 +} from '../../common/agentEngine/modelCatalog.js';
++import {
++	IDirectorProviderRegistryService,
++	makeDirectorModelIdentifier,
++	modelEntriesFromCatalog,
++	parseDirectorModelIdentifier,
++	type IDirectorProviderInstance,
++	type IDirectorProviderModelEntry,
++} from '../../common/agentEngine/providerRegistry.js';
 +
 +// ============================================================================
 +// Configuration
@@ -12924,6 +13175,15 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +	};
 +}
 +
++function findInstanceModel(instance: IDirectorProviderInstance, modelId: string): IDirectorProviderModelEntry | undefined {
++	return instance.models.find(model => model.id === modelId)
++		?? modelEntriesFromCatalog(instance.kind, instance.authVariant).find(model => model.id === modelId);
++}
++
++function instanceModelDisplayName(instance: IDirectorProviderInstance, model: IDirectorProviderModelEntry): string {
++	return model.displayName || findModelByIdForProvider(instance.kind, model.id)?.name || model.id;
++}
++
 +export class DirectorCodeModelProvider extends Disposable implements ILanguageModelChatProvider {
 +
 +	private readonly _onDidChange = this._register(new Emitter<void>());
@@ -12933,6 +13193,7 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +		@IConfigurationService private readonly configService: IConfigurationService,
 +		@IAuthStateService private readonly authStateService: IAuthStateService,
 +		@IModelResolverService private readonly modelResolverService: IModelResolverService,
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
 +	) {
 +		super();
 +
@@ -12944,73 +13205,64 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +		}));
 +		this._register(this.authStateService.onDidChangeAuthState(() => this._onDidChange.fire()));
 +		this._register(this.modelResolverService.onDidChangeModels(() => this._onDidChange.fire()));
++		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => this._onDidChange.fire()));
 +	}
 +
 +	async provideLanguageModelChatInfo(
-+		_options: ILanguageModelChatInfoOptions,
++		options: ILanguageModelChatInfoOptions,
 +		_token: CancellationToken,
 +	): Promise<ILanguageModelChatMetadataAndIdentifier[]> {
-+		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+		const configuredModel = this.configService.getValue<string>(CONFIG_MODEL) || '';
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+		const configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
-+		const authVariant = normalizeAuthVariantForProvider(providerName, configuredAuthVariant);
-+		const effectiveModel = modelForAuthVariant(providerName, configuredModel, authVariant);
-+		const authState = await this.authStateService.resolveAuth(providerName, effectiveModel, authVariant, baseURL);
++		const state = await this.providerRegistryService.getState();
++		const providerInstanceId = typeof options.configuration?.directorProviderInstanceId === 'string'
++			? options.configuration.directorProviderInstanceId
++			: undefined;
++		const projectionGroups = await this.providerRegistryService.getProjectionGroups();
++		const groupInstanceId = providerInstanceId
++			?? projectionGroups.find(group => group.name === options.group)?.providerInstanceId;
 +
-+		const catalogModels = await this.modelResolverService.resolveModels(
-+			providerName,
-+			authState.accessToken ?? authState.apiKey,
-+			authState.baseURL ?? baseURL,
-+			authState.identityKey,
-+			authState.authVariant,
-+		);
-+
-+		const results: ILanguageModelChatMetadataAndIdentifier[] = catalogModels.map(m => ({
-+			identifier: `${VENDOR}/${m.id}`,
-+			metadata: {
-+				extension: EXTENSION_ID,
-+				name: m.name,
-+				id: `${VENDOR}/${m.id}`,
-+				vendor: VENDOR,
-+				version: '1.0',
-+				family: m.family,
-+				maxInputTokens: m.maxInputTokens,
-+				maxOutputTokens: m.maxOutputTokens,
-+				isDefaultForLocation: {
-+					[ChatAgentLocation.Chat]: false,
-+				},
-+				isUserSelectable: true,
-+				capabilities: capabilitiesForAuthVariant(authVariant),
-+				modelPickerCategory: undefined,
-+			} satisfies ILanguageModelChatMetadata,
-+		}));
-+
-+		// If the user typed a custom model ID not in the catalog, include it
-+		const customModelId = authVariant === OPENAI_CODEX_AUTH_VARIANT ? effectiveModel : configuredModel;
-+		if (customModelId && !catalogModels.some(m => m.id === customModelId)) {
-+			results.push({
-+				identifier: `${VENDOR}/${customModelId}`,
-+				metadata: {
-+					extension: EXTENSION_ID,
-+					name: customModelId,
-+					id: `${VENDOR}/${customModelId}`,
-+					vendor: VENDOR,
-+					version: '1.0',
-+					family: 'custom',
-+					maxInputTokens: 0,
-+					maxOutputTokens: 0,
-+					isDefaultForLocation: {
-+						[ChatAgentLocation.Chat]: false,
-+					},
-+					isUserSelectable: true,
-+					capabilities: capabilitiesForAuthVariant(authVariant),
-+					modelPickerCategory: undefined,
-+				} satisfies ILanguageModelChatMetadata,
-+			});
++		if (!groupInstanceId) {
++			return [];
 +		}
 +
-+		return results;
++		const instance = state.instances.find(candidate => candidate.id === groupInstanceId && candidate.enabled);
++		if (!instance) {
++			return [];
++		}
++
++		const authVariant = normalizeAuthVariantForProvider(instance.kind, instance.authVariant);
++		const models = instance.models.length ? instance.models : modelEntriesFromCatalog(instance.kind, authVariant);
++		return models
++			.filter(model => model.enabled !== false)
++			.map(model => {
++				const identifier = makeDirectorModelIdentifier(instance.id, model.id);
++				const catalogModel = findModelByIdForProvider(instance.kind, model.id);
++				const isDefault = state.defaultProviderId === instance.id && state.defaultModelId === model.id;
++				return {
++					identifier,
++					metadata: {
++						extension: EXTENSION_ID,
++						name: instanceModelDisplayName(instance, model),
++						id: model.id,
++						vendor: VENDOR,
++						version: '1.0',
++						family: model.family || catalogModel?.family || 'custom',
++						maxInputTokens: model.maxInputTokens ?? catalogModel?.maxInputTokens ?? 0,
++						maxOutputTokens: model.maxOutputTokens ?? catalogModel?.maxOutputTokens ?? 8_192,
++						isDefaultForLocation: {
++							[ChatAgentLocation.Chat]: isDefault,
++						},
++						isUserSelectable: model.hidden !== true,
++						capabilities: {
++							...capabilitiesForAuthVariant(authVariant),
++							...model.capabilities,
++						},
++						modelPickerCategory: { label: instance.displayName, order: 10 },
++						auth: {
++							providerLabel: instance.displayName,
++						},
++					} satisfies ILanguageModelChatMetadata,
++				};
++			});
 +	}
 +
 +	async sendChatRequest(
@@ -13020,26 +13272,28 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +		_options: { [name: string]: unknown },
 +		token: CancellationToken,
 +	): Promise<ILanguageModelChatResponse> {
-+		// 1. Resolve model — catalog hit or custom model from config
-+		let shortId = modelId.replace(`${VENDOR}/`, '');
-+		let modelDef = findModelById(shortId);
-+		const providerName = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+		const effectiveProvider = (modelDef?.provider ?? providerName) as ProviderName;
-+
-+		// 2. Resolve auth state through the same facade used by the Agent path
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+		let configuredAuthVariant = (this.configService.getValue<string>(CONFIG_AUTH_VARIANT) || 'default') as AuthVariantName;
-+		if (modelDef?.apiType === 'openai-codex') {
-+			configuredAuthVariant = OPENAI_CODEX_AUTH_VARIANT;
++		// 1. Resolve provider instance and model from the Director registry.
++		const parsed = parseDirectorModelIdentifier(modelId);
++		const selection = parsed
++			? { instance: await this.providerRegistryService.getInstance(parsed.providerInstanceId), modelId: parsed.modelId }
++			: await this.providerRegistryService.getDefaultSelection();
++		if (!selection?.instance) {
++			throw new Error('No Director provider instance is configured.');
 +		}
-+		const authVariant = normalizeAuthVariantForProvider(effectiveProvider, configuredAuthVariant);
-+		shortId = modelForAuthVariant(effectiveProvider, shortId, authVariant);
-+		modelDef = findModelById(shortId);
-+		const apiType = effectiveProvider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
++		const instance = selection.instance;
++		const authVariant = normalizeAuthVariantForProvider(instance.kind, instance.authVariant);
++		let shortId = modelForAuthVariant(instance.kind, selection.modelId, authVariant);
++		const registryModel = findInstanceModel(instance, shortId);
++		let modelDef = findModelByIdForProvider(instance.kind, shortId) ?? findModelById(shortId);
++		if (modelDef?.apiType === 'openai-codex') {
++			shortId = modelForAuthVariant(instance.kind, shortId, OPENAI_CODEX_AUTH_VARIANT);
++			modelDef = findModelById(shortId);
++		}
++		const apiType = instance.kind === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
 +			? 'openai-codex'
-+			: modelDef?.apiType ?? providerToApiType(effectiveProvider);
-+		const maxOutputTokens = modelDef?.maxOutputTokens ?? 8_192;
-+		const authState = await this.authStateService.resolveAuth(effectiveProvider, shortId, authVariant, baseURL);
++			: modelDef?.apiType ?? providerToApiType(instance.kind);
++		const maxOutputTokens = registryModel?.maxOutputTokens ?? modelDef?.maxOutputTokens ?? 8_192;
++		const authState = await this.authStateService.resolveInstanceAuth(instance, shortId);
 +		if (authState.source === 'missing' || !authState.auth) {
 +			throw missingAuthError(authState);
 +		}
@@ -13049,6 +13303,7 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +			auth: authState.auth,
 +			baseURL: authState.baseURL,
 +			capabilities: authState.capabilities,
++			headers: instance.headers,
 +		});
 +
 +		// 4. Convert VS Code messages → normalized format
@@ -13262,10 +13517,10 @@ index 0000000000000000000000000000000000000000..76771ad067616ce14fdded392ae9adf9
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba84fb6ad6
+index 0000000000000000000000000000000000000000..be4a501cc6a37caa02c6abb65d874d5fd48cf1ed
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts
-@@ -0,0 +1,341 @@
+@@ -0,0 +1,326 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -13296,20 +13551,12 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +import { Codicon } from '../../../../../base/common/codicons.js';
 +import { ThemeIcon } from '../../../../../base/common/themables.js';
 +import { ProviderSettingsWidget } from './providerSettingsWidget.js';
-+import { ApiKeysWidget } from './apiKeysWidget.js';
 +import { OAuthWidget } from './oauthWidget.js';
-+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-+import { PROVIDER_DISPLAY_NAMES, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
-+import { IAuthStateService, normalizeAuthVariantForProvider } from '../../common/agentEngine/authStateService.js';
-+import { getDefaultModelForAuthVariant } from '../../common/agentEngine/modelCatalog.js';
-+import { type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
++import { PROVIDER_DISPLAY_NAMES } from '../../common/agentEngine/apiKeyService.js';
++import { IAuthStateService } from '../../common/agentEngine/authStateService.js';
++import { IDirectorProviderRegistryService } from '../../common/agentEngine/providerRegistry.js';
 +
 +const $ = DOM.$;
-+
-+const CONFIG_PROVIDER = 'directorCode.ai.provider';
-+const CONFIG_MODEL = 'directorCode.ai.model';
-+const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
-+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 +
 +// ============================================================================
 +// Editor Icon
@@ -13326,7 +13573,7 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +
 +	readonly resource = undefined;
 +
-+	constructor() {
++	constructor(readonly providerInstanceId?: string) {
 +		super();
 +	}
 +
@@ -13380,7 +13627,6 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +	private dimension: Dimension | undefined;
 +	private bodyContainer: HTMLElement | undefined;
 +	private providerSettingsWidget: ProviderSettingsWidget | undefined;
-+	private apiKeysWidget: ApiKeysWidget | undefined;
 +	private oauthWidget: OAuthWidget | undefined;
 +	private statusBar: DirectorCodeStatusBar | undefined;
 +
@@ -13425,30 +13671,26 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +		// Separator
 +		DOM.append(this.bodyContainer, $('.dc-separator'));
 +
-+		// API Keys Widget
-+		this.apiKeysWidget = this.editorDisposables.add(
-+			this.instantiationService.createInstance(ApiKeysWidget)
-+		);
-+		this.apiKeysWidget.setBeforeTestFlush(() => this.flushPendingWrites());
-+		this.bodyContainer.appendChild(this.apiKeysWidget.element);
-+
-+		// Separator
-+		DOM.append(this.bodyContainer, $('.dc-separator'));
-+
 +		// OAuth / Subscription widget (B1-7 state machine shell)
 +		this.oauthWidget = this.editorDisposables.add(
 +			this.instantiationService.createInstance(OAuthWidget)
 +		);
 +		this.oauthWidget.setBeforeOAuthActionFlush(() => this.flushPendingWrites());
-+		this.oauthWidget.setActiveProvider(this.getCurrentProvider());
 +		this.bodyContainer.appendChild(this.oauthWidget.element);
 +
 +		this.editorDisposables.add(this.instantiationService.invokeFunction(accessor => {
-+			const configService = accessor.get(IConfigurationService);
-+			return configService.onDidChangeConfiguration(e => {
-+				if (e.affectsConfiguration(CONFIG_PROVIDER)) {
-+					this.oauthWidget?.setActiveProvider(this.getCurrentProvider());
++			const providerRegistryService = accessor.get(IDirectorProviderRegistryService);
++			void providerRegistryService.getDefaultSelection().then(selection => {
++				if (selection) {
++					this.oauthWidget?.setActiveProvider(selection.instance.kind);
 +				}
++			});
++			return providerRegistryService.onDidChangeProviderRegistry(() => {
++				void providerRegistryService.getDefaultSelection().then(selection => {
++					if (selection) {
++						this.oauthWidget?.setActiveProvider(selection.instance.kind);
++					}
++				});
 +			});
 +		}));
 +	}
@@ -13460,6 +13702,9 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +		token: CancellationToken,
 +	): Promise<void> {
 +		await super.setInput(input, options, context, token);
++		if (input instanceof DirectorCodeSettingsEditorInput) {
++			this.providerSettingsWidget?.setSelectedProviderInstanceId(input.providerInstanceId);
++		}
 +		if (this.dimension) {
 +			this.layout(this.dimension);
 +		}
@@ -13486,17 +13731,11 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +		super.dispose();
 +	}
 +
-+	private getCurrentProvider(): ProviderName {
-+		const configService = this.instantiationService.invokeFunction(accessor => accessor.get(IConfigurationService));
-+		return (configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+	}
-+
 +	private clearEditorWidgets(): void {
 +		this.editorDisposables.clear();
 +		this.bodyContainer?.remove();
 +		this.bodyContainer = undefined;
 +		this.providerSettingsWidget = undefined;
-+		this.apiKeysWidget = undefined;
 +		this.oauthWidget = undefined;
 +		this.statusBar = undefined;
 +	}
@@ -13521,26 +13760,16 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +	private refreshGeneration = 0;
 +
 +	constructor(
-+		@IConfigurationService private readonly configService: IConfigurationService,
 +		@IAuthStateService private readonly authStateService: IAuthStateService,
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
 +	) {
 +		super();
 +		this.element = $('.dc-status-bar');
 +		this.create();
 +		this.refresh();
 +
-+		this._register(this.configService.onDidChangeConfiguration(e => {
-+			if (
-+				e.affectsConfiguration(CONFIG_PROVIDER) ||
-+				e.affectsConfiguration(CONFIG_MODEL) ||
-+				e.affectsConfiguration(CONFIG_BASE_URL) ||
-+				e.affectsConfiguration(CONFIG_AUTH_VARIANT)
-+			) {
-+				this.refresh();
-+			}
-+		}));
-+
 +		this._register(this.authStateService.onDidChangeAuthState(() => this.refresh()));
++		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => this.refresh()));
 +	}
 +
 +	private create(): void {
@@ -13567,17 +13796,24 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +
 +	private async refresh(): Promise<void> {
 +		const generation = ++this.refreshGeneration;
-+		const provider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+		const authVariant = normalizeAuthVariantForProvider(provider, this.configService.getValue<string>(CONFIG_AUTH_VARIANT) as AuthVariantName | undefined);
-+		const model = this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant);
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+		const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
++		const selection = await this.providerRegistryService.getDefaultSelection();
++		if (!selection) {
++			this.providerValue.textContent = 'Not configured';
++			this.modelValue.textContent = '-';
++			this.authValue.textContent = 'Missing';
++			this.readyValue.textContent = 'Needs config';
++			this.readyValue.classList.remove('dc-ready');
++			this.readyValue.classList.add('dc-not-ready');
++			return;
++		}
++		const { instance, modelId } = selection;
++		const authState = await this.authStateService.resolveInstanceAuth(instance, modelId);
 +		if (generation !== this.refreshGeneration) {
 +			return;
 +		}
 +
-+		this.providerValue.textContent = PROVIDER_DISPLAY_NAMES[provider] || provider;
-+		this.modelValue.textContent = model;
++		this.providerValue.textContent = instance.displayName || PROVIDER_DISPLAY_NAMES[instance.kind] || instance.kind;
++		this.modelValue.textContent = modelId;
 +
 +		this.authValue.textContent = this.authMethodLabel(authState.source, authState.metadata?.sourceLabel);
 +
@@ -13585,7 +13821,7 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +		if (authState.source === 'oauth') {
 +			this.readyValue.textContent = 'Logged in';
 +			this.readyValue.classList.add('dc-ready');
-+		} else if (authState.source === 'provider-key' || authState.source === 'per-model-key') {
++		} else if (authState.source === 'provider-key' || authState.source === 'per-model-key' || authState.source === 'provider-instance-key' || authState.source === 'env-var') {
 +			this.readyValue.textContent = 'Ready';
 +			this.readyValue.classList.add('dc-ready');
 +		} else {
@@ -13602,6 +13838,10 @@ index 0000000000000000000000000000000000000000..8ce20a9c6592e183fec26c24140783ba
 +				return 'Per-model API key';
 +			case 'provider-key':
 +				return 'API key';
++			case 'provider-instance-key':
++				return 'Provider API key';
++			case 'env-var':
++				return 'Environment variable';
 +			default:
 +				return 'Missing';
 +		}
@@ -14978,56 +15218,51 @@ index 0000000000000000000000000000000000000000..9383f953accdcf4037b0590880217754
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed204b0e7504
+index 0000000000000000000000000000000000000000..b74d368eadafafe1f64f2a484d2ca750c934437c
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts
-@@ -0,0 +1,489 @@
+@@ -0,0 +1,549 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
-+
-+/**
-+ * Provider Settings Widget
-+ *
-+ * UI widget for configuring the LLM provider, model, base URL,
-+ * and advanced parameters (max turns, max tokens).
-+ * Reads and writes to IConfigurationService directly.
-+ */
 +
 +import './media/directorCodeSettings.css';
 +import { Disposable } from '../../../../../base/common/lifecycle.js';
 +import { Emitter } from '../../../../../base/common/event.js';
 +import * as DOM from '../../../../../base/browser/dom.js';
 +import { localize } from '../../../../../nls.js';
-+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-+import { ConfigurationTarget } from '../../../../../platform/configuration/common/configuration.js';
-+import { SUPPORTED_PROVIDERS, PROVIDER_DISPLAY_NAMES, providerRequiresBaseURL, type ProviderName } from '../../common/agentEngine/apiKeyService.js';
-+import { IAuthStateService, normalizeAuthVariantForProvider } from '../../common/agentEngine/authStateService.js';
++import { IConfigurationService, ConfigurationTarget } from '../../../../../platform/configuration/common/configuration.js';
++import {
++	IApiKeyService,
++	PROVIDER_DISPLAY_NAMES,
++	SUPPORTED_PROVIDERS,
++	providerRequiresBaseURL,
++	type ProviderName,
++} from '../../common/agentEngine/apiKeyService.js';
++import { IAuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService } from '../../common/agentEngine/modelResolver.js';
-+import { getModelsForProviderAndAuthVariant, getDefaultModelForAuthVariant, providerSupportsCustomModels } from '../../common/agentEngine/modelCatalog.js';
++import { getDefaultModelForAuthVariant } from '../../common/agentEngine/modelCatalog.js';
 +import { PendingConfigurationWrites } from '../../common/agentEngine/settingsWriteQueue.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from '../../common/agentEngine/providers/providerTypes.js';
++import {
++	IDirectorProviderRegistryService,
++	modelEntriesFromCatalog,
++	normalizeRegistryAuthVariant,
++	sanitizeProviderInstanceId,
++	type DirectorProviderAuthKind,
++	type IDirectorApiKeySource,
++	type IDirectorProviderInstance,
++	type IDirectorProviderModelEntry,
++} from '../../common/agentEngine/providerRegistry.js';
 +
 +const $ = DOM.$;
 +
-+// ============================================================================
-+// Configuration keys (must match agentEngine.contribution.ts)
-+// ============================================================================
-+
-+const CONFIG_PROVIDER = 'directorCode.ai.provider';
-+const CONFIG_MODEL = 'directorCode.ai.model';
-+const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
-+const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
 +const CONFIG_COMPACT_MODEL = 'directorCode.ai.compactModel';
 +const CONFIG_MAX_TURNS = 'directorCode.ai.maxTurns';
 +const CONFIG_MAX_TOKENS = 'directorCode.ai.maxTokens';
 +const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
 +const CONFIG_DEBOUNCE_DELAY_MS = 500;
-+
-+// ============================================================================
-+// ProviderSettingsWidget
-+// ============================================================================
 +
 +export class ProviderSettingsWidget extends Disposable {
 +
@@ -15036,312 +15271,453 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +
 +	readonly element: HTMLElement;
 +
++	private instanceSelect!: HTMLSelectElement;
++	private instanceIdInput!: HTMLInputElement;
++	private displayNameInput!: HTMLInputElement;
++	private enabledInput!: HTMLInputElement;
 +	private providerSelect!: HTMLSelectElement;
++	private authKindSelect!: HTMLSelectElement;
 +	private authVariantRow!: HTMLElement;
 +	private authVariantSelect!: HTMLSelectElement;
-+	private modelSelect!: HTMLSelectElement;
-+	private modelCustomInput!: HTMLInputElement;
-+	private modelCustomRow!: HTMLElement;
-+	private compactModelInput!: HTMLInputElement;
 +	private baseURLInput!: HTMLInputElement;
-+	private baseURLRow!: HTMLElement;
 +	private baseURLHint!: HTMLElement;
-+	private refreshModelsBtn!: HTMLButtonElement;
-+	private refreshModelsResult!: HTMLElement;
++	private headersTextArea!: HTMLTextAreaElement;
++	private apiKeySourceSelect!: HTMLSelectElement;
++	private envVarInput!: HTMLInputElement;
++	private apiKeyInput!: HTMLInputElement;
++	private apiKeyStatus!: HTMLElement;
++	private modelsTextArea!: HTMLTextAreaElement;
++	private defaultModelSelect!: HTMLSelectElement;
++	private compactModelInput!: HTMLInputElement;
 +	private maxTurnsInput!: HTMLInputElement;
 +	private maxTokensInput!: HTMLInputElement;
 +	private maxInputTokensInput!: HTMLInputElement;
++	private saveButton!: HTMLButtonElement;
++	private newButton!: HTMLButtonElement;
++	private deleteButton!: HTMLButtonElement;
++	private refreshModelsButton!: HTMLButtonElement;
++	private refreshModelsResult!: HTMLElement;
 +
-+	private _updating = false;
++	private selectedInstanceId: string | undefined;
++	private _loading = false;
 +	private readonly pendingWrites: PendingConfigurationWrites;
-+	private authRefreshGeneration = 0;
 +
 +	constructor(
 +		@IConfigurationService private readonly configService: IConfigurationService,
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
++		@IApiKeyService private readonly apiKeyService: IApiKeyService,
 +		@IAuthStateService private readonly authStateService: IAuthStateService,
 +		@IModelResolverService private readonly modelResolverService: IModelResolverService,
 +	) {
 +		super();
-+		this.pendingWrites = new PendingConfigurationWrites((key, value) => this.writeConfigNow(key, value), CONFIG_DEBOUNCE_DELAY_MS);
-+
++		this.pendingWrites = new PendingConfigurationWrites((key, value) => this.configService.updateValue(key, value, ConfigurationTarget.USER), CONFIG_DEBOUNCE_DELAY_MS);
 +		this.element = $('.director-code-provider-settings-widget');
 +		this.create(this.element);
-+		this.loadFromConfig();
++		void this.loadFromRegistry();
 +
-+		// Listen for external config changes
-+		this._register(this.configService.onDidChangeConfiguration(e => {
-+			if (!this._updating && (
-+				e.affectsConfiguration(CONFIG_PROVIDER) ||
-+				e.affectsConfiguration(CONFIG_MODEL) ||
-+				e.affectsConfiguration(CONFIG_BASE_URL) ||
-+				e.affectsConfiguration(CONFIG_AUTH_VARIANT) ||
-+				e.affectsConfiguration(CONFIG_COMPACT_MODEL) ||
-+				e.affectsConfiguration(CONFIG_MAX_TURNS) ||
-+				e.affectsConfiguration(CONFIG_MAX_TOKENS) ||
-+				e.affectsConfiguration(CONFIG_MAX_INPUT_TOKENS)
-+			)) {
-+				this.loadFromConfig();
++		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => {
++			if (!this._loading) {
++				void this.loadFromRegistry();
 +			}
 +		}));
-+
-+		this._register(this.authStateService.onDidChangeAuthState(provider => {
-+			if (provider === this.getCurrentProvider()) {
-+				void this.refreshAuthBoundUI();
-+			}
++		this._register(this.apiKeyService.onDidChangeApiKey(() => {
++			void this.refreshApiKeyStatus();
 +		}));
++	}
++
++	setSelectedProviderInstanceId(instanceId: string | undefined): void {
++		this.selectedInstanceId = instanceId ? sanitizeProviderInstanceId(instanceId) : undefined;
++		void this.loadFromRegistry();
 +	}
 +
 +	private create(parent: HTMLElement): void {
-+		const header = DOM.append(parent, $('.dc-section-header'));
-+		header.textContent = localize('providerSettings.title', 'Provider Configuration');
-+
-+		const subtitle = DOM.append(parent, $('.dc-section-subtitle'));
-+		subtitle.textContent = localize('providerSettings.subtitle', 'Select the LLM provider and model for the AI agent.');
++		DOM.append(parent, $('.dc-section-header')).textContent = localize('providerSettings.title', 'Provider Manager');
++		DOM.append(parent, $('.dc-section-subtitle')).textContent = localize('providerSettings.subtitle', 'Manage provider instances, model lists, credentials, and the default Director model.');
 +
 +		const form = DOM.append(parent, $('.dc-settings-form'));
 +
-+		// Provider select
++		this.instanceSelect = this.createSelectRow(form, localize('providerSettings.instance', 'Provider Instance'), []);
++		const instanceActions = DOM.append(form, $('.dc-action-row'));
++		this.newButton = this.createButton(instanceActions, localize('providerSettings.newProvider', 'New Provider'));
++		this.saveButton = this.createButton(instanceActions, localize('providerSettings.saveProvider', 'Save Provider'));
++		this.deleteButton = this.createButton(instanceActions, localize('providerSettings.deleteProvider', 'Delete Provider'));
++
++		this.instanceIdInput = this.createInputRow(form, localize('providerSettings.instanceId', 'Instance ID'), 'openai-work');
++		this.displayNameInput = this.createInputRow(form, localize('providerSettings.displayName', 'Display Name'), 'OpenAI Work');
++
++		const enabledRow = DOM.append(form, $('.dc-form-row'));
++		DOM.append(enabledRow, $<HTMLLabelElement>('label.dc-form-label')).textContent = localize('providerSettings.enabled', 'Enabled');
++		this.enabledInput = DOM.append(enabledRow, $<HTMLInputElement>('input.dc-form-checkbox'));
++		this.enabledInput.type = 'checkbox';
++
 +		this.providerSelect = this.createSelectRow(
 +			form,
 +			localize('providerSettings.provider', 'Provider'),
-+			SUPPORTED_PROVIDERS.map(p => ({ value: p, label: PROVIDER_DISPLAY_NAMES[p] })),
++			SUPPORTED_PROVIDERS.map(provider => ({ value: provider, label: PROVIDER_DISPLAY_NAMES[provider] })),
 +		);
-+
++		this.authKindSelect = this.createSelectRow(
++			form,
++			localize('providerSettings.authKind', 'Credential Type'),
++			[
++				{ value: 'api-key', label: localize('providerSettings.authApiKey', 'API Key') },
++				{ value: 'oauth', label: localize('providerSettings.authOAuth', 'OAuth') },
++			],
++		);
 +		this.authVariantRow = DOM.append(form, $('.dc-form-row'));
-+		const authVariantLabel = DOM.append(this.authVariantRow, $<HTMLLabelElement>('label.dc-form-label'));
-+		authVariantLabel.textContent = localize('providerSettings.authMethod', 'Authentication');
++		DOM.append(this.authVariantRow, $<HTMLLabelElement>('label.dc-form-label')).textContent = localize('providerSettings.authVariant', 'OpenAI OAuth Variant');
 +		this.authVariantSelect = DOM.append(this.authVariantRow, $<HTMLSelectElement>('select.dc-form-select'));
-+		this.appendOption(this.authVariantSelect, DEFAULT_AUTH_VARIANT, localize('providerSettings.authDefault', 'API Key / OpenAI API'));
-+		this.appendOption(this.authVariantSelect, OPENAI_CODEX_AUTH_VARIANT, localize('providerSettings.authOpenAICodex', 'OpenAI (ChatGPT/Codex OAuth)'));
-+		const authVariantHint = DOM.append(this.authVariantRow, $('.dc-form-hint'));
-+		authVariantHint.textContent = localize('providerSettings.authHint', 'OAuth is only available for supported providers and is resolved separately from API keys.');
++		this.appendOption(this.authVariantSelect, DEFAULT_AUTH_VARIANT, localize('providerSettings.authDefault', 'OpenAI API'));
++		this.appendOption(this.authVariantSelect, OPENAI_CODEX_AUTH_VARIANT, localize('providerSettings.authOpenAICodex', 'OpenAI ChatGPT/Codex OAuth'));
 +
-+		// Model select (populated dynamically from catalog)
-+		this.modelSelect = this.createSelectRow(
++		this.baseURLInput = this.createInputRow(form, localize('providerSettings.baseURL', 'Base URL'), 'https://api.example.com/v1');
++		this.baseURLHint = DOM.append(form.lastElementChild as HTMLElement, $('.dc-form-hint'));
++
++		const headersRow = DOM.append(form, $('.dc-form-row'));
++		DOM.append(headersRow, $<HTMLLabelElement>('label.dc-form-label')).textContent = localize('providerSettings.headers', 'Custom Headers');
++		this.headersTextArea = DOM.append(headersRow, $<HTMLTextAreaElement>('textarea.dc-form-input'));
++		this.headersTextArea.rows = 3;
++		this.headersTextArea.placeholder = 'X-Provider-Header: value';
++		DOM.append(headersRow, $('.dc-form-hint')).textContent = localize('providerSettings.headersHint', 'Optional. One header per line, using "Name: value".');
++
++		this.apiKeySourceSelect = this.createSelectRow(
 +			form,
-+			localize('providerSettings.model', 'Model'),
-+			[],
++			localize('providerSettings.apiKeySource', 'API Key Source'),
++			[
++				{ value: 'secret', label: localize('providerSettings.apiKeySecret', 'Director secret storage') },
++				{ value: 'env', label: localize('providerSettings.apiKeyEnv', 'Environment variable') },
++			],
 +		);
++		this.envVarInput = this.createInputRow(form, localize('providerSettings.envVar', 'Environment Variable'), 'OPENAI_API_KEY');
++		this.apiKeyInput = this.createInputRow(form, localize('providerSettings.apiKey', 'API Key'), 'sk-...');
++		this.apiKeyInput.type = 'password';
++		this.apiKeyStatus = DOM.append(form, $('.dc-test-result'));
 +
-+		const refreshRow = DOM.append(form, $('.dc-action-row.dc-model-refresh-row'));
-+		this.refreshModelsBtn = DOM.append(refreshRow, $<HTMLButtonElement>('button.dc-btn.dc-btn-secondary'));
-+		this.refreshModelsBtn.type = 'button';
-+		this.refreshModelsBtn.textContent = localize('providerSettings.refreshModels', 'Refresh Models');
-+		this.refreshModelsResult = DOM.append(refreshRow, $('.dc-test-result'));
++		const modelRow = DOM.append(form, $('.dc-form-row'));
++		DOM.append(modelRow, $<HTMLLabelElement>('label.dc-form-label')).textContent = localize('providerSettings.models', 'Models');
++		this.modelsTextArea = DOM.append(modelRow, $<HTMLTextAreaElement>('textarea.dc-form-input'));
++		this.modelsTextArea.rows = 6;
++		this.modelsTextArea.placeholder = localize('providerSettings.modelsPlaceholder', 'One model id per line. Example: gpt-4o');
++		DOM.append(modelRow, $('.dc-form-hint')).textContent = localize('providerSettings.modelsHint', 'The list is manual and can include any model id supported by the provider endpoint.');
 +
-+		// Custom model input (shown for compatible providers)
-+		this.modelCustomRow = DOM.append(form, $('.dc-form-row'));
-+		const customModelLabel = DOM.append(this.modelCustomRow, $<HTMLLabelElement>('label.dc-form-label'));
-+		customModelLabel.textContent = localize('providerSettings.customModel', 'Custom Model ID');
-+		this.modelCustomInput = DOM.append(this.modelCustomRow, $<HTMLInputElement>('input.dc-form-input'));
-+		this.modelCustomInput.type = 'text';
-+		this.modelCustomInput.placeholder = localize('providerSettings.customModelPlaceholder', 'Type a model ID (e.g. deepseek-chat, llama-3.1-70b)');
-+		this.modelCustomInput.autocomplete = 'off';
-+		const customModelHint = DOM.append(this.modelCustomRow, $('.dc-form-hint'));
-+		customModelHint.textContent = localize('providerSettings.customModelHint', 'Select a preset above or type any model ID your API endpoint supports.');
++		this.defaultModelSelect = this.createSelectRow(form, localize('providerSettings.defaultModel', 'Default Model'), []);
 +
-+		this.compactModelInput = this.createInputRow(
-+			form,
-+			localize('providerSettings.compactModel', 'Compact Model'),
-+			localize('providerSettings.compactModelPlaceholder', 'Blank = provider default small model'),
-+			'text',
-+		);
++		const modelActions = DOM.append(form, $('.dc-action-row.dc-model-refresh-row'));
++		this.refreshModelsButton = this.createButton(modelActions, localize('providerSettings.refreshModels', 'Refresh Models'));
++		this.refreshModelsResult = DOM.append(modelActions, $('.dc-test-result'));
 +
-+		// Base URL
-+		this.baseURLRow = DOM.append(form, $('.dc-form-row'));
-+		const baseURLLabel = DOM.append(this.baseURLRow, $<HTMLLabelElement>('label.dc-form-label'));
-+		baseURLLabel.textContent = localize('providerSettings.baseURL', 'Base URL');
-+		this.baseURLInput = DOM.append(this.baseURLRow, $<HTMLInputElement>('input.dc-form-input'));
-+		this.baseURLInput.type = 'text';
-+		this.baseURLInput.placeholder = localize('providerSettings.baseURLPlaceholder', 'Leave empty for default. Use for proxies or compatible APIs.');
-+		this.baseURLInput.autocomplete = 'off';
-+		this.baseURLHint = DOM.append(this.baseURLRow, $('.dc-form-hint'));
++		this.compactModelInput = this.createInputRow(form, localize('providerSettings.compactModel', 'Compact Model'), 'Blank = provider default small model');
++		this.maxTurnsInput = this.createInputRow(form, localize('providerSettings.maxTurns', 'Max Turns'), '25', 'number');
++		this.maxTokensInput = this.createInputRow(form, localize('providerSettings.maxTokens', 'Max Output Tokens'), '8192', 'number');
++		this.maxInputTokensInput = this.createInputRow(form, localize('providerSettings.maxInputTokens', 'Context Window'), '0 = use model default', 'number');
 +
-+		// Max Turns
-+		this.maxTurnsInput = this.createInputRow(
-+			form,
-+			localize('providerSettings.maxTurns', 'Max Turns'),
-+			'25',
-+			'number',
-+		);
-+		this.maxTurnsInput.min = '1';
-+		this.maxTurnsInput.max = '100';
-+
-+		// Max Tokens
-+		this.maxTokensInput = this.createInputRow(
-+			form,
-+			localize('providerSettings.maxTokens', 'Max Output Tokens'),
-+			'8192',
-+			'number',
-+		);
-+		this.maxTokensInput.min = '256';
-+		this.maxTokensInput.max = '100000';
-+
-+		// Max Input Tokens (context length)
-+		this.maxInputTokensInput = this.createInputRow(
-+			form,
-+			localize('providerSettings.maxInputTokens', 'Context Window (Max Input Tokens)'),
-+			localize('providerSettings.maxInputTokensPlaceholder', '0 = use model default'),
-+			'number',
-+		);
-+		this.maxInputTokensInput.min = '0';
-+		this.maxInputTokensInput.max = '2000000';
-+
-+		// Event handlers
-+		this._register(DOM.addDisposableListener(this.providerSelect, 'change', () => {
-+			this.onProviderChanged();
++		this._register(DOM.addDisposableListener(this.instanceSelect, 'change', () => {
++			this.selectedInstanceId = this.instanceSelect.value;
++			void this.loadFromRegistry();
 +		}));
-+		this._register(DOM.addDisposableListener(this.authVariantSelect, 'change', () => {
-+			this.onAuthVariantChanged();
-+		}));
-+		this._register(DOM.addDisposableListener(this.modelSelect, 'change', () => {
-+			const value = this.modelSelect.value;
-+			if (!value) {
-+				return;
-+			}
-+			this.queueConfigWrite(CONFIG_MODEL, value);
-+			if (this.modelCustomInput) {
-+				this.modelCustomInput.value = value;
-+			}
-+		}));
-+		this._register(DOM.addDisposableListener(this.refreshModelsBtn, 'click', () => {
-+			void this.refreshModels();
-+		}));
-+		this._register(DOM.addDisposableListener(this.modelCustomInput, 'input', () => {
-+			const value = this.modelCustomInput.value.trim();
-+			if (value) {
-+				this.queueConfigWrite(CONFIG_MODEL, value);
-+			}
-+		}));
-+		this._register(DOM.addDisposableListener(this.compactModelInput, 'input', () => {
-+			this.queueConfigWrite(CONFIG_COMPACT_MODEL, this.compactModelInput.value.trim());
-+		}));
-+		this._register(DOM.addDisposableListener(this.baseURLInput, 'input', () => {
-+			this.queueConfigWrite(CONFIG_BASE_URL, this.baseURLInput.value);
-+		}));
-+		this._register(DOM.addDisposableListener(this.maxTurnsInput, 'input', () => {
-+			const val = parseInt(this.maxTurnsInput.value, 10);
-+			if (!isNaN(val) && val >= 1 && val <= 100) {
-+				this.queueConfigWrite(CONFIG_MAX_TURNS, val);
-+			}
-+		}));
-+		this._register(DOM.addDisposableListener(this.maxTokensInput, 'input', () => {
-+			const val = parseInt(this.maxTokensInput.value, 10);
-+			if (!isNaN(val) && val >= 256 && val <= 100000) {
-+				this.queueConfigWrite(CONFIG_MAX_TOKENS, val);
-+			}
-+		}));
-+		this._register(DOM.addDisposableListener(this.maxInputTokensInput, 'input', () => {
-+			const val = parseInt(this.maxInputTokensInput.value, 10);
-+			if (!isNaN(val) && val >= 0 && val <= 2000000) {
-+				this.queueConfigWrite(CONFIG_MAX_INPUT_TOKENS, val);
-+			}
-+		}));
++		this._register(DOM.addDisposableListener(this.newButton, 'click', () => this.prepareNewInstance()));
++		this._register(DOM.addDisposableListener(this.saveButton, 'click', () => void this.saveProvider()));
++		this._register(DOM.addDisposableListener(this.deleteButton, 'click', () => void this.deleteProvider()));
++		this._register(DOM.addDisposableListener(this.refreshModelsButton, 'click', () => void this.refreshModels()));
++		this._register(DOM.addDisposableListener(this.providerSelect, 'change', () => this.onProviderDraftChanged()));
++		this._register(DOM.addDisposableListener(this.authKindSelect, 'change', () => this.updateAuthRows()));
++		this._register(DOM.addDisposableListener(this.authVariantSelect, 'change', () => this.onProviderDraftChanged()));
++		this._register(DOM.addDisposableListener(this.apiKeySourceSelect, 'change', () => this.updateAuthRows()));
++		this._register(DOM.addDisposableListener(this.modelsTextArea, 'input', () => this.populateDefaultModelSelect(this.parseModelIds())));
++		this._register(DOM.addDisposableListener(this.compactModelInput, 'input', () => this.pendingWrites.queue(CONFIG_COMPACT_MODEL, this.compactModelInput.value.trim())));
++		this._register(DOM.addDisposableListener(this.maxTurnsInput, 'input', () => this.queueNumberConfig(CONFIG_MAX_TURNS, this.maxTurnsInput, 1, 100)));
++		this._register(DOM.addDisposableListener(this.maxTokensInput, 'input', () => this.queueNumberConfig(CONFIG_MAX_TOKENS, this.maxTokensInput, 256, 100000)));
++		this._register(DOM.addDisposableListener(this.maxInputTokensInput, 'input', () => this.queueNumberConfig(CONFIG_MAX_INPUT_TOKENS, this.maxInputTokensInput, 0, 2000000)));
 +	}
 +
-+	// ====================================================================
-+	// Config <-> UI Sync
-+	// ====================================================================
++	private async loadFromRegistry(): Promise<void> {
++		this._loading = true;
++		try {
++			const state = await this.providerRegistryService.getState();
++			this.populateInstanceSelect(state.instances);
++			const selected = state.instances.find(instance => instance.id === this.selectedInstanceId)
++				?? state.instances.find(instance => instance.id === state.defaultProviderId)
++				?? state.instances[0];
++			this.selectedInstanceId = selected?.id;
++			if (selected) {
++				this.loadInstance(selected, state.defaultProviderId === selected.id ? state.defaultModelId : selected.defaultModelId);
++			} else {
++				this.prepareNewInstance();
++			}
++			this.loadGlobalConfig();
++			await this.refreshApiKeyStatus();
++			this._onDidChangeContentHeight.fire(this.element.offsetHeight || 420);
++		} finally {
++			this._loading = false;
++		}
++	}
 +
-+	private loadFromConfig(): void {
-+		const provider = (this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+		const authVariant = normalizeAuthVariantForProvider(provider, this.configService.getValue<string>(CONFIG_AUTH_VARIANT));
-+		const model = this.configService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant) || 'claude-sonnet-4-6';
-+		const compactModel = this.configService.getValue<string>(CONFIG_COMPACT_MODEL) || '';
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || '';
-+		const maxTurns = this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25;
-+		const maxTokens = this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192;
-+		const maxInputTokens = this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0;
++	private populateInstanceSelect(instances: readonly IDirectorProviderInstance[]): void {
++		DOM.clearNode(this.instanceSelect);
++		for (const instance of instances) {
++			this.appendOption(this.instanceSelect, instance.id, instance.displayName);
++		}
++		if (this.selectedInstanceId) {
++			this.instanceSelect.value = this.selectedInstanceId;
++		}
++	}
 +
++	private loadInstance(instance: IDirectorProviderInstance, defaultModelId: string | undefined): void {
++		this.instanceIdInput.value = instance.id;
++		this.instanceIdInput.disabled = true;
++		this.displayNameInput.value = instance.displayName;
++		this.enabledInput.checked = instance.enabled;
++		this.providerSelect.value = instance.kind;
++		this.authKindSelect.value = instance.authKind;
++		this.authVariantSelect.value = instance.authVariant;
++		this.baseURLInput.value = instance.baseURL ?? '';
++		this.headersTextArea.value = this.formatHeaders(instance.headers);
++		this.apiKeySourceSelect.value = instance.apiKeySource?.kind ?? 'secret';
++		this.envVarInput.value = instance.apiKeySource?.envVar ?? '';
++		this.apiKeyInput.value = '';
++		this.modelsTextArea.value = instance.models.map(model => model.id).join('\n');
++		this.populateDefaultModelSelect(instance.models.map(model => model.id));
++		this.defaultModelSelect.value = defaultModelId ?? instance.defaultModelId ?? instance.models[0]?.id ?? '';
++		this.updateAuthRows();
++		this.updateBaseURLHint();
++	}
++
++	private prepareNewInstance(): void {
++		const provider = (this.providerSelect?.value || 'anthropic') as ProviderName;
++		const authVariant = normalizeRegistryAuthVariant(provider, this.authVariantSelect?.value || DEFAULT_AUTH_VARIANT);
++		const id = sanitizeProviderInstanceId(`${provider}-${Date.now().toString(36)}`);
++		const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
++		this.selectedInstanceId = undefined;
++		this.instanceIdInput.disabled = false;
++		this.instanceIdInput.value = id;
++		this.displayNameInput.value = PROVIDER_DISPLAY_NAMES[provider] || provider;
++		this.enabledInput.checked = true;
 +		this.providerSelect.value = provider;
++		this.authKindSelect.value = authVariant === OPENAI_CODEX_AUTH_VARIANT ? 'oauth' : 'api-key';
 +		this.authVariantSelect.value = authVariant;
-+		this.populateModelSelect(provider, authVariant);
-+		this.modelSelect.value = model;
-+		this.modelCustomInput.value = model;
-+		this.compactModelInput.value = compactModel;
-+		this.baseURLInput.value = baseURL;
-+		this.maxTurnsInput.value = String(maxTurns);
-+		this.maxTokensInput.value = String(maxTokens);
-+		this.maxInputTokensInput.value = String(maxInputTokens);
-+
-+		this.updateProviderUI(provider);
-+		void this.refreshAuthBoundUI();
-+
-+		const height = this.element.offsetHeight || 300;
-+		this._onDidChangeContentHeight.fire(height);
++		this.baseURLInput.value = '';
++		this.headersTextArea.value = '';
++		this.apiKeySourceSelect.value = 'secret';
++		this.envVarInput.value = '';
++		this.apiKeyInput.value = '';
++		const models = modelEntriesFromCatalog(provider, authVariant, defaultModel);
++		this.modelsTextArea.value = models.map(model => model.id).join('\n');
++		this.populateDefaultModelSelect(models.map(model => model.id));
++		this.defaultModelSelect.value = defaultModel;
++		this.updateAuthRows();
++		this.updateBaseURLHint();
 +	}
 +
-+	private onProviderChanged(): void {
++	private loadGlobalConfig(): void {
++		this.compactModelInput.value = this.configService.getValue<string>(CONFIG_COMPACT_MODEL) || '';
++		this.maxTurnsInput.value = String(this.configService.getValue<number>(CONFIG_MAX_TURNS) || 25);
++		this.maxTokensInput.value = String(this.configService.getValue<number>(CONFIG_MAX_TOKENS) || 8192);
++		this.maxInputTokensInput.value = String(this.configService.getValue<number>(CONFIG_MAX_INPUT_TOKENS) || 0);
++	}
++
++	private onProviderDraftChanged(): void {
 +		const provider = this.providerSelect.value as ProviderName;
-+		const authVariant = normalizeAuthVariantForProvider(provider, this.authVariantSelect.value);
++		const authVariant = normalizeRegistryAuthVariant(provider, this.authVariantSelect.value);
 +		this.authVariantSelect.value = authVariant;
-+		this.populateModelSelect(provider, authVariant);
-+
-+		const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
-+		const existingModel = this.configService.getValue<string>(CONFIG_MODEL) || this.modelCustomInput.value.trim();
-+		const nextModel = defaultModel || existingModel || '';
-+		this.modelSelect.value = nextModel;
-+		this.modelCustomInput.value = nextModel;
-+
-+		this.updateProviderUI(provider);
-+
-+		this.queueConfigWrite(CONFIG_PROVIDER, provider);
-+		this.queueConfigWrite(CONFIG_AUTH_VARIANT, authVariant);
-+		if (nextModel) {
-+			this.queueConfigWrite(CONFIG_MODEL, nextModel);
++		const currentModels = this.parseModelIds();
++		if (currentModels.length === 0) {
++			const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
++			const models = modelEntriesFromCatalog(provider, authVariant, defaultModel);
++			this.modelsTextArea.value = models.map(model => model.id).join('\n');
++			this.populateDefaultModelSelect(models.map(model => model.id));
++			this.defaultModelSelect.value = defaultModel;
 +		}
-+		void this.refreshAuthBoundUI();
++		this.updateAuthRows();
++		this.updateBaseURLHint();
 +	}
 +
-+	private onAuthVariantChanged(): void {
-+		const provider = this.getCurrentProvider();
-+		const authVariant = normalizeAuthVariantForProvider(provider, this.authVariantSelect.value);
-+		this.authVariantSelect.value = authVariant;
-+		this.populateModelSelect(provider, authVariant);
-+
-+		const defaultModel = getDefaultModelForAuthVariant(provider, authVariant);
-+		if (defaultModel) {
-+			this.modelSelect.value = defaultModel;
-+			this.modelCustomInput.value = defaultModel;
-+			this.queueConfigWrite(CONFIG_MODEL, defaultModel);
-+		}
-+		this.queueConfigWrite(CONFIG_AUTH_VARIANT, authVariant);
-+		this.updateProviderUI(provider);
-+		void this.refreshAuthBoundUI();
-+	}
-+
-+	private updateProviderUI(provider: ProviderName): void {
-+		const supportsCustom = providerSupportsCustomModels(provider);
-+		const requiresURL = providerRequiresBaseURL(provider);
-+
-+		// Show/hide custom model input
-+		this.modelCustomRow.style.display = supportsCustom ? '' : 'none';
++	private updateAuthRows(): void {
++		const provider = this.providerSelect.value as ProviderName;
++		const authKind = this.authKindSelect.value as DirectorProviderAuthKind;
 +		this.authVariantRow.style.display = provider === 'openai' ? '' : 'none';
-+		this.baseURLInput.disabled = false;
++		this.apiKeySourceSelect.disabled = authKind === 'oauth';
++		this.envVarInput.disabled = authKind === 'oauth' || this.apiKeySourceSelect.value !== 'env';
++		this.apiKeyInput.disabled = authKind === 'oauth' || this.apiKeySourceSelect.value !== 'secret';
++		this.baseURLInput.disabled = authKind === 'oauth';
++	}
 +
-+		// Update base URL hint
-+		if (requiresURL) {
-+			this.baseURLHint.textContent = localize('providerSettings.baseURLRequired',
-+				'Required. Enter the API base URL for your provider (e.g. https://api.deepseek.com).');
-+			this.baseURLInput.placeholder = localize('providerSettings.baseURLRequiredPlaceholder',
-+				'https://api.your-provider.com');
++	private updateBaseURLHint(): void {
++		const provider = this.providerSelect.value as ProviderName;
++		if (providerRequiresBaseURL(provider)) {
++			this.baseURLHint.textContent = localize('providerSettings.baseURLRequired', 'Required for compatible providers.');
 +		} else {
-+			this.baseURLHint.textContent = localize('providerSettings.baseURLOptional',
-+				'Optional. Leave empty to use the official API endpoint.');
-+			this.baseURLInput.placeholder = localize('providerSettings.baseURLOptionalPlaceholder',
-+				'Leave empty for default');
++			this.baseURLHint.textContent = localize('providerSettings.baseURLOptional', 'Optional. Leave blank for the official API endpoint.');
 +		}
 +	}
 +
-+	private populateModelSelect(provider: ProviderName, authVariant: AuthVariantName): void {
-+		// Clear existing options
-+		while (this.modelSelect.options.length > 0) {
-+			this.modelSelect.remove(0);
++	private async saveProvider(): Promise<IDirectorProviderInstance | undefined> {
++		const instance = this.buildInstanceFromForm();
++		if (!instance) {
++			return undefined;
 +		}
++		const defaultModelId = this.defaultModelSelect.value || instance.defaultModelId || instance.models[0]?.id;
++		await this.providerRegistryService.upsertInstance(instance, defaultModelId);
++		if (this.apiKeySourceSelect.value === 'secret' && this.apiKeyInput.value.trim()) {
++			await this.apiKeyService.setInstanceApiKey(instance.id, instance.kind, this.apiKeyInput.value.trim());
++			this.apiKeyInput.value = '';
++		}
++		await this.providerRegistryService.setDefault(instance.id, defaultModelId);
++		this.selectedInstanceId = instance.id;
++		await this.loadFromRegistry();
++		return instance;
++	}
 +
-+		const models = getModelsForProviderAndAuthVariant(provider, authVariant);
-+		for (const model of models) {
-+			this.appendOption(this.modelSelect, model.id, model.name);
++	private buildInstanceFromForm(): IDirectorProviderInstance | undefined {
++		const id = sanitizeProviderInstanceId(this.instanceIdInput.value);
++		const provider = this.providerSelect.value as ProviderName;
++		const authVariant = normalizeRegistryAuthVariant(provider, this.authVariantSelect.value);
++		const authKind = this.authKindSelect.value as DirectorProviderAuthKind;
++		const modelIds = this.parseModelIds();
++		const defaultModelId = this.defaultModelSelect.value || modelIds[0] || getDefaultModelForAuthVariant(provider, authVariant);
++		const models = this.buildModelEntries(provider, authVariant, modelIds.length ? modelIds : [defaultModelId]);
++		const previousCreatedAt = Date.now();
++		const apiKeySource: IDirectorApiKeySource | undefined = authKind === 'api-key'
++			? this.apiKeySourceSelect.value === 'env'
++				? { kind: 'env', envVar: this.envVarInput.value.trim() }
++				: { kind: 'secret' }
++			: undefined;
++		return {
++			id,
++			kind: provider,
++			displayName: this.displayNameInput.value.trim() || PROVIDER_DISPLAY_NAMES[provider] || id,
++			enabled: this.enabledInput.checked,
++			authKind,
++			authVariant,
++			baseURL: this.baseURLInput.value.trim() || undefined,
++			headers: this.parseHeaders(),
++			apiKeySource,
++			models,
++			defaultModelId,
++			createdAt: previousCreatedAt,
++			updatedAt: Date.now(),
++		};
++	}
++
++	private buildModelEntries(provider: ProviderName, authVariant: AuthVariantName, modelIds: readonly string[]): readonly IDirectorProviderModelEntry[] {
++		const catalog = new Map(modelEntriesFromCatalog(provider, authVariant).map(model => [model.id, model]));
++		const result: IDirectorProviderModelEntry[] = [];
++		for (const id of modelIds) {
++			const catalogModel = catalog.get(id);
++			result.push(catalogModel ?? {
++				id,
++				displayName: id,
++				enabled: true,
++				hidden: false,
++				family: 'custom',
++				maxInputTokens: 0,
++				maxOutputTokens: 8_192,
++			});
++		}
++		return result;
++	}
++
++	private async deleteProvider(): Promise<void> {
++		if (!this.selectedInstanceId) {
++			return;
++		}
++		await this.providerRegistryService.removeInstance(this.selectedInstanceId);
++		await this.apiKeyService.deleteInstanceApiKey(this.selectedInstanceId);
++		this.selectedInstanceId = undefined;
++		await this.loadFromRegistry();
++	}
++
++	private async refreshModels(): Promise<void> {
++		const instance = await this.saveProvider();
++		if (!instance) {
++			return;
++		}
++		const modelId = instance.defaultModelId || instance.models[0]?.id || getDefaultModelForAuthVariant(instance.kind, instance.authVariant);
++		this.refreshModelsButton.disabled = true;
++		this.refreshModelsResult.textContent = localize('providerSettings.refreshingModels', 'Refreshing...');
++		this.refreshModelsResult.classList.remove('dc-test-success', 'dc-test-error');
++		try {
++			const authState = await this.authStateService.resolveInstanceAuth(instance, modelId);
++			const credential = authState.accessToken || authState.apiKey;
++			const models = await this.modelResolverService.refreshModels(instance.kind, credential, authState.baseURL, authState.identityKey, authState.authVariant);
++			const nextModels = models.map(model => ({
++				id: model.id,
++				displayName: model.name,
++				enabled: true,
++				hidden: false,
++				family: model.family,
++				maxInputTokens: model.maxInputTokens,
++				maxOutputTokens: model.maxOutputTokens,
++				capabilities: model.capabilities,
++			}));
++			await this.providerRegistryService.upsertInstance({ ...instance, models: nextModels, updatedAt: Date.now() }, instance.defaultModelId || nextModels[0]?.id);
++			this.refreshModelsResult.classList.add('dc-test-success');
++			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsSuccess', 'Refreshed {0} models', models.length);
++		} catch (err: any) {
++			this.refreshModelsResult.classList.add('dc-test-error');
++			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsFailed', 'Failed: {0}', err?.message || String(err));
++		} finally {
++			this.refreshModelsButton.disabled = false;
++		}
++	}
++
++	private async refreshApiKeyStatus(): Promise<void> {
++		const id = this.selectedInstanceId || sanitizeProviderInstanceId(this.instanceIdInput?.value || '');
++		if (!id) {
++			this.apiKeyStatus.textContent = '';
++			return;
++		}
++		const hasKey = await this.apiKeyService.hasInstanceApiKey(id);
++		this.apiKeyStatus.textContent = hasKey
++			? localize('providerSettings.apiKeyConfigured', 'API key is stored for this provider instance.')
++			: localize('providerSettings.apiKeyMissing', 'No API key is stored for this provider instance.');
++		this.apiKeyStatus.classList.toggle('dc-test-success', hasKey);
++		this.apiKeyStatus.classList.toggle('dc-test-error', !hasKey);
++	}
++
++	private parseModelIds(): string[] {
++		const values = this.modelsTextArea.value
++			.split(/[\n,]+/g)
++			.map(value => value.trim())
++			.filter(value => value.length > 0);
++		return Array.from(new Set(values));
++	}
++
++	private parseHeaders(): Record<string, string> | undefined {
++		const headers: Record<string, string> = {};
++		for (const line of this.headersTextArea.value.split(/\r?\n/g)) {
++			const trimmed = line.trim();
++			if (!trimmed || trimmed.startsWith('#')) {
++				continue;
++			}
++			const separator = trimmed.indexOf(':');
++			if (separator <= 0) {
++				continue;
++			}
++			const name = trimmed.slice(0, separator).trim();
++			const value = trimmed.slice(separator + 1).trim();
++			if (name && value) {
++				headers[name] = value;
++			}
++		}
++		return Object.keys(headers).length ? headers : undefined;
++	}
++
++	private formatHeaders(headers: Record<string, string> | undefined): string {
++		if (!headers) {
++			return '';
++		}
++		return Object.entries(headers).map(([key, value]) => `${key}: ${value}`).join('\n');
++	}
++
++	private populateDefaultModelSelect(modelIds: readonly string[]): void {
++		const current = this.defaultModelSelect.value;
++		DOM.clearNode(this.defaultModelSelect);
++		for (const modelId of modelIds) {
++			this.appendOption(this.defaultModelSelect, modelId, modelId);
++		}
++		if (modelIds.includes(current)) {
++			this.defaultModelSelect.value = current;
++		} else if (modelIds[0]) {
++			this.defaultModelSelect.value = modelIds[0];
 +		}
 +	}
 +
@@ -15354,114 +15730,38 @@ index 0000000000000000000000000000000000000000..345079043bda37a2122444778af7ed20
 +		super.dispose();
 +	}
 +
-+	private queueConfigWrite(key: string, value: string | number): void {
-+		this.pendingWrites.queue(key, value);
-+	}
-+
-+	private async writeConfigNow(key: string, value: unknown): Promise<void> {
-+		this._updating = true;
-+		try {
-+			await this.configService.updateValue(key, value, ConfigurationTarget.USER);
-+		} finally {
-+			this._updating = false;
++	private queueNumberConfig(key: string, input: HTMLInputElement, min: number, max: number): void {
++		const value = parseInt(input.value, 10);
++		if (!isNaN(value) && value >= min && value <= max) {
++			this.pendingWrites.queue(key, value);
 +		}
 +	}
-+
-+	private async refreshModels(): Promise<void> {
-+		await this.flushPendingWrites();
-+		const provider = this.getCurrentProvider();
-+		const authVariant = this.getCurrentAuthVariant();
-+		const model = this.getCurrentModel(provider, authVariant);
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+
-+		this.refreshModelsBtn.disabled = true;
-+		this.refreshModelsResult.textContent = localize('providerSettings.refreshingModels', 'Refreshing...');
-+		this.refreshModelsResult.classList.remove('dc-test-success', 'dc-test-error');
-+
-+		try {
-+			const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
-+			const credential = authState.accessToken || authState.apiKey;
-+			const models = await this.modelResolverService.refreshModels(provider, credential, authState.baseURL || baseURL, authState.identityKey, authState.authVariant);
-+			this.populateModelSelect(provider, authVariant);
-+			this.modelSelect.value = model;
-+			this.refreshModelsResult.classList.add('dc-test-success');
-+			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsSuccess', 'Refreshed {0} models', models.length);
-+		} catch (err: any) {
-+			this.refreshModelsResult.classList.add('dc-test-error');
-+			this.refreshModelsResult.textContent = localize('providerSettings.refreshModelsFailed', 'Failed: {0}', err?.message || String(err));
-+		} finally {
-+			this.refreshModelsBtn.disabled = false;
-+		}
-+	}
-+
-+	private async refreshAuthBoundUI(): Promise<void> {
-+		const generation = ++this.authRefreshGeneration;
-+		const provider = this.getCurrentProvider();
-+		const authVariant = this.getCurrentAuthVariant();
-+		const model = this.getCurrentModel(provider, authVariant);
-+		const baseURL = this.configService.getValue<string>(CONFIG_BASE_URL) || undefined;
-+		const authState = await this.authStateService.resolveAuth(provider, model, authVariant, baseURL);
-+		if (generation !== this.authRefreshGeneration) {
-+			return;
-+		}
-+
-+		const oauthActive = authState.source === 'oauth';
-+		this.baseURLInput.disabled = oauthActive;
-+		if (oauthActive) {
-+			this.baseURLHint.textContent = authState.metadata?.sourceLabel === 'OpenAI (ChatGPT/Codex OAuth)'
-+				? localize('providerSettings.baseURLOpenAICodexInactive', 'OpenAI Codex OAuth uses the ChatGPT Codex backend. Base URL applies only to the API-key path.')
-+				: localize('providerSettings.baseURLOAuthInactive', 'OAuth is active for this provider. Base URL applies only to the API-key path.');
-+		} else {
-+			this.updateProviderUI(provider);
-+		}
-+	}
-+
-+	private getCurrentProvider(): ProviderName {
-+		return (this.providerSelect.value || this.configService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName;
-+	}
-+
-+	private getCurrentAuthVariant(): AuthVariantName {
-+		return normalizeAuthVariantForProvider(this.getCurrentProvider(), this.authVariantSelect.value || this.configService.getValue<string>(CONFIG_AUTH_VARIANT));
-+	}
-+
-+	private getCurrentModel(provider: ProviderName, authVariant: AuthVariantName): string {
-+		return this.modelCustomInput.value.trim()
-+			|| this.modelSelect.value
-+			|| this.configService.getValue<string>(CONFIG_MODEL)
-+			|| getDefaultModelForAuthVariant(provider, authVariant)
-+			|| '';
-+	}
-+
-+	// ====================================================================
-+	// DOM Helpers
-+	// ====================================================================
 +
 +	private createSelectRow(parent: HTMLElement, labelText: string, options: { value: string; label: string }[]): HTMLSelectElement {
 +		const row = DOM.append(parent, $('.dc-form-row'));
-+
-+		const label = DOM.append(row, $<HTMLLabelElement>('label.dc-form-label'));
-+		label.textContent = labelText;
-+
++		DOM.append(row, $<HTMLLabelElement>('label.dc-form-label')).textContent = labelText;
 +		const select = DOM.append(row, $<HTMLSelectElement>('select.dc-form-select'));
-+		for (const opt of options) {
-+			this.appendOption(select, opt.value, opt.label);
++		for (const option of options) {
++			this.appendOption(select, option.value, option.label);
 +		}
-+
 +		return select;
 +	}
 +
 +	private createInputRow(parent: HTMLElement, labelText: string, placeholder: string, type: string = 'text'): HTMLInputElement {
 +		const row = DOM.append(parent, $('.dc-form-row'));
-+
-+		const label = DOM.append(row, $<HTMLLabelElement>('label.dc-form-label'));
-+		label.textContent = labelText;
-+
++		DOM.append(row, $<HTMLLabelElement>('label.dc-form-label')).textContent = labelText;
 +		const input = DOM.append(row, $<HTMLInputElement>('input.dc-form-input'));
 +		input.type = type;
 +		input.placeholder = placeholder;
 +		input.autocomplete = 'off';
-+
 +		return input;
++	}
++
++	private createButton(parent: HTMLElement, label: string): HTMLButtonElement {
++		const button = DOM.append(parent, $<HTMLButtonElement>('button.dc-btn.dc-btn-secondary'));
++		button.type = 'button';
++		button.textContent = label;
++		return button;
 +	}
 +
 +	private appendOption(select: HTMLSelectElement, value: string, label: string): void {
@@ -16733,10 +17033,10 @@ index 0000000000000000000000000000000000000000..09fef8bdd8352378372c44496a5914f5
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae011d309738
+index 0000000000000000000000000000000000000000..4d068e81b3652576a5606bf0c1fc6156e2403b6e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts
-@@ -0,0 +1,555 @@
+@@ -0,0 +1,609 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16774,6 +17074,7 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +export const SECRET_KEY_PREFIX = 'director-code.apiKey';
 +export const MODEL_KEY_PREFIX = 'director-code.modelKey';
 +export const MODEL_CONFIG_PREFIX = 'director-code.modelConfig';
++export const INSTANCE_KEY_PREFIX = 'director-code.providerInstanceKey';
 +export const TEST_CONNECTION_TIMEOUT_MS = 15_000;
 +
 +/**
@@ -16850,6 +17151,13 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +		return parseProviderModelSecretKey(secretKey, MODEL_CONFIG_PREFIX, 'model-config', changeKind);
 +	}
 +
++	if (secretKey.startsWith(INSTANCE_KEY_PREFIX + '.')) {
++		const providerInstanceId = secretKey.slice(INSTANCE_KEY_PREFIX.length + 1);
++		return providerInstanceId
++			? { provider: 'openai-compatible', scope: 'provider-instance', changeKind, providerInstanceId, secretKey }
++			: undefined;
++	}
++
 +	return undefined;
 +}
 +
@@ -16879,7 +17187,7 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +	readonly latencyMs?: number;
 +}
 +
-+export type ApiKeyChangeScope = 'provider' | 'model' | 'model-config';
++export type ApiKeyChangeScope = 'provider' | 'model' | 'model-config' | 'provider-instance';
 +export type ApiKeyChangeKind = 'set' | 'delete' | 'changed';
 +
 +export interface IApiKeyChangeEvent {
@@ -16887,6 +17195,7 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +	readonly scope: ApiKeyChangeScope;
 +	readonly changeKind: ApiKeyChangeKind;
 +	readonly modelId?: string;
++	readonly providerInstanceId?: string;
 +	readonly secretKey: string;
 +}
 +
@@ -16958,6 +17267,26 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +	 * Check if an API key is configured for a provider.
 +	 */
 +	hasApiKey(provider: ProviderName): Promise<boolean>;
++
++	/**
++	 * Get the API key for a Director provider instance.
++	 */
++	getInstanceApiKey(providerInstanceId: string): Promise<string | undefined>;
++
++	/**
++	 * Store the API key for a Director provider instance.
++	 */
++	setInstanceApiKey(providerInstanceId: string, provider: ProviderName, key: string): Promise<void>;
++
++	/**
++	 * Delete the API key for a Director provider instance.
++	 */
++	deleteInstanceApiKey(providerInstanceId: string, provider?: ProviderName): Promise<void>;
++
++	/**
++	 * Check if an API key is configured for a Director provider instance.
++	 */
++	hasInstanceApiKey(providerInstanceId: string): Promise<boolean>;
 +
 +	/**
 +	 * Test the API-key connection for a provider using the given API key.
@@ -17073,6 +17402,10 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +		return `${MODEL_CONFIG_PREFIX}.${provider}.${modelId}`;
 +	}
 +
++	private _instanceSecretKey(providerInstanceId: string): string {
++		return `${INSTANCE_KEY_PREFIX}.${providerInstanceId}`;
++	}
++
 +	async getApiKey(provider: ProviderName): Promise<string | undefined> {
 +		return this.secretService.get(this._secretKey(provider));
 +	}
@@ -17093,6 +17426,27 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +
 +	async hasApiKey(provider: ProviderName): Promise<boolean> {
 +		const key = await this.getApiKey(provider);
++		return key !== undefined && key.length > 0;
++	}
++
++	async getInstanceApiKey(providerInstanceId: string): Promise<string | undefined> {
++		return this.secretService.get(this._instanceSecretKey(providerInstanceId));
++	}
++
++	async setInstanceApiKey(providerInstanceId: string, provider: ProviderName, key: string): Promise<void> {
++		const secretKey = this._instanceSecretKey(providerInstanceId);
++		this.pendingSecretEvents.set(secretKey, { provider, scope: 'provider-instance', changeKind: 'set', providerInstanceId, secretKey });
++		await this.secretService.set(secretKey, key);
++	}
++
++	async deleteInstanceApiKey(providerInstanceId: string, provider: ProviderName = 'openai-compatible'): Promise<void> {
++		const secretKey = this._instanceSecretKey(providerInstanceId);
++		this.pendingSecretEvents.set(secretKey, { provider, scope: 'provider-instance', changeKind: 'delete', providerInstanceId, secretKey });
++		await this.secretService.delete(secretKey);
++	}
++
++	async hasInstanceApiKey(providerInstanceId: string): Promise<boolean> {
++		const key = await this.getInstanceApiKey(providerInstanceId);
 +		return key !== undefined && key.length > 0;
 +	}
 +
@@ -17294,10 +17648,10 @@ index 0000000000000000000000000000000000000000..2f0f5ca6efa8085a7066453c8bf2ae01
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6beec84eec4c
+index 0000000000000000000000000000000000000000..445ec2778f4c21eebe45ec851078fd323c3c9fab
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,342 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -17317,12 +17671,13 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +import { IOAuthService, type OAuthProviderName } from './oauthService.js';
 +import type { ProviderAuth, ProviderCapabilities } from './providers/providerTypes.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName } from './providers/providerTypes.js';
++import type { IDirectorProviderInstance } from './providerRegistry.js';
 +
 +// ============================================================================
 +// Types
 +// ============================================================================
 +
-+export type AuthStateSource = 'oauth' | 'per-model-key' | 'provider-key' | 'missing';
++export type AuthStateSource = 'oauth' | 'per-model-key' | 'provider-key' | 'provider-instance-key' | 'env-var' | 'missing';
 +
 +export interface IResolvedAuthStateMetadata {
 +	readonly sourceLabel?: string;
@@ -17354,6 +17709,7 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +	readonly onDidChangeAuthState: Event<ProviderName>;
 +
 +	resolveAuth(provider: ProviderName, model: string, authVariant: AuthVariantName, globalBaseURL?: string): Promise<IResolvedAuthState>;
++	resolveInstanceAuth(instance: IDirectorProviderInstance, model: string): Promise<IResolvedAuthState>;
 +}
 +
 +// ============================================================================
@@ -17368,7 +17724,7 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +}
 +
 +export function isApiKeyAuthState(state: IResolvedAuthState): boolean {
-+	return state.source === 'per-model-key' || state.source === 'provider-key';
++	return state.source === 'per-model-key' || state.source === 'provider-key' || state.source === 'provider-instance-key' || state.source === 'env-var';
 +}
 +
 +function providerFromApiKeyEvent(event: IApiKeyChangeEvent): ProviderName | undefined {
@@ -17385,6 +17741,15 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +
 +function isOAuthProvider(provider: ProviderName): provider is OAuthProviderName {
 +	return provider === 'anthropic' || provider === 'openai';
++}
++
++function getEnvVar(name: string | undefined): string | undefined {
++	if (!name) {
++		return undefined;
++	}
++	const env = (globalThis as any).process?.env as Record<string, string | undefined> | undefined;
++	const value = env?.[name];
++	return value && value.length > 0 ? value : undefined;
 +}
 +
 +// ============================================================================
@@ -17436,6 +17801,87 @@ index 0000000000000000000000000000000000000000..c5d2ccb01af66256ccca152ef12d6bee
 +		}
 +
 +		return this._resolveApiKey(provider, model, DEFAULT_AUTH_VARIANT, globalBaseURL);
++	}
++
++	async resolveInstanceAuth(instance: IDirectorProviderInstance, model: string): Promise<IResolvedAuthState> {
++		const authVariant = normalizeAuthVariantForProvider(instance.kind, instance.authVariant);
++		if (instance.authKind === 'oauth') {
++			if (!isOAuthProvider(instance.kind)) {
++				return this._missing(instance.kind, model, authVariant, `OAuth is not supported for ${instance.kind}.`);
++			}
++			const oauthState = await this._tryResolveOAuth(instance.kind, model, authVariant);
++			if (oauthState) {
++				return {
++					...oauthState,
++					baseURL: instance.baseURL,
++					identityKey: `instance:${instance.id}:${oauthState.identityKey}`,
++				};
++			}
++			return this._missing(instance.kind, model, authVariant, `No OAuth login found for ${instance.displayName}.`);
++		}
++
++		const apiType = instance.kind === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
++			? 'openai-codex'
++			: providerToApiType(instance.kind);
++		const modelEntry = instance.models.find(candidate => candidate.id === model);
++		const capabilities = modelEntry?.capabilities ?? resolveConfiguredProviderCapabilities(instance.kind, model, undefined, apiType);
++
++		if (instance.apiKeySource?.kind === 'env') {
++			const envValue = getEnvVar(instance.apiKeySource.envVar);
++			if (!envValue) {
++				return this._missing(instance.kind, model, authVariant, `Environment variable "${instance.apiKeySource.envVar || ''}" is not set.`);
++			}
++			const auth: ProviderAuth = { kind: 'api-key', value: envValue };
++			const keyHash = await sha256Prefix(envValue);
++			return {
++				source: 'env-var',
++				provider: instance.kind,
++				model,
++				authVariant,
++				apiKey: envValue,
++				auth,
++				baseURL: instance.baseURL,
++				capabilities,
++				identityKey: `env:${instance.id}:${instance.apiKeySource.envVar}:${keyHash}`,
++				metadata: {
++					sourceLabel: `${instance.displayName} (${instance.apiKeySource.envVar})`,
++				},
++			};
++		}
++
++		const instanceKey = await this.apiKeyService.getInstanceApiKey(instance.id);
++		if (instanceKey) {
++			const auth: ProviderAuth = { kind: 'api-key', value: instanceKey };
++			const keyHash = await sha256Prefix(instanceKey);
++			return {
++				source: 'provider-instance-key',
++				provider: instance.kind,
++				model,
++				authVariant,
++				apiKey: instanceKey,
++				auth,
++				baseURL: instance.baseURL,
++				capabilities,
++				identityKey: `instance-key:${instance.id}:${keyHash}`,
++				metadata: {
++					sourceLabel: `${instance.displayName} API key`,
++				},
++			};
++		}
++
++		const legacyState = await this._resolveApiKey(instance.kind, model, authVariant, instance.baseURL);
++		if (legacyState.source !== 'missing') {
++			return {
++				...legacyState,
++				identityKey: `legacy:${instance.id}:${legacyState.identityKey}`,
++				metadata: {
++					...legacyState.metadata,
++					sourceLabel: `${instance.displayName} legacy ${legacyState.metadata?.sourceLabel ?? 'API key'}`,
++				},
++			};
++		}
++
++		return this._missing(instance.kind, model, authVariant, `No API key configured for ${instance.displayName}.`);
 +	}
 +
 +	private async _resolveApiKey(
@@ -21013,12 +21459,485 @@ index 0000000000000000000000000000000000000000..ea6359b3da7e444fc3b033b3668a507a
 +		}
 +	}
 +}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de84650df4
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
+@@ -0,0 +1,467 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { VSBuffer } from '../../../../../base/common/buffer.js';
++import { Emitter, Event } from '../../../../../base/common/event.js';
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
++import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
++import { IFileService } from '../../../../../platform/files/common/files.js';
++import { IUriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentity.js';
++import { IUserDataProfileService } from '../../../../services/userDataProfile/common/userDataProfile.js';
++import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type ProviderCapabilities } from './providers/providerTypes.js';
++import { getDefaultModelForAuthVariant, getModelsForProviderAndAuthVariant, type IModelDefinition } from './modelCatalog.js';
++import { PROVIDER_DISPLAY_NAMES, type ProviderName } from './apiKeyService.js';
++
++export const DIRECTOR_PROVIDER_REGISTRY_FILE = 'directorCodeProviders.json';
++export const DIRECTOR_LANGUAGE_MODEL_VENDOR = 'director-code';
++
++const CONFIG_PROVIDER = 'directorCode.ai.provider';
++const CONFIG_MODEL = 'directorCode.ai.model';
++const CONFIG_BASE_URL = 'directorCode.ai.baseURL';
++const CONFIG_AUTH_VARIANT = 'directorCode.ai.authVariant';
++
++export type DirectorProviderAuthKind = 'api-key' | 'oauth';
++
++export interface IDirectorApiKeySource {
++	readonly kind: 'secret' | 'env';
++	readonly envVar?: string;
++}
++
++export interface IDirectorProviderModelEntry {
++	readonly id: string;
++	readonly displayName?: string;
++	readonly enabled?: boolean;
++	readonly hidden?: boolean;
++	readonly family?: string;
++	readonly maxInputTokens?: number;
++	readonly maxOutputTokens?: number;
++	readonly capabilities?: ProviderCapabilities;
++}
++
++export interface IDirectorProviderInstance {
++	readonly id: string;
++	readonly kind: ProviderName;
++	readonly displayName: string;
++	readonly enabled: boolean;
++	readonly authKind: DirectorProviderAuthKind;
++	readonly authVariant: AuthVariantName;
++	readonly baseURL?: string;
++	readonly headers?: Record<string, string>;
++	readonly apiKeySource?: IDirectorApiKeySource;
++	readonly models: readonly IDirectorProviderModelEntry[];
++	readonly defaultModelId?: string;
++	readonly createdAt: number;
++	readonly updatedAt: number;
++}
++
++export interface IDirectorProviderRegistryState {
++	readonly version: 1;
++	readonly instances: readonly IDirectorProviderInstance[];
++	readonly defaultProviderId?: string;
++	readonly defaultModelId?: string;
++	readonly migratedLegacy?: boolean;
++}
++
++export interface IDirectorProviderSelection {
++	readonly instance: IDirectorProviderInstance;
++	readonly modelId: string;
++}
++
++export interface IDirectorProviderProjectionGroup {
++	readonly name: string;
++	readonly providerInstanceId: string;
++}
++
++export const IDirectorProviderRegistryService = createDecorator<IDirectorProviderRegistryService>('directorCodeProviderRegistryService');
++
++export interface IDirectorProviderRegistryService {
++	readonly _serviceBrand: undefined;
++
++	readonly onDidChangeProviderRegistry: Event<IDirectorProviderRegistryState>;
++
++	getState(): Promise<IDirectorProviderRegistryState>;
++	saveState(state: IDirectorProviderRegistryState): Promise<void>;
++	upsertInstance(instance: IDirectorProviderInstance, defaultModelId?: string): Promise<IDirectorProviderRegistryState>;
++	removeInstance(instanceId: string): Promise<IDirectorProviderRegistryState>;
++	setDefault(instanceId: string, modelId: string): Promise<IDirectorProviderRegistryState>;
++	getDefaultSelection(): Promise<IDirectorProviderSelection | undefined>;
++	getInstance(instanceId: string): Promise<IDirectorProviderInstance | undefined>;
++	getProjectionGroups(): Promise<readonly IDirectorProviderProjectionGroup[]>;
++}
++
++export function sanitizeProviderInstanceId(value: string): string {
++	const sanitized = value
++		.trim()
++		.toLowerCase()
++		.replace(/[^a-z0-9._-]+/g, '-')
++		.replace(/^-+|-+$/g, '')
++		.slice(0, 80);
++	return sanitized || 'provider';
++}
++
++export function makeDirectorModelIdentifier(instanceId: string, modelId: string): string {
++	return `${DIRECTOR_LANGUAGE_MODEL_VENDOR}/${sanitizeProviderInstanceId(instanceId)}/${modelId}`;
++}
++
++export function parseDirectorModelIdentifier(identifier: string): { providerInstanceId: string; modelId: string } | undefined {
++	const prefix = `${DIRECTOR_LANGUAGE_MODEL_VENDOR}/`;
++	if (!identifier.startsWith(prefix)) {
++		return undefined;
++	}
++	const rest = identifier.slice(prefix.length);
++	const slash = rest.indexOf('/');
++	if (slash < 1) {
++		return undefined;
++	}
++	return {
++		providerInstanceId: rest.slice(0, slash),
++		modelId: rest.slice(slash + 1),
++	};
++}
++
++export function normalizeDirectorProviderRegistryState(value: unknown): IDirectorProviderRegistryState | undefined {
++	if (!value || typeof value !== 'object') {
++		return undefined;
++	}
++	const raw = value as Partial<IDirectorProviderRegistryState>;
++	if (raw.version !== 1 || !Array.isArray(raw.instances)) {
++		return undefined;
++	}
++
++	const instances = raw.instances
++		.map(normalizeInstance)
++		.filter((instance): instance is IDirectorProviderInstance => !!instance);
++
++	return {
++		version: 1,
++		instances,
++		defaultProviderId: typeof raw.defaultProviderId === 'string' ? sanitizeProviderInstanceId(raw.defaultProviderId) : instances[0]?.id,
++		defaultModelId: typeof raw.defaultModelId === 'string' ? raw.defaultModelId : instances[0]?.defaultModelId,
++		migratedLegacy: raw.migratedLegacy === true,
++	};
++}
++
++function normalizeInstance(value: unknown): IDirectorProviderInstance | undefined {
++	if (!value || typeof value !== 'object') {
++		return undefined;
++	}
++	const raw = value as Partial<IDirectorProviderInstance>;
++	if (typeof raw.id !== 'string' || typeof raw.kind !== 'string') {
++		return undefined;
++	}
++	const id = sanitizeProviderInstanceId(raw.id);
++	const kind = raw.kind as ProviderName;
++	const authVariant = normalizeRegistryAuthVariant(kind, raw.authVariant);
++	const authKind = raw.authKind === 'oauth' ? 'oauth' : 'api-key';
++	const models = Array.isArray(raw.models)
++		? raw.models
++			.map(normalizeModelEntry)
++			.filter((model): model is IDirectorProviderModelEntry => !!model)
++		: [];
++	const now = Date.now();
++	return {
++		id,
++		kind,
++		displayName: typeof raw.displayName === 'string' && raw.displayName.trim() ? raw.displayName.trim() : PROVIDER_DISPLAY_NAMES[kind] || id,
++		enabled: raw.enabled !== false,
++		authKind,
++		authVariant,
++		baseURL: typeof raw.baseURL === 'string' && raw.baseURL.trim() ? raw.baseURL.trim() : undefined,
++		headers: normalizeHeaders(raw.headers),
++		apiKeySource: normalizeApiKeySource(raw.apiKeySource),
++		models,
++		defaultModelId: typeof raw.defaultModelId === 'string' && raw.defaultModelId.trim() ? raw.defaultModelId.trim() : models[0]?.id,
++		createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : now,
++		updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : now,
++	};
++}
++
++function normalizeHeaders(value: unknown): Record<string, string> | undefined {
++	if (!value || typeof value !== 'object') {
++		return undefined;
++	}
++	const result: Record<string, string> = {};
++	for (const [key, rawValue] of Object.entries(value as Record<string, unknown>)) {
++		if (typeof rawValue === 'string' && key.trim() && rawValue.trim()) {
++			result[key.trim()] = rawValue.trim();
++		}
++	}
++	return Object.keys(result).length ? result : undefined;
++}
++
++function normalizeModelEntry(value: unknown): IDirectorProviderModelEntry | undefined {
++	if (!value || typeof value !== 'object') {
++		return undefined;
++	}
++	const raw = value as Partial<IDirectorProviderModelEntry>;
++	if (typeof raw.id !== 'string' || !raw.id.trim()) {
++		return undefined;
++	}
++	return {
++		id: raw.id.trim(),
++		displayName: typeof raw.displayName === 'string' && raw.displayName.trim() ? raw.displayName.trim() : undefined,
++		enabled: raw.enabled !== false,
++		hidden: raw.hidden === true,
++		family: typeof raw.family === 'string' && raw.family.trim() ? raw.family.trim() : undefined,
++		maxInputTokens: typeof raw.maxInputTokens === 'number' ? raw.maxInputTokens : undefined,
++		maxOutputTokens: typeof raw.maxOutputTokens === 'number' ? raw.maxOutputTokens : undefined,
++		capabilities: raw.capabilities,
++	};
++}
++
++function normalizeApiKeySource(value: unknown): IDirectorApiKeySource | undefined {
++	if (!value || typeof value !== 'object') {
++		return { kind: 'secret' };
++	}
++	const raw = value as Partial<IDirectorApiKeySource>;
++	if (raw.kind === 'env') {
++		return {
++			kind: 'env',
++			envVar: typeof raw.envVar === 'string' ? raw.envVar.trim() : '',
++		};
++	}
++	return { kind: 'secret' };
++}
++
++export function normalizeRegistryAuthVariant(provider: ProviderName, value: string | undefined): AuthVariantName {
++	return provider === 'openai' && value === OPENAI_CODEX_AUTH_VARIANT
++		? OPENAI_CODEX_AUTH_VARIANT
++		: DEFAULT_AUTH_VARIANT;
++}
++
++export function providerInstanceToProjectionGroup(instance: IDirectorProviderInstance, usedNames: Set<string>): IDirectorProviderProjectionGroup {
++	let name = instance.displayName || instance.id;
++	if (usedNames.has(name)) {
++		name = `${name} (${instance.id})`;
++	}
++	usedNames.add(name);
++	return {
++		name,
++		providerInstanceId: instance.id,
++	};
++}
++
++export function modelEntriesFromCatalog(provider: ProviderName, authVariant: AuthVariantName, extraModelId?: string): readonly IDirectorProviderModelEntry[] {
++	const models = new Map<string, IDirectorProviderModelEntry>();
++	for (const model of getModelsForProviderAndAuthVariant(provider, authVariant)) {
++		models.set(model.id, modelDefinitionToRegistryModel(model));
++	}
++	if (extraModelId && !models.has(extraModelId)) {
++		models.set(extraModelId, {
++			id: extraModelId,
++			displayName: extraModelId,
++			enabled: true,
++			hidden: false,
++			family: 'custom',
++			maxInputTokens: 0,
++			maxOutputTokens: 0,
++		});
++	}
++	return Array.from(models.values());
++}
++
++export function modelDefinitionToRegistryModel(model: IModelDefinition): IDirectorProviderModelEntry {
++	return {
++		id: model.id,
++		displayName: model.name,
++		enabled: true,
++		hidden: false,
++		family: model.family,
++		maxInputTokens: model.maxInputTokens,
++		maxOutputTokens: model.maxOutputTokens,
++		capabilities: model.capabilities,
++	};
++}
++
++export class DirectorProviderRegistryService extends Disposable implements IDirectorProviderRegistryService {
++	declare readonly _serviceBrand: undefined;
++
++	private readonly registryFile;
++	private readonly _onDidChangeProviderRegistry = this._register(new Emitter<IDirectorProviderRegistryState>());
++	readonly onDidChangeProviderRegistry: Event<IDirectorProviderRegistryState> = this._onDidChangeProviderRegistry.event;
++
++	private statePromise: Promise<IDirectorProviderRegistryState> | undefined;
++
++	constructor(
++		@IFileService private readonly fileService: IFileService,
++		@IUserDataProfileService userDataProfileService: IUserDataProfileService,
++		@IUriIdentityService uriIdentityService: IUriIdentityService,
++		@IConfigurationService private readonly configurationService: IConfigurationService,
++	) {
++		super();
++		this.registryFile = uriIdentityService.extUri.joinPath(userDataProfileService.currentProfile.location, DIRECTOR_PROVIDER_REGISTRY_FILE);
++		this._register(this.fileService.watch(this.registryFile));
++		this._register(this.fileService.onDidFilesChange(e => {
++			if (e.contains(this.registryFile)) {
++				this.statePromise = undefined;
++				void this.getState().then(state => this._onDidChangeProviderRegistry.fire(state));
++			}
++		}));
++	}
++
++	async getState(): Promise<IDirectorProviderRegistryState> {
++		if (!this.statePromise) {
++			this.statePromise = this.readState();
++		}
++		return this.statePromise;
++	}
++
++	async saveState(state: IDirectorProviderRegistryState): Promise<void> {
++		const normalized = normalizeDirectorProviderRegistryState(state) ?? createEmptyState();
++		this.statePromise = Promise.resolve(normalized);
++		await this.fileService.writeFile(this.registryFile, VSBuffer.fromString(JSON.stringify(normalized, undefined, '\t')));
++		this._onDidChangeProviderRegistry.fire(normalized);
++	}
++
++	async upsertInstance(instance: IDirectorProviderInstance, defaultModelId?: string): Promise<IDirectorProviderRegistryState> {
++		const state = await this.getState();
++		const normalizedInstance = normalizeInstance({ ...instance, updatedAt: Date.now() });
++		if (!normalizedInstance) {
++			throw new Error('Invalid Director provider instance.');
++		}
++		const instances = state.instances.filter(existing => existing.id !== normalizedInstance.id);
++		instances.push(normalizedInstance);
++		const next: IDirectorProviderRegistryState = {
++			version: 1,
++			instances,
++			defaultProviderId: state.defaultProviderId ?? normalizedInstance.id,
++			defaultModelId: defaultModelId ?? state.defaultModelId ?? normalizedInstance.defaultModelId,
++			migratedLegacy: state.migratedLegacy,
++		};
++		await this.saveState(next);
++		return next;
++	}
++
++	async removeInstance(instanceId: string): Promise<IDirectorProviderRegistryState> {
++		const state = await this.getState();
++		const sanitizedId = sanitizeProviderInstanceId(instanceId);
++		const instances = state.instances.filter(instance => instance.id !== sanitizedId);
++		const fallback = instances[0];
++		const next: IDirectorProviderRegistryState = {
++			version: 1,
++			instances,
++			defaultProviderId: state.defaultProviderId === sanitizedId ? fallback?.id : state.defaultProviderId,
++			defaultModelId: state.defaultProviderId === sanitizedId ? fallback?.defaultModelId : state.defaultModelId,
++			migratedLegacy: state.migratedLegacy,
++		};
++		await this.saveState(next);
++		return next;
++	}
++
++	async setDefault(instanceId: string, modelId: string): Promise<IDirectorProviderRegistryState> {
++		const state = await this.getState();
++		const sanitizedId = sanitizeProviderInstanceId(instanceId);
++		if (!state.instances.some(instance => instance.id === sanitizedId)) {
++			throw new Error(`Director provider instance "${sanitizedId}" does not exist.`);
++		}
++		const next: IDirectorProviderRegistryState = {
++			...state,
++			defaultProviderId: sanitizedId,
++			defaultModelId: modelId,
++		};
++		await this.saveState(next);
++		return next;
++	}
++
++	async getDefaultSelection(): Promise<IDirectorProviderSelection | undefined> {
++		const state = await this.getState();
++		const enabled = state.instances.filter(instance => instance.enabled);
++		const instance = enabled.find(candidate => candidate.id === state.defaultProviderId) ?? enabled[0];
++		if (!instance) {
++			return undefined;
++		}
++		const modelId = state.defaultProviderId === instance.id && state.defaultModelId
++			? state.defaultModelId
++			: instance.defaultModelId;
++		const model = modelId && instance.models.some(candidate => candidate.id === modelId && candidate.enabled !== false)
++			? modelId
++			: instance.models.find(candidate => candidate.enabled !== false)?.id;
++		if (!model) {
++			return undefined;
++		}
++		return { instance, modelId: model };
++	}
++
++	async getInstance(instanceId: string): Promise<IDirectorProviderInstance | undefined> {
++		const state = await this.getState();
++		const sanitizedId = sanitizeProviderInstanceId(instanceId);
++		return state.instances.find(instance => instance.id === sanitizedId);
++	}
++
++	async getProjectionGroups(): Promise<readonly IDirectorProviderProjectionGroup[]> {
++		const state = await this.getState();
++		const usedNames = new Set<string>();
++		return state.instances
++			.filter(instance => instance.enabled)
++			.map(instance => providerInstanceToProjectionGroup(instance, usedNames));
++	}
++
++	private async readState(): Promise<IDirectorProviderRegistryState> {
++		const exists = await this.fileService.exists(this.registryFile);
++		if (exists) {
++			const content = await this.fileService.readFile(this.registryFile);
++			const raw = content.value.toString();
++			try {
++				const state = normalizeDirectorProviderRegistryState(JSON.parse(raw));
++				if (state) {
++					return state.instances.length ? state : await this.ensureLegacyState(state);
++				}
++			} catch {
++				// Fall through to a legacy/default migration rather than blocking startup.
++			}
++		}
++		return this.ensureLegacyState(createEmptyState());
++	}
++
++	private async ensureLegacyState(existing: IDirectorProviderRegistryState): Promise<IDirectorProviderRegistryState> {
++		if (existing.instances.length) {
++			return existing;
++		}
++		const migrated = createLegacyMigratedState(this.configurationService);
++		await this.fileService.writeFile(this.registryFile, VSBuffer.fromString(JSON.stringify(migrated, undefined, '\t')));
++		return migrated;
++	}
++}
++
++function createEmptyState(): IDirectorProviderRegistryState {
++	return {
++		version: 1,
++		instances: [],
++	};
++}
++
++export function createLegacyMigratedState(configurationService: IConfigurationService): IDirectorProviderRegistryState {
++	const provider = ((configurationService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName);
++	const authVariant = normalizeRegistryAuthVariant(provider, configurationService.getValue<string>(CONFIG_AUTH_VARIANT));
++	const configuredModel = configurationService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant);
++	const defaultModelId = provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
++		? getDefaultModelForAuthVariant(provider, OPENAI_CODEX_AUTH_VARIANT)
++		: configuredModel;
++	const now = Date.now();
++	const id = sanitizeProviderInstanceId(`${provider}-${authVariant === OPENAI_CODEX_AUTH_VARIANT ? 'oauth' : 'api-key'}`);
++	const instance: IDirectorProviderInstance = {
++		id,
++		kind: provider,
++		displayName: authVariant === OPENAI_CODEX_AUTH_VARIANT ? 'OpenAI OAuth' : PROVIDER_DISPLAY_NAMES[provider] || provider,
++		enabled: true,
++		authKind: authVariant === OPENAI_CODEX_AUTH_VARIANT ? 'oauth' : 'api-key',
++		authVariant,
++		baseURL: configurationService.getValue<string>(CONFIG_BASE_URL) || undefined,
++		headers: undefined,
++		apiKeySource: authVariant === OPENAI_CODEX_AUTH_VARIANT ? undefined : { kind: 'secret' },
++		models: modelEntriesFromCatalog(provider, authVariant, defaultModelId),
++		defaultModelId,
++		createdAt: now,
++		updatedAt: now,
++	};
++	return {
++		version: 1,
++		instances: [instance],
++		defaultProviderId: instance.id,
++		defaultModelId,
++		migratedLegacy: true,
++	};
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..57e79b17c6725456a2039a36311047d62eacae17
+index 0000000000000000000000000000000000000000..6141ec63f686a627fc5e5e5b67f03cfa7ce1fcce
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts
-@@ -0,0 +1,220 @@
+@@ -0,0 +1,226 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -21119,10 +22038,12 @@ index 0000000000000000000000000000000000000000..57e79b17c6725456a2039a36311047d6
 +	readonly capabilities: ProviderCapabilities;
 +	protected readonly auth: ProviderAuth;
 +	protected readonly baseURL: string;
++	protected readonly extraHeaders: Record<string, string>;
 +
 +	constructor(opts: ProviderConfig) {
 +		this.auth = opts.auth;
 +		this.baseURL = (opts.baseURL || this.getDefaultBaseURL()).replace(/\/$/, '');
++		this.extraHeaders = opts.headers ?? {};
 +		this.capabilities = mergeProviderCapabilities(getDefaultCapabilities(this.getApiType()), opts.capabilities) ?? {};
 +	}
 +
@@ -21169,6 +22090,10 @@ index 0000000000000000000000000000000000000000..57e79b17c6725456a2039a36311047d6
 +
 +	protected buildUrl(path: string, baseURL: string = this.baseURL): string {
 +		return buildProviderUrl(baseURL, path);
++	}
++
++	protected withExtraHeaders(headers: Record<string, string>): Record<string, string> {
++		return { ...headers, ...this.extraHeaders };
 +	}
 +
 +	// ========================================================================
@@ -21241,7 +22166,7 @@ index 0000000000000000000000000000000000000000..57e79b17c6725456a2039a36311047d6
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f809cca8fbd344d8c1b87f2d0bd49fb14e4dab41
+index 0000000000000000000000000000000000000000..7e080c7df7d607f1d9bbab71bdd807d8222ed0f0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts
 @@ -0,0 +1,282 @@
@@ -21473,7 +22398,7 @@ index 0000000000000000000000000000000000000000..f809cca8fbd344d8c1b87f2d0bd49fb1
 +			headers['x-api-key'] = this.auth.value;
 +		}
 +
-+		return headers;
++		return this.withExtraHeaders(headers);
 +	}
 +
 +	private buildRequestBody(params: CreateMessageParams): Record<string, any> {
@@ -21529,7 +22454,7 @@ index 0000000000000000000000000000000000000000..f809cca8fbd344d8c1b87f2d0bd49fb1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..ab509b1b360b137ec6692f51d44a0a16e2909b14
+index 0000000000000000000000000000000000000000..7b61c4c8e93a7de36e59f7106ec296f3696212f9
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts
 @@ -0,0 +1,400 @@
@@ -21650,7 +22575,7 @@ index 0000000000000000000000000000000000000000..ab509b1b360b137ec6692f51d44a0a16
 +
 +		const response = await this.fetchWithErrorHandling(request.url, {
 +			method: 'POST',
-+			headers: { 'Content-Type': 'application/json', ...request.headers },
++			headers: this.withExtraHeaders({ 'Content-Type': 'application/json', ...request.headers }),
 +			body: JSON.stringify(body),
 +			signal: params.abortSignal,
 +		});
@@ -21682,7 +22607,7 @@ index 0000000000000000000000000000000000000000..ab509b1b360b137ec6692f51d44a0a16
 +
 +		const response = await this.fetchWithErrorHandling(request.url, {
 +			method: 'POST',
-+			headers: { 'Content-Type': 'application/json', ...request.headers },
++			headers: this.withExtraHeaders({ 'Content-Type': 'application/json', ...request.headers }),
 +			body: JSON.stringify(body),
 +			signal: params.abortSignal,
 +		});
@@ -22467,7 +23392,7 @@ index 0000000000000000000000000000000000000000..05b7d903685c86af75f8a0b33f8c6b5c
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..79ceba43d8b9be7a289aa78969a2a5b262736047
+index 0000000000000000000000000000000000000000..e189e1e44439b5cea708cf4111fc0eacfab333f5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts
 @@ -0,0 +1,615 @@
@@ -22719,10 +23644,10 @@ index 0000000000000000000000000000000000000000..79ceba43d8b9be7a289aa78969a2a5b2
 +	private postChatCompletions(body: Record<string, any>, abortSignal?: AbortSignal): Promise<Response> {
 +		return this.fetchWithErrorHandling(this.buildUrl('/chat/completions'), {
 +			method: 'POST',
-+			headers: {
++			headers: this.withExtraHeaders({
 +				'Content-Type': 'application/json',
 +				'Authorization': `Bearer ${this.getAuthValue()}`, // [Director-Code] B1-1
-+			},
++			}),
 +			body: JSON.stringify(body),
 +			signal: abortSignal,
 +		});
@@ -23164,10 +24089,10 @@ index 0000000000000000000000000000000000000000..5c15b6f83544ec050f2c6f1e2f7c0fbe
 +} from './providerTypes.js';
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..60be3123ba9838ace928898f1f080c07892e0e88
+index 0000000000000000000000000000000000000000..69409b76a194c3cecda0440a764394976be80aab
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,181 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -23227,6 +24152,7 @@ index 0000000000000000000000000000000000000000..60be3123ba9838ace928898f1f080c07
 +	readonly auth: ProviderAuth;
 +	readonly baseURL?: string;
 +	readonly geminiKeyInUrl?: boolean;
++	readonly headers?: Record<string, string>;
 +}
 +
 +/**

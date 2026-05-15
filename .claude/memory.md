@@ -1,5 +1,35 @@
 # Memory - 项目状态与上下文
 
+## 2026-05-16 latest memory: Phase 2 Wave 2 Provider Registry completed and packaged
+- Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
+- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push.
+- Director Provider Registry is the canonical source for provider instances and persists profile data in `directorCodeProviders.json`; VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
+- Model ids exposed to VS Code now use `director-code/<providerInstanceId>/<modelId>`, allowing multiple provider instances and multiple OpenAI-compatible endpoints.
+- Director Agent and Director language model provider resolve defaults, model ids, auth, base URL, custom headers, SecretStorage keys, env var API key references, and OAuth through provider instances.
+- Legacy `directorCode.ai.provider/model/baseURL/authVariant` is only a lazy migration/read-only fallback. The Provider Manager UI no longer writes the old single global provider path as its normal path.
+- VS Code Models Management is reused with a thin Director hook for Manage/Add actions and a Director entitlement bypass for the `director-code` vendor.
+- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/005-director-chat-built-in-mode.116.patch`, `patches/series.116.json`, `director-patches-report.json`, and `docs/upgrade/116-phase2-waves-plan.md`.
+- New report/script:
+  - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-wave2-provider-registry-report.md`
+  - `scripts/smoke/director-provider-oauth-smoke.ps1`
+- Validation passed after clean replay materialization:
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json`
+  - `npm run compile-check-ts-native`
+  - `npm run transpile-client`
+  - `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts` (`5 passing`)
+  - `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts` (`21 passing`)
+  - `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts` (`13 passing`)
+  - `node test/unit/node/index.js --run src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts` (`11 passing`)
+  - `node test/unit/browser/index.js --run src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts --browser chromium` (`4 passing`)
+  - full package build with `scripts/build-director-116.ps1` without `-SkipReplay`
+- Installer artifacts:
+  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `E600290AF3AFD9B2AA758DD2894160FA0C6AD8258DC802AC0E88B6C781FA72E2`
+  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `DE2EB15C35827716B115F83F747A58B7C4141D82BFC8EC7978155166DF57289D`
+- Manual API/OAuth smoke is intentionally deferred until after package/push. Use `scripts/smoke/director-provider-oauth-smoke.ps1` with a temp user data dir.
+- Next wave: Phase 2 Wave 3 Claude SDK Adapter unless user chooses to run manual Wave 2 API/OAuth smoke first.
+
 ## 2026-05-16 latest memory: Director architecture boundary principle accepted
 - Current checkout: `E:\Projects\Director-Code-batch\Director-Code-112-check`; branch `refactor/112-replay-baseline`.
 - User accepted the architecture direction: Director should be treated as `Director-owned core + thin VS Code bridge + replayed brand/product layer`.
