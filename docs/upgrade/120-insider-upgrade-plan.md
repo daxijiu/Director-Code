@@ -309,7 +309,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
 | Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pushed: `31a4e9e6` |
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
-| Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | push pending |
+| Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
 | Phase F: `007`-`009` tool/editing stages | pending | | | | |
 | Phase G: `002`/`006` branding/text polish | pending | | | | |
 | Phase H: expected contracts/canonical/full materialize | pending | | | | |
@@ -693,11 +693,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase E validation and before the Phase E commit, expected dirty files are:
-
-- `docs/upgrade/120-insider-upgrade-plan.md`
-- `patches/series.120-insider.json`
-- `patches/replay/004-director-agent-engine.120-insider.patch`
-- untracked `artifacts/`
+As of 2026-05-17 after Phase E push, only the untracked `artifacts/` directory should remain.
 
 Do not clean or revert `artifacts/` unless explicitly asked.
