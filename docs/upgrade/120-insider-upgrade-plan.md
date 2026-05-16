@@ -4,7 +4,7 @@ Date: 2026-05-17
 
 Branch: `120-replay-baseline`
 
-Status: 120 profile infrastructure plus replay stages `001`-`009` are ported. Phase H canonicalization is complete, `activeProfile` is now `120-insider-win32-x64-client`, and the current local follow-up hardens remaining branding/commercial residuals in `002`, `005`, and `006` before push.
+Status: 120 profile infrastructure plus replay stages `001`-`009` are ported. Phase H canonicalization is complete, `activeProfile` is now `120-insider-win32-x64-client`, and the post-H branding/commercial residual hardening follow-up is pushed.
 
 ## Purpose
 
@@ -323,7 +323,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | pushed: `fcd37328` |
 | Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still failed until Phase H captured expected JSON files | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pushed: `1039b40e` |
 | Phase H: expected contracts/canonical/full materialize | complete | 2026-05-17 | passed: profile, series, product overrides, expected contracts, canonical manifest, clean full materialize to `vscode.generated`, materialize report target/product-shape assertions, commercial grep, no reject files, diff check | passed: `005` follow-up removed model-picker Copilot upgrade hover text; 120 expected/canonical/report outputs captured; active profile switched to 120 after Director materialize passed | pushed: `938dd858` |
-| Post-H: branding/commercial residual hardening | complete | 2026-05-17 | passed: profile, series, product overrides, clean full materialize to `vscode.generated`, expected contracts, canonical manifest refresh/validate, residual grep scans | passed: broader Director branding restored across low-risk user-visible surfaces; residual VSCodium/Copilot hits are allowlisted dependency, sourcemap, fixture, internal-doc, or symbol-id cases | pending |
+| Post-H: branding/commercial residual hardening | complete | 2026-05-17 | passed: profile, series, product overrides, clean full materialize to `vscode.generated`, expected contracts, canonical manifest refresh/validate, residual grep scans | passed: broader Director branding restored across low-risk user-visible surfaces; residual VSCodium/Copilot hits are allowlisted dependency, sourcemap, fixture, internal-doc, or symbol-id cases | pushed: `8f3a86b7` |
 
 ### Phase B: Port Product / Build / Release (`003`)
 
@@ -800,6 +800,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 before the post-H branding/commercial follow-up push, expected dirty work is limited to the follow-up patch/report/manifest/doc files plus the untracked `artifacts/` directory.
+As of 2026-05-17 after the post-H branding/commercial follow-up push, only the untracked `artifacts/` directory should remain.
 
 Do not clean or revert `artifacts/` unless explicitly asked.
