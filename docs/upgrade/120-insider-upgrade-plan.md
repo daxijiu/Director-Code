@@ -303,7 +303,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | --- | --- | --- | --- | --- | --- |
 | Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
 | Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
-| Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pending push |
+| Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pushed: `31a4e9e6` |
 | Phase D: `005` chat/provider/model UI | pending | | | | |
 | Phase E: Plan Mode to 120 review UI | pending | | | | |
 | Phase F: `007`-`009` tool/editing stages | pending | | | | |
@@ -638,11 +638,4 @@ node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 during Phase C closeout, the expected dirty worktree before the Phase C commit includes:
-
-- Modified: `docs/upgrade/120-insider-upgrade-plan.md`
-- Modified: `patches/series.120-insider.json`
-- New `patches/replay/004-director-agent-engine.120-insider.patch`
-- Existing untracked `artifacts/`
-
-After the Phase C commit and push, only the untracked `artifacts/` directory should remain. Do not clean or revert `artifacts/` unless explicitly asked.
+As of 2026-05-17 after Phase C push, only the untracked `artifacts/` directory should remain. Do not clean or revert `artifacts/` unless explicitly asked.
