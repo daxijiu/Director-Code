@@ -1,85 +1,49 @@
-# CLAUDE.md - Director-Code replay source guide
+# Director-Code Project Guide
 
-## 2026-05-16 Phase 2 Wave 2 Provider Registry Update
+This file is intentionally identical to the companion root guide (`AGENTS.md` / `CLAUDE.md`). Keep the two files in sync.
+Detailed historical state belongs in `.claude/memory.md`; this file is the durable project overview, goals, and direction.
 
-- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push.
-- Director Provider Registry is now the canonical source for provider instances and is persisted as profile data in `directorCodeProviders.json`; VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
-- Model ids exposed to VS Code now use `director-code/<providerInstanceId>/<modelId>`, allowing multiple instances of the same provider or compatible endpoint.
-- Director Agent and Director language model provider resolve model/default/auth through provider instances, including SecretStorage API keys, env var API key references, OpenAI/Anthropic OAuth, base URL, custom headers, manual model lists, and legacy global-config lazy migration.
-- Director Code Settings now contains the Provider Manager instance UI. The old single global provider/model/baseURL write path is no longer the normal UI path.
-- VS Code Models Management remains reused, with a thin Director hook for Manage/Add actions and a Director entitlement bypass for the `director-code` vendor.
-- Replay assets updated: `patches/replay/004-director-agent-engine.116.patch`, `patches/replay/005-director-chat-built-in-mode.116.patch`, `patches/series.116.json`, `director-patches-report.json`, and `docs/upgrade/116-phase2-waves-plan.md`.
-- Reports/scripts added:
-  - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-wave2-provider-registry-report.md`
-  - `scripts/smoke/director-provider-oauth-smoke.ps1`
-- Validation passed after clean replay materialization: `validate-series`, `validate-product-overrides`, `expected-contracts`, `compile-check-ts-native`, `transpile-client`, provider registry/model/auth/api-key node tests, API-key browser DOM test, and full package build via `scripts/build-director-116.ps1`.
-- Packaged artifacts:
-  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `E600290AF3AFD9B2AA758DD2894160FA0C6AD8258DC802AC0E88B6C781FA72E2`
-  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `DE2EB15C35827716B115F83F747A58B7C4141D82BFC8EC7978155166DF57289D`
-- Manual API/OAuth smoke is intentionally deferred until after package/push. Use `scripts/smoke/director-provider-oauth-smoke.ps1` with a temp user data dir.
-- Next wave: Phase 2 Wave 3 Claude SDK Adapter unless user chooses to manually smoke Wave 2 first.
+## Project Summary
 
-## 2026-05-16 Director Architecture Boundary Principle
+Director-Code is a replay-backed VS Code/VSCodium derivative focused on a deeply integrated AI coding experience.
 
-- Long-term Director architecture is `Director-owned core + thin VS Code bridge + replayed brand/product layer`.
-- New behavior should default into `src/vs/workbench/contrib/directorCode/**` or a future Director-owned built-in extension. VS Code upstream directories should only hold registration hooks, model/chat/tool surface adapters, command/menu wiring, and small compatibility shims.
-- Do not judge upgrade risk only by touched file count: branding/product edits touch many files but are shallow; the important metric is whether runtime logic stays concentrated in Director-owned modules and whether upstream chat/API/model files remain thin.
-- Copilot is the reference shape: deeply integrated user experience, but most product logic lives in an extension-like island plus privileged workbench/API entry points. Director should keep moving toward the same shape.
-- Wave 2 Provider/Model work must follow this boundary: Director Provider Registry, secret/OAuth policy, provider manager UI, provider instances, and model visibility state are Director-owned; VS Code model management/model picker files should be reused through provider-group metadata and minimal hooks.
+The long-term source of truth is the replay control plane, not the generated VS Code tree. The generated tree is a debugging, validation, and packaging workspace only.
+
+The durable architecture direction is:
+
+`Director-owned core + thin VS Code bridge + replayed brand/product layer`
+
+Director should feel deeply integrated, similar in shape to Copilot inside VS Code, while keeping Director product/runtime logic in Director-owned modules or adapter islands.
+
+## Current Program
+
+- Current mainline work is P2: upgrade the replay baseline from VS Code/VSCodium 112 to 116, then continue fixing and expanding the Director-Code runtime on that replay-backed baseline.
+- The active canonical profile is `docs/upgrade/profiles/116-stable-win32-x64-client.json`.
+- The active profile index is `docs/upgrade/profiles/index.json`; do not infer a new active profile from the branch name alone.
+- The old 112 physical reference validation is complete. For 116 and later, correctness comes from replay validation, expected contracts, targeted tests, compile/build smoke, and packaged/manual verification.
+- `vscode.generated/layers/director/vscode` is not the long-term source of truth.
+
+## Goals
+
+- Keep Director-Code easy to upgrade across VS Code baselines by concentrating runtime behavior in Director-owned code.
+- Preserve a high-quality AI coding workflow: Ask, Edit, Agent, Inline, Plan, provider/model management, reviewable edits, read-only context tools, and external agent adapters.
+- Build toward a provider/agent ecosystem where model providers, secrets, OAuth, model visibility, permissions, session policy, and agent adapters are Director-owned.
+- Reuse VS Code model management, chat UI, agent/session surfaces, and workbench integration points through minimal hooks and bridges.
+- Keep Windows packaging, branding, product metadata, and installer outputs reproducible from replay-backed inputs.
+
+## Architecture Direction
+
+- New Director behavior should default into `src/vs/workbench/contrib/directorCode/**` or a future Director-owned built-in extension.
+- VS Code upstream directories should hold only registration hooks, model/chat/tool surface adapters, command/menu wiring, and small compatibility shims.
+- When an upstream VS Code surface must change, prefer a small hook into a Director-owned service over embedding Director business logic directly in upstream files.
+- Branding/product edits may touch many files but are shallow; upgrade risk should be judged by where runtime logic lives, not by touched file count alone.
+- Provider/model work must keep the Director Provider Registry, secret/OAuth policy, provider manager UI, provider instances, model visibility state, and default-model logic Director-owned.
 - External agent adapters such as Claude SDK, ACP, and Codex should be plugin-like or adapter-like islands. Workbench changes for them should stay limited to session registration, permissions/tool policy, UI entry points, and bridge plumbing.
-- When an upstream VS Code surface must be changed, prefer a small hook that calls Director-owned services over embedding Director business logic directly in upstream files.
+- Wave 3 Claude AgentHost integration may place a Director-owned Claude adapter island under AgentHost-related platform paths when that is the cleanest way to reuse VS Code main/Copilot shape, but provider registry, proxy, auth, diagnostics, model routing, and policy remain Director-owned.
 
-## 2026-05-16 Phase 2 Wave 1 Plan Mode Update
+## Canonical Inputs
 
-- Phase 2 Wave 1 Plan Mode is complete, replay-backed, packaged, committed, and pushed as `1940758b` (`feat: add director plan mode wave 1`) on `refactor/112-replay-baseline`.
-- Plan Mode is implemented as Director Agent/session state, not a new top-level `ChatModeKind`. The default remains full Agent mode; users enter/exit Plan from the Chat input secondary UI while the top-level chat mode stays Agent.
-- Plan drafts are written to workspace-local `.director/plans/*.md` through Director-owned host code. The plan file has YAML frontmatter, a short human-readable id, stable sections, and host-managed status transitions.
-- Plan completion is driven by the Plan-only `director_present_plan` tool. The host rejects invalid payloads, unknown fields, and `planMarkdown` that attempts to carry frontmatter/status/path/cwd/root/write-target metadata; one Plan-only correction attempt is allowed.
-- Review UI is Director-owned minimal Chat review: Execute / Reject / Revise. Execute starts a new same-session Agent request with approved plan context; it only leaves Plan after the new Agent request is sent or queued-then-sent. Revise keeps Plan mode and sends feedback into the same planning session flow.
-- Plan tool policy exposes only read context tools, `fetch`, and `director_present_plan`; edit tools, terminal/task tools, extension search, subagents, and mutation tools remain hidden from Plan.
-- Replay ownership: runtime/agent loop and Plan service/tool code are in `patches/replay/004-director-agent-engine.116.patch`; tool policy/schema changes are in `patches/replay/007-director-tool-layer.116.patch`; `patches/series.116.json` and 116 reports were refreshed.
-- Validation completed after clean replay materialization: `validate-series`, `validate-product-overrides`, `expected-contracts`, `compile-check-ts-native`, `transpile-client`, and Director browser tests (`100 passing`). Full package build via `scripts/build-director-116.ps1` passed without `-SkipReplay`.
-- Installer artifacts from the Wave 1 build:
-  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `21155405981C5BADED22883A7962101195C3AFABCAFA60EA1F85D642796E40B2`
-  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `4DEC8AC60533F5E2979B059863872A0D20AB67F27F7D9657959400C6D0A0DD64`
-- Interactive installer/manual smoke was not run automatically to avoid modifying the user's installed app/profile. Treat user-side installer/manual acceptance as the remaining external check for this package.
-- Next planned Phase 2 wave is Wave 2 Provider / Model Registry + UI. Before code, refresh or add the Provider/Model UI research report with local OpenCode and VS Code main evidence, then decide the minimum 116 backport/adaptation surface.
-
-## 2026-05-14 Phase 6 Package Regression Update
-
-- Phase 6 non-destructive package/regression pass is complete and should be committed/pushed as its own wave.
-- `scripts/build-director-116.ps1` was run without `-SkipReplay`; it materialized from replay, installed dependencies, ran compile/core/min/package tasks, and produced both installers.
-- Installer artifacts:
-  - `artifacts/out/stable/win32-x64/system-setup/Director-CodeSetup-x64-1.116.0.exe` sha256 `DAF13D81BC9580443DC52BB3E700839983EAAB8649138733AD2B0208C793ACBB`
-  - `artifacts/out/stable/win32-x64/user-setup/Director-CodeUserSetup-x64-1.116.0.exe` sha256 `A96A9259DFC943B7D53912F0C8A888C886E239EA72A99974D674D5BC44748764`
-- `%APPDATA%\Director-Code\clp` was cleared before runtime smoke. A loose-build launch smoke used a temp profile under `artifacts/phase6-smoke`, observed the expected Electron process tree, then terminated only processes for that temp profile.
-- Replay/product validators passed after the package build. A post-build canonical check drifted because build outputs add extension `dist/` files; clean materialize was rerun and canonical manifest validation then passed.
-- Interactive installer/manual smoke was not run automatically to avoid modifying the user's installed app/profile. Treat user-side installer/manual acceptance as the only remaining external release-candidate check.
-
-## 2026-05-14 Phase 5 Mode Routing Update
-
-- Phase 5 Ask/Edit/Inline mode routing is complete, replay-backed, clean-materialized, validated, and ready for commit/push.
-- Runtime routing now maps Ask/Edit/Agent/EditorInline through `directorChatModeRouting.ts`: Ask uses read-only Q&A policy, Edit uses reviewable edit tools, Agent remains the full autonomous harness, and Inline exposes no model-callable tools.
-- Inline now uses selected editor context plus `DirectorChatEditingAdapter.emitInlineTextEdit()` to emit a real `textEdit` for the inline request. Fallback-only inline behavior is no longer the Phase 5 target.
-- Phase 5 replay ownership: mode routing source is in `004-director-agent-engine.116.patch`; Agent Customizations settings bridge remains in `005-director-chat-built-in-mode.116.patch`; inline edit adapter changes are in `008-director-chat-editing.116.patch`; edit tool test compatibility updates are in `009-director-edit-tools.116.patch`.
-- Phase 5 report: `docs/upgrade/reports/116-stable-win32-x64-client/mode-routing-report.md`.
-- Validation completed: clean materialize, `npm ci` after clearing stale Windows native build processes, `compile-check-ts-native`, `transpile-client-esbuild`, Director browser tests (`21 passing`), inline controller smoke (`2 passing`), replay validators, and canonical manifest validation.
-- Next wave is Phase 6 package/regression. Use `scripts/build-director-116.ps1` or `.cmd` without `-SkipReplay`; clear `%APPDATA%\Director-Code\clp` before packaged runtime smoke.
-
-> 每次开始工作先确认当前分支和 `git status --short`。不要把生成后的 VS Code
-> 源码树当作长期源码真相；它只是不稳定的调试和验证工作区。
-
-## 当前阶段
-
-- 当前主线是 P2: 将 replay 基线从 VS Code/VSCodium 112 升级到 116，并在此基础上继续修复 Director Code 运行时问题。
-- 112 的物理参考验证已经完成。116 及后续升级不再依赖物理参考目录，正确性来自 replay、expected contracts、targeted tests、compile/build smoke 和人工 packaged-build 验证。
-- 当前 116 profile 是 `docs/upgrade/profiles/116-stable-win32-x64-client.json`。
-
-## Canonical Source
-
-Director-Code 的长期源码真相是 replay control plane，而不是 materialized tree。
-
-当前 116 相关 canonical 输入包括：
+Current 116 canonical inputs include:
 
 - `docs/upgrade/profiles/116-stable-win32-x64-client.json`
 - `patches/series.116.json`
@@ -88,35 +52,33 @@ Director-Code 的长期源码真相是 replay control plane，而不是 material
 - `docs/upgrade/expected/116-stable-win32-x64-client/*.json`
 - `docs/upgrade/reports/116-stable-win32-x64-client/*.json`
 - `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
-- `scripts/upgrade/` 下的 materialize、patch generation、validation scripts
+- `scripts/upgrade/` materialize, patch generation, and validation scripts
 
-生成后的工作区是：
+Generated validation workspace:
 
-```bash
+```text
 vscode.generated/layers/director/vscode
 ```
 
-这个目录允许用于快速调试、局部验证、编译和手动试验。任何最终要保留的修改都必须回写到 Director replay patch 或对应的 replay control file 中。一个 phase、bugfix 或 release candidate 不能只依赖手改过的 `vscode.generated` 内容完成。
-
 ## Replay Landing Rule
 
-后续所有 Director 相关源码修改必须满足以下规则：
+All durable Director changes must land through replay:
 
-1. 可以先直接改 `vscode.generated/layers/director/vscode` 来调试和验证。
-2. 调试验证通过后，必须把差异转成 Director replay patch。
-3. 如果新增 patch stage，必须同步更新 `patches/series.116.json`、active profile 和 `scripts/upgrade/generate-director-patches.mjs` 的 stage/path classification。
-4. 若修改影响 product/package/server manifest/expected contracts，必须同步更新 `docs/upgrade/expected/...`、product override、canonical manifest 或对应 report。
-5. 完成前必须至少运行 profile-scoped replay validation，不能只说生成目录里能跑。
+1. It is fine to first edit `vscode.generated/layers/director/vscode` for debugging and local validation.
+2. After the behavior is validated, convert the diff into the appropriate Director replay patch or replay control file.
+3. If a new patch stage is truly needed, update `patches/series.116.json`, the active profile, and `scripts/upgrade/generate-director-patches.mjs` stage/path classification.
+4. If a change affects product/package/server manifests, expected contracts, product overrides, canonical manifests, or reports, update those canonical files too.
+5. Before finishing a phase, bugfix, or release candidate, run profile-scoped replay validation. Do not accept a generated-tree-only fix as complete.
 
-推荐核对命令：
+Recommended baseline checks:
 
-```bash
+```powershell
 node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
 node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
 node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
 ```
 
-发布候选或阶段收口时还要从 clean upstream inputs 重新 materialize：
+For release candidates or phase closeout, clean-materialize from upstream inputs:
 
 ```bash
 bash scripts/upgrade/materialize-vscode.sh \
@@ -128,50 +90,60 @@ bash scripts/upgrade/materialize-vscode.sh \
 
 ## 116 Patch Stage Ownership
 
-当前 116 replay stage 语义：
+Current 116 replay stages:
 
-1. `001-vscodium-layer.116.patch`: VSCodium aggregate layer，不属于 Director 自有改动。
-2. `002-director-branding.116.patch`: 品牌、资源、文本、产品体验漂移。
-3. `003-director-product-build-release.116.patch`: product/package/server manifest、gulp、Windows installer、release/build wiring。
-4. `004-director-agent-engine.116.patch`: Director agent harness、model/tool bridge、agent engine、language-model/tool service integration、MCP 相关 agent paths。
-5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode、Copilot commercial-flow bypass、chat setup/status/model picker/agent session UI entry points。
-6. `006-director-text-polish.116.patch`: 小范围文本和 prompt polish。
-7. `007-director-tool-layer.116.patch`: Director-owned tool registry、mode policy、migration report/test layer、read-only workspace/GitHub v1 context tools。Phase 1-2 gates 已完成。
-8. `008-director-chat-editing.116.patch`: Director-owned Chat Editing contract、reviewable text edit progress adapter、internal single-file edit probe、request/session binding tests。Phase 3 gate 已完成。
-9. `009-director-edit-tools.116.patch`: Director-owned reviewable edit tools：`apply_patch`、`create_file`、`create_directory`、`replace_string_in_file`、`multi_replace_string_in_file`。Phase 4 gate 已完成。
+1. `001-vscodium-layer.116.patch`: VSCodium aggregate layer, not Director-owned.
+2. `002-director-branding.116.patch`: branding, resources, copy, product experience drift.
+3. `003-director-product-build-release.116.patch`: product/package/server manifests, gulp, Windows installer, release/build wiring.
+4. `004-director-agent-engine.116.patch`: Director agent harness, model/tool bridge, agent engine, language-model/tool service integration, MCP-related agent paths.
+5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode, Copilot commercial-flow bypass, chat setup/status/model picker/agent session UI entry points.
+6. `006-director-text-polish.116.patch`: narrow copy and prompt polish.
+7. `007-director-tool-layer.116.patch`: Director tool registry, mode policy, migration report/test layer, read-only workspace/GitHub context tools.
+8. `008-director-chat-editing.116.patch`: Director Chat Editing contract, reviewable text edit progress adapter, internal single-file edit probe, request/session binding tests.
+9. `009-director-edit-tools.116.patch`: Director reviewable edit tools: `apply_patch`, `create_file`, `create_directory`, `replace_string_in_file`, `multi_replace_string_in_file`.
 
-计划中的后续新增 stage：
+Prefer using existing stage ownership for follow-up work. Do not add empty or casual stages.
 
-- 后续如新增 mode routing/UI patch，默认仍按现有 stage ownership 归入 `005-director-chat-built-in-mode.116.patch` 或对应既有 stage；不要随意新增空 stage。
+## Current Feature State
 
-## 当前 116 重要事实
+- Phase 2 Wave 1 Plan Mode is complete, replay-backed, packaged, committed, and pushed.
+- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push per memory.
+- Plan Mode is Director Agent/session state, not a new top-level `ChatModeKind`.
+- Plan drafts are written to workspace-local `.director/plans/*.md` by Director-owned host code.
+- Plan completion goes through the Plan-only `director_present_plan` tool.
+- Provider Registry is the canonical source for provider instances and persists profile data in `directorCodeProviders.json`.
+- VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
+- Earlier 116 runtime gates are complete and replay-backed: Ask/Edit/Inline mode routing, read-only tool layer, Chat Editing contract, and reviewable edit tools.
+- Next planned wave is Phase 2 Wave 3 Claude AgentHost SDK integration, unless the user chooses to run manual Wave 2 API/OAuth smoke first.
 
-- 116 空白 Workbench 的根因是 `defaultChatAgent.provider` 覆盖不完整。VS Code 116 启动时读取 `defaultChatAgent.provider.enterprise.id`，所以 Director 必须保留完整 provider object shape，禁用 provider 也要保留空字符串字段。
-- 这个修复已经落在 `003-director-product-build-release.116.patch`、expected product JSON 和 `validate-product-overrides.mjs` 中。后续不得只在 materialized `product.json` 中修。
-- 重复构建入口是 `scripts/build-director-116.ps1` 或 `scripts/build-director-116.cmd`。默认会 materialize 116 Director tree、安装依赖、编译、构建 installer 并复制到 `artifacts/out/stable/win32-x64`。
-- Director settings 入口仍需要并入 VS Code 116 的 Agent Customizations 界面，计划文件是 `docs/upgrade/116-agent-customizations-director-settings-plan.md`。
-- 当前大优化计划是 `docs/upgrade/116-inline-mermaid-runtime-regression-fix-plan.md`，覆盖 Mermaid runtime、inline chat、Ask/Edit/Agent mode routing、Chat Editing UI、工具层复刻和 GitHub v1 read-only repo context。
-- Phase 2 read-only tool layer 已完成并 replay-backed：`read_file`、`list_dir`、`file_search`、`grep_search`、`get_errors`、`get_changed_files`、`view_image`、`github_repo` 均由 Director-owned 工具提供，落在 `007-director-tool-layer.116.patch`，注册 hook 的小改动落在 `004-director-agent-engine.116.patch`。
-- Phase 3 Chat Editing contract 已完成并 replay-backed：`DirectorChatEditingAdapter` 通过 `chatSessionResource` + `chatRequestId` 绑定目标请求，发出 explanation / `codeblockUri` / `textEdit` start-progress-done response parts，生成 VS Code 116 Chat Editing UI 可观察的 `textEditGroup` 路径；内部 probe 不注册为模型可见工具。契约报告是 `docs/upgrade/reports/116-stable-win32-x64-client/chat-editing-contract-report.md`。
-- Phase 4 reviewable edit tools 已完成并 replay-backed：`apply_patch`、`create_file`、`create_directory`、`replace_string_in_file`、`multi_replace_string_in_file` 已注册为 Director-owned 工具，只允许 Edit/Agent；文本/文件编辑走 Phase 3 reviewable `textEdit` contract，`create_directory` 走 accept/reject transaction，accept 前不 mkdir。报告是 `docs/upgrade/reports/116-stable-win32-x64-client/edit-tools-report.md`。
-- 下一波按计划进入 Phase 5 Ask/Edit/Inline mode gate；Inline 仍不得暴露 model-callable edit tools，必须走单独的 inline session edit protocol。
+## Important 116 Facts
+
+- A prior 116 blank Workbench issue came from an incomplete `defaultChatAgent.provider` override. VS Code 116 reads `defaultChatAgent.provider.enterprise.id`, so Director must preserve the full provider object shape even when disabling provider fields.
+- That fix belongs in `003-director-product-build-release.116.patch`, expected product JSON, and `validate-product-overrides.mjs`; do not fix it only in generated `product.json`.
+- `%APPDATA%\Director-Code\clp` may need clearing before packaged runtime smoke when cached language-pack/NLS or CLP state interferes with a fresh build.
+- Interactive installer/manual smoke is intentionally not run automatically unless the user asks, because it can modify the user's installed app/profile.
+- `artifacts/` is untracked by default and should not be committed unless the user explicitly asks for release artifacts to be tracked.
 
 ## Build And Package
 
-优先使用封装脚本：
+Preferred build entry points:
 
 ```powershell
 .\scripts\build-director-116.ps1
 ```
 
-或：
-
 ```cmd
 .\scripts\build-director-116.cmd
 ```
 
-`-SkipReplay` 只允许用于快速本地调试，不能用于 release candidate/package acceptance。
+Use `-SkipReplay` only for quick local debugging. Do not use it for release candidate or package acceptance.
 
-## Legacy 112 Notes
+## Standing Work Rules
 
-112 replay baseline 已验证通过，相关历史命令仍可参考 `docs/upgrade/112-replay-baseline-handoff.md`。当前不要把旧 `vscode/` 物理参考目录作为 116 及后续正确性来源。
+- At the start of each work session, check the current branch and `git status --short`.
+- Preserve user changes. Do not revert unrelated dirty work.
+- Prefer `rg` / `rg --files` for searches.
+- Many project documents contain Chinese text. Read and write Markdown/docs with UTF-8 encoding, and avoid tools or shell defaults that may reinterpret text through a legacy Windows code page.
+- Keep final changes replay-backed when they affect Director runtime/product behavior.
+- Keep generated-tree experiments temporary unless they are converted back into replay.
+- Keep `CLAUDE.md` and `AGENTS.md` identical; put chronological detail in `.claude/memory.md`.
