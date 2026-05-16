@@ -280,6 +280,7 @@ function isAgentEngine(filePath) {
     'src/vs/workbench/api/common/extHostLanguageModelTools.ts',
     'src/vs/workbench/api/common/extHostLanguageModels.ts',
     'src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts',
+    'src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts',
     'src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts',
     'src/vs/workbench/contrib/chat/browser/chat.contribution.ts',
     'src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts',

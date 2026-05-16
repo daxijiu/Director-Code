@@ -9,6 +9,7 @@
 - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-acp-agent-integration-report.html`
 - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-provider-model-ui-report.html`
 - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-plan-mode-report.html`
+- `docs/upgrade/reports/116-stable-win32-x64-client/phase2-wave3-claude-sdk-report.md`
 - `docs/upgrade/reports/116-stable-win32-x64-client/phase2-overall-roadmap-report.html`
 
 ## 总体决策
@@ -17,7 +18,7 @@ Phase 2 不再定义为单纯的 ACP 接入，而拆成五个 wave：
 
 1. Wave 1: Director Plan Mode Foundation
 2. Wave 2: Provider / Model Registry + UI
-3. Wave 3: Claude SDK Adapter
+3. Wave 3: Claude AgentHost SDK Integration
 4. Wave 4: Generic ACP Adapter
 5. Wave 5: Codex Dedicated Decision
 
@@ -33,9 +34,10 @@ Phase 2 不再定义为单纯的 ACP 接入，而拆成五个 wave：
 
 - Phase 2 长期形态固定为 `Director-owned core + thin VS Code bridge + replayed brand/product layer`。
 - 新功能默认进入 `src/vs/workbench/contrib/directorCode/**` 或后续 Director-owned built-in extension；VS Code 上游目录只保留注册 hook、chat/model/tool surface adapter、命令/菜单接线和少量兼容 shim。
+- Wave 3 Claude AgentHost backend 是该规则的明确例外：为直接复用上游 AgentHost，可以把 Director-owned Claude adapter island 放在 `src/vs/platform/agentHost/node/claude/**` 和少量 AgentHost common/schema 文件中；但 Provider Registry、secret/OAuth、model routing、local proxy、diagnostics 仍归 Director-owned service，不在上游 chat/model/provider 文件里堆业务逻辑。
 - 不用 touched file count 单独判断上游升级风险：品牌化和产品包装会触碰很多文件但改动浅；更重要的指标是 runtime 逻辑是否集中在 Director-owned 模块，以及 upstream chat/API/model 文件是否保持薄桥接。
 - Copilot 是参考形态：用户体验可以和 VS Code 深度融合，但产品逻辑尽量集中在 extension-like island，加少量 privileged workbench/API entry points。Director 后续也按这个方向继续收敛。
-- Wave 2 Provider/Model、Wave 3 Claude SDK、Wave 4 ACP、Wave 5 Codex 都必须遵循该边界：registry、adapter、secret/OAuth、session policy 和业务逻辑归 Director；VS Code 侧只做必要入口和桥接。
+- Wave 2 Provider/Model、Wave 3 Claude AgentHost SDK integration、Wave 4 ACP、Wave 5 Codex 都必须遵循该边界：registry、adapter、secret/OAuth、session policy 和业务逻辑归 Director；VS Code 侧只做必要入口和桥接。
 - 必须修改 VS Code 上游 surface 时，优先添加调用 Director-owned service 的小 hook，不在上游文件内堆 Director 业务逻辑。
 
 ## Wave 1: Director Plan Mode Foundation
@@ -543,38 +545,59 @@ Replay patch ownership：
 
 - 第一阶段仍以 workbench 内部 Director Provider Registry 为长期真相，避免把 secret、OAuth、mode/tool policy、Chat Editing 等能力拆散到不成熟的普通扩展路径。
 - 模型管理层尽量复用 116 当前已有的 provider group / Models Management / Model Picker 设计；121 只用于确认未来兼容，不作为默认 backport 内容。
-- Adapter 层先支持 Director-owned OpenAI key、OpenAI OAuth、OpenAI-compatible custom provider，再逐步扩展 Anthropic、OpenRouter、Ollama、company proxy 等。
+- Adapter 层第一批支持 Director-owned OpenAI key、OpenAI OAuth、OpenAI-compatible custom provider；但 Wave 3 开始前必须补齐 Anthropic 官方 API key/OAuth 和 Anthropic-compatible provider 的 `anthropicMessages` capability contract，至少包含 provider instance、selected model、secret/OAuth 读取、Messages API request/stream/error/cancel 语义。
 - 后续可把稳定的 OpenAI-compatible 等 provider adapter 抽到 built-in extension，但 Provider Registry、secret/OAuth policy 和 user-facing management flow 仍由 Director 控制。
 
-## Wave 3: Claude SDK Adapter
+## Wave 3: Claude AgentHost SDK Integration
 
-目标：通过 TypeScript Claude Agent SDK 将 Claude Code 接入 Director native Chat。
+目标：通过 TypeScript Claude Agent SDK，经 VS Code AgentHost / Agent Sessions 路径，将 Claude Code 接入 Director native Chat。
+
+总体原则：Claude 接入按 VS Code main / Copilot 的 Claude Code integration 基本全盘复刻；能直接复用的 AgentHost / Agent Sessions / UI / protocol 直接复用或 backport，只把后端 Provider/Auth/Proxy 替换为 Director-owned Provider Registry、Secret/OAuth、selected model 和 Anthropic-compatible local proxy。
 
 范围：
 
 - 固定并封装 `@anthropic-ai/claude-agent-sdk` 版本。
-- 新增 `ClaudeAgentSdkAdapter`。
+- 回补/新增 Claude AgentHost provider/backend：`platform/agentHost/node/claude/**`、`ClaudeSdkService`、`DirectorClaudeProxyServer` 等；不新增平行的 Director-only `ClaudeAgentSdkAdapter`。
+- 复刻 VS Code/Copilot 的 Claude session 生命周期、SDK service、session materializer、prompt queue / pipeline、message router 和 session resume。
+- 复刻 VS Code AgentHost session type 语义：会话创建时锁定 Agent kind / runtime family，例如 Director Agent、Claude Agent、后续 ACP/Codex Agent；同一个 chat/session 内不允许中途从 Director Agent 切到 Claude Agent，反向也不允许。切换 Agent kind 必须新开会话或未来显式 handoff/fork。
+- 直接复用 116 已有 `platform/agentHost/**`、`agentSessions/**`、AgentHost progress/editing/session protocol；从 VS Code main 回补 Claude provider/backend，不在 `directorCode` 中重做一套平行 AgentHost。
 - 支持 prompt stream。
 - 支持 cancel / interrupt。
 - 支持 permission callback。
 - 支持 Claude `permissionMode: "plan"`。
+- 复刻 VS Code Claude 的 Approvals / permission mode 切换 UI 心智；Claude session 不强行映射为普通 Ask/Edit/Agent mode。
 - 支持基础 session resume。
-- 将 Claude tool / edit 输出映射到 Director Chat progress 和 reviewable edit contract。
-- 将 Claude Plan / ExitPlanMode 映射到 Director Plan 审批体验。
+- 将 Claude tool / edit 输出映射到 AgentHost/Director Chat progress 和 VS Code external edit / checkpoint / revert 语义；不要把 Claude edit 强行改造成 Director 普通 `textEdit` pre-review。
+- 将 Claude Plan / ExitPlanMode 映射到 Director-branded Plan review；优先跟踪 Claude/VS Code plan file，若镜像到 `.director/plans/*.md` 只作为附加记录，不作为 Claude session 的执行真相；Plan review 只允许打开/展示 host 验证过的 Claude plan URI；approve 后默认继续同一个 Claude SDK session，并按用户动作切换 `permissionMode`。
+- 复刻 VS Code/Copilot 的 Claude tool confirmation、interactive tools、file edit observer / external edit tracking、Plan review 交互，再把最终 UI bridge 接到 AgentHost / Director Chat / Plan / Edit surfaces。
+- 新增 Director-owned Claude local proxy：Claude SDK v1 主路径始终连接该本地 Anthropic-compatible facade；proxy 对内接 Director Provider Registry、secret/OAuth、model selection 和 policy，不让 Claude SDK 直接持有远端 provider secret 或绕过 Director provider policy。
+- local proxy v1 建立稳定后端接口，例如 `ClaudeProxyBackend` / `AnthropicMessagesBackend`，但运行时只注册 `AnthropicPassthroughBackend`：目标 provider 必须已经具备 `anthropicMessages` capability，包含 Anthropic 官方和 Anthropic-compatible provider/model。
+- v1 passthrough 是协议直通而非裸转发：proxy 负责 provider/model 解析、auth 注入、baseURL 与 `/v1/messages`/`/messages` 路径归一、header allow/deny、SSE/streaming、tool_use/tool_result、thinking 透传或降级、cancel/abort、Anthropic error shape、日志 redaction 和 request diagnostics。
+- 为后续预留但不注册 `OpenAIChatCompletionsToAnthropicBackend`、`CodexResponsesToAnthropicBackend` 等 translator 接口；OpenAI-compatible / OpenAI Chat Completions / ChatGPT-Codex `/responses` 到 Anthropic Messages 的转换作为后续增强，不进入 Wave 3 v1 主路径。
 
 非范围：
 
 - 不通过 ACP 接 Claude Code。
 - 不追求 Claude 完全调用 Director 内部 tool registry。
 - 不要求第一版覆盖所有 Claude SDK hooks/plugins/subagents。
+- 不引入 VS Code/Copilot CAPI proxy、entitlement、Microsoft/GitHub account、subscription gating 或 Copilot model routing。
+- 不为 Claude 另造一套与 VS Code 用户心智不同的 mode / permission / review UI，除非 116 API 差异要求最小适配。
+- 不在 Wave 3 v1 支持或展示 OpenAI-compatible、OpenAI Chat Completions、ChatGPT-Codex `/responses`、Gemini 等非 `anthropicMessages` provider 给 Claude Agent；这些制式只保留后端接口占位，不注册到 Claude provider picker。
+- 不支持 CodePilot 式“同一 UI 会话中途重解析 runtime 并隐式切 Agent 引擎”；Wave 3 与 VS Code 保持一致，Agent kind 是 session creation-time choice。
+- 不把 SDK package path 作为普通用户必须填写的配置；SDK package path 只保留为 developer/debug fallback。
 
 建议验收：
 
 - Claude session 可以在 Director native Chat 中对话。
+- Claude session 入口、状态展示、Approvals / permission mode 切换、Plan Only 入口与 VS Code/Copilot Claude 体验保持一致或等价。
+- Claude session 创建后，Agent 引擎选择器或入口被锁定为 Claude Agent；Director Agent 会话同理不能中途切到 Claude Agent。UI 只能允许切换该 Agent kind 内的合法 session config，例如 Claude permission mode / Plan Only、provider/model 中的 `anthropicMessages` backend，而不是切换 Agent kind。用户要换 Agent kind 时，引导新建会话或未来 handoff/fork。
 - Claude streaming、thinking、tool call 展示正常。
 - 权限确认可控。
-- Plan Mode 可进入、审批、拒绝或修订。
-- 文件编辑不绕过 reviewable edit contract。
+- Plan Mode 可进入、审批、拒绝或修订；approve 后 Claude 留在同一 session 继续执行，且 permission mode 状态与 UI 同步；Plan review 能打开/展示 Claude plan file，`.director/plans` 镜像不影响 Claude 执行。
+- 文件编辑不绕过权限与可观察 review/revert 机制；Claude edit 通过 VS Code-style external edit/checkpoint/file edit observer 呈现。
+- SDK 请求经 Director-owned proxy 可使用 Director Provider Registry 中选定的 Anthropic / Anthropic-compatible provider/model；Claude provider picker 只列出 `anthropicMessages` capable provider/model；不依赖 Copilot auth 或 entitlement。
+- Proxy backend 接口已存在并能被单测覆盖，但 v1 运行时只有 `AnthropicPassthroughBackend` 可选；OpenAI/Codex translator backend 未注册、未出现在 UI 中。
+- 缺 SDK、缺 Claude Code executable、`pathToClaudeCodeExecutable` 无效、proxy auth 失败时有明确 diagnostics。
 - Windows loose build 和 packaged runtime 至少完成 smoke。
 
 关键选择：
@@ -582,6 +605,23 @@ Replay patch ownership：
 - Python Claude SDK 只作为行为参考。
 - Director 主链路使用 TypeScript SDK，避免引入 Python helper runtime。
 - SDK 包版本推进快，必须通过窄 adapter 层隔离。
+- Wave 3 实现总体按 VS Code main / Copilot 的 Claude AgentHost / Claude Code 分层复刻：SDK service、session/pipeline、message router、permission callback、tool/edit observer、Approvals UI、permission mode 切换和 Plan/ExitPlanMode flow 都优先按 VS Code Claude 形态适配。116 已有 AgentHost/Agent Sessions 框架，优先直接复用并回补 Claude provider/backend；只有 compile spike 证明 116 与 121 差距过大时，才把升级上游作为前置方案。
+- Agent kind 固定性按 VS Code/Copilot 执行：Copilot-started session 不能中途变 Claude session，Claude-started session 也不能中途变 Director/Copilot session。Wave 3 UI 需要在会话创建后锁住 agent engine switch，只保留 session-local 的 permission/mode/provider/model 配置轴。
+- Provider/Auth/Proxy 层使用 Director-owned provider/auth policy，不引入 VS Code/Copilot CAPI proxy、entitlement 或 Microsoft/GitHub account 假设。
+- Wave 3 对 Wave 2 的硬前置是 `anthropicMessages` provider capability：Anthropic 官方 API key/OAuth 和 Anthropic-compatible provider/model 必须可由 Director Provider Registry 选择，并可被 Director-owned Claude local proxy 的 `AnthropicPassthroughBackend` 调用；Claude Agent provider picker 必须隐藏 OpenAI-compatible、OpenAI Chat Completions、ChatGPT-Codex `/responses`、Gemini 等非 `anthropicMessages` provider。
+- Claude permission/tool 行为不强制对齐 Director LLM tool registry；优先参考 VS Code Claude 的 `canUseTool`、interactive tools、file edit observer 和 tool confirmation 体验，再桥接到 Director Chat UI。
+- “本机已安装 Claude Code”需要拆成两件事：Director 运行时使用固定 TypeScript SDK/loader，SDK 再启动一个可执行 Claude Code binary。普通用户路径应自动发现已安装 Claude Code 或随 SDK/产品提供的 binary；`pathToClaudeCodeExecutable` 是高级 override；`chat.agentHost.claudeAgent.path` 风格的 SDK package path 仅作 developer/debug fallback。
+- Claude executable 发现顺序固定为：显式 `pathToClaudeCodeExecutable` 设置/env override -> Director 随包或 pinned SDK install 中可用的 platform optional binary -> 用户 PATH 中的 `claude` -> compile spike 记录的 Claude Code 默认安装位置 -> 明确 diagnostic。PATH 查找必须验证 VS Code/Electron 可取得的 user shell environment，而不是只依赖进程启动环境；任何路径命中后都要做版本/可执行性探测，失败不能静默 fallback 到错误 auth/proxy 状态。
+- Wave 3 产品目标优先复刻 VS Code/Copilot 的 Anthropic-compatible local proxy 机制，但 proxy 后端接 Director Provider Registry / secret / OAuth / selected model；v1 同时落地 proxy facade、backend adapter 接口和 `AnthropicPassthroughBackend`，只支持 Anthropic 官方和 Anthropic-compatible provider；OpenAI-compatible、ChatGPT-Codex `/responses` 等协议翻译另列后续工作；local Claude Code auth/env 只作为 debug 或 fallback 路径评估。
+
+Replay patch ownership：
+
+- `004-director-agent-engine.116.patch`：Claude AgentHost provider/backend、SDK service、session pipeline、message mapper、permission bridge、file edit observer、Plan bridge、Director-owned Claude local proxy runtime。
+- `005-director-chat-built-in-mode.116.patch`：Agent Sessions / Chat UI 入口、Claude session config / Approvals / Plan Only UI 薄接线、Director-branded review surface hook。
+- `003-director-product-build-release.116.patch`：若引入 SDK/package dependency、native binary packaging、product/package/server manifest 或 installer wiring。
+- Wave 2 Provider Registry 相关 patch/report：`anthropicMessages` provider capability、secret/OAuth/model-selection contract 和 Provider UI/diagnostics。
+- `scripts/upgrade/generate-director-patches.mjs` 必须把新增 `src/vs/platform/agentHost/node/claude/**` 及必要 common/schema 薄改动稳定分类到对应 replay stage，不能只手工维护 patch 文件。
+- 若 compile spike 证明需要新增 patch stage，必须同步更新 `patches/series.116.json`、profile 和 patch generation classification；否则优先归入上述既有 stage。
 
 ## Wave 4: Generic ACP Adapter
 
@@ -695,6 +735,6 @@ bash scripts/upgrade/materialize-vscode.sh \
 
 ## 当前开放问题
 
-1. Wave 3 Claude SDK 是否以用户本机 Claude Code auth 为主，还是同时支持 Anthropic API key。
+1. Wave 3 local Claude Code auth/env 是否保留为 debug/fallback；产品主路径已固定为 Director-owned Anthropic-compatible local proxy。
 2. Wave 4 第一个 ACP smoke 对象选择 Hermes 还是 OpenCode。
 3. Wave 5 Codex 是否接受先走 ACP wrapper 做 baseline。

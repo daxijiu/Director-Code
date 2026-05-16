@@ -1183,7 +1183,7 @@ index 31d68e8873a70062e7a9fb5dbce39b562d48cd0c..dfe449921cbe8e3fdf41c27c1a8ae5f7
  
  		this.welcomeMessageContainer.style.height = `${contentHeight}px`;
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
-index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29255d4d06 100644
+index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..856a923fcb36877d2bf6cae704dd4def568a111e 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 @@ -32,6 +32,7 @@ import * as semver from '../../../../../../base/common/semver/semver.js';
@@ -1220,7 +1220,74 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  ): IActionListItem<IActionWidgetDropdownAction>[] {
  	const items: IActionListItem<IActionWidgetDropdownAction>[] = [];
  	if (models.length === 0) {
-@@ -251,7 +253,10 @@ export function buildModelPickerItems(
+@@ -229,6 +231,66 @@ export function buildModelPickerItems(
+ 		}));
+ 	}
+ 
++	if (neutralUnavailableModels && models.length > 0) {
++		const providerGroups = new Map<string, { label: string; order: number; firstIndex: number; models: ILanguageModelChatMetadataAndIdentifier[] }>();
++		for (let index = 0; index < models.length; index++) {
++			const model = models[index];
++			const category = model.metadata.modelPickerCategory;
++			const label = category?.label || model.metadata.auth?.providerLabel || model.metadata.vendor || localize('chat.modelPicker.providerModels', "Provider Models");
++			const key = label.toLowerCase();
++			let group = providerGroups.get(key);
++			if (!group) {
++				group = { label, order: category?.order ?? 10_000, firstIndex: index, models: [] };
++				providerGroups.set(key, group);
++			}
++			group.models.push(model);
++		}
++
++		const sortedGroups = Array.from(providerGroups.values()).sort((a, b) => {
++			if (a.order !== b.order) {
++				return a.order - b.order;
++			}
++			return a.firstIndex - b.firstIndex;
++		});
++
++		for (const group of sortedGroups) {
++			if (items.length > 0) {
++				items.push({ kind: ActionListItemKind.Separator });
++			}
++			items.push({
++				kind: ActionListItemKind.Header,
++				label: group.label,
++				group: { title: group.label },
++				hideIcon: false,
++			});
++			const sortedModels = group.models.sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
++			for (const model of sortedModels) {
++				const entry = controlModels[model.metadata.id] ?? controlModels[model.identifier];
++				if (entry?.minVSCodeVersion && !isVersionAtLeast(currentVSCodeVersion, entry.minVSCodeVersion)) {
++					items.push(createUnavailableModelItem(model.metadata.id, entry, 'update', manageSettingsUrl, updateStateType, undefined, hoverPosition));
++				} else {
++					items.push(createModelItem(createModelAction(model, selectedModelId, onSelect, languageModelsService!), model, hoverPosition, languageModelsService));
++				}
++			}
++		}
++
++		if (manageModelsAction) {
++			if (items.length > 0) {
++				items.push({ kind: ActionListItemKind.Separator });
++			}
++			items.push({
++				item: manageModelsAction,
++				kind: ActionListItemKind.Action,
++				label: manageModelsAction.label,
++				group: { title: '', icon: Codicon.blank },
++				hideIcon: false,
++				showAlways: true,
++			});
++		}
++
++		return items;
++	}
++
+ 	if (useGroupedModelPicker) {
+ 		let otherModels: ILanguageModelChatMetadataAndIdentifier[] = [];
+ 		if (models.length) {
+@@ -251,7 +313,10 @@ export function buildModelPickerItems(
  
  			const resolveModel = (id: string) => allModelsMap.get(id) ?? modelsByMetadataId.get(id);
  
@@ -1232,7 +1299,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  				const isBusinessOrEnterpriseUser = chatEntitlementService.entitlement === ChatEntitlement.Business || chatEntitlementService.entitlement === ChatEntitlement.Enterprise;
  				if (!isBusinessOrEnterpriseUser) {
  					return 'upgrade';
-@@ -272,7 +277,7 @@ export function buildModelPickerItems(
+@@ -272,7 +337,7 @@ export function buildModelPickerItems(
  			// --- 2. Promoted section (selected + recently used + featured) ---
  			type PromotedItem =
  				| { kind: 'available'; model: ILanguageModelChatMetadataAndIdentifier }
@@ -1241,7 +1308,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  
  			const promotedItems: PromotedItem[] = [];
  
-@@ -470,7 +475,7 @@ export function getModelPickerAccessibilityProvider() {
+@@ -470,7 +535,7 @@ export function getModelPickerAccessibilityProvider() {
  function createUnavailableModelItem(
  	id: string,
  	entry: IModelControlEntry,
@@ -1250,7 +1317,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  	manageSettingsUrl: string | undefined,
  	updateStateType: StateType,
  	section?: string,
-@@ -481,7 +486,9 @@ function createUnavailableModelItem(
+@@ -481,7 +546,9 @@ function createUnavailableModelItem(
  	if (reason === 'upgrade') {
  		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Upgrade](command:workbench.action.chat.upgradePlan \" \")"), { isTrusted: true });
  	} else if (reason === 'update') {
@@ -1261,7 +1328,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  	} else {
  		description = manageSettingsUrl
  			? new MarkdownString(localize('chat.modelPicker.adminLink', "[Contact your admin]({0})", manageSettingsUrl), { isTrusted: true })
-@@ -491,9 +498,12 @@ function createUnavailableModelItem(
+@@ -491,9 +558,12 @@ function createUnavailableModelItem(
  	let hoverContent: MarkdownString;
  	if (reason === 'upgrade') {
  		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
@@ -1275,7 +1342,7 @@ index 4f4c316e2e2a5e465bd0437edeaaa37b20915829..62a33e21656669f6b9fa8d01e10d0a29
  	} else {
  		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
  		hoverContent.appendMarkdown(localize('chat.modelPicker.adminHover', "This model is not available. Contact your administrator to enable it."));
-@@ -683,6 +693,7 @@ export class ModelPickerWidget extends Disposable {
+@@ -683,6 +753,7 @@ export class ModelPickerWidget extends Disposable {
  			this._delegate.showFeatured(),
  			this._hoverPosition,
  			this._languageModelsService,

@@ -301,7 +301,7 @@ index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..fc35f8773311a9d5576399d26f6e1a1a8389a175
+index 0000000000000000000000000000000000000000..e4d3fb3dda74defd9eb1dfcbdbf3e839dc379f98
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 @@ -0,0 +1,217 @@
@@ -500,7 +500,7 @@ index 0000000000000000000000000000000000000000..fc35f8773311a9d5576399d26f6e1a1a
 +		assert.strictEqual(snapshot.find(item => item.id === 'vscode_editFile_internal')?.disposition, 'hide');
 +	});
 +
-+	test('exposes only read context, fetch, and director_present_plan in Plan mode', () => {
++	test('exposes read context, askQuestions, fetch, and director_present_plan in Plan mode', () => {
 +		const raw = [
 +			tool('director_read_file', 'readFile'),
 +			tool('director_grep_search', 'textSearch'),
@@ -513,13 +513,13 @@ index 0000000000000000000000000000000000000000..fc35f8773311a9d5576399d26f6e1a1a
 +		];
 +
 +		const planTools = getDirectorToolAllowlist(raw, DirectorToolMode.Plan);
-+		assert.deepStrictEqual(planTools.map(item => item.modelName), ['director_present_plan', 'fetch', 'readFile', 'textSearch']);
++		assert.deepStrictEqual(planTools.map(item => item.modelName), ['askQuestions', 'director_present_plan', 'fetch', 'readFile', 'textSearch']);
 +		assert.strictEqual(planTools.find(item => item.modelName === 'director_present_plan')?.definition.isReadOnly, false);
 +		assert.strictEqual(planTools.find(item => item.modelName === 'director_present_plan')?.definition.inputSchema.additionalProperties, false);
++		assert.strictEqual(planTools.find(item => item.modelName === 'askQuestions')?.definition.isReadOnly, false);
 +		assert.ok(!planTools.some(item => item.modelName === 'apply_patch'));
 +		assert.ok(!planTools.some(item => item.modelName === 'runInTerminal'));
 +		assert.ok(!planTools.some(item => item.modelName === 'runSubagent'));
-+		assert.ok(!planTools.some(item => item.modelName === 'askQuestions'));
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts
@@ -1255,10 +1255,10 @@ index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..ea59987b74c03a2c765449b43c1b32382100ba69
+index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c04302570
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
-@@ -0,0 +1,282 @@
+@@ -0,0 +1,283 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1320,6 +1320,7 @@ index 0000000000000000000000000000000000000000..ea59987b74c03a2c765449b43c1b3238
 +
 +const NO_MODES: readonly DirectorToolMode[] = [];
 +const AGENT_ONLY: readonly DirectorToolMode[] = [DirectorToolMode.Agent];
++const PLAN_AND_AGENT: readonly DirectorToolMode[] = [DirectorToolMode.Plan, DirectorToolMode.Agent];
 +const READ_NON_PLAN_MODES: readonly DirectorToolMode[] = [DirectorToolMode.Ask, DirectorToolMode.Edit, DirectorToolMode.Agent];
 +const READ_CONTEXT_MODES: readonly DirectorToolMode[] = [DirectorToolMode.Ask, DirectorToolMode.Edit, DirectorToolMode.Agent, DirectorToolMode.Plan];
 +const REVIEWABLE_EDIT_MODES: readonly DirectorToolMode[] = [DirectorToolMode.Edit, DirectorToolMode.Agent];
@@ -1363,7 +1364,7 @@ index 0000000000000000000000000000000000000000..ea59987b74c03a2c765449b43c1b3238
 +const DIRECTOR_BROWSER_SESSION_PRE_APPROVAL = 'Director browser policy requires explicit approval before the agent reads or captures integrated browser page content outside a user-opened Director browser session.';
 +
 +export const directorToolRegistry: readonly DirectorToolRegistryEntry[] = [
-+	entry('askQuestions', ['vscode_askQuestions'], ['askQuestions'], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve the existing user-question helper for Agent prompts that need explicit user input.'),
++	entry('askQuestions', ['vscode_askQuestions'], ['askQuestions'], 'confirmation', PLAN_AND_AGENT, 'pre-approval', 'keep', 'Preserve the existing user-question helper for Agent and Plan prompts that need explicit user input.'),
 +	entry('vscode_get_confirmation', ['vscode_get_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve generic confirmation behavior for current Agent flows.'),
 +	entry('vscode_get_confirmation_with_options', ['vscode_get_confirmation_with_options'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve option-based confirmation behavior for current Agent flows.'),
 +	entry('vscode_get_modified_files_confirmation', ['vscode_get_modified_files_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve modified-files confirmation behavior until Phase 3/4 reviewable edit tools replace direct mutation paths.'),
