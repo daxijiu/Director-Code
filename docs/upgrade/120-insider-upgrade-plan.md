@@ -4,7 +4,7 @@ Date: 2026-05-17
 
 Branch: `120-replay-baseline`
 
-Status: 120 profile infrastructure plus `003`, `004`, and `005` Director runtime/product stages are ported; active profile is still 116 until full 120 Director materialize passes.
+Status: 120 profile infrastructure plus `003`, `004`, `005`, and the Phase E Plan Review UI adaptation are ported; active profile is still 116 until full 120 Director materialize passes.
 
 ## Purpose
 
@@ -47,6 +47,7 @@ Completed in this branch:
 - Ported product/build/release replay stage: `patches/replay/003-director-product-build-release.120-insider.patch`
 - Ported agent engine / Claude / MCP replay stage: `patches/replay/004-director-agent-engine.120-insider.patch`
 - Ported chat built-in mode / provider UI shielding replay stage: `patches/replay/005-director-chat-built-in-mode.120-insider.patch`
+- Amended `004-director-agent-engine.120-insider.patch` for Phase E Plan Mode -> 120 review UI adaptation.
 - Generated 120 series file: `patches/series.120-insider.json`
 - Generated VSCodium layer manifest: `docs/upgrade/vscodium-layer.120-insider.json`
 - Added 120 product override, owned-key, delete, overlay, and deps mutation files
@@ -308,7 +309,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
 | Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pushed: `31a4e9e6` |
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
-| Phase E: Plan Mode to 120 review UI | pending | | | | |
+| Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | push pending |
 | Phase F: `007`-`009` tool/editing stages | pending | | | | |
 | Phase G: `002`/`006` branding/text polish | pending | | | | |
 | Phase H: expected contracts/canonical/full materialize | pending | | | | |
@@ -540,6 +541,32 @@ Acceptance:
 - `.director/plans/*.md` remains authoritative for Director plan persistence.
 - Plan review action nonce/session safety remains intact.
 
+Completion note, 2026-05-17:
+
+- Implemented Phase E by amending `patches/replay/004-director-agent-engine.120-insider.patch`; no new replay stage was added.
+- Kept `director_present_plan` as the only model-visible Director Plan completion tool.
+- Kept `DirectorPlanModeService` as owner of Plan state, nonce/session checks, `.director/plans/*.md` writes, approval/rejection/revision state transitions, and execution prompt generation.
+- Added a Director-owned 120 review adapter in `DirectorCodeAgent`:
+  - creates `ChatPlanReviewData` from the active `DirectorPlanRecord`;
+  - keeps the Plan request pending with `raceCancellation(reviewData.completion.p, token)`;
+  - maps Reject to `rejectPlan`;
+  - maps Submit Feedback to `beginRevision` and queues a new Plan revision request;
+  - maps Execute to `approvePlanForExecution` and queues a new Agent execution request.
+- Added `createDirectorPlanReviewContent(plan)` so the 120 widget shows the plan body without YAML frontmatter and without using the plan file as the executable source.
+- Deliberately did not pass `planUri` into the 120 review widget in this phase. This keeps inline plan-file editing disabled until Director has an explicit validate/reconcile path for edited plan file content.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Independent scratch replay of `003`, updated `004`, and `005` on the 120 VSCodium layer, followed by checks for reject files, `git diff --check`, `ChatPlanReviewData`, `raceCancellation(reviewData.completion.p, token)`, execution/revision prompt queueing, `createDirectorPlanReviewContent`, and the Phase D model-management shield.
+- Self-review passed:
+  - `git diff --check` found no whitespace errors in `patches/replay/004-director-agent-engine.120-insider.patch` or `patches/series.120-insider.json`.
+  - `rg` confirmed the patch did not expose `vscode_reviewPlan` as the Director Plan tool and did not enable `planUri`/inline edit reconciliation prematurely.
+  - Patch ownership remains in `004`: Director Plan state/tool/agent flow and a focused Plan Mode test.
+- Test runner limitation:
+  - The available 120 scratch trees and repository root do not have `node_modules`, so `npm run test-node -- --grep "Director Plan Mode"` could not be run in this environment without a dependency install.
+  - The focused unit assertion was added to `src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts`; running the VS Code node test runner remains a Phase H/dependency-environment gate.
+
 ### Phase F: Clean Tool / Editing Stages (`007`-`009`)
 
 Goal: port cleanly-applying Director-owned stages after upstream bridge hooks are stable.
@@ -642,16 +669,16 @@ Do:
 
 ## Immediate Next Step
 
-After Phase D is committed and pushed, continue with Phase E: map Director Plan Mode to the 120 review UI.
+After Phase E is committed and pushed, continue with Phase F: port clean tool/editing stages `007`-`009`.
 
 The next window should:
 
 1. Confirm branch/status.
 2. Start from the 120 VSCodium layer plus enabled `003`, `004`, and `005`.
-3. Inventory Director Plan state, `director_present_plan`, and `.director/plans/*.md` persistence.
-4. Map the Director plan result into 120 `ChatPlanReviewData` / `ChatPlanReviewPart` without changing Director Plan ownership.
-5. Generate the replay-backed Phase E changes in the appropriate existing stage or a clearly justified new stage.
-6. Validate profile, series, product overrides, focused plan-mode assertions/tests, and scratch replay.
+3. Apply existing 116 `007`, `008`, and `009` patches against the 120 `003+004+005` tree.
+4. Confirm clean apply still holds after the Phase E `004` amendment; manually review any new rejects instead of taking either side blindly.
+5. Generate `007`, `008`, and `009` 120 replay patches and regenerate `series.120-insider.json`.
+6. Validate profile, series, product overrides, focused tool/editing assertions/tests, and scratch replay.
 7. Self-review, update this plan, commit, and push before starting the next stage.
 
 Suggested first commands:
@@ -666,6 +693,11 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase D push, only the untracked `artifacts/` directory should remain.
+As of 2026-05-17 after Phase E validation and before the Phase E commit, expected dirty files are:
+
+- `docs/upgrade/120-insider-upgrade-plan.md`
+- `patches/series.120-insider.json`
+- `patches/replay/004-director-agent-engine.120-insider.patch`
+- untracked `artifacts/`
 
 Do not clean or revert `artifacts/` unless explicitly asked.

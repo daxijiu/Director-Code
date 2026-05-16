@@ -5191,10 +5191,10 @@ index 0000000..bcb0c52
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
 new file mode 100644
-index 0000000..b12189d
+index 0000000..af70ed7
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,102 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5203,7 +5203,7 @@ index 0000000..b12189d
 +import assert from 'assert';
 +import { URI } from '../../../../../../base/common/uri.js';
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-+import { createApprovedPlanExecutionPrompt, renderDirectorPlanFile, validateDirectorPresentPlanInput, type DirectorPlanRecord } from '../../../../directorCode/common/agentEngine/directorPlanMode.js';
++import { createApprovedPlanExecutionPrompt, createDirectorPlanReviewContent, renderDirectorPlanFile, validateDirectorPresentPlanInput, type DirectorPlanRecord } from '../../../../directorCode/common/agentEngine/directorPlanMode.js';
 +
 +suite('Director Plan Mode', () => {
 +
@@ -5261,6 +5261,16 @@ index 0000000..b12189d
 +		assert.ok(prompt.includes('Continue in full Agent mode.'));
 +		assert.ok(prompt.includes('Plan file: .director/plans/20260516-120000-abcd1234-plan.md'));
 +		assert.ok(prompt.includes('## Proposed Steps'));
++	});
++
++	test('120 review content exposes plan sections without frontmatter', () => {
++		const content = createDirectorPlanReviewContent(samplePlan());
++
++		assert.ok(!content.startsWith('---'));
++		assert.ok(content.includes('Plan file: `.director/plans/20260516-120000-abcd1234-plan.md`'));
++		assert.ok(content.includes('## Proposed Steps\n1. Inspect files\n2. Implement'));
++		assert.ok(content.includes('## Validation\n- Run targeted tests'));
++		assert.ok(content.includes('## Risks\n- Button UI is minimal'));
 +	});
 +
 +	function samplePlan(): DirectorPlanRecord {
@@ -12813,10 +12823,10 @@ index 0000000..9ed53a1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000..ce3b2bf
+index 0000000..eae104c
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,825 @@
+@@ -0,0 +1,973 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12831,6 +12841,7 @@ index 0000000..ce3b2bf
 + * and streams progress back to the Chat UI.
 + */
 +
++import { raceCancellation } from '../../../../../base/common/async.js';
 +import { CancellationToken } from '../../../../../base/common/cancellation.js';
 +import { MarkdownString } from '../../../../../base/common/htmlContent.js';
 +import { Disposable } from '../../../../../base/common/lifecycle.js';
@@ -12862,17 +12873,18 @@ index 0000000..ce3b2bf
 +	IChatAgentResult,
 +	IChatAgentHistoryEntry,
 +} from '../../../chat/common/participants/chatAgents.js';
-+import { IChatService, type IChatFollowup, type IChatProgress } from '../../../chat/common/chatService/chatService.js';
++import { ChatRequestQueueKind, ChatSendResult, IChatService, type IChatFollowup, type IChatPlanReviewResult, type IChatProgress } from '../../../chat/common/chatService/chatService.js';
 +import type { IChatProgressResponseContent } from '../../../chat/common/model/chatModel.js';
-+import { ChatAgentLocation, type ChatModeKind } from '../../../chat/common/constants.js';
++import { ChatPlanReviewData } from '../../../chat/common/model/chatProgressTypes/chatPlanReviewData.js';
++import type { IChatRequestModeInfo } from '../../../chat/common/model/chatModel.js';
++import { ChatAgentLocation, ChatModeKind } from '../../../chat/common/constants.js';
 +import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
 +import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
 +import {
-+	createDirectorPlanReviewMarkdown,
++	createDirectorPlanReviewContent,
 +	createPlanModeUserPrompt,
-+	DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
-+	DIRECTOR_PLAN_REJECT_COMMAND_ID,
-+	DIRECTOR_PLAN_REVISE_COMMAND_ID,
++	createApprovedPlanExecutionPrompt,
++	createPlanRevisionPrompt,
 +	DIRECTOR_PRESENT_PLAN_TOOL_NAME,
 +	IDirectorPlanModeService,
 +	type DirectorPlanRecord,
@@ -12893,6 +12905,15 @@ index 0000000..ce3b2bf
 +const CONFIG_MAX_INPUT_TOKENS = 'directorCode.ai.maxInputTokens';
 +const MAX_REPLAY_SNAPSHOTS = 16;
 +const MAX_REPLAY_MESSAGES = 200;
++const AGENT_ID = 'director-code';
++const DIRECTOR_PLAN_REVIEW_EXECUTE_ACTION_ID = 'director.planReview.execute';
++const AGENT_MODE_INFO: IChatRequestModeInfo = {
++	kind: ChatModeKind.Agent,
++	isBuiltin: true,
++	modeInstructions: undefined,
++	modeId: 'agent',
++	applyCodeBlockSuggestionId: undefined,
++};
 +
 +interface ReplaySnapshot {
 +	readonly messages: NormalizedMessageParam[];
@@ -13185,18 +13206,7 @@ index 0000000..ce3b2bf
 +								}
 +								firstProgressTime ??= Date.now() - startTime;
 +								firstProgressSent = true;
-+								progress(this.createDirectorPlanReviewProgress(request.sessionResource, plan));
-+								return {
-+									timings: {
-+										firstProgress: firstProgressTime,
-+										totalElapsed: Date.now() - startTime,
-+									},
-+									metadata: {
-+										subtype: 'plan_awaiting_decision',
-+										planId: plan.planId,
-+										planFile: plan.planFile,
-+									},
-+								};
++								return this.reviewDirectorPlan(request, progress, plan, firstProgressTime, startTime, token);
 +							}
 +							if (presentResult?.fatal) {
 +								return {
@@ -13383,36 +13393,184 @@ index 0000000..ce3b2bf
 +		return undefined;
 +	}
 +
-+	private createDirectorPlanReviewProgress(sessionResource: IChatAgentRequest['sessionResource'], plan: DirectorPlanRecord): IChatProgress[] {
-+		return [
-+			{
-+				kind: 'markdownContent',
-+				content: createDirectorPlanReviewMarkdown(plan),
-+			},
-+			{
-+				kind: 'command',
-+				command: {
-+					id: DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
-+					title: '$(play) Execute',
-+					tooltip: 'Execute this approved plan in Agent mode',
-+					arguments: [sessionResource, plan.planId, plan.nonce],
++	private async reviewDirectorPlan(
++		request: IChatAgentRequest,
++		progress: (parts: IChatProgress[]) => void,
++		plan: DirectorPlanRecord,
++		firstProgressTime: number | undefined,
++		startTime: number,
++		token: CancellationToken,
++	): Promise<IChatAgentResult> {
++		const reviewData = new ChatPlanReviewData(
++			plan.title,
++			createDirectorPlanReviewContent(plan),
++			[{
++				id: DIRECTOR_PLAN_REVIEW_EXECUTE_ACTION_ID,
++				label: 'Execute',
++				description: 'Run this plan in Agent mode',
++				default: true,
++			}],
++			true,
++			undefined,
++			`director-plan-${plan.planId}-${plan.nonce}`,
++		);
++
++		progress([reviewData]);
++
++		const result = await raceCancellation(reviewData.completion.p, token);
++		if (!result || token.isCancellationRequested) {
++			return {
++				metadata: {
++					subtype: 'plan_review_cancelled',
++					planId: plan.planId,
++					planFile: plan.planFile,
 +				},
-+				additionalCommands: [
-+					{
-+						id: DIRECTOR_PLAN_REJECT_COMMAND_ID,
-+						title: '$(close) Reject',
-+						tooltip: 'Reject this plan',
-+						arguments: [sessionResource, plan.planId, plan.nonce],
-+					},
-+					{
-+						id: DIRECTOR_PLAN_REVISE_COMMAND_ID,
-+						title: '$(comment-discussion) Revise',
-+						tooltip: 'Add feedback and revise this plan',
-+						arguments: [sessionResource, plan.planId, plan.nonce],
-+					},
-+				],
++				timings: {
++					firstProgress: firstProgressTime,
++					totalElapsed: Date.now() - startTime,
++				},
++			};
++		}
++
++		if (result.rejected) {
++			const reason = result.feedback?.trim() || 'User rejected the plan.';
++			const rejectedPlan = await this.planModeService.rejectPlan(request.sessionResource, plan.planId, plan.nonce, reason, token);
++			if (!rejectedPlan) {
++				return this.planReviewMissingResult(firstProgressTime, startTime, 'plan_reject_missing');
++			}
++			return {
++				metadata: {
++					subtype: 'plan_rejected',
++					planId: rejectedPlan.planId,
++					planFile: rejectedPlan.planFile,
++				},
++				timings: {
++					firstProgress: firstProgressTime,
++					totalElapsed: Date.now() - startTime,
++				},
++			};
++		}
++
++		if (result.feedback?.trim() && result.actionId !== DIRECTOR_PLAN_REVIEW_EXECUTE_ACTION_ID) {
++			const revisedPlan = await this.planModeService.beginRevision(request.sessionResource, plan.planId, plan.nonce, result.feedback.trim(), token);
++			if (!revisedPlan) {
++				return this.planReviewMissingResult(firstProgressTime, startTime, 'plan_revision_missing');
++			}
++			const queued = await this.queueDirectorPlanRevision(request, revisedPlan, result);
++			if (!queued.ok) {
++				await this.planModeService.restorePlanReview(request.sessionResource, revisedPlan, `Revision did not start: ${queued.message}`, token);
++				return this.planReviewQueueFailedResult(firstProgressTime, startTime, queued.message, 'plan_revision_queue_rejected');
++			}
++			return {
++				metadata: {
++					subtype: 'plan_revision_queued',
++					planId: revisedPlan.planId,
++					planFile: revisedPlan.planFile,
++				},
++				timings: {
++					firstProgress: firstProgressTime,
++					totalElapsed: Date.now() - startTime,
++				},
++			};
++		}
++
++		const approvedPlan = await this.planModeService.approvePlanForExecution(request.sessionResource, plan.planId, plan.nonce, token);
++		if (!approvedPlan) {
++			return this.planReviewMissingResult(firstProgressTime, startTime, 'plan_execute_missing');
++		}
++		const queued = await this.queueDirectorPlanExecution(request, approvedPlan);
++		if (!queued.ok) {
++			await this.planModeService.restorePlanReview(request.sessionResource, approvedPlan, `Execution did not start: ${queued.message}`, token);
++			return this.planReviewQueueFailedResult(firstProgressTime, startTime, queued.message, 'plan_execution_queue_rejected');
++		}
++		return {
++			metadata: {
++				subtype: 'plan_execution_queued',
++				planId: approvedPlan.planId,
++				planFile: approvedPlan.planFile,
 +			},
-+		];
++			timings: {
++				firstProgress: firstProgressTime,
++				totalElapsed: Date.now() - startTime,
++			},
++		};
++	}
++
++	private async queueDirectorPlanExecution(request: IChatAgentRequest, plan: DirectorPlanRecord): Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }> {
++		const chatService = this.getChatService();
++		if (!chatService) {
++			return { ok: false, message: 'Chat service is not available.' };
++		}
++		const result = await chatService.sendRequest(request.sessionResource, createApprovedPlanExecutionPrompt(plan), {
++			agentIdSilent: AGENT_ID,
++			modeInfo: AGENT_MODE_INFO,
++			userSelectedModelId: request.userSelectedModelId,
++			location: ChatAgentLocation.Chat,
++			queue: ChatRequestQueueKind.Queued,
++			isSystemInitiated: true,
++			systemInitiatedLabel: 'Execute approved plan',
++		});
++		if (ChatSendResult.isRejected(result)) {
++			return { ok: false, message: result.reason };
++		}
++		if (ChatSendResult.isQueued(result)) {
++			void result.deferred.then(async deferred => {
++				if (ChatSendResult.isRejected(deferred)) {
++					await this.planModeService.restorePlanReview(request.sessionResource, plan, `Execution did not start: ${deferred.reason}`);
++				}
++			}).catch(() => undefined);
++		}
++		return { ok: true };
++	}
++
++	private async queueDirectorPlanRevision(request: IChatAgentRequest, plan: DirectorPlanRecord, result: IChatPlanReviewResult): Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }> {
++		const chatService = this.getChatService();
++		if (!chatService) {
++			return { ok: false, message: 'Chat service is not available.' };
++		}
++		const feedback = result.feedback?.trim() ?? '';
++		const sendResult = await chatService.sendRequest(request.sessionResource, createPlanRevisionPrompt(plan, feedback), {
++			agentIdSilent: AGENT_ID,
++			modeInfo: AGENT_MODE_INFO,
++			userSelectedModelId: request.userSelectedModelId,
++			location: ChatAgentLocation.Chat,
++			queue: ChatRequestQueueKind.Queued,
++			isSystemInitiated: true,
++			systemInitiatedLabel: 'Revise plan',
++		});
++		if (ChatSendResult.isRejected(sendResult)) {
++			return { ok: false, message: sendResult.reason };
++		}
++		if (ChatSendResult.isQueued(sendResult)) {
++			void sendResult.deferred.then(async deferred => {
++				if (ChatSendResult.isRejected(deferred)) {
++					await this.planModeService.restorePlanReview(request.sessionResource, plan, `Revision did not start: ${deferred.reason}`);
++				}
++			}).catch(() => undefined);
++		}
++		return { ok: true };
++	}
++
++	private planReviewMissingResult(firstProgressTime: number | undefined, startTime: number, subtype: string): IChatAgentResult {
++		return {
++			errorDetails: { message: 'This plan review is no longer active.' },
++			timings: {
++				firstProgress: firstProgressTime,
++				totalElapsed: Date.now() - startTime,
++			},
++			metadata: { subtype },
++		};
++	}
++
++	private planReviewQueueFailedResult(firstProgressTime: number | undefined, startTime: number, message: string, subtype: string): IChatAgentResult {
++		return {
++			errorDetails: { message },
++			timings: {
++				firstProgress: firstProgressTime,
++				totalElapsed: Date.now() - startTime,
++			},
++			metadata: { subtype },
++		};
 +	}
 +
 +	private resolveRequestModeKind(request: IChatAgentRequest): ChatModeKind | undefined {
@@ -20339,10 +20497,10 @@ index 0000000..dfcd9b7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
 new file mode 100644
-index 0000000..39c5c63
+index 0000000..14dab49
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
-@@ -0,0 +1,661 @@
+@@ -0,0 +1,684 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -20894,6 +21052,29 @@ index 0000000..39c5c63
 +			: '',
 +	].filter(Boolean).join('\n'));
 +	return md;
++}
++
++export function createDirectorPlanReviewContent(plan: DirectorPlanRecord): string {
++	return [
++		plan.summary,
++		'',
++		`Plan file: \`${plan.planFile}\``,
++		'',
++		'## Proposed Steps',
++		plan.planMarkdown,
++		'',
++		'## Assumptions',
++		renderList(plan.assumptions),
++		'',
++		'## Open Questions',
++		renderList(plan.openQuestions),
++		'',
++		'## Validation',
++		renderList(plan.validation),
++		'',
++		'## Risks',
++		renderList(plan.risks),
++	].join('\n');
 +}
 +
 +export function createApprovedPlanExecutionPrompt(plan: DirectorPlanRecord): string {
