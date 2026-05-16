@@ -315,7 +315,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
 | Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
 | Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | pushed: `fcd37328` |
-| Phase G: `002`/`006` branding/text polish | pending | | | | |
+| Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still fails because Phase H expected JSON files do not exist yet | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pending implementation push |
 | Phase H: expected contracts/canonical/full materialize | pending | | | | |
 
 ### Phase B: Port Product / Build / Release (`003`)
@@ -635,6 +635,25 @@ Acceptance:
 - Copilot commercial flows are not user-facing.
 - Residual upstream commercial names are documented and justified.
 
+Completion note, 2026-05-17:
+
+- Created the 120 branding/text-polish replay patches from current 120 sources instead of blindly replaying the 116 patches:
+  - `patches/replay/002-director-branding.120-insider.patch`
+  - `patches/replay/006-director-text-polish.120-insider.patch`
+- Regenerated `patches/series.120-insider.json`; `002` and `006` are now enabled with real sha256 values.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Full scratch materialize to Director layer using enabled `001-009` patches passed, with no `.rej` files and no `git diff --check` errors in the materialized tree.
+  - Branding assertions confirmed Director-Code text in server CLI, Windows update strings, extension unification messaging, welcome/onboarding disclaimers, extension search, hook schema, and terminal settings.
+- Self-review passed:
+  - `git diff --check -- patches/replay/002-director-branding.120-insider.patch patches/replay/006-director-text-polish.120-insider.patch patches/series.120-insider.json` found no whitespace errors.
+  - `rg` checks found no VSCodium/VS Code leftovers in the selected user-visible Phase G files.
+  - Copilot commercial-flow leftovers were removed or guarded. Remaining Copilot matches are compatibility target/CLI names, not Director product-flow text.
+- Known Phase H gate:
+  - `node scripts/upgrade/expected-contracts.mjs --profile 120-insider-win32-x64-client` still fails because `docs/upgrade/expected/120-insider-win32-x64-client/*.expected.json` files have not been captured yet. This is the first Phase H task.
+
 ### Phase H: Expected Contracts, Canonical Manifest, Full Materialize
 
 Goal: switch from partial replay to full 120 Director replay.
@@ -693,18 +712,17 @@ Do:
 
 ## Immediate Next Step
 
-After Phase F is committed and pushed, continue with Phase G: branding/text polish stages `002` and `006`.
+After Phase G is committed and pushed, continue with Phase H: expected contracts, canonical manifest, and full materialize.
 
 The next window should:
 
 1. Confirm branch/status.
-2. Start from the 120 VSCodium layer plus enabled `003`, Phase E `004`, `005`, and `007`-`009`.
-3. Create `002-director-branding.120-insider.patch` from current 120 sources, not by blindly replaying the 116 branding patch.
-4. Prioritize visible leftovers from the Phase G pre-review: onboarding/welcome, extension reload/gallery UX, server CLI terminal wording, policy watcher, Windows visual/installer-adjacent text.
-5. Create `006-director-text-polish.120-insider.patch` narrowly for prompt syntax/search extension/terminal text that is user-visible.
-6. Update allowlists for accepted fixtures/internal/protocol strings instead of hand-editing low-value upstream text.
-7. Regenerate `series.120-insider.json`, validate profile/series/product overrides, run branding grep checks and scratch replay.
-8. Self-review, update this plan, commit, and push before starting the next stage.
+2. Capture 120 expected contract files from the fully materialized Director layer.
+3. Run `expected-contracts` until it passes and write the expected-contracts report.
+4. Generate the 120 canonical manifest from the full Director materialized tree.
+5. Run a clean full materialize to `vscode.generated/layers/director/vscode`.
+6. Run profile, series, product override, expected-contract, canonical manifest, and diff/grep self-review checks.
+7. Record Phase H completion here, commit, push, then decide whether the 120 profile is ready to become active.
 
 Suggested first commands:
 
@@ -718,6 +736,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase F push, only the untracked `artifacts/` directory should remain.
+As of 2026-05-17 during Phase G closeout, the intended tracked changes are `002`, `006`, `series.120-insider.json`, and this plan file. The untracked `artifacts/` directory remains unrelated and should stay uncommitted.
 
 Do not clean or revert `artifacts/` unless explicitly asked.

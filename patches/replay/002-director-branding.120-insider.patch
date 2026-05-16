@@ -1,0 +1,1026 @@
+diff --git a/build/lib/policies/basePolicy.ts b/build/lib/policies/basePolicy.ts
+index 1403c4d..433a6bf 100644
+--- a/build/lib/policies/basePolicy.ts
++++ b/build/lib/policies/basePolicy.ts
+@@ -36,7 +36,7 @@ export abstract class BasePolicy implements Policy {
+ 
+ 	renderADMX(regKey: string) {
+ 		return [
+-			`<policy name="${this.name}" class="Both" displayName="$(string.${this.name})" explainText="$(string.${this.name}_${this.description.nlsKey.replace(/\./g, '_')})" key="Software\\Policies\\VSCodium\\${regKey}" presentation="$(presentation.${this.name})">`,
++			`<policy name="${this.name}" class="Both" displayName="$(string.${this.name})" explainText="$(string.${this.name}_${this.description.nlsKey.replace(/\./g, '_')})" key="Software\\Policies\\Director-Code\\${regKey}" presentation="$(presentation.${this.name})">`,
+ 			`	<parentCategory ref="${this.category.name.nlsKey}" />`,
+ 			`	<supportedOn ref="Supported_${this.minimumVersion.replace(/\./g, '_')}" />`,
+ 			`	<elements>`,
+diff --git a/build/lib/policies/render.ts b/build/lib/policies/render.ts
+index 8656504..caaef64 100644
+--- a/build/lib/policies/render.ts
++++ b/build/lib/policies/render.ts
+@@ -47,7 +47,7 @@ export function renderADMX(regKey: string, versions: string[], categories: Categ
+ 	return `<?xml version="1.0" encoding="utf-8"?>
+ <policyDefinitions revision="1.1" schemaVersion="1.0">
+ 	<policyNamespaces>
+-		<target prefix="${regKey}" namespace="VSCodium.Policies.${regKey}" />
++		<target prefix="${regKey}" namespace="Director-Code.Policies.${regKey}" />
+ 	</policyNamespaces>
+ 	<resources minRequiredRevision="1.0" />
+ 	<supportedOn>
+@@ -165,7 +165,7 @@ export function renderProfileManifest(appName: string, bundleIdentifier: string,
+ 		</dict>
+ 		<dict>
+ 			<key>pfm_default</key>
+-			<string>VSCodium</string>
++			<string>Director-Code</string>
+ 			<key>pfm_name</key>
+ 			<string>PayloadOrganization</string>
+ 			<key>pfm_title</key>
+@@ -183,11 +183,11 @@ export function renderProfileManifest(appName: string, bundleIdentifier: string,
+ <plist version="1.0">
+ <dict>
+     <key>pfm_app_url</key>
+-    <string>https://github.com/VSCodium/vscodium</string>
++    <string>https://github.com/daxijiu/Director-Code</string>
+     <key>pfm_description</key>
+     <string>${appName} Managed Settings</string>
+     <key>pfm_documentation_url</key>
+-    <string>https://github.com/VSCodium/vscodium</string>
++    <string>https://github.com/daxijiu/Director-Code</string>
+     <key>pfm_domain</key>
+     <string>${bundleIdentifier}</string>
+     <key>pfm_format_version</key>
+@@ -253,13 +253,13 @@ ${policyEntries}
+ 			</dict>
+ 		</array>
+ 		<key>PayloadDescription</key>
+-		<string>This profile manages ${appName}. For more information see https://github.com/VSCodium/vscodium</string>
++		<string>This profile manages ${appName}. For more information see https://github.com/daxijiu/Director-Code</string>
+ 		<key>PayloadDisplayName</key>
+ 		<string>${appName}</string>
+ 		<key>PayloadIdentifier</key>
+ 		<string>${bundleIdentifier}</string>
+ 		<key>PayloadOrganization</key>
+-		<string>VSCodium</string>
++		<string>Director-Code</string>
+ 		<key>PayloadType</key>
+ 		<string>Configuration</string>
+ 		<key>PayloadUUID</key>
+diff --git a/build/win32/i18n/messages.de.isl b/build/win32/i18n/messages.de.isl
+index 3a3c7fa..8c4bd64 100644
+--- a/build/win32/i18n/messages.de.isl
++++ b/build/win32/i18n/messages.de.isl
+@@ -7,4 +7,4 @@ RunAfter=%1 nach der Installation ausführen
+ Other=Andere:
+ SourceFile=%1-Quelldatei
+ OpenWithCodeContextMenu=Mit %1 öffnen
+-UpdatingVisualStudioCode=Visual Studio Code wird aktualisiert...
+\ No newline at end of file
++UpdatingVisualStudioCode=Director-Code wird aktualisiert...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.en.isl b/build/win32/i18n/messages.en.isl
+index 130534f..24fc19e 100644
+--- a/build/win32/i18n/messages.en.isl
++++ b/build/win32/i18n/messages.en.isl
+@@ -14,4 +14,4 @@ RunAfter=Run %1 after installation
+ Other=Other:
+ SourceFile=%1 Source File
+ OpenWithCodeContextMenu=Open w&ith %1
+-UpdatingVisualStudioCode=Updating VSCodium - Insiders...
++UpdatingVisualStudioCode=Updating Director-Code...
+diff --git a/build/win32/i18n/messages.es.isl b/build/win32/i18n/messages.es.isl
+index 9725880..85ee88a 100644
+--- a/build/win32/i18n/messages.es.isl
++++ b/build/win32/i18n/messages.es.isl
+@@ -7,4 +7,4 @@ RunAfter=Ejecutar %1 después de la instalación
+ Other=Otros:
+ SourceFile=Archivo de origen %1
+ OpenWithCodeContextMenu=Abrir &con %1
+-UpdatingVisualStudioCode=Actualizando VSCodium - Insiders...
+\ No newline at end of file
++UpdatingVisualStudioCode=Actualizando Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.fr.isl b/build/win32/i18n/messages.fr.isl
+index 65ad8f1..246c27b 100644
+--- a/build/win32/i18n/messages.fr.isl
++++ b/build/win32/i18n/messages.fr.isl
+@@ -7,4 +7,4 @@ RunAfter=Exécuter %1 après l'installation
+ Other=Autre :
+ SourceFile=Fichier source %1
+ OpenWithCodeContextMenu=Ouvrir avec %1
+-UpdatingVisualStudioCode=Mise à jour de Visual Studio Code...
+\ No newline at end of file
++UpdatingVisualStudioCode=Mise à jour de Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.hu.isl b/build/win32/i18n/messages.hu.isl
+index 87487f6..16ea99e 100644
+--- a/build/win32/i18n/messages.hu.isl
++++ b/build/win32/i18n/messages.hu.isl
+@@ -7,4 +7,4 @@ RunAfter=%1 indítása a telepítés után
+ Other=Egyéb:
+ SourceFile=%1 forrásfájl
+ OpenWithCodeContextMenu=Megnyitás a következővel: %1
+-UpdatingVisualStudioCode=A Visual Studio Code frissítése...
+\ No newline at end of file
++UpdatingVisualStudioCode=A Director-Code frissítése...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.it.isl b/build/win32/i18n/messages.it.isl
+index 5436f3e..9efa864 100644
+--- a/build/win32/i18n/messages.it.isl
++++ b/build/win32/i18n/messages.it.isl
+@@ -7,4 +7,4 @@ RunAfter=Esegui %1 dopo l'installazione
+ Other=Altro:
+ SourceFile=File di origine %1
+ OpenWithCodeContextMenu=Apri con %1
+-UpdatingVisualStudioCode=Aggiornamento di VSCodium - Insiders...
+\ No newline at end of file
++UpdatingVisualStudioCode=Aggiornamento di Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.ja.isl b/build/win32/i18n/messages.ja.isl
+index 76e634f..85e34c5 100644
+--- a/build/win32/i18n/messages.ja.isl
++++ b/build/win32/i18n/messages.ja.isl
+@@ -7,4 +7,4 @@ RunAfter=インストール後に %1 を実行する
+ Other=その他:
+ SourceFile=%1 ソース ファイル
+ OpenWithCodeContextMenu=%1 で開く
+-UpdatingVisualStudioCode=Visual Studio Code を更新しています...
+\ No newline at end of file
++UpdatingVisualStudioCode=Director-Code を更新しています...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.ko.isl b/build/win32/i18n/messages.ko.isl
+index 40abfaf..8990f0b 100644
+--- a/build/win32/i18n/messages.ko.isl
++++ b/build/win32/i18n/messages.ko.isl
+@@ -7,4 +7,4 @@ RunAfter=설치 후 %1 실행
+ Other=기타:
+ SourceFile=%1 원본 파일
+ OpenWithCodeContextMenu=%1(으)로 열기
+-UpdatingVisualStudioCode=Visual Studio Code 업데이트 중...
+\ No newline at end of file
++UpdatingVisualStudioCode=Director-Code 업데이트 중...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.pt-br.isl b/build/win32/i18n/messages.pt-br.isl
+index 9cf9408..30e7a6b 100644
+--- a/build/win32/i18n/messages.pt-br.isl
++++ b/build/win32/i18n/messages.pt-br.isl
+@@ -7,4 +7,4 @@ RunAfter=Executar %1 após a instalação
+ Other=Outros:
+ SourceFile=Arquivo Fonte %1
+ OpenWithCodeContextMenu=Abrir com %1
+-UpdatingVisualStudioCode=Atualizando o VSCodium - Insiders...
+\ No newline at end of file
++UpdatingVisualStudioCode=Atualizando o Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.ru.isl b/build/win32/i18n/messages.ru.isl
+index d4f427a..9356741 100644
+--- a/build/win32/i18n/messages.ru.isl
++++ b/build/win32/i18n/messages.ru.isl
+@@ -7,4 +7,4 @@ RunAfter=Запустить %1 после установки
+ Other=Другое:
+ SourceFile=Исходный файл %1
+ OpenWithCodeContextMenu=Открыть с помощью %1
+-UpdatingVisualStudioCode=Обновление Visual Studio Code...
+\ No newline at end of file
++UpdatingVisualStudioCode=Обновление Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.tr.isl b/build/win32/i18n/messages.tr.isl
+index 7cc6586..54be337 100644
+--- a/build/win32/i18n/messages.tr.isl
++++ b/build/win32/i18n/messages.tr.isl
+@@ -7,4 +7,4 @@ RunAfter=Kurulumdan sonra %1 uygulamasını çalıştır.
+ Other=Diğer:
+ SourceFile=%1 Kaynak Dosyası
+ OpenWithCodeContextMenu=%1 İle Aç
+-UpdatingVisualStudioCode=Visual Studio Code güncelleniyor...
+\ No newline at end of file
++UpdatingVisualStudioCode=Director-Code güncelleniyor...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.zh-cn.isl b/build/win32/i18n/messages.zh-cn.isl
+index 79e9cdb..50f1e8e 100644
+--- a/build/win32/i18n/messages.zh-cn.isl
++++ b/build/win32/i18n/messages.zh-cn.isl
+@@ -7,4 +7,4 @@ RunAfter=安装后运行 %1
+ Other=其他:
+ SourceFile=%1 源文件
+ OpenWithCodeContextMenu=通过 %1 打开
+-UpdatingVisualStudioCode=正在更新 Visual Studio Code...
+\ No newline at end of file
++UpdatingVisualStudioCode=正在更新 Director-Code...
+\ No newline at end of file
+diff --git a/build/win32/i18n/messages.zh-tw.isl b/build/win32/i18n/messages.zh-tw.isl
+index d7a95a9..262dec2 100644
+--- a/build/win32/i18n/messages.zh-tw.isl
++++ b/build/win32/i18n/messages.zh-tw.isl
+@@ -7,4 +7,4 @@ RunAfter=安裝後執行 %1
+ Other=其他:
+ SourceFile=%1 來源檔案
+ OpenWithCodeContextMenu=以 %1 開啟
+-UpdatingVisualStudioCode=正在更新 Visual Studio Code...
+\ No newline at end of file
++UpdatingVisualStudioCode=正在更新 Director-Code...
+\ No newline at end of file
+diff --git a/resources/win32/VisualElementsManifest.xml b/resources/win32/VisualElementsManifest.xml
+index 214861c..ddec564 100644
+--- a/resources/win32/VisualElementsManifest.xml
++++ b/resources/win32/VisualElementsManifest.xml
+@@ -5,5 +5,5 @@
+ 				Square150x150Logo="resources\app\resources\win32\code_150x150.png"
+ 				Square70x70Logo="resources\app\resources\win32\code_70x70.png"
+ 				ForegroundText="light"
+-				ShortDisplayName="VSCodium - Insiders" />
++				ShortDisplayName="Director-Code" />
+ </Application>
+diff --git a/src/vs/platform/policy/node/nativePolicyService.ts b/src/vs/platform/policy/node/nativePolicyService.ts
+index f2ea09c..792a84d 100644
+--- a/src/vs/platform/policy/node/nativePolicyService.ts
++++ b/src/vs/platform/policy/node/nativePolicyService.ts
+@@ -30,7 +30,7 @@ export class NativePolicyService extends AbstractPolicyService implements IPolic
+ 		await this.throttler.queue(() => new Promise<void>((c, e) => {
+ 			try {
+ 				this.logService.trace(`Creating watcher for productName ${this.productName}`);
+-				this.watcher.value = createWatcher('VSCodium', this.productName, policyDefinitions, update => {
++				this.watcher.value = createWatcher('Director-Code', this.productName, policyDefinitions, update => {
+ 					this._onDidPolicyChange(update);
+ 					c();
+ 				});
+diff --git a/src/vs/server/node/server.cli.ts b/src/vs/server/node/server.cli.ts
+index 70f16c0..161e86a 100644
+--- a/src/vs/server/node/server.cli.ts
++++ b/src/vs/server/node/server.cli.ts
+@@ -18,11 +18,11 @@ import { DeferredPromise } from '../../base/common/async.js';
+ import { FileAccess } from '../../base/common/network.js';
+ 
+ /*
+- * Implements a standalone CLI app that opens VS Code from a remote terminal.
++ * Implements a standalone CLI app that opens Director-Code from a remote terminal.
+  *  - In integrated terminals for remote windows this connects to the remote server though a pipe.
+  *    The pipe is passed in env VSCODE_IPC_HOOK_CLI.
+- *  - In external terminals for WSL this calls VS Code on the Windows side.
+- *    The VS Code desktop executable path is passed in env VSCODE_CLIENT_COMMAND.
++ *  - In external terminals for WSL this calls Director-Code on the Windows side.
++ *    The Director-Code desktop executable path is passed in env VSCODE_CLIENT_COMMAND.
+  */
+ 
+ 
+@@ -91,7 +91,7 @@ const cliStdInFilePath = process.env['VSCODE_STDIN_FILE_PATH'] as string;
+ 
+ export async function main(desc: ProductDescription, args: string[]): Promise<void> {
+ 	if (!cliPipe && !cliCommand) {
+-		console.log('Command is only available in WSL or inside a VSCodium - Insiders terminal.');
++		console.log('Command is only available in WSL or inside a Director-Code terminal.');
+ 		return;
+ 	}
+ 
+@@ -473,7 +473,7 @@ function asExtensionIdOrVSIX(inputs: string[] | undefined) {
+ }
+ 
+ function fatal(message: string, err: unknown): void {
+-	console.error('Unable to connect to VSCodium - Insiders server: ' + message);
++	console.error('Unable to connect to Director-Code server: ' + message);
+ 	console.error(err);
+ 	process.exit(1);
+ }
+diff --git a/src/vs/workbench/browser/actions/developerActions.ts b/src/vs/workbench/browser/actions/developerActions.ts
+index 41ed1ab..009bb01 100644
+--- a/src/vs/workbench/browser/actions/developerActions.ts
++++ b/src/vs/workbench/browser/actions/developerActions.ts
+@@ -688,7 +688,7 @@ class PolicyDiagnosticsAction extends Action2 {
+ 
+ 		const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
+ 
+-		let content = '# VSCodium - Insiders Policy Diagnostics\n\n';
++		let content = '# Director-Code Policy Diagnostics\n\n';
+ 		content += '*WARNING: This file may contain sensitive information.*\n\n';
+ 		content += '## System Information\n\n';
+ 		content += '| Property | Value |\n';
+diff --git a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
+index dee0f35..3806049 100644
+--- a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
++++ b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
+@@ -149,14 +149,14 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
+ 					localize('extensions.autoUpdate.enabled', 'Download and install updates automatically only for enabled extensions.'),
+ 					localize('extensions.autoUpdate.false', 'Extensions are not automatically updated.'),
+ 				],
+-				description: localize('extensions.autoUpdate', "Controls the automatic update behavior of extensions. The updates are fetched from a Microsoft online service."),
++				description: localize('extensions.autoUpdate', "Controls the automatic update behavior of extensions. The updates are fetched from the configured extension gallery."),
+ 				default: true,
+ 				scope: ConfigurationScope.APPLICATION,
+ 				tags: ['usesOnlineServices']
+ 			},
+ 			'extensions.autoCheckUpdates': {
+ 				type: 'boolean',
+-				description: localize('extensionsCheckUpdates', "When enabled, automatically checks extensions for updates. If an extension has an update, it is marked as outdated in the Extensions view. The updates are fetched from a Microsoft online service."),
++				description: localize('extensionsCheckUpdates', "When enabled, automatically checks extensions for updates. If an extension has an update, it is marked as outdated in the Extensions view. The updates are fetched from the configured extension gallery."),
+ 				default: true,
+ 				scope: ConfigurationScope.APPLICATION,
+ 				tags: ['usesOnlineServices']
+@@ -388,24 +388,24 @@ CommandsRegistry.registerCommand({
+ 			{
+ 				name: 'options',
+ 				description: '(optional) Options for installing the extension. Object with the following properties: ' +
+-					'`installOnlyNewlyAddedFromExtensionPackVSIX`: When enabled, VSCodium - Insiders installs only newly added extensions from the extension pack VSIX. This option is considered only when installing VSIX. ',
++					'`installOnlyNewlyAddedFromExtensionPackVSIX`: When enabled, Director-Code installs only newly added extensions from the extension pack VSIX. This option is considered only when installing VSIX. ',
+ 				isOptional: true,
+ 				schema: {
+ 					'type': 'object',
+ 					'properties': {
+ 						'installOnlyNewlyAddedFromExtensionPackVSIX': {
+ 							'type': 'boolean',
+-							'description': localize('workbench.extensions.installExtension.option.installOnlyNewlyAddedFromExtensionPackVSIX', "When enabled, VSCodium - Insiders installs only newly added extensions from the extension pack VSIX. This option is considered only while installing a VSIX."),
++							'description': localize('workbench.extensions.installExtension.option.installOnlyNewlyAddedFromExtensionPackVSIX', "When enabled, Director-Code installs only newly added extensions from the extension pack VSIX. This option is considered only while installing a VSIX."),
+ 							default: false
+ 						},
+ 						'installPreReleaseVersion': {
+ 							'type': 'boolean',
+-							'description': localize('workbench.extensions.installExtension.option.installPreReleaseVersion', "When enabled, VSCodium - Insiders installs the pre-release version of the extension if available."),
++							'description': localize('workbench.extensions.installExtension.option.installPreReleaseVersion', "When enabled, Director-Code installs the pre-release version of the extension if available."),
+ 							default: false
+ 						},
+ 						'donotSync': {
+ 							'type': 'boolean',
+-							'description': localize('workbench.extensions.installExtension.option.donotSync', "When enabled, VSCodium - Insiders do not sync this extension when Settings Sync is on."),
++							'description': localize('workbench.extensions.installExtension.option.donotSync', "When enabled, Director-Code do not sync this extension when Settings Sync is on."),
+ 							default: false
+ 						},
+ 						'justification': {
+@@ -935,8 +935,8 @@ class ExtensionsContributions extends Disposable implements IWorkbenchContributi
+ 				if (requireReload) {
+ 					notificationService.prompt(
+ 						Severity.Info,
+-						vsixs.length > 1 ? localize('InstallVSIXs.successReload', "Completed installing extensions. Please reload VSCodium to enable them.")
+-							: localize('InstallVSIXAction.successReload', "Completed installing extension. Please reload VSCodium to enable it."),
++						vsixs.length > 1 ? localize('InstallVSIXs.successReload', "Completed installing extensions. Please reload Director-Code to enable them.")
++							: localize('InstallVSIXAction.successReload', "Completed installing extension. Please reload Director-Code to enable it."),
+ 						[{
+ 							label: localize('InstallVSIXAction.reloadNow', "Reload Now"),
+ 							run: () => hostService.reload()
+diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
+index de1c7cd..3ac066e 100644
+--- a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
++++ b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
+@@ -107,7 +107,7 @@ export class PromptExtensionInstallFailureAction extends Action {
+ 		this.logService.error(this.error);
+ 
+ 		if (this.error.name === ExtensionManagementErrorCode.Unsupported) {
+-			const productName = isWeb ? localize('VSCodium - Insiders for Web', "{0} for the Web", this.productService.nameLong) : this.productService.nameLong;
++			const productName = isWeb ? localize('Director-Code for Web', "{0} for the Web", this.productService.nameLong) : this.productService.nameLong;
+ 			const message = localize('cannot be installed', "The '{0}' extension is not available in {1}. Click 'More Information' to learn more.", this.extension.displayName || this.extension.identifier.id, productName);
+ 			const { confirmed } = await this.dialogService.confirm({
+ 				type: Severity.Info,
+@@ -551,7 +551,7 @@ export class InstallAction extends ExtensionAction {
+ 					}
+ 				});
+ 			} else if (this.extension.deprecationInfo.settings) {
+-				detail = localize('deprecated with alternate settings message', "This extension is deprecated as this functionality is now built-in to VSCodium - Insiders.");
++				detail = localize('deprecated with alternate settings message', "This extension is deprecated as this functionality is now built-in to Director-Code.");
+ 
+ 				const settings = this.extension.deprecationInfo.settings;
+ 				buttons.push({
+@@ -940,7 +940,7 @@ export class UninstallAction extends ExtensionAction {
+ 
+ 		try {
+ 			await this.extensionsWorkbenchService.uninstall(this.extension);
+-			alert(localize('uninstallExtensionComplete', "Please reload VSCodium - Insiders to complete the uninstallation of the extension {0}.", this.extension.displayName));
++			alert(localize('uninstallExtensionComplete', "Please reload Director-Code to complete the uninstallation of the extension {0}.", this.extension.displayName));
+ 		} catch (error) {
+ 			if (!isCancellationError(error)) {
+ 				this.dialogService.error(getErrorMessage(error));
+@@ -2808,7 +2808,7 @@ export class ExtensionStatusAction extends ExtensionAction {
+ 				this.updateStatus({ icon: warningIcon, message: new MarkdownString(localize('deprecated with alternate extension tooltip', "This extension is deprecated. Use the {0} extension instead.", link)) }, true);
+ 			} else if (this.extension.deprecationInfo.settings) {
+ 				const link = `[${localize('settings', "settings")}](${createCommandUri('workbench.action.openSettings', this.extension.deprecationInfo.settings.map(setting => `@id:${setting}`).join(' '))}})`;
+-				this.updateStatus({ icon: warningIcon, message: new MarkdownString(localize('deprecated with alternate settings tooltip', "This extension is deprecated as this functionality is now built-in to VSCodium - Insiders. Configure these {0} to use this functionality.", link)) }, true);
++				this.updateStatus({ icon: warningIcon, message: new MarkdownString(localize('deprecated with alternate settings tooltip', "This extension is deprecated as this functionality is now built-in to Director-Code. Configure these {0} to use this functionality.", link)) }, true);
+ 			} else {
+ 				const message = new MarkdownString(localize('deprecated tooltip', "This extension is deprecated as it is no longer being maintained."));
+ 				if (this.extension.deprecationInfo.additionalInfo) {
+@@ -2900,7 +2900,7 @@ export class ExtensionStatusAction extends ExtensionAction {
+ 
+ 		// Unification
+ 		if (this.extension.enablementState === EnablementState.DisabledByUnification) {
+-			this.updateStatus({ icon: infoIcon, message: new MarkdownString(localize('extension disabled because of unification', "All GitHub Copilot functionality is now being served from the GitHub Copilot Chat extension. To temporarily opt out of this extension unification, toggle the {0} setting.", '`chat.extensionUnification.enabled`')) }, true);
++			this.updateStatus({ icon: infoIcon, message: new MarkdownString(localize('extension disabled because of unification', "Compatible AI functionality is now being served from the active chat extension. To temporarily opt out of this extension unification, toggle the {0} setting.", '`chat.extensionUnification.enabled`')) }, true);
+ 			return;
+ 		}
+ 
+diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts b/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
+index 7418299..f5315ce 100644
+--- a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
++++ b/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
+@@ -477,7 +477,7 @@ export class Extension implements IExtension {
+ 
+ 		if (this.type === ExtensionType.System) {
+ 			return Promise.resolve(`# ${this.displayName || this.name}
+-**Notice:** This extension is bundled with VSCodium - Insiders. It can be disabled but not uninstalled.
++**Notice:** This extension is bundled with Director-Code. It can be disabled but not uninstalled.
+ ## Features
+ ${this.description}
+ `);
+@@ -515,7 +515,7 @@ ${this.description}
+ 		}
+ 
+ 		if (this.type === ExtensionType.System) {
+-			return Promise.resolve(`Please check the [VSCodium - Insiders Release Notes](command:${ShowCurrentReleaseNotesActionId}) for changes to the built-in extensions.`);
++			return Promise.resolve(`Please check the [Director-Code Release Notes](command:${ShowCurrentReleaseNotesActionId}) for changes to the built-in extensions.`);
+ 		}
+ 
+ 		return Promise.reject(new Error('not available'));
+diff --git a/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts b/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
+index 5158363..1fcec85 100644
+--- a/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
++++ b/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
+@@ -27,7 +27,7 @@ export const ExtensionsConfigurationSchema: IJSONSchema = {
+ 		},
+ 		unwantedRecommendations: {
+ 			type: 'array',
+-			description: localize('app.extensions.json.unwantedRecommendations', "List of extensions recommended by VSCodium - Insiders that should not be recommended for users of this workspace. The identifier of an extension is always '${publisher}.${name}'. For example: 'vscode.csharp'."),
++			description: localize('app.extensions.json.unwantedRecommendations', "List of extensions recommended by Director-Code that should not be recommended for users of this workspace. The identifier of an extension is always '${publisher}.${name}'. For example: 'vscode.csharp'."),
+ 			items: {
+ 				type: 'string',
+ 				pattern: EXTENSION_IDENTIFIER_PATTERN,
+@@ -46,7 +46,7 @@ export const ExtensionsConfigurationInitialContent: string = [
+ 	'\t"recommendations": [',
+ 	'\t\t',
+ 	'\t],',
+-	'\t// List of extensions recommended by VSCodium - Insiders that should not be recommended for users of this workspace.',
++	'\t// List of extensions recommended by Director-Code that should not be recommended for users of this workspace.',
+ 	'\t"unwantedRecommendations": [',
+ 	'\t\t',
+ 	'\t]',
+diff --git a/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts b/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
+index c6e95c9..d7b5ef1 100644
+--- a/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
++++ b/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
+@@ -17,7 +17,7 @@ export const InstallExtensionsToolData: IToolData = {
+ 	toolReferenceName: 'installExtensions',
+ 	canBeReferencedInPrompt: true,
+ 	displayName: localize('installExtensionsTool.displayName', 'Install Extensions'),
+-	modelDescription: 'This is a tool for installing extensions in VSCodium - Insiders. You should provide the list of extension ids to install. The identifier of an extension is \'\${ publisher }.\${ name }\' for example: \'vscode.csharp\'.',
++	modelDescription: 'This is a tool for installing extensions in Director-Code. You should provide the list of extension ids to install. The identifier of an extension is \'\${ publisher }.\${ name }\' for example: \'vscode.csharp\'.',
+ 	userDescription: localize('installExtensionsTool.userDescription', 'Tool for installing extensions'),
+ 	source: ToolDataSource.Internal,
+ 	inputSchema: {
+diff --git a/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts b/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
+index 1f40825..632179b 100644
+--- a/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
++++ b/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
+@@ -151,7 +151,7 @@ class ReportExtensionSlowAction extends Action {
+ - Extension Name: \`${this.extension.name}\`
+ - Extension Version: \`${this.extension.version}\`
+ - OS Version: \`${osVersion}\`
+-- VSCodium - Insiders version: \`${this._productService.version}\`\n\n${message}`);
++- Director-Code version: \`${this._productService.version}\`\n\n${message}`);
+ 
+ 		const url = `${this.repoInfo.base}/${this.repoInfo.owner}/${this.repoInfo.repo}/issues/new/?body=${body}&title=${title}`;
+ 		this._openerService.open(URI.parse(url));
+diff --git a/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts b/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
+index 03aa639..7aeb17c 100644
+--- a/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
++++ b/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
+@@ -853,7 +853,7 @@ export class BaseIssueReporterService extends Disposable {
+ 
+ 	public searchVSCodeIssues(title: string, issueDescription?: string): void {
+ 		if (title) {
+-			this.searchGitHub('VSCodium/vscodium-insiders', title);
++			this.searchGitHub('Director-Code/vscodium-insiders', title);
+ 		} else {
+ 			this.clearSearchResults();
+ 		}
+@@ -1022,8 +1022,8 @@ export class BaseIssueReporterService extends Disposable {
+ 
+ 		sourceSelect.innerText = '';
+ 		sourceSelect.append(this.makeOption('', localize('selectSource', "Select source"), true));
+-		sourceSelect.append(this.makeOption(IssueSource.VSCode, localize('vscode', "VSCodium - Insiders"), false));
+-		sourceSelect.append(this.makeOption(IssueSource.Extension, localize('extension', "A VSCodium - Insiders extension"), false));
++		sourceSelect.append(this.makeOption(IssueSource.VSCode, localize('vscode', "Director-Code"), false));
++		sourceSelect.append(this.makeOption(IssueSource.Extension, localize('extension', "A Director-Code extension"), false));
+ 		if (this.product.reportMarketplaceIssueUrl) {
+ 			sourceSelect.append(this.makeOption(IssueSource.Marketplace, localize('marketplace', "Extensions Marketplace"), false));
+ 		}
+@@ -1126,7 +1126,7 @@ export class BaseIssueReporterService extends Disposable {
+ 		if (selectedExtension && this.nonGitHubIssueUrl) {
+ 			hide(titleTextArea);
+ 			hide(descriptionTextArea);
+-			reset(descriptionTitle, localize('handlesIssuesElsewhere', "This extension handles issues outside of VSCodium - Insiders"));
++			reset(descriptionTitle, localize('handlesIssuesElsewhere', "This extension handles issues outside of Director-Code"));
+ 			reset(descriptionSubtitle, localize('elsewhereDescription', "The '{0}' extension prefers to use an external issue reporter. To be taken to that issue reporting experience, click the button below.", selectedExtension.displayName));
+ 			this.publicGithubButton.label = localize('openIssueReporter', "Open External Issue Reporter");
+ 			return;
+diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+index 1f4ec19..00160e7 100644
+--- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
++++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+@@ -105,7 +105,7 @@ if [ -z "${VSCODE_PYTHON_AUTOACTIVATE_GUARD:-}" ]; then
+ 		# Prevent crashing by negating exit code
+ 		if ! builtin eval "$VSCODE_PYTHON_BASH_ACTIVATE"; then
+ 			__vsc_activation_status=$?
+-			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m VSCodium - Insiders Python bash activation failed with exit code %d \x1b[0m' "$__vsc_activation_status"
++			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m Director-Code Python bash activation failed with exit code %d \x1b[0m' "$__vsc_activation_status"
+ 		fi
+ 	fi
+ 	# Remove any leftover Python activation env vars.
+diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+index a229182..ffb4e19 100644
+--- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
++++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+@@ -10,7 +10,7 @@ if [ -n "$VSCODE_SHELL_INTEGRATION" ]; then
+ 	builtin return
+ fi
+ 
+-# This variable allows the shell to both detect that VS Code's shell integration is enabled as well
++# This variable allows the shell to both detect that Director-Code's shell integration is enabled as well
+ # as disable it by unsetting the variable.
+ VSCODE_SHELL_INTEGRATION=1
+ 
+@@ -76,7 +76,7 @@ if [ -z "${VSCODE_PYTHON_AUTOACTIVATE_GUARD:-}" ]; then
+ 		# Prevent crashing by negating exit code
+ 		if ! builtin eval "$VSCODE_PYTHON_ZSH_ACTIVATE"; then
+ 			__vsc_activation_status=$?
+-			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m VSCodium - Insiders Python zsh activation failed with exit code %d \x1b[0m' "$__vsc_activation_status"
++			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m Director-Code Python zsh activation failed with exit code %d \x1b[0m' "$__vsc_activation_status"
+ 		fi
+ 	fi
+ 	# Remove any leftover Python activation env vars.
+diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
+index 7563e67..9a47688 100644
+--- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
++++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
+@@ -3,7 +3,7 @@
+ #   Licensed under the MIT License. See License.txt in the project root for license information.
+ # ---------------------------------------------------------------------------------------------
+ #
+-# Visual Studio Code terminal integration for fish
++# Director-Code terminal integration for fish
+ #
+ # Manual installation:
+ #
+@@ -92,7 +92,7 @@ if not set -q VSCODE_PYTHON_AUTOACTIVATE_GUARD
+ 		set __vsc_activation_status $status
+ 
+ 		if test $__vsc_activation_status -ne 0
+-			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m VSCodium - Insiders Python fish activation failed with exit code %d \x1b[0m \n' "$__vsc_activation_status"
++			builtin printf '\x1b[0m\x1b[7m * \x1b[0;103m Director-Code Python fish activation failed with exit code %d \x1b[0m \n' "$__vsc_activation_status"
+ 		end
+ 	end
+ 	# Remove any leftover Python activation env vars.
+@@ -108,7 +108,7 @@ if set -q VSCODE_NONCE
+ end
+ 
+ # Helper function
+-function __vsc_esc -d "Emit escape sequences for VSCodium - Insiders shell integration"
++function __vsc_esc -d "Emit escape sequences for Director-Code shell integration"
+ 	builtin printf "\e]633;%s\a" (string join ";" -- $argv)
+ end
+ 
+diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1 b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
+index a700f5b..f83431a 100644
+--- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
++++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
+@@ -85,7 +85,7 @@ if (-not $env:VSCODE_PYTHON_AUTOACTIVATE_GUARD) {
+ 		}
+ 		catch {
+ 			$activationError = $_
+-			Write-Host "`e[0m`e[7m * `e[0;103m VSCodium - Insiders Python powershell activation failed with exit code $($activationError.Exception.Message) `e[0m"
++			Write-Host "`e[0m`e[7m * `e[0;103m Director-Code Python powershell activation failed with exit code $($activationError.Exception.Message) `e[0m"
+ 		}
+ 	}
+ 	# Remove any leftover Python activation env vars.
+@@ -182,7 +182,7 @@ if ($Global:__VSCodeState.IsA11yMode -eq "1") {
+ 	if (-not $hasScreenReaderParam -and $PSVersionTable.PSVersion -ge "7.0") {
+ 		# The loaded PSReadLine lacks EnableScreenReaderMode (only available in 2.4.4-beta4+).
+ 		# PowerShell 7.0+ skips autoloading PSReadLine when the OS reports a screen reader active.
+-		# When only VS Code's accessibility mode is enabled (no OS screen reader),
++		# When only Director-Code's accessibility mode is enabled (no OS screen reader),
+ 		# it's still loaded and must be removed to load our bundled copy.
+ 		# Skip this on Windows PowerShell 5.1 where removing the built-in PSReadLine 2.0.0
+ 		# and replacing it can cause input handling issues (e.g. repeated Enter key presses).
+@@ -190,7 +190,7 @@ if ($Global:__VSCodeState.IsA11yMode -eq "1") {
+ 			Remove-Module PSReadLine -Force
+ 		}
+ 
+-		# Import VS Code's bundled PSReadLine 2.4.3 which has EnableScreenReaderMode
++		# Import Director-Code's bundled PSReadLine 2.4.3 which has EnableScreenReaderMode
+ 		$specialPsrlPath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'psreadline'
+ 		if (Test-Path $specialPsrlPath) {
+ 			Import-Module $specialPsrlPath
+@@ -253,7 +253,7 @@ else {
+ 	[Console]::Write("$([char]0x1b)]633;P;IsWindows=$IsWindows`a")
+ }
+ 
+-# Set always on key handlers which map to default VS Code keybindings
++# Set always on key handlers which map to default Director-Code keybindings
+ function Set-MappedKeyHandler {
+ 	param ([string[]] $Chord, [string[]]$Sequence)
+ 	try {
+diff --git a/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts b/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
+index e081b77..f14b826 100644
+--- a/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
++++ b/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
+@@ -53,12 +53,12 @@ function computeTrustedDomainContent(defaultTrustedDomains: string[], trustedDom
+ 	let content = CONFIG_HELP_TEXT_PRE;
+ 
+ 	if (defaultTrustedDomains.length > 0) {
+-		content += `// By default, VSCodium - Insiders trusts "localhost" as well as the following domains:\n`;
++		content += `// By default, Director-Code trusts "localhost" as well as the following domains:\n`;
+ 		defaultTrustedDomains.forEach(d => {
+ 			content += `// - "${d}"\n`;
+ 		});
+ 	} else {
+-		content += `// By default, VSCodium - Insiders trusts "localhost".\n`;
++		content += `// By default, Director-Code trusts "localhost".\n`;
+ 	}
+ 
+ 	content += CONFIG_HELP_TEXT_AFTER;
+diff --git a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
+index 70b5729..fec482e 100644
+--- a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
++++ b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
+@@ -60,6 +60,7 @@ import { IViewDescriptorService, ViewContainerLocation } from '../../../common/v
+ import { toErrorMessage } from '../../../../base/common/errorMessage.js';
+ import { ILogService } from '../../../../platform/log/common/log.js';
+ import { canShowAgentsBanner, createAgentsBanner } from '../../chat/browser/agentSessions/agentSessionsBanner.js';
++import { isDirectorCodeBuiltInMode } from '../../directorCode/common/agentEngine/builtInModeUtil.js';
+ import { FONT } from '../../../../base/common/font.js';
+ 
+ const configurationKey = 'workbench.startupEditor';
+@@ -700,6 +701,10 @@ export class AgentSessionsWelcomePage extends EditorPane {
+ 	private static readonly PRIVACY_NOTICE_DISMISSED_KEY = 'agentSessionsWelcome.privacyNoticeDismissed';
+ 
+ 	private buildPrivacyNotice(container: HTMLElement): void {
++		if (isDirectorCodeBuiltInMode(this.productService.defaultChatAgent)) {
++			return;
++		}
++
+ 		// TOS/Privacy notice for users who are not signed in - reusing walkthrough card design
+ 		if (!this.chatEntitlementService.anonymous) {
+ 			return;
+@@ -732,7 +737,7 @@ export class AgentSessionsWelcomePage extends EditorPane {
+ 		// Content
+ 		const content = append(tosCard, $('.agentSessionsWelcome-walkthroughCard-content'));
+ 		const title = append(content, $('.agentSessionsWelcome-walkthroughCard-title'));
+-		title.textContent = localize('tosTitle', "Try GitHub Copilot for free, no sign-in required!");
++		title.textContent = localize('tosTitle', "Try chat for free, no sign-in required!");
+ 
+ 		const desc = append(content, $('.agentSessionsWelcome-walkthroughCard-description'));
+ 		const descriptionMarkdown = new MarkdownString(
+diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
+index ba81de5..4726e63 100644
+--- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
++++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
+@@ -50,7 +50,7 @@ registerAction2(class extends Action2 {
+ 				order: 1,
+ 			},
+ 			metadata: {
+-				description: localize2('minWelcomeDescription', 'Opens a Walkthrough to help you get started in VSCodium - Insiders.')
++				description: localize2('minWelcomeDescription', 'Opens a Walkthrough to help you get started in Director-Code.')
+ 			}
+ 		});
+ 	}
+@@ -318,7 +318,7 @@ configurationRegistry.registerConfiguration({
+ 			scope: ConfigurationScope.MACHINE,
+ 			type: 'boolean',
+ 			default: true,
+-			description: localize('workbench.welcomePage.extraAnnouncements', "When enabled, the get started page loads additional announcements from VSCodium - Insiders's repository."),
++			description: localize('workbench.welcomePage.extraAnnouncements', "When enabled, the get started page loads additional announcements from Director-Code's repository."),
+ 			tags: ['usesOnlineServices']
+ 		},
+ 		'workbench.startupEditor': {
+@@ -327,7 +327,7 @@ configurationRegistry.registerConfiguration({
+ 			'enum': ['none', 'welcomePage', 'readme', 'newUntitledFile', 'welcomePageInEmptyWorkbench', 'terminal', 'agentSessionsWelcomePage'],
+ 			'enumDescriptions': [
+ 				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.none' }, "Start without an editor."),
+-				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.welcomePage' }, "Open the Welcome page, with content to aid in getting started with VSCodium - Insiders and extensions."),
++				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.welcomePage' }, "Open the Welcome page, with content to aid in getting started with Director-Code and extensions."),
+ 				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.readme' }, "Open the README when opening a folder that contains one, fallback to 'welcomePage' otherwise. Note: This is only observed as a global configuration, it will be ignored if set in a workspace or folder configuration."),
+ 				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.newUntitledFile' }, "Open a new untitled text file (only applies when opening an empty window)."),
+ 				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.welcomePageInEmptyWorkbench' }, "Open the Welcome page when opening an empty workbench."),
+diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
+index 091acf6..23645b9 100644
+--- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
++++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
+@@ -1174,7 +1174,7 @@ export class GettingStartedPage extends EditorPane {
+ 		if (this.announcementList) { this.announcementList.dispose(); }
+ 
+ 		const announcementList = this.announcementList = new GettingStartedIndexList({
+-			title: localize('announcements', "VSCodium - Insiders Announcements"),
++			title: localize('announcements', "Director-Code Announcements"),
+ 			klass: 'announcements',
+ 			limit: 5,
+ 			empty: $('.empty-recent', {}, localize('noAnnouncements', "There are no current announcements.")),
+@@ -1187,7 +1187,7 @@ export class GettingStartedPage extends EditorPane {
+ 
+ 			if (showExtras) {
+ 				const branch = this.productService.quality === 'insider' ? 'insider' : 'master';
+-				await fetch(`https://raw.githubusercontent.com/VSCodium/vscodium-insiders/${branch}/announcements-extra.json`)
++				await fetch(`https://raw.githubusercontent.com/Director-Code/vscodium-insiders/${branch}/announcements-extra.json`)
+ 					.then(async res => {
+ 						if (res.ok) {
+ 							var extraAnnouncements = await res.json() as AnnouncementEntry[];
+diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
+index 30cc721..85b99c0 100644
+--- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
++++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
+@@ -159,7 +159,7 @@ export const walkthroughsExtensionPoint = ExtensionsRegistry.registerExtensionPo
+ 									defaultSnippets: [
+ 										{
+ 											label: 'onCommand',
+-											description: localize('walkthroughs.steps.completionEvents.onCommand', 'Check off step when a given command is executed anywhere in VSCodium - Insiders.'),
++											description: localize('walkthroughs.steps.completionEvents.onCommand', 'Check off step when a given command is executed anywhere in Director-Code.'),
+ 											body: 'onCommand:${1:commandId}'
+ 										},
+ 										{
+diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts b/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
+index 1dd316d..d541b06 100644
+--- a/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
++++ b/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
+@@ -28,7 +28,7 @@ const defaultChat = {
+ 	privacyStatementUrl: product.defaultChatAgent?.privacyStatementUrl ?? ''
+ };
+ 
+-export const copilotSettingsMessage = localize({ key: 'settings', comment: ['{Locked="["}', '{Locked="]({0})"}', '{Locked="]({1})"}'] }, "{0} Copilot may show [public code]({1}) suggestions and use your data to improve the product. You can change these [settings]({2}) anytime.", defaultChat.provider.default.name, defaultChat.publicCodeMatchesUrl, defaultChat.manageSettingsUrl);
++export const copilotSettingsMessage = localize({ key: 'settings', comment: ['{Locked="["}', '{Locked="]({0})"}', '{Locked="]({1})"}'] }, "{0} may show [public code]({1}) suggestions and use your data to improve the product. You can change these [settings]({2}) anytime.", defaultChat.provider.default.name, defaultChat.publicCodeMatchesUrl, defaultChat.manageSettingsUrl);
+ 
+ class GettingStartedContentProviderRegistry {
+ 
+@@ -205,12 +205,12 @@ const Button = (title: string, href: string) => `[${title}](${href})`;
+ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 	{
+ 		id: 'Setup',
+-		title: localize('gettingStarted.setup.title', "Get started with VSCodium - Insiders"),
++		title: localize('gettingStarted.setup.title', "Get started with Director-Code"),
+ 		description: localize('gettingStarted.setup.description', "Customize your editor, learn the basics, and start coding"),
+ 		isFeatured: true,
+ 		icon: setupIcon,
+ 		when: '!isWeb',
+-		walkthroughPageTitle: localize('gettingStarted.setup.walkthroughPageTitle', 'Setup VSCodium - Insiders'),
++		walkthroughPageTitle: localize('gettingStarted.setup.walkthroughPageTitle', 'Setup Director-Code'),
+ 		next: 'Beginner',
+ 		content: {
+ 			type: 'steps',
+@@ -228,8 +228,8 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 				{
+ 					id: 'videoTutorial',
+ 					title: localize('gettingStarted.videoTutorial.title', "Watch video tutorials"),
+-					description: localize('gettingStarted.videoTutorial.description.interpolated', "Watch the first in a series of short & practical video tutorials for VSCodium - Insiders's key features.\n{0}", Button(localize('watch', "Watch Tutorial"), 'https://aka.ms/vscode-getting-started-video')),
+-					media: { type: 'svg', altText: 'VSCodium - Insiders Settings', path: 'learn.svg' },
++					description: localize('gettingStarted.videoTutorial.description.interpolated', "Watch the first in a series of short & practical video tutorials for Director-Code's key features.\n{0}", Button(localize('watch', "Watch Tutorial"), 'https://aka.ms/vscode-getting-started-video')),
++					media: { type: 'svg', altText: 'Director-Code Settings', path: 'learn.svg' },
+ 				}
+ 			]
+ 		}
+@@ -237,13 +237,13 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 
+ 	{
+ 		id: 'SetupWeb',
+-		title: localize('gettingStarted.setupWeb.title', "Get Started with VSCodium - Insiders for the Web"),
++		title: localize('gettingStarted.setupWeb.title', "Get Started with Director-Code for the Web"),
+ 		description: localize('gettingStarted.setupWeb.description', "Customize your editor, learn the basics, and start coding"),
+ 		isFeatured: true,
+ 		icon: setupIcon,
+ 		when: 'isWeb',
+ 		next: 'Beginner',
+-		walkthroughPageTitle: localize('gettingStarted.setupWeb.walkthroughPageTitle', 'Setup VSCodium - Insiders Web'),
++		walkthroughPageTitle: localize('gettingStarted.setupWeb.walkthroughPageTitle', 'Setup Director-Code Web'),
+ 		content: {
+ 			type: 'steps',
+ 			steps: [
+@@ -269,10 +269,10 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 				{
+ 					id: 'extensionsWebWeb',
+ 					title: localize('gettingStarted.extensions.title', "Code with extensions"),
+-					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Extensions are VSCodium - Insiders's power-ups. A growing number are becoming available in the web.\n{0}", Button(localize('browsePopularWeb', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
++					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Extensions are Director-Code's power-ups. A growing number are becoming available in the web.\n{0}", Button(localize('browsePopularWeb', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
+ 					when: 'workspacePlatform == \'webworker\'',
+ 					media: {
+-						type: 'svg', altText: 'VSCodium - Insiders extension marketplace with featured language extensions', path: 'extensions-web.svg'
++						type: 'svg', altText: 'Director-Code extension marketplace with featured language extensions', path: 'extensions-web.svg'
+ 					},
+ 				},
+ 				{
+@@ -287,13 +287,13 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 				{
+ 					id: 'commandPaletteTaskWeb',
+ 					title: localize('gettingStarted.commandPalette.title', "Unlock productivity with the Command Palette "),
+-					description: localize('gettingStarted.commandPalette.description.interpolated', "Run commands without reaching for your mouse to accomplish any task in VSCodium - Insiders.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
++					description: localize('gettingStarted.commandPalette.description.interpolated', "Run commands without reaching for your mouse to accomplish any task in Director-Code.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
+ 					media: { type: 'svg', altText: 'Command Palette overlay for searching and executing commands.', path: 'commandPalette.svg' },
+ 				},
+ 				{
+ 					id: 'pickAFolderTask-WebWeb',
+ 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
+-					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You're all set to start coding. You can open a local project or a remote repository to get your files into VSCodium - Insiders.\n{0}\n{1}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository')),
++					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You're all set to start coding. You can open a local project or a remote repository to get your files into Director-Code.\n{0}\n{1}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository')),
+ 					when: 'workspaceFolderCount == 0',
+ 					media: {
+ 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'
+@@ -314,12 +314,12 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 	{
+ 		id: 'SetupAccessibility',
+ 		title: localize('gettingStarted.setupAccessibility.title', "Get Started with Accessibility Features"),
+-		description: localize('gettingStarted.setupAccessibility.description', "Learn the tools and shortcuts that make VSCodium - Insiders accessible. Note that some actions are not actionable from within the context of the walkthrough."),
++		description: localize('gettingStarted.setupAccessibility.description', "Learn the tools and shortcuts that make Director-Code accessible. Note that some actions are not actionable from within the context of the walkthrough."),
+ 		isFeatured: true,
+ 		icon: setupIcon,
+ 		when: CONTEXT_ACCESSIBILITY_MODE_ENABLED.key,
+ 		next: 'Setup',
+-		walkthroughPageTitle: localize('gettingStarted.setupAccessibility.walkthroughPageTitle', 'Setup VSCodium - Insiders Accessibility'),
++		walkthroughPageTitle: localize('gettingStarted.setupAccessibility.walkthroughPageTitle', 'Setup Director-Code Accessibility'),
+ 		content: {
+ 			type: 'steps',
+ 			steps: [
+@@ -350,7 +350,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 				{
+ 					id: 'commandPaletteTaskAccessibility',
+ 					title: localize('gettingStarted.commandPaletteAccessibility.title', "Unlock productivity with the Command Palette "),
+-					description: localize('gettingStarted.commandPaletteAccessibility.description.interpolated', "Run commands without reaching for your mouse to accomplish any task in VSCodium - Insiders.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
++					description: localize('gettingStarted.commandPaletteAccessibility.description.interpolated', "Run commands without reaching for your mouse to accomplish any task in Director-Code.\n{0}", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
+ 					media: { type: 'markdown', path: 'empty' },
+ 				},
+ 				{
+@@ -430,20 +430,20 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
+ 				{
+ 					id: 'settingsAndSync',
+ 					title: localize('gettingStarted.settings.title', "Tune your settings"),
+-					description: localize('gettingStarted.settingsAndSync.description.interpolated', "Customize every aspect of VSCodium - Insiders and [sync](command:workbench.userDataSync.actions.turnOn) customizations across devices.\n{0}", Button(localize('tweakSettings', "Open Settings"), 'command:toSide:workbench.action.openSettings')),
++					description: localize('gettingStarted.settingsAndSync.description.interpolated', "Customize every aspect of Director-Code and [sync](command:workbench.userDataSync.actions.turnOn) customizations across devices.\n{0}", Button(localize('tweakSettings', "Open Settings"), 'command:toSide:workbench.action.openSettings')),
+ 					when: 'workspacePlatform != \'webworker\' && syncStatus != uninitialized',
+ 					completionEvents: ['onEvent:sync-enabled'],
+ 					media: {
+-						type: 'svg', altText: 'VSCodium - Insiders Settings', path: 'settings.svg'
++						type: 'svg', altText: 'Director-Code Settings', path: 'settings.svg'
+ 					},
+ 				},
+ 				{
+ 					id: 'extensions',
+ 					title: localize('gettingStarted.extensions.title', "Code with extensions"),
+-					description: localize('gettingStarted.extensions.description.interpolated', "Extensions are VSCodium - Insiders's power-ups. They range from handy productivity hacks, expanding out-of-the-box features, to adding completely new capabilities.\n{0}", Button(localize('browsePopular', "Browse Popular Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
++					description: localize('gettingStarted.extensions.description.interpolated', "Extensions are Director-Code's power-ups. They range from handy productivity hacks, expanding out-of-the-box features, to adding completely new capabilities.\n{0}", Button(localize('browsePopular', "Browse Popular Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
+ 					when: 'workspacePlatform != \'webworker\'',
+ 					media: {
+-						type: 'svg', altText: 'VSCodium - Insiders extension marketplace with featured language extensions', path: 'extensions.svg'
++						type: 'svg', altText: 'Director-Code extension marketplace with featured language extensions', path: 'extensions.svg'
+ 					},
+ 				},
+ 				{
+diff --git a/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts b/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
+index a77b2cd..4270dbf 100644
+--- a/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
++++ b/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
+@@ -81,7 +81,7 @@ const defaultChat = product.defaultChatAgent;
+  * tab. When dismissed, the welcome tab is revealed underneath.
+  *
+  * Steps:
+- * 1. Sign In — sessions-style sign-in hero with GitHub Copilot, Google, and Apple options
++ * 1. Sign In — sessions-style sign-in hero with configured Director providers
+  * 2. Personalize — Theme selection grid + keymap pills
+  * 3. Agent Sessions — Feature cards showcasing AI capabilities
+  */
+@@ -171,7 +171,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 		this.overlay = append(container, $('.onboarding-a-overlay'));
+ 		this.overlay.setAttribute('role', 'dialog');
+ 		this.overlay.setAttribute('aria-modal', 'true');
+-		this.overlay.setAttribute('aria-label', localize('onboarding.a.aria', "Welcome to Visual Studio Code"));
++		this.overlay.setAttribute('aria-label', localize('onboarding.a.aria', "Welcome to Director-Code"));
+ 
+ 		// Card
+ 		this.card = append(this.overlay, $('.onboarding-a-card'));
+@@ -452,7 +452,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 		const content = append(wrapper, $('.onboarding-a-signin-content'));
+ 		const contentMain = append(content, $('.onboarding-a-signin-content-main'));
+ 		const title = append(contentMain, $('h2.onboarding-a-signin-title'));
+-		title.textContent = localize('onboarding.signIn.heroTitle', "Welcome to VS Code");
++		title.textContent = localize('onboarding.signIn.heroTitle', "Welcome to Director-Code");
+ 
+ 		const subtitle = append(contentMain, $('p.onboarding-a-signin-subtitle'));
+ 		subtitle.textContent = localize('onboarding.signIn.heroSubtitle', "Sign in to continue with AI-powered development.");
+@@ -499,13 +499,13 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 
+ 		const disclaimerCol = append(footer, $('.onboarding-a-signin-disclaimer-col'));
+ 
+-		// GitHub Copilot disclaimer
++		// Director provider disclaimer
+ 		const copilotDisclaimer = append(disclaimerCol, $('.onboarding-a-signin-disclaimer'));
+ 		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.prefix', "By signing in, you agree to {0}'s ", defaultChat.provider.default.name));
+ 		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.terms', "Terms"), defaultChat.termsStatementUrl);
+ 		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.middle', " and "));
+ 		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.privacy', "Privacy Statement"), defaultChat.privacyStatementUrl);
+-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.copilotPrefix', ". {0} Copilot may show ", defaultChat.provider.default.name));
++		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.copilotPrefix', ". {0} may show ", defaultChat.provider.default.name));
+ 		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.publicCode', "public code"), defaultChat.publicCodeMatchesUrl);
+ 		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.improveSuffix', " suggestions and use your data to improve the product."));
+ 		copilotDisclaimer.append(' ');
+@@ -762,7 +762,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 			this._createKbd(localize('onboarding.personalize.tip.shift', "Shift")),
+ 			'+',
+ 			this._createKbd(localize('onboarding.personalize.tip.p', "P")),
+-			localize('onboarding.personalize.tip.suffix', " to access all VS Code commands."),
++			localize('onboarding.personalize.tip.suffix', " to access all Director-Code commands."),
+ 		);
+ 	}
+ 
+@@ -823,7 +823,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 	private async _applyKeymap(keymapId: string): Promise<void> {
+ 		const keymap = (product.onboardingKeymaps ?? []).find(k => k.id === keymapId);
+ 		if (!keymap?.extensionId) {
+-			return; // VS Code default, nothing to install
++			return; // Director-Code default, nothing to install
+ 		}
+ 
+ 		try {
+@@ -1015,11 +1015,11 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 
+ 		this._createFeatureCard(moreGrid, Codicon.rocket,
+ 			localize('onboarding.sessions.runAnywhere', "Run Agents Anywhere"),
+-			localize('onboarding.sessions.runAnywhere.desc', "Run agents locally for interactive work, in the background with Copilot CLI, or in the cloud with cloud agents that open a pull request your team can review."));
++			localize('onboarding.sessions.runAnywhere.desc', "Run agents locally for interactive work, in the background, or through configured agent adapters that fit your team workflow."));
+ 
+ 		this._createFeatureCard(moreGrid, Codicon.settingsGear,
+ 			localize('onboarding.sessions.customize', "Customize Your Agents"),
+-			localize('onboarding.sessions.customize.desc', "Tailor Copilot to your project with custom instructions and agents, skills, reusable prompts, and MCP servers that connect to the tools and context you rely on."));
++			localize('onboarding.sessions.customize.desc', "Tailor Director-Code to your project with custom instructions and agents, skills, reusable prompts, and MCP servers that connect to the tools and context you rely on."));
+ 
+ 		// Tutorial link at bottom of content, above footer
+ 		const docsRow = append(wrapper, $('.onboarding-a-sessions-docs'));
+diff --git a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts b/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
+index 366c70e..99f84bd 100644
+--- a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
++++ b/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
+@@ -11,7 +11,7 @@ export default function content(accessor: ServicesAccessor) {
+ 	const isServerless = platform.isWeb && !accessor.get(IWorkbenchEnvironmentService).remoteAuthority;
+ 	return `
+ ## Interactive Editor Playground
+-The core editor in VSCodium - Insiders is packed with features.  This page highlights a number of them and lets you interactively try them out through the use of a number of embedded editors.  For full details on the editor features for VSCodium - Insiders and more head over to our [documentation](https://code.visualstudio.com/docs).
++The core editor in Director-Code is packed with features.  This page highlights a number of them and lets you interactively try them out through the use of a number of embedded editors.  For full details on the editor features for Director-Code and more head over to our [documentation](https://code.visualstudio.com/docs).
+ 
+ * [Multi-cursor Editing](#multi-cursor-editing) - block selection, select all occurrences, add additional cursors and more.
+ * [IntelliSense](#intellisense) - get code assistance and parameter suggestions for your code and external modules.
+@@ -44,7 +44,7 @@ That is the tip of the iceberg for multi-cursor editing. Have a look at the sele
+ 
+ ### IntelliSense
+ 
+-VSCodium - Insiders comes with the powerful IntelliSense for JavaScript and TypeScript pre-installed. In the below example, position the text cursor right after the dot and press kb(editor.action.triggerSuggest) to invoke IntelliSense.  Notice how the suggestions come from the Canvas API.
++Director-Code comes with the powerful IntelliSense for JavaScript and TypeScript pre-installed. In the below example, position the text cursor right after the dot and press kb(editor.action.triggerSuggest) to invoke IntelliSense.  Notice how the suggestions come from the Canvas API.
+ 
+ |||js
+ const canvas = document.querySelector('canvas');
+@@ -95,7 +95,7 @@ function Book(title, author) {
+ }
+ |||
+ 
+-> **JSDoc Tip:** VSCodium - Insiders's IntelliSense uses JSDoc comments to provide richer suggestions. The types and documentation from JSDoc comments show up when you hover over a reference to |Book| or in IntelliSense when you create a new instance of |Book|.
++> **JSDoc Tip:** Director-Code's IntelliSense uses JSDoc comments to provide richer suggestions. The types and documentation from JSDoc comments show up when you hover over a reference to |Book| or in IntelliSense when you create a new instance of |Book|.
+ 
+ ` : ''}
+ ### Formatting
+@@ -163,7 +163,7 @@ Emmet takes the snippets idea to a whole new level: you can type CSS-like expres
+ ul>li.item$*5
+ |||
+ 
+->**Tip:** The [Emmet cheat sheet](https://docs.emmet.io/cheat-sheet/) is a great source of Emmet syntax suggestions. To expand Emmet abbreviations and snippets using the |tab| key use the |emmet.triggerExpansionOnTab| [setting](command:workbench.action.openGlobalSettings). Check out the docs on [Emmet in VS Code](https://code.visualstudio.com/docs/editor/emmet) to learn more.
++>**Tip:** The [Emmet cheat sheet](https://docs.emmet.io/cheat-sheet/) is a great source of Emmet syntax suggestions. To expand Emmet abbreviations and snippets using the |tab| key use the |emmet.triggerExpansionOnTab| [setting](command:workbench.action.openGlobalSettings). Check out the docs on [Emmet in Director-Code](https://code.visualstudio.com/docs/editor/emmet) to learn more.
+ 
+ 
+ 
+@@ -177,11 +177,11 @@ let easy = true;
+ easy = 42;
+ |||
+ 
+->**Tip:** You can also enable the checks workspace or application wide by adding |"js/ts.implicitProjectConfig.checkJs": true| to your workspace or user settings and explicitly ignoring files or lines using |// @ts-nocheck| and |// @ts-expect-error|. Check out the docs on [JavaScript in VS Code](https://code.visualstudio.com/docs/languages/javascript) to learn more.
++>**Tip:** You can also enable the checks workspace or application wide by adding |"js/ts.implicitProjectConfig.checkJs": true| to your workspace or user settings and explicitly ignoring files or lines using |// @ts-nocheck| and |// @ts-expect-error|. Check out the docs on [JavaScript in Director-Code](https://code.visualstudio.com/docs/languages/javascript) to learn more.
+ 
+ 
+ ## Thanks!
+-Well if you have got this far then you will have touched on some of the editing features in VSCodium - Insiders.  But don't stop now :)  We have lots of additional [documentation](https://code.visualstudio.com/docs), [introductory videos](https://code.visualstudio.com/docs/getstarted/introvideos) and [tips and tricks](https://go.microsoft.com/fwlink/?linkid=852118) for the product that will help you learn how to use it.  And while you are here, here are a few additional things you can try:
++Well if you have got this far then you will have touched on some of the editing features in Director-Code.  But don't stop now :)  We have lots of additional [documentation](https://code.visualstudio.com/docs), [introductory videos](https://code.visualstudio.com/docs/getstarted/introvideos) and [tips and tricks](https://go.microsoft.com/fwlink/?linkid=852118) for the product that will help you learn how to use it.  And while you are here, here are a few additional things you can try:
+ - Open the Integrated Terminal by pressing kb(workbench.action.terminal.toggleTerminal), then see what's possible by [reviewing the terminal documentation](https://code.visualstudio.com/docs/editor/integrated-terminal)
+ - Work with version control by pressing kb(workbench.view.scm). Understand how to stage, commit, change branches, and view diffs and more by reviewing the [version control documentation](https://code.visualstudio.com/docs/editor/versioncontrol)
+ - Browse thousands of extensions in our integrated gallery by pressing kb(workbench.view.extensions). The [documentation](https://code.visualstudio.com/docs/editor/extension-gallery) will show you how to see the most popular extensions, disable installed ones and more.
+diff --git a/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts b/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
+index d0b50c0..13b4943 100644
+--- a/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
++++ b/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
+@@ -56,7 +56,7 @@ const BANNER_RESTRICTED_MODE_DISMISSED_KEY = 'workbench.banner.restrictedMode.di
+ 
+ /**
+  * Returns a trust note string for the sessions window explaining that trusting
+- * a folder/workspace also persists trust to the parent VS Code install.
++ * a folder/workspace also persists trust to the parent Director-Code install.
+  * Returns `undefined` when not running in the sessions window.
+  */
+ function getSessionsWindowTrustNote(environmentService: IWorkbenchEnvironmentService, productService: IProductService, isWorkspace: boolean): string | undefined {
+@@ -799,7 +799,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
+ 			[WORKSPACE_TRUST_ENABLED]: {
+ 				type: 'boolean',
+ 				default: true,
+-				description: localize('workspace.trust.description', "Controls whether or not Workspace Trust is enabled within VSCodium - Insiders."),
++				description: localize('workspace.trust.description', "Controls whether or not Workspace Trust is enabled within Director-Code."),
+ 				tags: [WORKSPACE_TRUST_SETTING_TAG],
+ 				scope: ConfigurationScope.APPLICATION,
+ 			},
+@@ -845,7 +845,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
+ 			[WORKSPACE_TRUST_EMPTY_WINDOW]: {
+ 				type: 'boolean',
+ 				default: true,
+-				markdownDescription: localize('workspace.trust.emptyWindow.description', "Controls whether or not the empty window is trusted by default within VSCodium - Insiders. When used with `#{0}#`, you can enable the full functionality of VSCodium - Insiders without prompting in an empty window.", WORKSPACE_TRUST_UNTRUSTED_FILES),
++				markdownDescription: localize('workspace.trust.emptyWindow.description', "Controls whether or not the empty window is trusted by default within Director-Code. When used with `#{0}#`, you can enable the full functionality of Director-Code without prompting in an empty window.", WORKSPACE_TRUST_UNTRUSTED_FILES),
+ 				tags: [WORKSPACE_TRUST_SETTING_TAG],
+ 				scope: ConfigurationScope.APPLICATION
+ 			}

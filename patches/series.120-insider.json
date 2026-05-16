@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T19:02:29.441Z",
+  "generatedAt": "2026-05-16T19:13:28.446Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -32,9 +32,9 @@
     },
     {
       "path": "patches/replay/002-director-branding.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "740eff4a3277abd3917f4ae37991d97214e94ec34d5d30696dcba1dfa14815d7",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "branding",
       "platforms": [
@@ -50,8 +50,7 @@
         "client"
       ],
       "order": 2,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/003-director-product-build-release.120-insider.patch",
@@ -121,9 +120,9 @@
     },
     {
       "path": "patches/replay/006-director-text-polish.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "b7fc9f325b09ff65022d2add3cad2ec4804fa946baa368e2a4d1a5754d8af65c",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "text-polish",
       "platforms": [
@@ -139,8 +138,7 @@
         "client"
       ],
       "order": 6,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/007-director-tool-layer.120-insider.patch",

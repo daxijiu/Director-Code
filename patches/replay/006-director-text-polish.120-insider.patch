@@ -1,0 +1,230 @@
+diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
+index 64e4695..e6c1039 100644
+--- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
++++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
+@@ -31,7 +31,7 @@ export interface IResolvedHookEntry {
+  * Supported hook file formats.
+  */
+ export enum HookSourceFormat {
+-	/** GitHub Copilot hooks .json format */
++	/** Standard hooks .json format */
+ 	Copilot = 'copilot',
+ 	/** Claude settings.json / settings.local.json format */
+ 	Claude = 'claude',
+@@ -62,7 +62,7 @@ export function isReadOnlyHookSource(format: HookSourceFormat): boolean {
+ }
+ 
+ /**
+- * Parses hooks from a Copilot hooks .json file (our native format).
++ * Parses hooks from a standard hooks .json file (our native format).
+  */
+ export function parseCopilotHooks(
+ 	json: unknown,
+@@ -196,7 +196,7 @@ export function getHookSourceFormatLabel(format: HookSourceFormat): string {
+ 		case HookSourceFormat.Claude:
+ 			return 'Claude';
+ 		case HookSourceFormat.Copilot:
+-			return 'GitHub Copilot';
++			return 'Standard JSON';
+ 	}
+ }
+ 
+diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
+index 3ff2713..50d67be 100644
+--- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
++++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
+@@ -76,7 +76,7 @@ export const HOOK_COMMAND_FIELD_DESCRIPTIONS: Record<string, string> = {
+ };
+ 
+ /**
+- * JSON Schema for GitHub Copilot hook configuration files.
++ * JSON Schema for standard hook configuration files.
+  * Hooks enable executing custom shell commands at strategic points in an agent's workflow.
+  */
+ const vscodeHookCommandSchema: IJSONSchema = {
+@@ -150,7 +150,7 @@ function buildHookProperties(target: Target, arraySchema: IJSONSchema): Record<s
+ }
+ 
+ /**
+- * Hook properties for the VS Code format.
++ * Hook properties for the standard editor format.
+  */
+ const vscodeHookProperties: Record<string, IJSONSchema> = buildHookProperties(Target.VSCode, hookArraySchema);
+ 
+@@ -211,7 +211,7 @@ const copilotCliHookProperties: Record<string, IJSONSchema> = buildHookPropertie
+ export const hookFileSchema: IJSONSchema = {
+ 	$schema: 'http://json-schema.org/draft-07/schema#',
+ 	type: 'object',
+-	description: nls.localize('hookFile.description', 'GitHub Copilot hook configuration file. Hooks enable executing custom shell commands at strategic points in an agent\'s workflow.'),
++	description: nls.localize('hookFile.description', 'Standard hook configuration file. Hooks enable executing custom shell commands at strategic points in an agent\'s workflow.'),
+ 	additionalProperties: true,
+ 	required: ['hooks'],
+ 	properties: {
+@@ -242,7 +242,7 @@ export const hookFileSchema: IJSONSchema = {
+ 		}
+ 	},
+ 	else: {
+-		// VS Code / PascalCase format
++		// Standard editor / PascalCase format
+ 		properties: {
+ 			hooks: {
+ 				properties: vscodeHookProperties
+diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
+index 66d28c2..d781b83 100644
+--- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
++++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
+@@ -28,7 +28,7 @@ export enum HookType {
+ export type HookTypeValue = `${HookType}`;
+ 
+ export const HOOKS_BY_TARGET: Record<Target, Record<string, HookType>> = {
+-	// see https://code.visualstudio.com/docs/copilot/customization/hooks#_hook-lifecycle-events
++	// Standard editor hook lifecycle events.
+ 	[Target.VSCode]: {
+ 		'SessionStart': HookType.SessionStart,
+ 		'UserPromptSubmit': HookType.UserPromptSubmit,
+@@ -39,7 +39,7 @@ export const HOOKS_BY_TARGET: Record<Target, Record<string, HookType>> = {
+ 		'SubagentStop': HookType.SubagentStop,
+ 		'Stop': HookType.Stop,
+ 	},
+-	// see https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks#types-of-hooks
++	// Compatible coding-agent hook lifecycle events.
+ 	[Target.GitHubCopilot]: {
+ 		'sessionStart': HookType.SessionStart,
+ 		'sessionEnd': HookType.SessionEnd,
+diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
+index 1f6ad3e..3150df7 100644
+--- a/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
++++ b/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
+@@ -289,21 +289,21 @@ export class PromptValidator {
+ 							// ignore for now as we don't have a full list of supported attributes for claude target
+ 						} else {
+ 							if (validGithubCopilotAttributeNames.value.has(attribute.key)) {
+-								report(toMarker(localize('promptValidator.ignoredAttribute.vscode-agent', "Attribute '{0}' is ignored when running locally in VSCodium - Insiders.", attribute.key), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
++								report(toMarker(localize('promptValidator.ignoredAttribute.vscode-agent', "Attribute '{0}' is ignored when running locally in Director-Code.", attribute.key), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
+ 							} else {
+-								report(toMarker(localize('promptValidator.unknownAttribute.vscode-agent', "Attribute '{0}' is not supported in VSCodium - Insiders agent files. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
++								report(toMarker(localize('promptValidator.unknownAttribute.vscode-agent', "Attribute '{0}' is not supported in Director-Code agent files. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
+ 							}
+ 						}
+ 						break;
+ 					case PromptsType.instructions:
+ 						if (target === Target.Claude) {
+-							report(toMarker(localize('promptValidator.unknownAttribute.rules', "Attribute '{0}' is not supported in rules files by VSCodium - Insiders agents. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
++							report(toMarker(localize('promptValidator.unknownAttribute.rules', "Attribute '{0}' is not supported in rules files by Director-Code agents. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
+ 						} else {
+ 							report(toMarker(localize('promptValidator.unknownAttribute.instructions', "Attribute '{0}' is not supported in instructions files. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
+ 						}
+ 						break;
+ 					case PromptsType.skill:
+-						report(toMarker(localize('promptValidator.unknownAttribute.skill', "Attribute '{0}' is not supported by VSCodium - Insiders agents. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
++						report(toMarker(localize('promptValidator.unknownAttribute.skill', "Attribute '{0}' is not supported by Director-Code agents. Supported: {1}.", attribute.key, supportedNames.value), attribute.range, MarkerSeverity.Hint, [MarkerTag.Unnecessary]));
+ 						break;
+ 				}
+ 			}
+@@ -1106,7 +1106,7 @@ export function mapClaudeModels(claudeModelNames: readonly string[]): readonly s
+ }
+ 
+ /**
+- * Maps Claude tool names to their VSCodium - Insiders tool equivalents.
++ * Maps Claude tool names to their Director-Code tool equivalents.
+  */
+ export function mapClaudeTools(claudeToolNames: readonly string[]): string[] {
+ 	const result: string[] = [];
+diff --git a/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts b/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
+index d5b0ccd..fa3546f 100644
+--- a/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
++++ b/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
+@@ -21,7 +21,7 @@ export const SearchExtensionsToolData: IToolData = {
+ 	icon: ThemeIcon.fromId(Codicon.extensions.id),
+ 	displayName: localize('searchExtensionsTool.displayName', 'Search Extensions'),
+ 	modelDescription: 'This is a tool for browsing OpenVSX. It allows the model to search for extensions and retrieve detailed information about them. The model should use this tool whenever it needs to discover extensions or resolve information about known ones. To use the tool, the model has to provide the category of the extensions, relevant search keywords, or known extension IDs. Note that search results may include false positives, so reviewing and filtering is recommended.',
+-	userDescription: localize('searchExtensionsTool.userDescription', 'Search for VSCodium - Insiders extensions'),
++	userDescription: localize('searchExtensionsTool.userDescription', 'Search for Director-Code extensions'),
+ 	source: ToolDataSource.Internal,
+ 	inputSchema: {
+ 		type: 'object',
+diff --git a/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts b/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
+index f6e78a3..723d4d8 100644
+--- a/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
++++ b/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
+@@ -320,7 +320,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 		default: 1000
+ 	},
+ 	[TerminalSettingId.DetectLocale]: {
+-		markdownDescription: localize('terminal.integrated.detectLocale', "Controls whether to detect and set the `$LANG` environment variable to a UTF-8 compliant option since VSCodium - Insiders's terminal only supports UTF-8 encoded data coming from the shell."),
++		markdownDescription: localize('terminal.integrated.detectLocale', "Controls whether to detect and set the `$LANG` environment variable to a UTF-8 compliant option since Director-Code's terminal only supports UTF-8 encoded data coming from the shell."),
+ 		type: 'string',
+ 		enum: ['auto', 'off', 'on'],
+ 		markdownEnumDescriptions: [
+@@ -334,7 +334,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 		type: 'string',
+ 		enum: ['auto', 'on', 'off'],
+ 		markdownEnumDescriptions: [
+-			localize('terminal.integrated.gpuAcceleration.auto', "Let VSCodium - Insiders detect which renderer will give the best experience."),
++			localize('terminal.integrated.gpuAcceleration.auto', "Let Director-Code detect which renderer will give the best experience."),
+ 			localize('terminal.integrated.gpuAcceleration.on', "Enable GPU acceleration within the terminal."),
+ 			localize('terminal.integrated.gpuAcceleration.off', "Disable GPU acceleration within the terminal. The terminal will render much slower when GPU acceleration is off but it should reliably work on all systems."),
+ 		],
+@@ -422,7 +422,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	[TerminalSettingId.CommandsToSkipShell]: {
+ 		markdownDescription: localize(
+ 			'terminal.integrated.commandsToSkipShell',
+-			"A set of command IDs whose keybindings will not be sent to the shell but instead always be handled by VSCodium - Insiders. This allows keybindings that would normally be consumed by the shell to act instead the same as when the terminal is not focused, for example `Ctrl+P` to launch Quick Open.\n\n&nbsp;\n\nMany commands are skipped by default. To override a default and pass that command's keybinding to the shell instead, add the command prefixed with the `-` character. For example add `-workbench.action.quickOpen` to allow `Ctrl+P` to reach the shell.\n\n&nbsp;\n\nThe following list of default skipped commands is truncated when viewed in Settings Editor. To see the full list, {1} and search for the first command from the list below.\n\n&nbsp;\n\nDefault Skipped Commands:\n\n{0}",
++			"A set of command IDs whose keybindings will not be sent to the shell but instead always be handled by Director-Code. This allows keybindings that would normally be consumed by the shell to act instead the same as when the terminal is not focused, for example `Ctrl+P` to launch Quick Open.\n\n&nbsp;\n\nMany commands are skipped by default. To override a default and pass that command's keybinding to the shell instead, add the command prefixed with the `-` character. For example add `-workbench.action.quickOpen` to allow `Ctrl+P` to reach the shell.\n\n&nbsp;\n\nThe following list of default skipped commands is truncated when viewed in Settings Editor. To see the full list, {1} and search for the first command from the list below.\n\n&nbsp;\n\nDefault Skipped Commands:\n\n{0}",
+ 			DEFAULT_COMMANDS_TO_SKIP_SHELL.sort().map(command => `- ${command}`).join('\n'),
+ 			`[${localize('openDefaultSettingsJson', "open the default settings JSON")}](command:workbench.action.openRawDefaultSettings '${localize('openDefaultSettingsJson.capitalized', "Open Default Settings (JSON)")}')`,
+ 
+@@ -434,7 +434,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 		default: []
+ 	},
+ 	[TerminalSettingId.AllowChords]: {
+-		markdownDescription: localize('terminal.integrated.allowChords', "Whether or not to allow chord keybindings in the terminal. Note that when this is true and the keystroke results in a chord it will bypass {0}, setting this to false is particularly useful when you want ctrl+k to go to your shell (not VSCodium - Insiders).", '`#terminal.integrated.commandsToSkipShell#`'),
++		markdownDescription: localize('terminal.integrated.allowChords', "Whether or not to allow chord keybindings in the terminal. Note that when this is true and the keystroke results in a chord it will bypass {0}, setting this to false is particularly useful when you want ctrl+k to go to your shell (not Director-Code).", '`#terminal.integrated.commandsToSkipShell#`'),
+ 		type: 'boolean',
+ 		default: true
+ 	},
+@@ -445,7 +445,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	},
+ 	[TerminalSettingId.EnvMacOs]: {
+ 		restricted: true,
+-		markdownDescription: localize('terminal.integrated.env.osx', "Object with environment variables that will be added to the VSCodium - Insiders process to be used by the terminal on macOS. Set to `null` to delete the environment variable."),
++		markdownDescription: localize('terminal.integrated.env.osx', "Object with environment variables that will be added to the Director-Code process to be used by the terminal on macOS. Set to `null` to delete the environment variable."),
+ 		type: 'object',
+ 		additionalProperties: {
+ 			type: ['string', 'null']
+@@ -454,7 +454,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	},
+ 	[TerminalSettingId.EnvLinux]: {
+ 		restricted: true,
+-		markdownDescription: localize('terminal.integrated.env.linux', "Object with environment variables that will be added to the VSCodium - Insiders process to be used by the terminal on Linux. Set to `null` to delete the environment variable."),
++		markdownDescription: localize('terminal.integrated.env.linux', "Object with environment variables that will be added to the Director-Code process to be used by the terminal on Linux. Set to `null` to delete the environment variable."),
+ 		type: 'object',
+ 		additionalProperties: {
+ 			type: ['string', 'null']
+@@ -463,7 +463,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	},
+ 	[TerminalSettingId.EnvWindows]: {
+ 		restricted: true,
+-		markdownDescription: localize('terminal.integrated.env.windows', "Object with environment variables that will be added to the VSCodium - Insiders process to be used by the terminal on Windows. Set to `null` to delete the environment variable."),
++		markdownDescription: localize('terminal.integrated.env.windows', "Object with environment variables that will be added to the Director-Code process to be used by the terminal on Windows. Set to `null` to delete the environment variable."),
+ 		type: 'object',
+ 		additionalProperties: {
+ 			type: ['string', 'null']
+@@ -482,7 +482,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	},
+ 	[TerminalSettingId.WindowsUseConptyDll]: {
+ 		restricted: true,
+-		markdownDescription: localize('terminal.integrated.windowsUseConptyDll', "Whether to use the experimental conpty.dll (v1.25.260303002) shipped with VSCodium - Insiders, instead of the one bundled with Windows."),
++		markdownDescription: localize('terminal.integrated.windowsUseConptyDll', "Whether to use the experimental conpty.dll (v1.25.260303002) shipped with Director-Code, instead of the one bundled with Windows."),
+ 		type: 'boolean',
+ 		tags: ['preview'],
+ 		default: false,
+@@ -612,7 +612,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {
+ 	},
+ 	[TerminalSettingId.ShellIntegrationEnabled]: {
+ 		restricted: true,
+-		markdownDescription: localize('terminal.integrated.shellIntegration.enabled', "Determines whether or not shell integration is auto-injected to support features like enhanced command tracking and current working directory detection. \n\nShell integration works by injecting the shell with a startup script. The script gives VSCodium - Insiders insight into what is happening within the terminal.\n\nSupported shells:\n\n- Linux/macOS: bash, fish, pwsh, zsh\n - Windows: pwsh, git bash\n\nThis setting applies only when terminals are created, so you will need to restart your terminals for it to take effect.\n\n Note that the script injection may not work if you have custom arguments defined in the terminal profile, have enabled {1}, have a [complex bash `PROMPT_COMMAND`](https://code.visualstudio.com/docs/editor/integrated-terminal#_complex-bash-promptcommand), or other unsupported setup. To disable decorations, see {0}", '`#terminal.integrated.shellIntegration.decorationsEnabled#`', '`#editor.accessibilitySupport#`'),
++		markdownDescription: localize('terminal.integrated.shellIntegration.enabled', "Determines whether or not shell integration is auto-injected to support features like enhanced command tracking and current working directory detection. \n\nShell integration works by injecting the shell with a startup script. The script gives Director-Code insight into what is happening within the terminal.\n\nSupported shells:\n\n- Linux/macOS: bash, fish, pwsh, zsh\n - Windows: pwsh, git bash\n\nThis setting applies only when terminals are created, so you will need to restart your terminals for it to take effect.\n\n Note that the script injection may not work if you have custom arguments defined in the terminal profile, have enabled {1}, have a [complex bash `PROMPT_COMMAND`](https://code.visualstudio.com/docs/editor/integrated-terminal#_complex-bash-promptcommand), or other unsupported setup. To disable decorations, see {0}", '`#terminal.integrated.shellIntegration.decorationsEnabled#`', '`#editor.accessibilitySupport#`'),
+ 		type: 'boolean',
+ 		default: true
+ 	},
