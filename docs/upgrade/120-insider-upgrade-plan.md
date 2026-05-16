@@ -293,7 +293,7 @@ Completion record:
   - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
   - `node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target .cache/upgrade-estimator/materialize-120-insider --up-to-layer vscodium --force --allow-nondefault-target-force`
 - Self-review status: profile is registered but not active; `series.120-insider.json` enables only `001`; Director `002-009` remain deferred.
-- Push status: pending. Push this completed infrastructure stage before beginning Phase B.
+- Push status: pushed to `origin/120-replay-baseline` in commit `bd81f12e` (`chore: add 120 insider replay profile`).
 
 ### Stage Completion Log
 
@@ -301,7 +301,7 @@ Append future completed stages here after tests and self-review pass, then commi
 
 | Stage | Status | Completed | Validation | Self-review | Push |
 | --- | --- | --- | --- | --- | --- |
-| Phase A: 120 profile + VSCodium layer | complete locally | 2026-05-17 | passed, commands listed above | passed | pending |
+| Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
 | Phase B: `003` product/build/release | pending | | | | |
 | Phase C: `004` agent engine / Claude / MCP | pending | | | | |
 | Phase D: `005` chat/provider/model UI | pending | | | | |
