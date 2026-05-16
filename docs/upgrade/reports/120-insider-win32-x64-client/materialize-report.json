@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-16T19:35:55.743Z",
+  "generatedAt": "2026-05-16T20:06:48.211Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/120-insider-win32-x64-client.json",
@@ -60,8 +60,8 @@
     {
       "layer": "director",
       "patch": "patches/replay/002-director-branding.120-insider.patch",
-      "size": 71012,
-      "sha256": "740eff4a3277abd3917f4ae37991d97214e94ec34d5d30696dcba1dfa14815d7",
+      "size": 168929,
+      "sha256": "16b5825f45109671ab1dd5478e3fecd09bb2bd29def903e37993068703b138e6",
       "status": "passed"
     },
     {
@@ -81,15 +81,15 @@
     {
       "layer": "director",
       "patch": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "size": 89058,
-      "sha256": "f507750d60c13d29e98b3b84e742b4fe507127f65a995a149f936ab7b18de68d",
+      "size": 97375,
+      "sha256": "d4a64c0ac51cb34ce0e8f4d9c66e76a9f0d873fa7d49aeed0735949f50eb5aa6",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/006-director-text-polish.120-insider.patch",
-      "size": 19136,
-      "sha256": "b7fc9f325b09ff65022d2add3cad2ec4804fa946baa368e2a4d1a5754d8af65c",
+      "size": 20196,
+      "sha256": "30c9ae913104f62925f2420db95805e18ab46acb0bee0e1a511080711b060e4d",
       "status": "passed"
     },
     {
@@ -135,7 +135,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "bf2c6d5cdba6fa1fea713ac58419f666b877b10d3bf0ab9f043b5ba83555c4a8"
+      "fileManifestHash": "e678bf35d64b36ba884792abf8ba867a31d66ce06972e922b55b481c30a6e5a4"
     }
   ],
   "checks": {

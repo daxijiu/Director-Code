@@ -1,3 +1,16 @@
+diff --git a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
+index ec5972a..3d96aec 100644
+--- a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
++++ b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
+@@ -394,7 +394,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
+ 		},
+ 		[TerminalSettingId.InheritEnv]: {
+ 			scope: ConfigurationScope.APPLICATION,
+-			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from VSCodium - Insiders, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
++			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from Director-Code, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
+ 			type: 'boolean',
+ 			default: true
+ 		},
 diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
 index 64e4695..e6c1039 100644
 --- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts

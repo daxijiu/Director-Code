@@ -1,3 +1,16 @@
+diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
+index f028af0..cba1354 100644
+--- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
++++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
+@@ -26,7 +26,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
+ 			type: 'boolean',
+ 			default: true,
+ 			experiment: { mode: 'startup' },
+-			description: localize('sessions.chat.claudeAgent.enabled', "Enable Claude Agent sessions in the Agents window. Start and resume agentic coding sessions powered by Anthropic's Claude Agent SDK directly. Uses your existing Copilot subscription."),
++			description: localize('sessions.chat.claudeAgent.enabled', "Enable Claude Agent sessions in the Agents window. Start and resume agentic coding sessions powered by Anthropic's Claude Agent SDK directly. Uses Director-owned authentication, policy, and routing."),
+ 		},
+ 		[LOCAL_SESSION_ENABLED_SETTING]: {
+ 			type: 'boolean',
 diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
 index 1c1e720..d103b77 100644
 --- a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
@@ -943,7 +956,7 @@ index acfbffe..a6ec0a5 100644
  		let footer: string;
  		if (options?.forceAnonymous || this.telemetryService.telemetryLevel === TelemetryLevel.NONE) {
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
-index f842f92..30344e5 100644
+index f842f92..bcb3281 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 @@ -45,6 +45,7 @@ import { isNewUser } from './chatStatus.js';
@@ -996,6 +1009,15 @@ index f842f92..30344e5 100644
  			this.createQuotaIndicator(container, localize('quotaLimited', "Limited"), localize('chatsLabel', "Chat messages"));
  		}
  	}
+@@ -507,7 +511,7 @@ export class ChatStatusDashboard extends DomWidget {
+ 		let descriptionText: string | MarkdownString;
+ 		let descriptionClass = '.description';
+ 		if (newUser && anonymousUser) {
+-			descriptionText = new MarkdownString(localize({ key: 'activeDescriptionAnonymous', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", defaultChat.provider.default.name, defaultChat.provider.default.name, defaultChat.termsStatementUrl, defaultChat.privacyStatementUrl), { isTrusted: true });
++			descriptionText = new MarkdownString(localize({ key: 'activeDescriptionAnonymous', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0}, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", defaultChat.provider.default.name, defaultChat.provider.default.name, defaultChat.termsStatementUrl, defaultChat.privacyStatementUrl), { isTrusted: true });
+ 			descriptionClass = `${descriptionClass}.terms`;
+ 		} else if (newUser) {
+ 			descriptionText = localize('activateDescription', "Set up Copilot to use AI features.");
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
 index d03f2a7..9d2d51e 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
@@ -1178,7 +1200,7 @@ index a92b6ee..b283172 100644
  			}
  		});
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
-index 1b65652..8ae85d1 100644
+index 1b65652..6b359f0 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/chatWidget.ts
 @@ -45,6 +45,7 @@ import { ServiceCollection } from '../../../../../platform/instantiation/common/
@@ -1189,7 +1211,7 @@ index 1b65652..8ae85d1 100644
  import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
  import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
  import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
-@@ -1066,7 +1067,9 @@ export class ChatWidget extends Disposable implements IChatWidget {
+@@ -1066,9 +1067,11 @@ export class ChatWidget extends Disposable implements IChatWidget {
  			if (!numItems) {
  				const defaultAgent = this.chatAgentService.getDefaultAgent(this.location, this.input.currentModeKind);
  				let additionalMessage: string | IMarkdownString | undefined;
@@ -1198,8 +1220,11 @@ index 1b65652..8ae85d1 100644
 +					additionalMessage = defaultAgent?.metadata.additionalWelcomeMessage;
 +				} else if (this.chatEntitlementService.anonymous && !this.chatEntitlementService.sentiment.completed) {
  					const providers = product.defaultChatAgent.provider;
- 					additionalMessage = new MarkdownString(localize({ key: 'settings', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3}).", providers.default.name, providers.default.name, product.defaultChatAgent.termsStatementUrl, product.defaultChatAgent.privacyStatementUrl), { isTrusted: true });
+-					additionalMessage = new MarkdownString(localize({ key: 'settings', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3}).", providers.default.name, providers.default.name, product.defaultChatAgent.termsStatementUrl, product.defaultChatAgent.privacyStatementUrl), { isTrusted: true });
++					additionalMessage = new MarkdownString(localize({ key: 'settings', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0}, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3}).", providers.default.name, providers.default.name, product.defaultChatAgent.termsStatementUrl, product.defaultChatAgent.privacyStatementUrl), { isTrusted: true });
  				} else {
+ 					additionalMessage = defaultAgent?.metadata.additionalWelcomeMessage;
+ 				}
 @@ -2755,7 +2758,8 @@ export class ChatWidget extends Disposable implements IChatWidget {
  		const lastElementVisible = this.listWidget.isScrolledToBottom;
  		const lastItem = this.listWidget.lastItem;
@@ -1354,7 +1379,7 @@ index 1516ae7..51204cd 100644
  			id: 'workbench.action.chat.agentOverview.learnMore',
  			label: localize('chat.learnMoreAgentTypes', "Learn about agent types..."),
 diff --git a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
-index 9e5c9df..5697d6c 100644
+index 9e5c9df..3dc0946 100644
 --- a/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts
 @@ -19,6 +19,7 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
@@ -1377,6 +1402,15 @@ index 9e5c9df..5697d6c 100644
  		const disclaimerElement = dom.append(parent, dom.$('.disclaimer.hidden'));
  		const disposables = this._store.add(new DisposableStore());
  
+@@ -278,7 +284,7 @@ class QuickChat extends Disposable {
+ 			disclaimerElement.classList.toggle('hidden', !showDisclaimer);
+ 
+ 			if (showDisclaimer) {
+-				const renderedMarkdown = disposables.add(this.markdownRendererService.render(new MarkdownString(localize({ key: 'termsDisclaimer', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.termsStatementUrl ?? '', product.defaultChatAgent?.privacyStatementUrl ?? ''), { isTrusted: true })));
++				const renderedMarkdown = disposables.add(this.markdownRendererService.render(new MarkdownString(localize({ key: 'termsDisclaimer', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0}, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.termsStatementUrl ?? '', product.defaultChatAgent?.privacyStatementUrl ?? ''), { isTrusted: true })));
+ 				disclaimerElement.appendChild(renderedMarkdown.element);
+ 			}
+ 		}));
 diff --git a/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts b/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts
 index 715d629..b301d4f 100644
 --- a/src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts
@@ -1452,3 +1486,67 @@ index a0a1eab..b4d5875 100644
  	test('anonymous user model selection triggers onSelect normally', () => {
  		const auto = createAutoModel();
  		const modelA = createModel('gpt-4o', 'GPT-4o');
+diff --git a/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts b/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts
+index 914f647..eecf378 100644
+--- a/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts
++++ b/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts
+@@ -324,7 +324,7 @@ export abstract class InlineChatWidget {
+ 			this._elements.disclaimerLabel.classList.toggle('hidden', !showDisclaimer);
+ 
+ 			if (showDisclaimer) {
+-				const renderedMarkdown = disposables.add(this.#markdownRendererService.render(new MarkdownString(localize({ key: 'termsDisclaimer', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.termsStatementUrl ?? '', product.defaultChatAgent?.privacyStatementUrl ?? ''), { isTrusted: true })));
++				const renderedMarkdown = disposables.add(this.#markdownRendererService.render(new MarkdownString(localize({ key: 'termsDisclaimer', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0}, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.provider?.default?.name ?? '', product.defaultChatAgent?.termsStatementUrl ?? '', product.defaultChatAgent?.privacyStatementUrl ?? ''), { isTrusted: true })));
+ 				this._elements.disclaimerLabel.appendChild(renderedMarkdown.element);
+ 			}
+ 
+diff --git a/src/vs/workbench/services/chat/common/chatEntitlementService.ts b/src/vs/workbench/services/chat/common/chatEntitlementService.ts
+index 8e7875b..d078467 100644
+--- a/src/vs/workbench/services/chat/common/chatEntitlementService.ts
++++ b/src/vs/workbench/services/chat/common/chatEntitlementService.ts
+@@ -223,16 +223,16 @@ export function isProUser(chatEntitlement: ChatEntitlement): boolean {
+ /**
+  * Gets the full plan name for the given chat entitlement
+  * @param chatEntitlement The chat entitlement to get the plan name for
+- * @returns The localized full plan name (e.g., "Copilot Pro", "Copilot Free")
++ * @returns The localized full plan name (e.g., "Chat Pro", "Chat Free")
+  */
+ export function getChatPlanName(chatEntitlement: ChatEntitlement): string {
+ 	switch (chatEntitlement) {
+ 		case ChatEntitlement.EDU:
+ 			return localize('plan.eduName', 'Copilot EDU');
+ 		case ChatEntitlement.Pro:
+-			return localize('plan.proName', 'Copilot Pro');
++			return localize('plan.proName', 'Chat Pro');
+ 		case ChatEntitlement.ProPlus:
+-			return localize('plan.proPlusName', 'Copilot Pro+');
++			return localize('plan.proPlusName', 'Chat Pro+');
+ 		case ChatEntitlement.Max:
+ 			return localize('plan.maxName', 'Copilot Max');
+ 		case ChatEntitlement.Business:
+@@ -240,7 +240,7 @@ export function getChatPlanName(chatEntitlement: ChatEntitlement): string {
+ 		case ChatEntitlement.Enterprise:
+ 			return localize('plan.enterpriseName', 'Copilot Enterprise');
+ 		default:
+-			return localize('plan.freeName', 'Copilot Free');
++			return localize('plan.freeName', 'Chat Free');
+ 	}
+ }
+ 
+@@ -1050,7 +1050,7 @@ export class ChatEntitlementRequests extends Disposable {
+ 		if (!this.lifecycleService.willShutdown) {
+ 			const { confirmed } = await this.dialogService.confirm({
+ 				type: Severity.Error,
+-				message: localize('unknownSignUpError', "An error occurred while signing up for the GitHub Copilot Free plan. Would you like to try again?"),
++				message: localize('unknownSignUpError', "An error occurred while signing up for the Chat Free plan. Would you like to try again?"),
+ 				detail,
+ 				primaryButton: localize('retry', "Retry")
+ 			});
+@@ -1067,7 +1067,7 @@ export class ChatEntitlementRequests extends Disposable {
+ 		if (!this.lifecycleService.willShutdown) {
+ 			this.dialogService.prompt({
+ 				type: Severity.Error,
+-				message: localize('unprocessableSignUpError', "An error occurred while signing up for the GitHub Copilot Free plan."),
++				message: localize('unprocessableSignUpError', "An error occurred while signing up for the Chat Free plan."),
+ 				detail: logDetails,
+ 				buttons: [
+ 					{

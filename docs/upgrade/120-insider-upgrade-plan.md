@@ -4,7 +4,7 @@ Date: 2026-05-17
 
 Branch: `120-replay-baseline`
 
-Status: 120 profile infrastructure plus `003`, `004`, `005`, Phase E Plan Review UI adaptation, and `007`-`009` tool/editing stages are ported; active profile is still 116 until full 120 Director materialize passes.
+Status: 120 profile infrastructure plus replay stages `001`-`009` are ported. Phase H canonicalization is complete, `activeProfile` is now `120-insider-win32-x64-client`, and the current local follow-up hardens remaining branding/commercial residuals in `002`, `005`, and `006` before push.
 
 ## Purpose
 
@@ -42,12 +42,15 @@ Completed in this branch:
 
 - Created formal profile: `docs/upgrade/profiles/120-insider-win32-x64-client.json`
 - Registered the 120 profile in `docs/upgrade/profiles/index.json`
-- Kept `activeProfile` unchanged as `116-stable-win32-x64-client`
+- Switched `activeProfile` to `120-insider-win32-x64-client` after Phase H Director materialize and canonical validation passed
 - Generated VSCodium aggregate replay patch: `patches/replay/001-vscodium-layer.120-insider.patch`
+- Ported branding replay stage: `patches/replay/002-director-branding.120-insider.patch`
 - Ported product/build/release replay stage: `patches/replay/003-director-product-build-release.120-insider.patch`
 - Ported agent engine / Claude / MCP replay stage: `patches/replay/004-director-agent-engine.120-insider.patch`
 - Ported chat built-in mode / provider UI shielding replay stage: `patches/replay/005-director-chat-built-in-mode.120-insider.patch`
+- Amended `005-director-chat-built-in-mode.120-insider.patch` for Phase G commercial-flow text shielding.
 - Amended `004-director-agent-engine.120-insider.patch` for Phase E Plan Mode -> 120 review UI adaptation.
+- Ported text-polish replay stage: `patches/replay/006-director-text-polish.120-insider.patch`
 - Ported tool/editing replay stages:
   - `patches/replay/007-director-tool-layer.120-insider.patch`
   - `patches/replay/008-director-chat-editing.120-insider.patch`
@@ -56,16 +59,17 @@ Completed in this branch:
 - Generated VSCodium layer manifest: `docs/upgrade/vscodium-layer.120-insider.json`
 - Added 120 product override, owned-key, delete, overlay, and deps mutation files
 - Generated/updated 120 reports under `docs/upgrade/reports/120-insider-win32-x64-client/`
+- Captured 120 expected contracts and canonical manifest
 - Added HTML conflict report: `docs/upgrade/reports/120-insider-win32-x64-client/upgrade-conflict-report.html`
 
 Current 120 series state:
 
 - `001-vscodium-layer.120-insider.patch`: `enabled`
-- `002-director-branding.120-insider.patch`: `deferred`
+- `002-director-branding.120-insider.patch`: `enabled`
 - `003-director-product-build-release.120-insider.patch`: `enabled`
 - `004-director-agent-engine.120-insider.patch`: `enabled`
 - `005-director-chat-built-in-mode.120-insider.patch`: `enabled`
-- `006-director-text-polish.120-insider.patch`: `deferred`
+- `006-director-text-polish.120-insider.patch`: `enabled`
 - `007-director-tool-layer.120-insider.patch`: `enabled`
 - `008-director-chat-editing.120-insider.patch`: `enabled`
 - `009-director-edit-tools.120-insider.patch`: `enabled`
@@ -76,10 +80,12 @@ Validation already run and passed:
 node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client
 node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client
 node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client
-node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target .cache/upgrade-estimator/materialize-120-insider --up-to-layer vscodium --force --allow-nondefault-target-force
+node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target vscode.generated --up-to-layer director --force
+node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
+node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
 ```
 
-The last command proves the formal 120 `001` VSCodium layer can replay to the VSCodium layer. It intentionally did not materialize the Director layer.
+The materialize and canonical checks prove the formal 120 replay stack can materialize through the Director layer in the default generated workspace.
 
 ## User Decisions
 
@@ -88,14 +94,14 @@ The last command proves the formal 120 `001` VSCodium layer can replay to the VS
 Decision:
 
 - Create a formal `120-insider-win32-x64-client` profile.
-- Do not switch `docs/upgrade/profiles/index.json` `activeProfile` yet.
-- Switch active profile only after 120 replay can materialize to the Director layer and key validation passes.
+- Do not switch `docs/upgrade/profiles/index.json` `activeProfile` until the 120 replay can materialize to the Director layer and key validation passes.
+- After Phase H passed, switch active profile to the 120 profile.
 
 Plain-language interpretation:
 
-- The 120 profile is now a named upgrade route that scripts can run explicitly.
-- The repository default remains 116, so normal profile-less commands still target the known-good baseline.
-- All 120 work should pass `--profile docs/upgrade/profiles/120-insider-win32-x64-client.json` or `--profile 120-insider-win32-x64-client`.
+- The 120 profile is now the repository default for profile-less replay validation commands.
+- Historical 116 inputs remain available for reference, but new upgrade/build work should treat 120 as canonical.
+- Explicit commands can still pass `--profile docs/upgrade/profiles/120-insider-win32-x64-client.json` or `--profile 120-insider-win32-x64-client`.
 
 ### 2. Provider / Model UI
 
@@ -315,8 +321,9 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
 | Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
 | Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | pushed: `fcd37328` |
-| Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still fails because Phase H expected JSON files do not exist yet | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pushed: `1039b40e` |
+| Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still failed until Phase H captured expected JSON files | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pushed: `1039b40e` |
 | Phase H: expected contracts/canonical/full materialize | complete | 2026-05-17 | passed: profile, series, product overrides, expected contracts, canonical manifest, clean full materialize to `vscode.generated`, materialize report target/product-shape assertions, commercial grep, no reject files, diff check | passed: `005` follow-up removed model-picker Copilot upgrade hover text; 120 expected/canonical/report outputs captured; active profile switched to 120 after Director materialize passed | pushed: `938dd858` |
+| Post-H: branding/commercial residual hardening | complete | 2026-05-17 | passed: profile, series, product overrides, clean full materialize to `vscode.generated`, expected contracts, canonical manifest refresh/validate, residual grep scans | passed: broader Director branding restored across low-risk user-visible surfaces; residual VSCodium/Copilot hits are allowlisted dependency, sourcemap, fixture, internal-doc, or symbol-id cases | pending |
 
 ### Phase B: Port Product / Build / Release (`003`)
 
@@ -637,10 +644,10 @@ Acceptance:
 
 Completion note, 2026-05-17:
 
-- Created the 120 branding/text-polish replay patches from current 120 sources instead of blindly replaying the 116 patches:
+- Created the initial 120 branding/text-polish replay patches from current 120 sources instead of blindly replaying the 116 patches:
   - `patches/replay/002-director-branding.120-insider.patch`
   - `patches/replay/006-director-text-polish.120-insider.patch`
-- Regenerated `patches/series.120-insider.json`; `002` and `006` are now enabled with real sha256 values.
+- Regenerated `patches/series.120-insider.json`; `002` and `006` were enabled with real sha256 values.
 - Validation passed:
   - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
   - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
@@ -650,13 +657,13 @@ Completion note, 2026-05-17:
 - Self-review passed:
   - `git diff --check -- patches/replay/002-director-branding.120-insider.patch patches/replay/006-director-text-polish.120-insider.patch patches/series.120-insider.json` found no whitespace errors.
   - `rg` checks found no VSCodium/VS Code leftovers in the selected user-visible Phase G files.
-  - Copilot commercial-flow leftovers were removed or guarded. Remaining Copilot matches are compatibility target/CLI names, not Director product-flow text.
-- Known Phase H gate:
-  - `node scripts/upgrade/expected-contracts.mjs --profile 120-insider-win32-x64-client` still fails because `docs/upgrade/expected/120-insider-win32-x64-client/*.expected.json` files have not been captured yet. This is the first Phase H task.
+  - Copilot commercial-flow leftovers were removed or guarded. Remaining Copilot matches were compatibility target/CLI names, not Director product-flow text.
+- Follow-up:
+  - Phase H and the post-H hardening below supersede the initial Phase G patch hashes with broader user-visible branding coverage.
 
 ### Phase H: Expected Contracts, Canonical Manifest, Full Materialize
 
-Goal: switch from partial replay to full 120 Director replay.
+Goal: promote the Phase G scratch Director replay into canonical 120 expected outputs, canonical manifest, and the default generated workspace.
 
 Required outputs:
 
@@ -664,7 +671,7 @@ Required outputs:
 - 120 canonical manifest
 - 120 materialize report
 - 120 expected contracts report
-- Updated `series.120-insider.json` with enabled Director patches and correct sha256 values
+- Confirmation that `series.120-insider.json` still has enabled Director patches and correct sha256 values
 
 Validation:
 
@@ -675,7 +682,7 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
 ```
 
-Full materialize, once Director stages are ready:
+Canonical full materialize:
 
 ```bash
 bash scripts/upgrade/materialize-vscode.sh \
@@ -697,7 +704,7 @@ Completion note, 2026-05-17:
 - Captured and validated `docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json`.
 - Wrote 120 materialize, expected-contracts, and canonical-manifest reports under `docs/upgrade/reports/120-insider-win32-x64-client/`.
 - Amended `patches/replay/005-director-chat-built-in-mode.120-insider.patch` to remove remaining model-picker GitHub Copilot upgrade hover text and route that fallback text to Director settings.
-- Regenerated `patches/series.120-insider.json`; the `005` sha256 now reflects the follow-up commercial-flow fix.
+- Regenerated `patches/series.120-insider.json`; the `005` sha256 reflected the Phase H commercial-flow fix.
 - Switched `docs/upgrade/profiles/index.json` `activeProfile` from `116-stable-win32-x64-client` to `120-insider-win32-x64-client` after Director-layer materialize passed.
 - Updated `AGENTS.md`, `CLAUDE.md`, and `.claude/memory.md` so new windows see 120 as the current canonical baseline.
 - Validation passed:
@@ -714,6 +721,38 @@ Completion note, 2026-05-17:
   - `git diff --check` found no whitespace errors and `rg --files -g '*.rej' vscode.generated/layers/director/vscode` found no reject files.
 - Test/build limitation:
   - This workspace has no `node_modules` in the repo root or generated tree, and there is not yet a 120-specific package script. TypeScript compile, unit/browser tests, and package build remain the next dependency/build pass, not part of this replay-canonical closeout.
+
+### Post-H Follow-up: Branding / Commercial Residual Hardening
+
+Goal: close the remaining user-visible VSCodium/Copilot branding and commercial-flow residuals after Phase H made 120 canonical.
+
+Completion note, 2026-05-17:
+
+- Regenerated `002-director-branding.120-insider.patch` with broader user-visible Director branding coverage.
+- Regenerated `006-director-text-polish.120-insider.patch` to include 120 terminal platform configuration branding.
+- Amended `005-director-chat-built-in-mode.120-insider.patch` so terms/disclaimer, plan labels, and Claude session descriptions no longer expose Copilot commercial framing.
+- Final follow-up patch hashes:
+  - `002-director-branding.120-insider.patch`: `16b5825f45109671ab1dd5478e3fecd09bb2bd29def903e37993068703b138e6`
+  - `005-director-chat-built-in-mode.120-insider.patch`: `d4a64c0ac51cb34ce0e8f4d9c66e76a9f0d873fa7d49aeed0735949f50eb5aa6`
+  - `006-director-text-polish.120-insider.patch`: `30c9ae913104f62925f2420db95805e18ab46acb0bee0e1a511080711b060e4d`
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
+  - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
+  - `node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+  - `node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --write`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
+  - `git diff --check`
+  - `rg --files -g '*.rej' vscode.generated/layers/director/vscode` returned no reject files
+- Canonical outputs updated:
+  - `docs/upgrade/reports/120-insider-win32-x64-client/materialize-report.json`
+  - `docs/upgrade/reports/120-insider-win32-x64-client/expected-contracts-report.json`
+  - `docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json`
+  - `docs/upgrade/reports/120-insider-win32-x64-client/canonical-manifest-report.json`
+- Residual review:
+  - Remaining VSCodium hits are allowlisted as real dependency/module names, sourcemap URLs, terminal-suggest internal identifiers, tests/fixtures, or SVG internal ids.
+  - Remaining Copilot commercial hits are allowlisted as internal comments, tests/fixtures, upstream internal docs, or compatibility-oriented session docs.
 
 ## Guardrails
 
@@ -740,7 +779,7 @@ Do:
 
 ## Immediate Next Step
 
-After Phase H is committed and pushed, the next work should be either a 120 dependency/build/package pass or Phase 2 Wave 3 Claude AgentHost SDK integration.
+After the post-H branding/commercial follow-up is committed and pushed, the next work should be either a 120 dependency/build/package pass or Phase 2 Wave 3 Claude AgentHost SDK integration.
 
 The next window should:
 
@@ -761,6 +800,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase H push, only the untracked `artifacts/` directory should remain.
+As of 2026-05-17 before the post-H branding/commercial follow-up push, expected dirty work is limited to the follow-up patch/report/manifest/doc files plus the untracked `artifacts/` directory.
 
 Do not clean or revert `artifacts/` unless explicitly asked.
