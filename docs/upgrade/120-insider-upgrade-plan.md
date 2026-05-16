@@ -302,7 +302,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Stage | Status | Completed | Validation | Self-review | Push |
 | --- | --- | --- | --- | --- | --- |
 | Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
-| Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pending push |
+| Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
 | Phase C: `004` agent engine / Claude / MCP | pending | | | | |
 | Phase D: `005` chat/provider/model UI | pending | | | | |
 | Phase E: Plan Mode to 120 review UI | pending | | | | |
