@@ -315,7 +315,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
 | Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
 | Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | pushed: `fcd37328` |
-| Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still fails because Phase H expected JSON files do not exist yet | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pending implementation push |
+| Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still fails because Phase H expected JSON files do not exist yet | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pushed: `1039b40e` |
 | Phase H: expected contracts/canonical/full materialize | pending | | | | |
 
 ### Phase B: Port Product / Build / Release (`003`)
@@ -736,6 +736,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 during Phase G closeout, the intended tracked changes are `002`, `006`, `series.120-insider.json`, and this plan file. The untracked `artifacts/` directory remains unrelated and should stay uncommitted.
+As of 2026-05-17 after Phase G push, only the untracked `artifacts/` directory should remain.
 
 Do not clean or revert `artifacts/` unless explicitly asked.
