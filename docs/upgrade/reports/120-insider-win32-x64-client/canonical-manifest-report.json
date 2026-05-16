@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "phase": "P2",
+  "batch": "canonical-manifest",
+  "status": "passed",
+  "generatedAt": "2026-05-16T19:35:59.734Z",
+  "mode": "write-and-validate",
+  "manifest": "docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json",
+  "sourceRoot": "vscode.generated/layers/director/vscode",
+  "treeHash": "5f03f165d7c7b767d4cf9ce06f0d10e33c1287dcaa8229d50ad1a126933f9884",
+  "fileCount": 10557,
+  "caseInsensitivePathCollisions": [],
+  "checks": {
+    "schema": "passed",
+    "manifestMatch": "passed"
+  }
+}

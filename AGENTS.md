@@ -17,10 +17,10 @@ Director should feel deeply integrated, similar in shape to Copilot inside VS Co
 
 ## Current Program
 
-- Current mainline work is P2: upgrade the replay baseline from VS Code/VSCodium 112 to 116, then continue fixing and expanding the Director-Code runtime on that replay-backed baseline.
-- The active canonical profile is `docs/upgrade/profiles/116-stable-win32-x64-client.json`.
+- Current mainline work is P2 on the 120 Insider replay baseline, after completing the 112 -> 116 -> 120 replay upgrade path.
+- The active canonical profile is `docs/upgrade/profiles/120-insider-win32-x64-client.json`.
 - The active profile index is `docs/upgrade/profiles/index.json`; do not infer a new active profile from the branch name alone.
-- The old 112 physical reference validation is complete. For 116 and later, correctness comes from replay validation, expected contracts, targeted tests, compile/build smoke, and packaged/manual verification.
+- The old 112 physical reference validation is complete. For 116 and later, correctness comes from replay validation, expected contracts, canonical manifests, targeted tests, compile/build smoke, and packaged/manual verification.
 - `vscode.generated/layers/director/vscode` is not the long-term source of truth.
 
 ## Goals
@@ -43,15 +43,15 @@ Director should feel deeply integrated, similar in shape to Copilot inside VS Co
 
 ## Canonical Inputs
 
-Current 116 canonical inputs include:
+Current 120 canonical inputs include:
 
-- `docs/upgrade/profiles/116-stable-win32-x64-client.json`
-- `patches/series.116.json`
-- `patches/replay/*.116.patch`
-- `docs/upgrade/product-overrides/116-stable-win32-x64-client.json`
-- `docs/upgrade/expected/116-stable-win32-x64-client/*.json`
-- `docs/upgrade/reports/116-stable-win32-x64-client/*.json`
-- `docs/upgrade/manifests/116-stable-win32-x64-client.canonical.json`
+- `docs/upgrade/profiles/120-insider-win32-x64-client.json`
+- `patches/series.120-insider.json`
+- `patches/replay/*.120-insider.patch`
+- `docs/upgrade/product-overrides/120-insider-win32-x64-client.json`
+- `docs/upgrade/expected/120-insider-win32-x64-client/*.json`
+- `docs/upgrade/reports/120-insider-win32-x64-client/*.json`
+- `docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json`
 - `scripts/upgrade/` materialize, patch generation, and validation scripts
 
 Generated validation workspace:
@@ -66,41 +66,42 @@ All durable Director changes must land through replay:
 
 1. It is fine to first edit `vscode.generated/layers/director/vscode` for debugging and local validation.
 2. After the behavior is validated, convert the diff into the appropriate Director replay patch or replay control file.
-3. If a new patch stage is truly needed, update `patches/series.116.json`, the active profile, and `scripts/upgrade/generate-director-patches.mjs` stage/path classification.
+3. If a new patch stage is truly needed, update `patches/series.120-insider.json`, the active profile, and `scripts/upgrade/generate-director-patches.mjs` stage/path classification.
 4. If a change affects product/package/server manifests, expected contracts, product overrides, canonical manifests, or reports, update those canonical files too.
 5. Before finishing a phase, bugfix, or release candidate, run profile-scoped replay validation. Do not accept a generated-tree-only fix as complete.
 
 Recommended baseline checks:
 
 ```powershell
-node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
-node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
-node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/116-stable-win32-x64-client.json
+node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
+node scripts/upgrade/validate-product-overrides.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
+node scripts/upgrade/expected-contracts.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
+node scripts/upgrade/canonical-manifest.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json
 ```
 
 For release candidates or phase closeout, clean-materialize from upstream inputs:
 
 ```bash
 bash scripts/upgrade/materialize-vscode.sh \
-  --profile docs/upgrade/profiles/116-stable-win32-x64-client.json \
+  --profile docs/upgrade/profiles/120-insider-win32-x64-client.json \
   --target vscode.generated \
   --up-to-layer director \
   --force
 ```
 
-## 116 Patch Stage Ownership
+## 120 Patch Stage Ownership
 
-Current 116 replay stages:
+Current 120 replay stages:
 
-1. `001-vscodium-layer.116.patch`: VSCodium aggregate layer, not Director-owned.
-2. `002-director-branding.116.patch`: branding, resources, copy, product experience drift.
-3. `003-director-product-build-release.116.patch`: product/package/server manifests, gulp, Windows installer, release/build wiring.
-4. `004-director-agent-engine.116.patch`: Director agent harness, model/tool bridge, agent engine, language-model/tool service integration, MCP-related agent paths.
-5. `005-director-chat-built-in-mode.116.patch`: built-in chat mode, Copilot commercial-flow bypass, chat setup/status/model picker/agent session UI entry points.
-6. `006-director-text-polish.116.patch`: narrow copy and prompt polish.
-7. `007-director-tool-layer.116.patch`: Director tool registry, mode policy, migration report/test layer, read-only workspace/GitHub context tools.
-8. `008-director-chat-editing.116.patch`: Director Chat Editing contract, reviewable text edit progress adapter, internal single-file edit probe, request/session binding tests.
-9. `009-director-edit-tools.116.patch`: Director reviewable edit tools: `apply_patch`, `create_file`, `create_directory`, `replace_string_in_file`, `multi_replace_string_in_file`.
+1. `001-vscodium-layer.120-insider.patch`: VSCodium aggregate layer, not Director-owned.
+2. `002-director-branding.120-insider.patch`: branding, resources, copy, product experience drift.
+3. `003-director-product-build-release.120-insider.patch`: product/package/server manifests, gulp, Windows installer, release/build wiring.
+4. `004-director-agent-engine.120-insider.patch`: Director agent harness, model/tool bridge, agent engine, language-model/tool service integration, MCP-related agent paths, and Plan Mode review adapter.
+5. `005-director-chat-built-in-mode.120-insider.patch`: built-in chat mode, Copilot commercial-flow bypass, chat setup/status/model picker/agent session UI entry points.
+6. `006-director-text-polish.120-insider.patch`: narrow copy and prompt polish.
+7. `007-director-tool-layer.120-insider.patch`: Director tool registry, mode policy, migration report/test layer, read-only workspace/GitHub context tools.
+8. `008-director-chat-editing.120-insider.patch`: Director Chat Editing contract, reviewable text edit progress adapter, internal single-file edit probe, request/session binding tests.
+9. `009-director-edit-tools.120-insider.patch`: Director reviewable edit tools: `apply_patch`, `create_file`, `create_directory`, `replace_string_in_file`, `multi_replace_string_in_file`.
 
 Prefer using existing stage ownership for follow-up work. Do not add empty or casual stages.
 
@@ -113,20 +114,21 @@ Prefer using existing stage ownership for follow-up work. Do not add empty or ca
 - Plan completion goes through the Plan-only `director_present_plan` tool.
 - Provider Registry is the canonical source for provider instances and persists profile data in `directorCodeProviders.json`.
 - VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
-- Earlier 116 runtime gates are complete and replay-backed: Ask/Edit/Inline mode routing, read-only tool layer, Chat Editing contract, and reviewable edit tools.
+- The 120 replay baseline is materialized through Director layer with expected contracts and canonical manifest captured.
+- Earlier runtime gates remain replay-backed on 120: Ask/Edit/Inline mode routing, Plan Mode review UI adapter, read-only tool layer, Chat Editing contract, and reviewable edit tools.
 - Next planned wave is Phase 2 Wave 3 Claude AgentHost SDK integration, unless the user chooses to run manual Wave 2 API/OAuth smoke first.
 
-## Important 116 Facts
+## Important 120 Facts
 
-- A prior 116 blank Workbench issue came from an incomplete `defaultChatAgent.provider` override. VS Code 116 reads `defaultChatAgent.provider.enterprise.id`, so Director must preserve the full provider object shape even when disabling provider fields.
-- That fix belongs in `003-director-product-build-release.116.patch`, expected product JSON, and `validate-product-overrides.mjs`; do not fix it only in generated `product.json`.
+- A prior 116 blank Workbench issue came from an incomplete `defaultChatAgent.provider` override. Modern VS Code baselines read `defaultChatAgent.provider.enterprise.id`, so Director must preserve the full provider object shape even when disabling provider fields.
+- That fix belongs in `003-director-product-build-release.120-insider.patch`, expected product JSON, and `validate-product-overrides.mjs`; do not fix it only in generated `product.json`.
 - `%APPDATA%\Director-Code\clp` may need clearing before packaged runtime smoke when cached language-pack/NLS or CLP state interferes with a fresh build.
 - Interactive installer/manual smoke is intentionally not run automatically unless the user asks, because it can modify the user's installed app/profile.
 - `artifacts/` is untracked by default and should not be committed unless the user explicitly asks for release artifacts to be tracked.
 
 ## Build And Package
 
-Preferred build entry points:
+Current packaged build entry points are still 116-specific until a 120 package script is added:
 
 ```powershell
 .\scripts\build-director-116.ps1

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T19:13:28.446Z",
+  "generatedAt": "2026-05-16T19:34:51.660Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -98,7 +98,7 @@
     },
     {
       "path": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "sha256": "cc6c45b5056b5fe69604ac4e56980cb24ca1d4edfc88b66bb7cd16e2faea7483",
+      "sha256": "f507750d60c13d29e98b3b84e742b4fe507127f65a995a149f936ab7b18de68d",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

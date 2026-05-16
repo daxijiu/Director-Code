@@ -1211,7 +1211,7 @@ index 1b65652..8ae85d1 100644
  
  		this.welcomeMessageContainer.style.height = `${contentHeight}px`;
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
-index 089b319..469b5df 100644
+index 089b319..ad4f19b 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 +++ b/src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts
 @@ -35,6 +35,7 @@ import * as semver from '../../../../../../base/common/semver/semver.js';
@@ -1278,9 +1278,12 @@ index 089b319..469b5df 100644
  	manageSettingsUrl: string | undefined,
  	updateStateType: StateType,
  	chatEntitlementService: IChatEntitlementService,
-@@ -723,7 +728,9 @@ function createUnavailableModelItem(
+@@ -721,9 +726,11 @@ function createUnavailableModelItem(
+ 	let description: string | MarkdownString | undefined;
+ 
  	if (reason === 'upgrade') {
- 		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Upgrade](command:workbench.action.chat.upgradePlan \" \")"), { isTrusted: true });
+-		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Upgrade](command:workbench.action.chat.upgradePlan \" \")"), { isTrusted: true });
++		description = new MarkdownString(localize('chat.modelPicker.upgradeLink', "[Configure](command:director-code.openSettings \" \")"), { isTrusted: true });
  	} else if (reason === 'update') {
 -		description = localize('chat.modelPicker.updateDescription', "Update VS Code");
 +		description = localize('chat.modelPicker.updateDescription', "Update Director-Code");
@@ -1289,7 +1292,15 @@ index 089b319..469b5df 100644
  	} else {
  		description = manageSettingsUrl
  			? new MarkdownString(localize('chat.modelPicker.adminLink', "[Contact your admin]({0})", manageSettingsUrl), { isTrusted: true })
-@@ -740,6 +747,9 @@ function createUnavailableModelItem(
+@@ -734,12 +741,15 @@ function createUnavailableModelItem(
+ 	if (reason === 'upgrade') {
+ 		hoverContent = new MarkdownString('', { isTrusted: true, supportThemeIcons: true });
+ 		if (chatEntitlementService.entitlement === ChatEntitlement.Pro) {
+-			hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHoverProPlus', "[Upgrade to GitHub Copilot Pro+](command:workbench.action.chat.upgradePlan \" \") to use the best models."));
++			hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHoverProPlus', "This model is not available. [Configure Director Code](command:director-code.openSettings \" \") to update your provider, authentication, or model list."));
+ 		} else {
+-			hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHover', "[Upgrade to GitHub Copilot Pro](command:workbench.action.chat.upgradePlan \" \") to use the best models."));
++			hoverContent.appendMarkdown(localize('chat.modelPicker.upgradeHover', "This model is not available. [Configure Director Code](command:director-code.openSettings \" \") to update your provider, authentication, or model list."));
  		}
  	} else if (reason === 'update') {
  		hoverContent = getUpdateHoverContent(updateStateType);

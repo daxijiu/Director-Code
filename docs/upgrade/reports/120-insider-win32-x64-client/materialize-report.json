@@ -4,19 +4,18 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-16T18:10:48.463Z",
+  "generatedAt": "2026-05-16T19:35:55.743Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/120-insider-win32-x64-client.json",
     "--target",
-    ".cache/upgrade-estimator/materialize-120-insider",
+    "vscode.generated",
     "--up-to-layer",
-    "vscodium",
-    "--force",
-    "--allow-nondefault-target-force"
+    "director",
+    "--force"
   ],
-  "target": ".cache/upgrade-estimator/materialize-120-insider",
-  "upToLayer": "vscodium",
+  "target": "vscode.generated",
+  "upToLayer": "director",
   "upstreams": {
     "vscode": {
       "path": ".cache/upstreams/vscode/1.120.0",
@@ -57,25 +56,86 @@
       "size": 65990121,
       "sha256": "386a7484711d6e9c89b437d4b8a7a6237b110be62729a6ef277ee6f603bb3b4f",
       "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/002-director-branding.120-insider.patch",
+      "size": 71012,
+      "sha256": "740eff4a3277abd3917f4ae37991d97214e94ec34d5d30696dcba1dfa14815d7",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/003-director-product-build-release.120-insider.patch",
+      "size": 21082,
+      "sha256": "09f06a980b94a94eab3d21fa1b4a55360591401e1c7d837958fe557ce2c8b257",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/004-director-agent-engine.120-insider.patch",
+      "size": 1056856,
+      "sha256": "f9b0267cd6289f88c2cc911564340160197b11b79029c12045074562a59ea532",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
+      "size": 89058,
+      "sha256": "f507750d60c13d29e98b3b84e742b4fe507127f65a995a149f936ab7b18de68d",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/006-director-text-polish.120-insider.patch",
+      "size": 19136,
+      "sha256": "b7fc9f325b09ff65022d2add3cad2ec4804fa946baa368e2a4d1a5754d8af65c",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/007-director-tool-layer.120-insider.patch",
+      "size": 82052,
+      "sha256": "7a5f5a458d01105ca2022e405874d43807f934133ebcb9eece0add08f1db5a86",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/008-director-chat-editing.120-insider.patch",
+      "size": 21189,
+      "sha256": "04daec12d5290bd3f75fa9e7027b0f38ee2b22ed4e5f8a800d14afa8bec5c75c",
+      "status": "passed"
+    },
+    {
+      "layer": "director",
+      "patch": "patches/replay/009-director-edit-tools.120-insider.patch",
+      "size": 45128,
+      "sha256": "c55466cc25cfbcfc9244c47c8c94103b44ae96ac43f62a4f4b01de6fa8ef65f8",
+      "status": "passed"
     }
   ],
   "referenceOverlays": {
-    "status": "not-requested",
+    "status": "not-applicable",
     "overlays": []
   },
   "equivalence": {
-    "status": "not-requested"
+    "status": "not-applicable"
   },
   "checkpoints": [
     {
       "name": "vscode",
-      "path": ".cache/upgrade-estimator/materialize-120-insider/layers/vscode/vscode",
+      "path": "vscode.generated/layers/vscode/vscode",
       "fileManifestHash": "9eae17ea2fd6ec79f1a5604ae7684cb6ab37b5e81da787e14d1411023e16d756"
     },
     {
       "name": "vscodium",
-      "path": ".cache/upgrade-estimator/materialize-120-insider/layers/vscodium/vscode",
+      "path": "vscode.generated/layers/vscodium/vscode",
       "fileManifestHash": "244cdffb46bc791c205532db75b5f026ea999762eddfb0a437a4f420356531cd"
+    },
+    {
+      "name": "director",
+      "path": "vscode.generated/layers/director/vscode",
+      "fileManifestHash": "bf2c6d5cdba6fa1fea713ac58419f666b877b10d3bf0ab9f043b5ba83555c4a8"
     }
   ],
   "checks": {
@@ -83,9 +143,9 @@
     "cleanVscodeMaterialized": "passed",
     "cleanVscodiumCache": "passed",
     "vscodiumTransformApplication": "passed",
-    "directorDeltaApplication": "not-requested",
-    "referenceOverlayApplication": "not-requested",
-    "sourceEquivalence": "not-requested",
+    "directorDeltaApplication": "passed",
+    "referenceOverlayApplication": "not-applicable",
+    "sourceEquivalence": "not-applicable",
     "installDeps": "not-requested",
     "buildArtifact": "not-requested"
   },

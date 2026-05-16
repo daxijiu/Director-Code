@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "activeProfile": "116-stable-win32-x64-client",
+  "activeProfile": "120-insider-win32-x64-client",
   "profiles": [
     {
       "profile": "112-stable-win32-x64-client",

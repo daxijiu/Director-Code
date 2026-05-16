@@ -316,7 +316,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
 | Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | pushed: `fcd37328` |
 | Phase G: `002`/`006` branding/text polish | complete | 2026-05-17 | passed: profile, series, product overrides, full `001-009` scratch materialize to Director layer, branding/text grep assertions; `expected-contracts` still fails because Phase H expected JSON files do not exist yet | passed: visible Director-Code branding restored; Copilot commercial flow text removed/guarded; remaining Copilot mentions are compatibility target/CLI names | pushed: `1039b40e` |
-| Phase H: expected contracts/canonical/full materialize | pending | | | | |
+| Phase H: expected contracts/canonical/full materialize | complete | 2026-05-17 | passed: profile, series, product overrides, expected contracts, canonical manifest, clean full materialize to `vscode.generated`, materialize report target/product-shape assertions, commercial grep, no reject files, diff check | passed: `005` follow-up removed model-picker Copilot upgrade hover text; 120 expected/canonical/report outputs captured; active profile switched to 120 after Director materialize passed | pending push |
 
 ### Phase B: Port Product / Build / Release (`003`)
 
@@ -685,7 +685,35 @@ bash scripts/upgrade/materialize-vscode.sh \
   --force
 ```
 
-Only after this passes should `docs/upgrade/profiles/index.json` `activeProfile` be changed from 116 to 120.
+Completion note, 2026-05-17:
+
+- Ran clean full materialize to `vscode.generated/layers/director/vscode` with enabled `001-009` patches.
+- Captured and validated 120 expected contracts:
+  - `docs/upgrade/expected/120-insider-win32-x64-client/product.expected.json`
+  - `docs/upgrade/expected/120-insider-win32-x64-client/package.expected.json`
+  - `docs/upgrade/expected/120-insider-win32-x64-client/server-manifest.expected.json`
+  - `docs/upgrade/expected/120-insider-win32-x64-client/announcements-builtin.expected.json`
+  - `docs/upgrade/expected/120-insider-win32-x64-client/announcements-extra.expected.json`
+- Captured and validated `docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json`.
+- Wrote 120 materialize, expected-contracts, and canonical-manifest reports under `docs/upgrade/reports/120-insider-win32-x64-client/`.
+- Amended `patches/replay/005-director-chat-built-in-mode.120-insider.patch` to remove remaining model-picker GitHub Copilot upgrade hover text and route that fallback text to Director settings.
+- Regenerated `patches/series.120-insider.json`; the `005` sha256 now reflects the follow-up commercial-flow fix.
+- Switched `docs/upgrade/profiles/index.json` `activeProfile` from `116-stable-win32-x64-client` to `120-insider-win32-x64-client` after Director-layer materialize passed.
+- Updated `AGENTS.md`, `CLAUDE.md`, and `.claude/memory.md` so new windows see 120 as the current canonical baseline.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/expected-contracts.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/canonical-manifest.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target vscode.generated --up-to-layer director --force`
+- Self-review passed:
+  - Materialize report status is `passed`, target is `vscode.generated`, and layer is `director`.
+  - Generated `product.json` preserves the full `defaultChatAgent.provider.{default,enterprise,google,apple}.{id,name}` object shape.
+  - Commercial/name grep over chat/extensions/welcome surfaces found no `Upgrade to GitHub Copilot`, `GitHub Copilot Chat extension`, `All GitHub Copilot functionality`, `Try GitHub Copilot`, `Manage GitHub`, `VSCodium - Insiders`, or `VSCodium` hits.
+  - `git diff --check` found no whitespace errors and `rg --files -g '*.rej' vscode.generated/layers/director/vscode` found no reject files.
+- Test/build limitation:
+  - This workspace has no `node_modules` in the repo root or generated tree, and there is not yet a 120-specific package script. TypeScript compile, unit/browser tests, and package build remain the next dependency/build pass, not part of this replay-canonical closeout.
 
 ## Guardrails
 
@@ -712,17 +740,14 @@ Do:
 
 ## Immediate Next Step
 
-After Phase G is committed and pushed, continue with Phase H: expected contracts, canonical manifest, and full materialize.
+After Phase H is committed and pushed, the next work should be either a 120 dependency/build/package pass or Phase 2 Wave 3 Claude AgentHost SDK integration.
 
 The next window should:
 
 1. Confirm branch/status.
-2. Capture 120 expected contract files from the fully materialized Director layer.
-3. Run `expected-contracts` until it passes and write the expected-contracts report.
-4. Generate the 120 canonical manifest from the full Director materialized tree.
-5. Run a clean full materialize to `vscode.generated/layers/director/vscode`.
-6. Run profile, series, product override, expected-contract, canonical manifest, and diff/grep self-review checks.
-7. Record Phase H completion here, commit, push, then decide whether the 120 profile is ready to become active.
+2. Confirm `docs/upgrade/profiles/index.json` still points to `120-insider-win32-x64-client`.
+3. If doing build/package work, install 120 generated-tree dependencies and run compile/test/package gates from the materialized `vscode.generated/layers/director/vscode` tree.
+4. If doing Wave 3, start from 120 native Claude AgentHost and keep provider/auth/proxy/routing policy Director-owned.
 
 Suggested first commands:
 
@@ -736,6 +761,6 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase G push, only the untracked `artifacts/` directory should remain.
+As of 2026-05-17 during Phase H closeout, intended tracked changes include the 120 active-profile switch, 120 expected/canonical/report outputs, the `005` follow-up commercial-flow fix, refreshed `series.120-insider.json`, and guide/memory/plan updates. The untracked `artifacts/` directory remains unrelated and should stay uncommitted.
 
 Do not clean or revert `artifacts/` unless explicitly asked.
