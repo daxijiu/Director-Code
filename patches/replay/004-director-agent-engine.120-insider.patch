@@ -1,5 +1,5 @@
 diff --git a/src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts b/src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts
-index 3d52370..26a0fd4 100644
+index 3d52370163fdf7ce01867d2c6e865d45724fbf5b..26a0fd46672e3b2312b4bad346e662207e665a9d 100644
 --- a/src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts
 +++ b/src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts
 @@ -4,14 +4,16 @@
@@ -192,8 +192,81 @@ index 3d52370..26a0fd4 100644
  
  		// Checksum
  		services.set(IChecksumService, new SyncDescriptor(ChecksumService, undefined, false /* proxied to other processes */));
+diff --git a/src/vs/platform/agentHost/test/node/mockAgent.ts b/src/vs/platform/agentHost/test/node/mockAgent.ts
+index 71258ee8e9106e05494d689473a533a5444fe715..1c48abc3cab8014f7e2df04d7e93e524e38288e4 100644
+--- a/src/vs/platform/agentHost/test/node/mockAgent.ts
++++ b/src/vs/platform/agentHost/test/node/mockAgent.ts
+@@ -10,10 +10,11 @@ import type { IAuthorizationProtectedResourceMetadata } from '../../../../base/c
+ import { URI } from '../../../../base/common/uri.js';
+ import { type ISyncedCustomization } from '../../common/agentPluginManager.js';
+ import { AgentSession, type AgentProvider, type AgentSignal, type IAgent, type IAgentActionSignal, type IAgentCreateSessionConfig, type IAgentCreateSessionResult, type IAgentDescriptor, type IAgentModelInfo, type IAgentResolveSessionConfigParams, type IAgentSessionConfigCompletionsParams, type IAgentSessionMetadata, type IAgentToolPendingConfirmationSignal } from '../../common/agentService.js';
++import { buildSubagentTurnsFromHistory, buildTurnsFromHistory, type IHistoryRecord } from './historyRecordFixtures.js';
+ import { ProtectedResourceMetadata, type MessageAttachment, type ModelSelection } from '../../common/state/protocol/state.js';
+ import type { ResolveSessionConfigResult, SessionConfigCompletionsResult } from '../../common/state/protocol/commands.js';
+ import { ActionType } from '../../common/state/sessionActions.js';
+-import { CustomizationStatus, ResponsePartKind, ToolCallConfirmationReason, ToolCallStatus, ToolResultContentType, type CustomizationRef, type PendingMessage, type SessionCustomization, type StringOrMarkdown, type ToolCallResult, type Turn } from '../../common/state/sessionState.js';
++import { CustomizationStatus, ResponsePartKind, ToolCallConfirmationReason, ToolCallStatus, ToolResultContentType, parseSubagentSessionUri, type CustomizationRef, type PendingMessage, type SessionCustomization, type StringOrMarkdown, type ToolCallResult, type Turn } from '../../common/state/sessionState.js';
+ import { hasKey } from '../../../../base/common/types.js';
+ 
+ /** Well-known auto-generated title used by the 'with-title' prompt. */
+@@ -62,6 +63,14 @@ export class MockAgent implements IAgent {
+ 	readonly onDidCustomizationsChange = this._onDidCustomizationsChange.event;
+ 	getSessionCustomizations?: (session: URI) => Promise<readonly SessionCustomization[]>;
+ 
++	/**
++	 * Configurable session history. Tests construct {@link IHistoryRecord}
++	 * entries (the agent-internal intermediate shape) and the mock converts
++	 * them to {@link Turn}s on demand. Subagent URIs are routed to filtered
++	 * subagent turns via {@link buildSubagentTurnsFromHistory}.
++	 */
++	sessionMessages: IHistoryRecord[] = [];
++
+ 	/** Optional overrides applied to session metadata from listSessions. */
+ 	sessionMetadataOverrides: Partial<Omit<IAgentSessionMetadata, 'session'>> = {};
+ 
+@@ -123,7 +132,11 @@ export class MockAgent implements IAgent {
+ 	}
+ 
+ 	async getSessionMessages(session: URI): Promise<readonly Turn[]> {
+-		return []
++		const subagentInfo = parseSubagentSessionUri(session);
++		if (subagentInfo) {
++			return buildSubagentTurnsFromHistory(this.sessionMessages, subagentInfo.toolCallId, session.toString());
++		}
++		return buildTurnsFromHistory(this.sessionMessages);
+ 	}
+ 
+ 	async disposeSession(session: URI): Promise<void> {
+@@ -230,6 +243,13 @@ export class ScriptedMockAgent implements IAgent {
+ 	 * Message history for the pre-existing session: a single user→assistant
+ 	 * turn with a tool call.
+ 	 */
++	private readonly _preExistingMessages: IHistoryRecord[] = [
++		{ type: 'message', role: 'user', session: PRE_EXISTING_SESSION_URI, messageId: 'h-msg-1', content: 'What files are here?' },
++		{ type: 'tool_start', session: PRE_EXISTING_SESSION_URI, toolCallId: 'h-tc-1', toolName: 'list_files', displayName: 'List Files', invocationMessage: 'Listing files...' },
++		{ type: 'tool_complete', session: PRE_EXISTING_SESSION_URI, toolCallId: 'h-tc-1', result: { pastTenseMessage: 'Listed files', content: [{ type: ToolResultContentType.Text, text: 'file1.ts\nfile2.ts' }], success: true } satisfies ToolCallResult },
++		{ type: 'message', role: 'assistant', session: PRE_EXISTING_SESSION_URI, messageId: 'h-msg-2', content: 'Here are the files: file1.ts and file2.ts' },
++	];
++
+ 	// Track pending permission requests
+ 	private readonly _pendingPermissions = new Map<string, (approved: boolean) => void>();
+ 	// Track the active turn ID per session, captured from sendMessage().
+@@ -662,6 +682,13 @@ export class ScriptedMockAgent implements IAgent {
+ 	}
+ 
+ 	async getSessionMessages(session: URI): Promise<readonly Turn[]> {
++		const subagentInfo = parseSubagentSessionUri(session);
++		if (subagentInfo) {
++			return buildSubagentTurnsFromHistory(this._preExistingMessages, subagentInfo.toolCallId, session.toString());
++		}
++		if (session.toString() === PRE_EXISTING_SESSION_URI.toString()) {
++			return buildTurnsFromHistory(this._preExistingMessages);
++		}
+ 		return [];
+ 	}
+ 
 diff --git a/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts b/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts
-index 5cec86b..9d8eaaf 100644
+index 5cec86ba5414063a9029bbc3ca8f89a4c6d4d023..9d8eaaffee4c1655f29653ed2b561f963242397e 100644
 --- a/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts
 +++ b/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts
 @@ -121,9 +121,11 @@ export class MainThreadLanguageModelTools extends Disposable implements MainThre
@@ -212,7 +285,7 @@ index 5cec86b..9d8eaaf 100644
  		const source: ToolDataSource = isBuiltinTool
  			? ToolDataSource.Internal
 diff --git a/src/vs/workbench/api/common/extHostLanguageModelTools.ts b/src/vs/workbench/api/common/extHostLanguageModelTools.ts
-index ef3117f..830ae02 100644
+index ef3117f6c4d815272f3bda39eca1e413fd07b7d4..830ae02df1e0a4d8c1dc1638076d6cd3adaefd3f 100644
 --- a/src/vs/workbench/api/common/extHostLanguageModelTools.ts
 +++ b/src/vs/workbench/api/common/extHostLanguageModelTools.ts
 @@ -161,7 +161,7 @@ export class ExtHostLanguageModelTools implements ExtHostLanguageModelToolsShape
@@ -225,7 +298,7 @@ index ef3117f..830ae02 100644
  		return Array.from(this._allTools.values())
  			.map(tool => hasParticipantAdditions ? tool.apiObjectWithChatParticipantAdditions : tool.apiObject)
 diff --git a/src/vs/workbench/api/common/extHostLanguageModels.ts b/src/vs/workbench/api/common/extHostLanguageModels.ts
-index 17eeef6..5bbaa2b 100644
+index 17eeef6f4ab9833550c66a5910a51de2179c5787..5bbaa2b972bddb749f0a6d903b22f9787c6eb2c7 100644
 --- a/src/vs/workbench/api/common/extHostLanguageModels.ts
 +++ b/src/vs/workbench/api/common/extHostLanguageModels.ts
 @@ -128,6 +128,9 @@ export class ExtHostLanguageModels implements ExtHostLanguageModelsShape {
@@ -334,7 +407,7 @@ index 17eeef6..5bbaa2b 100644
  		const internalMessages: IChatMessage[] = this._convertMessages(extension, messages);
 diff --git a/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts b/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts
 new file mode 100644
-index 0000000..4ded1d7
+index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f58e8dc07
 --- /dev/null
 +++ b/src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts
 @@ -0,0 +1,167 @@
@@ -507,7 +580,7 @@ index 0000000..4ded1d7
 +}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts
 new file mode 100644
-index 0000000..8ab07f3
+index 0000000000000000000000000000000000000000..8ab07f36b18eab99b469135093691bfaf4a45b27
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts
 @@ -0,0 +1,25 @@
@@ -537,7 +610,7 @@ index 0000000..8ab07f3
 +
 +registerWorkbenchContribution2(DirectorPlanToolsContribution.ID, DirectorPlanToolsContribution, WorkbenchPhase.AfterRestored);
 diff --git a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
-index 89e5d00..704f36d 100644
+index 89e5d008de9f558aeb85176db1f0191b24eb62d8..704f36dd0489c61c9f8156b89672dba9b2e16cdb 100644
 --- a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 @@ -74,6 +74,7 @@ import { Extensions as JSONExtensions, IJSONContributionRegistry } from '../../.
@@ -614,7 +687,7 @@ index 89e5d00..704f36d 100644
  			tags: ['experimental'],
  			experiment: {
 diff --git a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
-index af82cdf..2d0db53 100644
+index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e138c4ee5 100644
 --- a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
 +++ b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
 @@ -84,12 +84,12 @@ export const globalAutoApproveDescription = localize2(
@@ -705,7 +778,7 @@ index af82cdf..2d0db53 100644
  			if (!(toolIdsThatCannotBeAutoApproved.has(toolId) && getChatSessionType(chatSessionResource!) !== localChatSessionType)) {
  				return { type: ToolConfirmKind.ConfirmationNotNeeded, reason: 'auto-approve-all' };
 diff --git a/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts b/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts
-index 8cfef4c..462efa2 100644
+index 8cfef4cbb74a93fea7be1909874ea603ffb1f5c6..462efa2aaa9573c0049fdee5c85551d7977276ca 100644
 --- a/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts
 +++ b/src/vs/workbench/contrib/chat/common/participants/chatAgents.ts
 @@ -283,6 +283,7 @@ export class ChatAgentService extends Disposable implements IChatAgentService {
@@ -764,7 +837,7 @@ index 8cfef4c..462efa2 100644
  	private _agentCompletionProviders = new Map<string, (query: string, token: CancellationToken) => Promise<IChatAgentCompletionItem[]>>();
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts
 new file mode 100644
-index 0000000..3bbbb45
+index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80aa1c2752
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts
 @@ -0,0 +1,268 @@
@@ -1038,7 +1111,7 @@ index 0000000..3bbbb45
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
 new file mode 100644
-index 0000000..6cfbd95
+index 0000000000000000000000000000000000000000..6cfbd95ed9021cc6a611bab2ba92c8d35410ea00
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
 @@ -0,0 +1,94 @@
@@ -1137,7 +1210,7 @@ index 0000000..6cfbd95
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts b/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
-index 0df0af2..2a426d6 100644
+index 0df0af2ee2282ab3cb18ef90d8bfd8b087c4d726..2a426d62e9e7438c067e163a13e2967c5fbf7aa9 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
 @@ -4535,4 +4535,118 @@ suite('LanguageModelToolsService', () => {
@@ -1261,7 +1334,7 @@ index 0df0af2..2a426d6 100644
  });
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts
 new file mode 100644
-index 0000000..65bb9c7
+index 0000000000000000000000000000000000000000..65bb9c720979665bbdfa648061c8243f8805d8a5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts
 @@ -0,0 +1,445 @@
@@ -1712,7 +1785,7 @@ index 0000000..65bb9c7
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 new file mode 100644
-index 0000000..18d4e2f
+index 0000000000000000000000000000000000000000..18d4e2f55f3ca44deaa277be01d75a115a1e988a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentEngine.test.ts
 @@ -0,0 +1,428 @@
@@ -2146,7 +2219,7 @@ index 0000000..18d4e2f
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts
 new file mode 100644
-index 0000000..341ec15
+index 0000000000000000000000000000000000000000..341ec15f0d0cf34f6f58fa8cce12c7ab9505e4e2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/agentRegistration.test.ts
 @@ -0,0 +1,240 @@
@@ -2392,7 +2465,7 @@ index 0000000..341ec15
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts
 new file mode 100644
-index 0000000..d889e9a
+index 0000000000000000000000000000000000000000..d889e9ae562cca1944a5c0631cd67beb4502847d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/anthropicProvider.test.ts
 @@ -0,0 +1,464 @@
@@ -2862,7 +2935,7 @@ index 0000000..d889e9a
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts
 new file mode 100644
-index 0000000..9a33ad5
+index 0000000000000000000000000000000000000000..9a33ad528945ede5a0706ef63dd8af3a10352e75
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeyService.test.ts
 @@ -0,0 +1,673 @@
@@ -3541,7 +3614,7 @@ index 0000000..9a33ad5
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts
 new file mode 100644
-index 0000000..fba7f9a
+index 0000000000000000000000000000000000000000..fba7f9af6f86251af155a15a1c918432610fa1e9
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/apiKeysWidget.test.ts
 @@ -0,0 +1,237 @@
@@ -3784,7 +3857,7 @@ index 0000000..fba7f9a
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts
 new file mode 100644
-index 0000000..c0c64cc
+index 0000000000000000000000000000000000000000..c0c64cc30e14bce972a6197b34ac9e8751537103
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/authStateService.test.ts
 @@ -0,0 +1,309 @@
@@ -4099,7 +4172,7 @@ index 0000000..c0c64cc
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 new file mode 100644
-index 0000000..2323a0f
+index 0000000000000000000000000000000000000000..2323a0f32acac0f5268ab3e22c5d29d4dce5755e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/compact.test.ts
 @@ -0,0 +1,435 @@
@@ -4540,7 +4613,7 @@ index 0000000..2323a0f
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts
 new file mode 100644
-index 0000000..6f8c6ea
+index 0000000000000000000000000000000000000000..6f8c6ea17c6517c6a2096a7d034856dead7ae691
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/configFlow.test.ts
 @@ -0,0 +1,246 @@
@@ -4792,7 +4865,7 @@ index 0000000..6f8c6ea
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 new file mode 100644
-index 0000000..88d0335
+index 0000000000000000000000000000000000000000..88d0335363949ea9706d57fb58f740e00908f311
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorChatModeRouting.test.ts
 @@ -0,0 +1,52 @@
@@ -4850,7 +4923,7 @@ index 0000000..88d0335
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
 new file mode 100644
-index 0000000..bcb0c52
+index 0000000000000000000000000000000000000000..bcb0c5267b196eb983d204b42ffc6c0a06bf50f6
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorCodeModelProvider.test.ts
 @@ -0,0 +1,335 @@
@@ -5191,7 +5264,7 @@ index 0000000..bcb0c52
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
 new file mode 100644
-index 0000000..af70ed7
+index 0000000000000000000000000000000000000000..af70ed75d8182a7dd37a0380052123d1b41e3d55
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorPlanMode.test.ts
 @@ -0,0 +1,102 @@
@@ -5299,7 +5372,7 @@ index 0000000..af70ed7
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 new file mode 100644
-index 0000000..d97392f
+index 0000000000000000000000000000000000000000..d97392f3bf0f11c8912934b6b6c3d4cc54b8bca0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/endToEnd.test.ts
 @@ -0,0 +1,790 @@
@@ -6095,7 +6168,7 @@ index 0000000..d97392f
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts
 new file mode 100644
-index 0000000..2e8b0f5
+index 0000000000000000000000000000000000000000..2e8b0f597d112a876f92d84c5f4e9cc9f10d9d67
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/errorHandling.test.ts
 @@ -0,0 +1,252 @@
@@ -6353,7 +6426,7 @@ index 0000000..2e8b0f5
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts
 new file mode 100644
-index 0000000..93afdf8
+index 0000000000000000000000000000000000000000..93afdf834e6261ec48f9b9a6519eadb462fbb1fc
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/fetchUtils.test.ts
 @@ -0,0 +1,103 @@
@@ -6462,7 +6535,7 @@ index 0000000..93afdf8
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts
 new file mode 100644
-index 0000000..d86c801
+index 0000000000000000000000000000000000000000..d86c801031ab5a4b9423782dcecd80a9df721311
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/geminiProvider.test.ts
 @@ -0,0 +1,754 @@
@@ -7222,7 +7295,7 @@ index 0000000..d86c801
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts
 new file mode 100644
-index 0000000..c249af1
+index 0000000000000000000000000000000000000000..c249af1c8dd5e7cad6b705a101dadadb55d18639
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/messageNormalization.test.ts
 @@ -0,0 +1,267 @@
@@ -7495,7 +7568,7 @@ index 0000000..c249af1
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts
 new file mode 100644
-index 0000000..0519f6b
+index 0000000000000000000000000000000000000000..0519f6b2bda85831f5e3943895752af833e0a8e8
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/modelResolver.test.ts
 @@ -0,0 +1,657 @@
@@ -8158,7 +8231,7 @@ index 0000000..0519f6b
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts
 new file mode 100644
-index 0000000..2c53cd2
+index 0000000000000000000000000000000000000000..2c53cd27c98016b07b1a0b2abfdc6ab9bdddf8fc
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthLoginController.test.ts
 @@ -0,0 +1,225 @@
@@ -8389,7 +8462,7 @@ index 0000000..2c53cd2
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts
 new file mode 100644
-index 0000000..74fe062
+index 0000000000000000000000000000000000000000..74fe0622a22b7e9a577ceb3d519b98d2df0a281e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/oauthService.test.ts
 @@ -0,0 +1,1104 @@
@@ -9499,7 +9572,7 @@ index 0000000..74fe062
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts
 new file mode 100644
-index 0000000..d216869
+index 0000000000000000000000000000000000000000..d216869df70fcd3753d1dabbe372008a13a503da
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiCodexProvider.test.ts
 @@ -0,0 +1,271 @@
@@ -9776,7 +9849,7 @@ index 0000000..d216869
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts
 new file mode 100644
-index 0000000..dfc8943
+index 0000000000000000000000000000000000000000..dfc89438ad86985ab2f66d542ef9a1bdcc8f39cc
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/openaiProvider.test.ts
 @@ -0,0 +1,794 @@
@@ -10576,7 +10649,7 @@ index 0000000..dfc8943
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts
 new file mode 100644
-index 0000000..be2ad1e
+index 0000000000000000000000000000000000000000..be2ad1ed6ec43b2f503d22376729f953df43db7a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/progressBridge.test.ts
 @@ -0,0 +1,290 @@
@@ -10872,7 +10945,7 @@ index 0000000..be2ad1e
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts
 new file mode 100644
-index 0000000..2e4c065
+index 0000000000000000000000000000000000000000..2e4c065f088c3723764ce1e34ae8db980224923e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerFactory.test.ts
 @@ -0,0 +1,72 @@
@@ -10950,7 +11023,7 @@ index 0000000..2e4c065
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
 new file mode 100644
-index 0000000..6bf16a0
+index 0000000000000000000000000000000000000000..6bf16a016e0e296bd433264b349ffbfe51ad113e
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
 @@ -0,0 +1,85 @@
@@ -11041,7 +11114,7 @@ index 0000000..6bf16a0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts
 new file mode 100644
-index 0000000..17d998a
+index 0000000000000000000000000000000000000000..17d998a0f033d5920c9554a527e11fae86bebe0a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts
 @@ -0,0 +1,212 @@
@@ -11259,7 +11332,7 @@ index 0000000..17d998a
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts
 new file mode 100644
-index 0000000..2b25abd
+index 0000000000000000000000000000000000000000..2b25abdbf59177502a2522d9ca5224bde83ab7c2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/retry.test.ts
 @@ -0,0 +1,255 @@
@@ -11520,7 +11593,7 @@ index 0000000..2b25abd
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts
 new file mode 100644
-index 0000000..4e359d9
+index 0000000000000000000000000000000000000000..4e359d9a57432a332b383861f8aa12eed4479a00
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/tokens.test.ts
 @@ -0,0 +1,241 @@
@@ -11766,7 +11839,7 @@ index 0000000..4e359d9
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts b/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts
-index 98a8e87..baceadd 100644
+index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f68f03fbe 100644
 --- a/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts
 @@ -110,4 +110,30 @@ suite('ChatAgents', function () {
@@ -11802,7 +11875,7 @@ index 98a8e87..baceadd 100644
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000..47b0259
+index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02c1cfe0cf
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 @@ -0,0 +1,567 @@
@@ -12375,7 +12448,7 @@ index 0000000..47b0259
 +);
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/apiKeysWidget.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/apiKeysWidget.ts
 new file mode 100644
-index 0000000..4766826
+index 0000000000000000000000000000000000000000..476682671c39085655a0bb4ed89e11421abe34d4
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/apiKeysWidget.ts
 @@ -0,0 +1,370 @@
@@ -12751,7 +12824,7 @@ index 0000000..4766826
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/auxiliaryModelSelection.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/auxiliaryModelSelection.ts
 new file mode 100644
-index 0000000..9ed53a1
+index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336001f45c5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/auxiliaryModelSelection.ts
 @@ -0,0 +1,66 @@
@@ -12823,7 +12896,7 @@ index 0000000..9ed53a1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000..eae104c
+index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6d1bceece
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 @@ -0,0 +1,973 @@
@@ -13802,7 +13875,7 @@ index 0000000..eae104c
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts
 new file mode 100644
-index 0000000..8b3dc59
+index 0000000000000000000000000000000000000000..8b3dc5956f661abab238e9a8fc3eab9c4234393f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts
 @@ -0,0 +1,444 @@
@@ -14252,7 +14325,7 @@ index 0000000..8b3dc59
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts
 new file mode 100644
-index 0000000..6fd879b
+index 0000000000000000000000000000000000000000..6fd879b5e82ff519af68ac9dc56e2b490a4c4da8
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeSettingsEditor.ts
 @@ -0,0 +1,297 @@
@@ -14555,7 +14628,7 @@ index 0000000..6fd879b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/media/directorCodeSettings.css b/src/vs/workbench/contrib/directorCode/browser/agentEngine/media/directorCodeSettings.css
 new file mode 100644
-index 0000000..09f91f7
+index 0000000000000000000000000000000000000000..09f91f763ef8964acefdbaa94988625925865425
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/media/directorCodeSettings.css
 @@ -0,0 +1,712 @@
@@ -15273,7 +15346,7 @@ index 0000000..09f91f7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/messageNormalization.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/messageNormalization.ts
 new file mode 100644
-index 0000000..2b89af7
+index 0000000000000000000000000000000000000000..2b89af7da1e73866bc0375487ced68fcda3fda64
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/messageNormalization.ts
 @@ -0,0 +1,495 @@
@@ -15774,7 +15847,7 @@ index 0000000..2b89af7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/oauthWidget.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/oauthWidget.ts
 new file mode 100644
-index 0000000..68ffe6b
+index 0000000000000000000000000000000000000000..68ffe6b3dc322c8ea08b26246a8966ce3951e1ff
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/oauthWidget.ts
 @@ -0,0 +1,314 @@
@@ -16094,7 +16167,7 @@ index 0000000..68ffe6b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/progressBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/progressBridge.ts
 new file mode 100644
-index 0000000..9383f95
+index 0000000000000000000000000000000000000000..9383f953accdcf4037b0590880217754fa14a73f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/progressBridge.ts
 @@ -0,0 +1,185 @@
@@ -16285,7 +16358,7 @@ index 0000000..9383f95
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts
 new file mode 100644
-index 0000000..156c83a
+index 0000000000000000000000000000000000000000..156c83a7301ac41b6b89d5b3465a4c768ec9174d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts
 @@ -0,0 +1,1455 @@
@@ -17746,7 +17819,7 @@ index 0000000..156c83a
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000..1fe2285
+index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5d6133428
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 @@ -0,0 +1,247 @@
@@ -17999,7 +18072,7 @@ index 0000000..1fe2285
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts
 new file mode 100644
-index 0000000..0202308
+index 0000000000000000000000000000000000000000..0202308537a36a34465444215ccbad91a69c8bc2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts
 @@ -0,0 +1,820 @@
@@ -18825,7 +18898,7 @@ index 0000000..0202308
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
 new file mode 100644
-index 0000000..0f904d1
+index 0000000000000000000000000000000000000000..0f904d104c95d33cbccde396377ad532b29dfcce
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.ts
 @@ -0,0 +1,212 @@
@@ -19043,7 +19116,7 @@ index 0000000..0f904d1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts
 new file mode 100644
-index 0000000..02b8137
+index 0000000000000000000000000000000000000000..02b8137918dd29645e818f5a4435610b7d0a26d2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/apiKeyService.ts
 @@ -0,0 +1,624 @@
@@ -19673,7 +19746,7 @@ index 0000000..02b8137
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts
 new file mode 100644
-index 0000000..445ec27
+index 0000000000000000000000000000000000000000..445ec2778f4c21eebe45ec851078fd323c3c9fab
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/authStateService.ts
 @@ -0,0 +1,342 @@
@@ -20021,7 +20094,7 @@ index 0000000..445ec27
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts
 new file mode 100644
-index 0000000..82c9206
+index 0000000000000000000000000000000000000000..82c92062ad90104b4131abdef4d3be407b9395ee
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/builtInModeUtil.ts
 @@ -0,0 +1,10 @@
@@ -20037,7 +20110,7 @@ index 0000000..82c9206
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts
 new file mode 100644
-index 0000000..abf84c6
+index 0000000000000000000000000000000000000000..abf84c62ad7e620eadb2ecbbf382f9a09986f99a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/compact.ts
 @@ -0,0 +1,364 @@
@@ -20407,7 +20480,7 @@ index 0000000..abf84c6
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
 new file mode 100644
-index 0000000..dfcd9b7
+index 0000000000000000000000000000000000000000..dfcd9b7ba8666021d48831caf2035d2f3aeb229a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts
 @@ -0,0 +1,84 @@
@@ -20497,7 +20570,7 @@ index 0000000..dfcd9b7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
 new file mode 100644
-index 0000000..14dab49
+index 0000000000000000000000000000000000000000..14dab493a60b1b32748b2aa413dfd858566a0b20
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts
 @@ -0,0 +1,684 @@
@@ -21187,7 +21260,7 @@ index 0000000..14dab49
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts
 new file mode 100644
-index 0000000..2aa2b84
+index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea86cd5dca
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts
 @@ -0,0 +1,72 @@
@@ -21265,7 +21338,7 @@ index 0000000..2aa2b84
 +] as const;
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts
 new file mode 100644
-index 0000000..b81a2e6
+index 0000000000000000000000000000000000000000..b81a2e62096a3bc49eca509991829bfe89efb23f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts
 @@ -0,0 +1,116 @@
@@ -21387,7 +21460,7 @@ index 0000000..b81a2e6
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts
 new file mode 100644
-index 0000000..18a4417
+index 0000000000000000000000000000000000000000..18a4417be40fbc3d7dd445bcad66a455ae17edd1
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts
 @@ -0,0 +1,25 @@
@@ -21418,7 +21491,7 @@ index 0000000..18a4417
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts
 new file mode 100644
-index 0000000..c133f2a
+index 0000000000000000000000000000000000000000..c133f2a51a99492621993faada93aba14e74f355
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts
 @@ -0,0 +1,218 @@
@@ -21642,7 +21715,7 @@ index 0000000..c133f2a
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts
 new file mode 100644
-index 0000000..ae03d8a
+index 0000000000000000000000000000000000000000..ae03d8a93aa3d07dab1747c36af5cc571affe007
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts
 @@ -0,0 +1,607 @@
@@ -22255,7 +22328,7 @@ index 0000000..ae03d8a
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts
 new file mode 100644
-index 0000000..6ed9dcc
+index 0000000000000000000000000000000000000000..6ed9dccea7cca20314868fa2b91daf4531e2065d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts
 @@ -0,0 +1,300 @@
@@ -22561,7 +22634,7 @@ index 0000000..6ed9dcc
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts
 new file mode 100644
-index 0000000..3cc84fb
+index 0000000000000000000000000000000000000000..3cc84fb42e77a4c204cf20e4dab169b80fd9fc53
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts
 @@ -0,0 +1,1314 @@
@@ -23881,7 +23954,7 @@ index 0000000..3cc84fb
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
 new file mode 100644
-index 0000000..0f1b8d1
+index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de84650df4
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
 @@ -0,0 +1,467 @@
@@ -24354,7 +24427,7 @@ index 0000000..0f1b8d1
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts
 new file mode 100644
-index 0000000..9ed4d91
+index 0000000000000000000000000000000000000000..9ed4d91a4e3537f2973c2860a0c5f7f222ca5c5a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts
 @@ -0,0 +1,228 @@
@@ -24588,7 +24661,7 @@ index 0000000..9ed4d91
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts
 new file mode 100644
-index 0000000..7e080c7
+index 0000000000000000000000000000000000000000..7e080c7df7d607f1d9bbab71bdd807d8222ed0f0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts
 @@ -0,0 +1,282 @@
@@ -24876,7 +24949,7 @@ index 0000000..7e080c7
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts
 new file mode 100644
-index 0000000..9657f07
+index 0000000000000000000000000000000000000000..9657f07790274b199f9e232343c8f3a096941d16
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/geminiProvider.ts
 @@ -0,0 +1,431 @@
@@ -25313,7 +25386,7 @@ index 0000000..9657f07
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiCodexProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiCodexProvider.ts
 new file mode 100644
-index 0000000..05b7d90
+index 0000000000000000000000000000000000000000..05b7d903685c86af75f8a0b33f8c6b5cf3a98757
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiCodexProvider.ts
 @@ -0,0 +1,526 @@
@@ -25845,7 +25918,7 @@ index 0000000..05b7d90
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts
 new file mode 100644
-index 0000000..82464ed
+index 0000000000000000000000000000000000000000..82464ed2685c7c87d5e1f0f81e5f53b1ca2dde78
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/openaiProvider.ts
 @@ -0,0 +1,623 @@
@@ -26474,7 +26547,7 @@ index 0000000..82464ed
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.ts
 new file mode 100644
-index 0000000..5c15b6f
+index 0000000000000000000000000000000000000000..5c15b6f83544ec050f2c6f1e2f7c0fbe6f234ae8
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.ts
 @@ -0,0 +1,70 @@
@@ -26550,7 +26623,7 @@ index 0000000..5c15b6f
 +} from './providerTypes.js';
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts
 new file mode 100644
-index 0000000..3edd473
+index 0000000000000000000000000000000000000000..3edd473176f3f1f13e0dea21bd7d64808ddc2cbb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.ts
 @@ -0,0 +1,182 @@
@@ -26738,7 +26811,7 @@ index 0000000..3edd473
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/requestFetch.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/requestFetch.ts
 new file mode 100644
-index 0000000..29e96ba
+index 0000000000000000000000000000000000000000..29e96baa623347a8b8081f1d0eccf6d3b7352010
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/requestFetch.ts
 @@ -0,0 +1,145 @@
@@ -26889,7 +26962,7 @@ index 0000000..29e96ba
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts
 new file mode 100644
-index 0000000..08e6616
+index 0000000000000000000000000000000000000000..08e661622f7a7d80e34c01953cbbd690165229eb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts
 @@ -0,0 +1,154 @@
@@ -27049,7 +27122,7 @@ index 0000000..08e6616
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts
 new file mode 100644
-index 0000000..67bb957
+index 0000000000000000000000000000000000000000..67bb9573ad1a2c999e85e6f9383a048038154f18
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts
 @@ -0,0 +1,76 @@
@@ -27131,7 +27204,7 @@ index 0000000..67bb957
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts
 new file mode 100644
-index 0000000..0a88d68
+index 0000000000000000000000000000000000000000..0a88d6819b9d68b7803b898bec408be8f2cff047
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts
 @@ -0,0 +1,130 @@
@@ -27266,7 +27339,7 @@ index 0000000..0a88d68
 +	return usage.input_tokens * pricing.input + usage.output_tokens * pricing.output;
 +}
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
-index ea735f8..94ad664 100644
+index ea735f845e95276e50cdc8451eb02635af8bb099..94ad664182a5f8072975d00632b8f63a37eaa79e 100644
 --- a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
 +++ b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
 @@ -11,8 +11,9 @@ import { localize } from '../../../../nls.js';
@@ -27303,7 +27376,7 @@ index ea735f8..94ad664 100644
  
  		this._register(autorun(reader => {
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpServersView.ts b/src/vs/workbench/contrib/mcp/browser/mcpServersView.ts
-index e784f10..26ca756 100644
+index e784f10d570b3c5d408aab302bccff201a5fc2c0..26ca7569915a215a3252e3020dd5492aa00bc41d 100644
 --- a/src/vs/workbench/contrib/mcp/browser/mcpServersView.ts
 +++ b/src/vs/workbench/contrib/mcp/browser/mcpServersView.ts
 @@ -274,7 +274,7 @@ export class McpServersListView extends AbstractExtensionsListView<IWorkbenchMcp
@@ -27316,7 +27389,7 @@ index e784f10..26ca756 100644
  			)
  				.appendMarkdown('\n\n')
 diff --git a/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts b/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts
-index 4cea06b..dbf1926 100644
+index 4cea06b17f9012eee52e5debdbf050138e91feb7..dbf1926e3d300cd087032b36eb5312243fa29adc 100644
 --- a/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts
 +++ b/src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts
 @@ -38,6 +38,12 @@ interface ISyncedToolData {
@@ -27364,7 +27437,7 @@ index 4cea06b..dbf1926 100644
  					}
 diff --git a/src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts b/src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts
 new file mode 100644
-index 0000000..154269f
+index 0000000000000000000000000000000000000000..154269fac14b99a436afaee820c52254765d3513
 --- /dev/null
 +++ b/src/vs/workbench/contrib/mcp/common/mcpResourcePickerState.ts
 @@ -0,0 +1,10 @@
@@ -27379,7 +27452,7 @@ index 0000000..154269f
 +	return capabilities.some(capability => capability === undefined || !!(capability & McpCapability.Resources));
 +}
 diff --git a/src/vs/workbench/contrib/mcp/common/mcpSamplingService.ts b/src/vs/workbench/contrib/mcp/common/mcpSamplingService.ts
-index 363f8a1..3e51976 100644
+index 363f8a12c5f260059a179f0a55d9658e4e58aa3b..3e519767eaf28e254186c351def5eb7afdacb1be 100644
 --- a/src/vs/workbench/contrib/mcp/common/mcpSamplingService.ts
 +++ b/src/vs/workbench/contrib/mcp/common/mcpSamplingService.ts
 @@ -235,9 +235,10 @@ export class McpSamplingService extends Disposable implements IMcpSamplingServic
@@ -27397,7 +27470,7 @@ index 363f8a1..3e51976 100644
  
 diff --git a/src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts b/src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts
 new file mode 100644
-index 0000000..810f470
+index 0000000000000000000000000000000000000000..810f4708c1aff5b285ddd89d16677f4dbdbe80d2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/mcp/test/common/mcpLanguageModelToolContribution.test.ts
 @@ -0,0 +1,24 @@
@@ -27427,7 +27500,7 @@ index 0000000..810f470
 +});
 diff --git a/src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts b/src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts
 new file mode 100644
-index 0000000..eda4274
+index 0000000000000000000000000000000000000000..eda4274f6faf68b0347ded55792eac0546d7a2a6
 --- /dev/null
 +++ b/src/vs/workbench/contrib/mcp/test/common/mcpResourcePickerState.test.ts
 @@ -0,0 +1,25 @@
@@ -27458,7 +27531,7 @@ index 0000000..eda4274
 +});
 diff --git a/src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts b/src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts
 new file mode 100644
-index 0000000..38ed2f7
+index 0000000000000000000000000000000000000000..38ed2f7de87533e1fb267664c63a88aa6711beea
 --- /dev/null
 +++ b/src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts
 @@ -0,0 +1,56 @@
@@ -27519,7 +27592,7 @@ index 0000000..38ed2f7
 +	});
 +});
 diff --git a/src/vs/workbench/services/extensions/common/extensions.ts b/src/vs/workbench/services/extensions/common/extensions.ts
-index b4a8251..c7fee71 100644
+index b4a8251394c0b05567591f8ff2bbb551f56f0a31..c7fee71a2e23b0bdc0f38f68c4e7ebbe8634e4a4 100644
 --- a/src/vs/workbench/services/extensions/common/extensions.ts
 +++ b/src/vs/workbench/services/extensions/common/extensions.ts
 @@ -324,7 +324,7 @@ export function isProposedApiEnabled(extension: IExtensionDescription, proposal:

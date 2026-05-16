@@ -1,6 +1,6 @@
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
 new file mode 100644
-index 0000000..965befd
+index 0000000000000000000000000000000000000000..965befdbdfa47c8d5e856820e9ebba77635cc5b7
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/browser/agentEngine/editTools/directorEditTools.contribution.ts
 @@ -0,0 +1,61 @@
@@ -67,7 +67,7 @@ index 0000000..965befd
 +export { DirectorEditToolData };
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts
 new file mode 100644
-index 0000000..b3e7ada
+index 0000000000000000000000000000000000000000..b3e7ada8c90ac51c587b578b8de5d87e2d40434c
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/editTools/directorEditTools.ts
 @@ -0,0 +1,810 @@
@@ -883,7 +883,7 @@ index 0000000..b3e7ada
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts
 new file mode 100644
-index 0000000..e31d304
+index 0000000000000000000000000000000000000000..e31d30408f88bf09076e332f71c202c751e95a4d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorEditTools.test.ts
 @@ -0,0 +1,206 @@

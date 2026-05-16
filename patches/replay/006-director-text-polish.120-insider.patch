@@ -1,18 +1,5 @@
-diff --git a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
-index ec5972a..3d96aec 100644
---- a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
-+++ b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
-@@ -394,7 +394,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
- 		},
- 		[TerminalSettingId.InheritEnv]: {
- 			scope: ConfigurationScope.APPLICATION,
--			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from VSCodium - Insiders, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
-+			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from Director-Code, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
- 			type: 'boolean',
- 			default: true
- 		},
 diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
-index 64e4695..e6c1039 100644
+index 64e46956b17ae5ca672d29b3a30bbb80d6fd26c7..e6c103979dc429f65e34455ea52fc594c286cd74 100644
 --- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
 +++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookCompatibility.ts
 @@ -31,7 +31,7 @@ export interface IResolvedHookEntry {
@@ -43,7 +30,7 @@ index 64e4695..e6c1039 100644
  }
  
 diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
-index 3ff2713..50d67be 100644
+index 3ff271322896254a9776a1d79e32bb7d7a7af1ae..50d67be5478826432b11b8d44a982f0532d38833 100644
 --- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
 +++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookSchema.ts
 @@ -76,7 +76,7 @@ export const HOOK_COMMAND_FIELD_DESCRIPTIONS: Record<string, string> = {
@@ -83,7 +70,7 @@ index 3ff2713..50d67be 100644
  			hooks: {
  				properties: vscodeHookProperties
 diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
-index 66d28c2..d781b83 100644
+index 66d28c22876eb20c8676440f1aa09d48286eabd7..d781b83fe54fde18cf52e16bfd496f05cd6adb60 100644
 --- a/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
 +++ b/src/vs/workbench/contrib/chat/common/promptSyntax/hookTypes.ts
 @@ -28,7 +28,7 @@ export enum HookType {
@@ -105,7 +92,7 @@ index 66d28c2..d781b83 100644
  		'sessionStart': HookType.SessionStart,
  		'sessionEnd': HookType.SessionEnd,
 diff --git a/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts b/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
-index 1f6ad3e..3150df7 100644
+index 1f6ad3e89e718aa6eec52b5c83a1f60cee62245f..3150df73ad1fa21741e54d2a7384091a8f3ca430 100644
 --- a/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
 +++ b/src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts
 @@ -289,21 +289,21 @@ export class PromptValidator {
@@ -144,7 +131,7 @@ index 1f6ad3e..3150df7 100644
  export function mapClaudeTools(claudeToolNames: readonly string[]): string[] {
  	const result: string[] = [];
 diff --git a/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts b/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
-index d5b0ccd..fa3546f 100644
+index d5b0ccd5ccb1123992169ec6b665e4ae41b8692d..fa3546f122e4f7004ffb6001d99c6cd544a0adfa 100644
 --- a/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
 +++ b/src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
 @@ -21,7 +21,7 @@ export const SearchExtensionsToolData: IToolData = {
@@ -157,7 +144,7 @@ index d5b0ccd..fa3546f 100644
  	inputSchema: {
  		type: 'object',
 diff --git a/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts b/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
-index f6e78a3..723d4d8 100644
+index f6e78a3cd29a1828257eefdca6377bfb76b12ea7..723d4d871fe3eb89dc6cac6fa8fb0c16a6fa9ad5 100644
 --- a/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
 +++ b/src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts
 @@ -320,7 +320,7 @@ const terminalConfiguration: IStringDictionary<IConfigurationPropertySchema> = {

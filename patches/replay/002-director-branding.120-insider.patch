@@ -1,5 +1,5 @@
 diff --git a/build/lib/electron.ts b/build/lib/electron.ts
-index 113aefc..0d0d84c 100644
+index 113aefc74a37abf8fb250aa86d7e8e9967dc3c1c..0d0d84c5abe5dcfd8950d9462bc362b74e9817bf 100644
 --- a/build/lib/electron.ts
 +++ b/build/lib/electron.ts
 @@ -1,5 +1,5 @@
@@ -21,7 +21,7 @@ index 113aefc..0d0d84c 100644
  	darwinIcon: 'resources/darwin/code.icns',
  	darwinBundleIdentifier: product.darwinBundleIdentifier,
 diff --git a/build/lib/policies/basePolicy.ts b/build/lib/policies/basePolicy.ts
-index 1403c4d..433a6bf 100644
+index 1403c4dc89665f946c3ff01ba4cb1c4b59d4a284..433a6bf8b591c8493d9a4eb0f25e1ea91bf20c44 100644
 --- a/build/lib/policies/basePolicy.ts
 +++ b/build/lib/policies/basePolicy.ts
 @@ -36,7 +36,7 @@ export abstract class BasePolicy implements Policy {
@@ -34,7 +34,7 @@ index 1403c4d..433a6bf 100644
  			`	<supportedOn ref="Supported_${this.minimumVersion.replace(/\./g, '_')}" />`,
  			`	<elements>`,
 diff --git a/build/lib/policies/render.ts b/build/lib/policies/render.ts
-index 8656504..caaef64 100644
+index 86565046e65d38746c2c4e1edc3313ab806c4be1..caaef64ec609fd3595823798c24e0373166b5491 100644
 --- a/build/lib/policies/render.ts
 +++ b/build/lib/policies/render.ts
 @@ -47,7 +47,7 @@ export function renderADMX(regKey: string, versions: string[], categories: Categ
@@ -86,53 +86,43 @@ index 8656504..caaef64 100644
  		<string>Configuration</string>
  		<key>PayloadUUID</key>
 diff --git a/build/win32/i18n/messages.en.isl b/build/win32/i18n/messages.en.isl
-index 130534f..24fc19e 100644
---- a/build/win32/i18n/messages.en.isl
-+++ b/build/win32/i18n/messages.en.isl
-@@ -14,4 +14,4 @@ RunAfter=Run %1 after installation
- Other=Other:
- SourceFile=%1 Source File
- OpenWithCodeContextMenu=Open w&ith %1
--UpdatingVisualStudioCode=Updating VSCodium - Insiders...
-+UpdatingVisualStudioCode=Updating Director-Code...
+index 130534f1899bbf517d7cc0166f3d8d65d11ca8b6..24fc19e3ce23027ed55da52d4a9ea7c172b2dd59 100644
+GIT binary patch
+delta 25
+gcmX@dc7kn#IkTWkW>IQ#Nq&*8bAC#yo}L~T0CN!t761SM
+
+delta 31
+mcmX@Xc8+a>IkR|JuycM&W@)a1u7YP?ab`+tQL&z$9v1+p%?a=T
+
 diff --git a/build/win32/i18n/messages.es.isl b/build/win32/i18n/messages.es.isl
-index 9725880..85ee88a 100644
---- a/build/win32/i18n/messages.es.isl
-+++ b/build/win32/i18n/messages.es.isl
-@@ -7,4 +7,4 @@ RunAfter=Ejecutar %1 después de la instalación
- Other=Otros:
- SourceFile=Archivo de origen %1
- OpenWithCodeContextMenu=Abrir &con %1
--UpdatingVisualStudioCode=Actualizando VSCodium - Insiders...
-\ No newline at end of file
-+UpdatingVisualStudioCode=Actualizando Director-Code...
-\ No newline at end of file
+index 97258808876a6db8323680bade30d7b7dcf252de..85ee88abd90a3490a8ff922c9f51e52999d096ac 100644
+GIT binary patch
+delta 24
+fcmdnbvXf<lCX;|mW>IQ#Nq&*8bAC#yo}L~6X2b{D
+
+delta 30
+lcmdnVvY%yxCX-lLuycM&W@)a1u7YP?ab`+tQL&z$9srqo3A6wJ
+
 diff --git a/build/win32/i18n/messages.it.isl b/build/win32/i18n/messages.it.isl
-index 5436f3e..9efa864 100644
---- a/build/win32/i18n/messages.it.isl
-+++ b/build/win32/i18n/messages.it.isl
-@@ -7,4 +7,4 @@ RunAfter=Esegui %1 dopo l'installazione
- Other=Altro:
- SourceFile=File di origine %1
- OpenWithCodeContextMenu=Apri con %1
--UpdatingVisualStudioCode=Aggiornamento di VSCodium - Insiders...
-\ No newline at end of file
-+UpdatingVisualStudioCode=Aggiornamento di Director-Code...
-\ No newline at end of file
+index 5436f3e3af64370c4bfb382994642163ad7912a5..9efa86486a89d4e5dad32ddb4a7280489946a655 100644
+GIT binary patch
+delta 24
+fcmbQqGMQxqGn0TzW>IQ#Nq&*8bAC#yo}L~6T^<K$
+
+delta 30
+lcmbQtGLvNkGm}_YuycM&W@)a1u7YP?ab`+tQL&z$9srFf2|@q>
+
 diff --git a/build/win32/i18n/messages.pt-br.isl b/build/win32/i18n/messages.pt-br.isl
-index 9cf9408..30e7a6b 100644
---- a/build/win32/i18n/messages.pt-br.isl
-+++ b/build/win32/i18n/messages.pt-br.isl
-@@ -7,4 +7,4 @@ RunAfter=Executar %1 após a instalação
- Other=Outros:
- SourceFile=Arquivo Fonte %1
- OpenWithCodeContextMenu=Abrir com %1
--UpdatingVisualStudioCode=Atualizando o VSCodium - Insiders...
-\ No newline at end of file
-+UpdatingVisualStudioCode=Atualizando o Director-Code...
-\ No newline at end of file
+index 9cf94088624bd86a3e1e287bec06c65b025422c0..30e7a6bf3931d977c5f3ea185af62aa90fa429df 100644
+GIT binary patch
+delta 24
+fcmZ3%vWR7a5R-sQW>IQ#Nq&*8bAC#yo}L~6VC@H$
+
+delta 30
+lcmZ3)vVvuU5R+I~uycM&W@)a1u7YP?ab`+tQL&z$9srUB32y)Z
+
 diff --git a/extensions/configuration-editing/src/configurationEditingMain.ts b/extensions/configuration-editing/src/configurationEditingMain.ts
-index 3f7e3f5..6f1e876 100644
+index 3f7e3f505b5874c60a7df98424b70b77869a2e41..6f1e8767dc0707f718d34c143d08fffea3ae0d48 100644
 --- a/extensions/configuration-editing/src/configurationEditingMain.ts
 +++ b/extensions/configuration-editing/src/configurationEditingMain.ts
 @@ -52,8 +52,8 @@ function registerVariableCompletions(pattern: string): vscode.Disposable {
@@ -147,7 +137,7 @@ index 3f7e3f5..6f1e876 100644
  					{ label: 'relativeFile', detail: vscode.l10n.t("The current opened file relative to ${workspaceFolder}") },
  					{ label: 'relativeFileDirname', detail: vscode.l10n.t("The current opened file's dirname relative to ${workspaceFolder}") },
 diff --git a/extensions/configuration-editing/src/settingsDocumentHelper.ts b/extensions/configuration-editing/src/settingsDocumentHelper.ts
-index 90a6ce1..8e70ef1 100644
+index 90a6ce155fc5e54c224a404682806a51b5fd855d..8e70ef1e4ebc62e956d419d0f5cf0f933cfb4c86 100644
 --- a/extensions/configuration-editing/src/settingsDocumentHelper.ts
 +++ b/extensions/configuration-editing/src/settingsDocumentHelper.ts
 @@ -121,7 +121,7 @@ export class SettingsDocument {
@@ -160,7 +150,7 @@ index 90a6ce1..8e70ef1 100644
  		completions.push(this.newSimpleCompletionItem(getText('dirty'), range, vscode.l10n.t("an indicator for when the active editor has unsaved changes")));
  		completions.push(this.newSimpleCompletionItem(getText('separator'), range, vscode.l10n.t("a conditional separator (' - ') that only shows when surrounded by variables with values")));
 diff --git a/extensions/css-language-features/package.nls.json b/extensions/css-language-features/package.nls.json
-index 5b7cd11..dde099a 100644
+index 5b7cd11a38248078d2f81f09775fb35a35da58dc..dde099a13fa593f778c9abd8f975c3667d2b3c96 100644
 --- a/extensions/css-language-features/package.nls.json
 +++ b/extensions/css-language-features/package.nls.json
 @@ -2,8 +2,8 @@
@@ -202,7 +192,7 @@ index 5b7cd11..dde099a 100644
  	"scss.lint.argumentsInColorFunction.desc": "Invalid number of parameters.",
  	"scss.lint.boxModel.desc": "Do not use `width` or `height` when using `padding` or `border`.",
 diff --git a/extensions/emmet/package.nls.json b/extensions/emmet/package.nls.json
-index b12c2a3..f6756c3 100644
+index b12c2a35e5eecd61580987f05a54bc9db58bca8b..f6756c35cba7a254c5ff426ef04144eebc83d626 100644
 --- a/extensions/emmet/package.nls.json
 +++ b/extensions/emmet/package.nls.json
 @@ -1,5 +1,5 @@
@@ -213,7 +203,7 @@ index b12c2a3..f6756c3 100644
  	"command.removeTag": "Remove Tag",
  	"command.updateTag": "Update Tag",
 diff --git a/extensions/extension-editing/src/constants.ts b/extensions/extension-editing/src/constants.ts
-index 0aa60c3..2f3b789 100644
+index 0aa60c361a6b9eed3d626c896b74de9b8879f999..2f3b789cb6f0679538d4912746861d080b60304a 100644
 --- a/extensions/extension-editing/src/constants.ts
 +++ b/extensions/extension-editing/src/constants.ts
 @@ -6,4 +6,4 @@
@@ -223,7 +213,7 @@ index 0aa60c3..2f3b789 100644
 -export const redundantImplicitActivationEvent = l10n.t("This activation event can be removed as VSCodium - Insiders generates these automatically from your package.json contribution declarations.");
 +export const redundantImplicitActivationEvent = l10n.t("This activation event can be removed as Director-Code generates these automatically from your package.json contribution declarations.");
 diff --git a/extensions/extension-editing/src/extensionLinter.ts b/extensions/extension-editing/src/extensionLinter.ts
-index fda0da5..079ad1b 100644
+index fda0da5d54d363280a2b867e771cdb25abf95609..079ad1bd5d0248e66daf36faeef4affc141da7d2 100644
 --- a/extensions/extension-editing/src/extensionLinter.ts
 +++ b/extensions/extension-editing/src/extensionLinter.ts
 @@ -32,7 +32,7 @@ const embeddedSvgsNotValid = l10n.t("Embedded SVGs are not a valid image source.
@@ -236,7 +226,7 @@ index fda0da5..079ad1b 100644
  const starActivation = l10n.t("Using '*' activation is usually a bad idea as it impacts performance.");
  const parsingErrorHeader = l10n.t("Error parsing the when-clause:");
 diff --git a/extensions/git/package.nls.json b/extensions/git/package.nls.json
-index 3faa2a6..1460baa 100644
+index 3faa2a62480d101e129e23134906211448970c97..1460baa2b137eab13d4fb459ac66d4de03184408 100644
 --- a/extensions/git/package.nls.json
 +++ b/extensions/git/package.nls.json
 @@ -257,7 +257,7 @@
@@ -408,7 +398,7 @@ index 3faa2a6..1460baa 100644
 +	"view.workbench.learnMore": "To learn more about how to use Git and source control in Director-Code [read our docs](https://aka.ms/vscode-scm)."
  }
 diff --git a/extensions/github/package.nls.json b/extensions/github/package.nls.json
-index 2e75145..6d18588 100644
+index 2e75145ab80a2813c0d62ddb006a7e968e957830..6d185888dadb5e297bc1e4547ea0cdc6f6d7e021 100644
 --- a/extensions/github/package.nls.json
 +++ b/extensions/github/package.nls.json
 @@ -1,6 +1,6 @@
@@ -447,7 +437,7 @@ index 2e75145..6d18588 100644
  		]
  	}
 diff --git a/extensions/grunt/package.nls.json b/extensions/grunt/package.nls.json
-index e1f4d13..ed4efab 100644
+index e1f4d136771f15aa0f1d824bfcd40730985b026b..ed4efab4c143187b7572eef7518b075ffe5fced5 100644
 --- a/extensions/grunt/package.nls.json
 +++ b/extensions/grunt/package.nls.json
 @@ -1,6 +1,6 @@
@@ -460,7 +450,7 @@ index e1f4d13..ed4efab 100644
  	"grunt.taskDefinition.type.description": "The Grunt task to customize.",
  	"grunt.taskDefinition.args.description": "Command line arguments to pass to the grunt task",
 diff --git a/extensions/html-language-features/client/src/htmlClient.ts b/extensions/html-language-features/client/src/htmlClient.ts
-index 272947b..4be23eb 100644
+index 272947b45a11b3f2ea4851297df88ee5f4c5b5bb..4be23eb07211e59794c7ce950794a8b878b0e43c 100644
 --- a/extensions/html-language-features/client/src/htmlClient.ts
 +++ b/extensions/html-language-features/client/src/htmlClient.ts
 @@ -107,7 +107,7 @@ export async function startClient(context: ExtensionContext, newLanguageClient:
@@ -473,7 +463,7 @@ index 272947b..4be23eb 100644
  						commands.executeCommand('workbench.action.openSettings', SettingIds.linkedEditing);
  					}
 diff --git a/extensions/html-language-features/package.nls.json b/extensions/html-language-features/package.nls.json
-index ab23796..f677c5c 100644
+index ab23796f6e0ad876eaef00195185859745870572..f677c5c7748c469a9156ba8a2fa688584e2a9997 100644
 --- a/extensions/html-language-features/package.nls.json
 +++ b/extensions/html-language-features/package.nls.json
 @@ -1,7 +1,7 @@
@@ -495,7 +485,7 @@ index ab23796..f677c5c 100644
  	"html.validate.styles": "Controls whether the built-in HTML language support validates embedded styles.",
  	"html.autoCreateQuotes": "Enable/disable auto creation of quotes for HTML attribute assignment. The type of quotes can be configured by `#html.completion.attributeDefaultValue#`.",
 diff --git a/extensions/html-language-features/schemas/package.schema.json b/extensions/html-language-features/schemas/package.schema.json
-index 8a2d50f..1122a84 100644
+index 8a2d50f1572c4d6617dad7da43d39ccc25d65003..1122a8467dbb5f17001da79783e9e2bab49ce758 100644
 --- a/extensions/html-language-features/schemas/package.schema.json
 +++ b/extensions/html-language-features/schemas/package.schema.json
 @@ -7,7 +7,7 @@
@@ -508,7 +498,7 @@ index 8a2d50f..1122a84 100644
  						"type": "string",
  						"description": "Relative path to a HTML custom data file"
 diff --git a/extensions/jake/package.nls.json b/extensions/jake/package.nls.json
-index fd0a216..07e5df1 100644
+index fd0a216a501b478efed9467840fde765280f0914..07e5df1bcb5e0f074544f4b3f360d84fb0f65c86 100644
 --- a/extensions/jake/package.nls.json
 +++ b/extensions/jake/package.nls.json
 @@ -1,6 +1,6 @@
@@ -521,7 +511,7 @@ index fd0a216..07e5df1 100644
  	"jake.taskDefinition.file.description": "The Jake file that provides the task. Can be omitted.",
  	"config.jake.autoDetect": "Controls enablement of Jake task detection. Jake task detection can cause files in any open workspace to be executed."
 diff --git a/extensions/json-language-features/package.nls.json b/extensions/json-language-features/package.nls.json
-index ecc1e6f..75facee 100644
+index ecc1e6f3aa9636a7899f1b8cb508069189df7299..75facee3c0583f2a54e50d2294b2d1a8ecf2d0e9 100644
 --- a/extensions/json-language-features/package.nls.json
 +++ b/extensions/json-language-features/package.nls.json
 @@ -9,7 +9,7 @@
@@ -534,7 +524,7 @@ index ecc1e6f..75facee 100644
  	"json.colorDecorators.enable.deprecationMessage": "The setting `json.colorDecorators.enable` has been deprecated in favor of `editor.colorDecorators`.",
  	"json.schemaResolutionErrorMessage": "Unable to resolve schema.",
 diff --git a/extensions/markdown-language-features/package.nls.json b/extensions/markdown-language-features/package.nls.json
-index cb84d8c..78d7a92 100644
+index cb84d8c3a6d7ada4bab63e1589d99dceb355f4d9..78d7a9215e9afafbb55544c5bc081b1523b73549 100644
 --- a/extensions/markdown-language-features/package.nls.json
 +++ b/extensions/markdown-language-features/package.nls.json
 @@ -27,7 +27,7 @@
@@ -556,7 +546,7 @@ index cb84d8c..78d7a92 100644
  			"",
  			"{ 'docs/*.md': '${documentDirName}/images/${fileName}' }",
 diff --git a/extensions/media-preview/package.nls.json b/extensions/media-preview/package.nls.json
-index 31cddf0..5cdd547 100644
+index 31cddf07e6817716c2c5e5d7bc0040bdb97821b5..5cdd54756f7f0b1351a703b2156e2c5abf341c6e 100644
 --- a/extensions/media-preview/package.nls.json
 +++ b/extensions/media-preview/package.nls.json
 @@ -1,6 +1,6 @@
@@ -568,7 +558,7 @@ index 31cddf0..5cdd547 100644
  	"customEditor.imagePreview.displayName": "Image Preview",
  	"customEditor.videoPreview.displayName": "Video Preview",
 diff --git a/extensions/media-preview/src/audioPreview.ts b/extensions/media-preview/src/audioPreview.ts
-index 2c37242..a1b5f65 100644
+index 2c3724284ef2244eb01217375a5bed9942c9858a..a1b5f6542278078143af8f216d7b88f434a77c01 100644
 --- a/extensions/media-preview/src/audioPreview.ts
 +++ b/extensions/media-preview/src/audioPreview.ts
 @@ -83,7 +83,7 @@ class AudioPreview extends MediaPreview {
@@ -581,7 +571,7 @@ index 2c37242..a1b5f65 100644
  	<div class="git-lfs-info">
  		<p>${vscode.l10n.t("The audio file is stored with Git LFS and is not available for preview.")}</p>
 diff --git a/extensions/media-preview/src/imagePreview/index.ts b/extensions/media-preview/src/imagePreview/index.ts
-index 4a2a9b0..79d3177 100644
+index 4a2a9b03c59a199151c7258ca174203461c632c2..79d31770a19a3977c528b3cd47a412c937dafd4c 100644
 --- a/extensions/media-preview/src/imagePreview/index.ts
 +++ b/extensions/media-preview/src/imagePreview/index.ts
 @@ -208,7 +208,7 @@ class ImagePreview extends MediaPreview {
@@ -594,7 +584,7 @@ index 4a2a9b0..79d3177 100644
  	<div class="git-lfs-info">
  		<p>${vscode.l10n.t("The image is stored with Git LFS and is not available for preview.")}</p>
 diff --git a/extensions/media-preview/src/videoPreview.ts b/extensions/media-preview/src/videoPreview.ts
-index 2ccd25d..0fb8502 100644
+index 2ccd25d8fcc248b3aa57e1c3fed5ce693b753da7..0fb85020d0b7e67fe7ded960bca610d154d85bbd 100644
 --- a/extensions/media-preview/src/videoPreview.ts
 +++ b/extensions/media-preview/src/videoPreview.ts
 @@ -87,7 +87,7 @@ class VideoPreview extends MediaPreview {
@@ -607,7 +597,7 @@ index 2ccd25d..0fb8502 100644
  	<div class="git-lfs-info">
  		<p>${vscode.l10n.t("The video file is stored with Git LFS and is not available for preview.")}</p>
 diff --git a/extensions/notebook-renderers/package.json b/extensions/notebook-renderers/package.json
-index 1aca262..037f95b 100644
+index 1aca2624445d1c6d376fe536b583e3ae4e8fd73e..037f95bda980dd17d59160fb3c57cfd89602dc1b 100644
 --- a/extensions/notebook-renderers/package.json
 +++ b/extensions/notebook-renderers/package.json
 @@ -20,7 +20,7 @@
@@ -620,7 +610,7 @@ index 1aca262..037f95b 100644
  				"mimeTypes": [
  					"image/gif",
 diff --git a/extensions/npm/package.nls.json b/extensions/npm/package.nls.json
-index 06f95d8..4d1f086 100644
+index 06f95d821caec49762ebf651528bef52a894e8ac..4d1f0860671440a1c22b60fd17936089a970badd 100644
 --- a/extensions/npm/package.nls.json
 +++ b/extensions/npm/package.nls.json
 @@ -1,6 +1,6 @@
@@ -632,7 +622,7 @@ index 06f95d8..4d1f086 100644
  	"virtualWorkspaces": "Functionality that requires running the 'npm' command is not available in virtual workspaces.",
  	"config.npm.autoDetect": "Controls whether npm scripts should be automatically detected.",
 diff --git a/extensions/swift/syntaxes/swift.tmLanguage.json b/extensions/swift/syntaxes/swift.tmLanguage.json
-index b5680e3..aa26c44 100644
+index b5680e316f05a5692f7c4cd85ff8aa26aa4c1dc0..aa26c44d80f1bffdbeb906e52c774ab2109ceb24 100644
 --- a/extensions/swift/syntaxes/swift.tmLanguage.json
 +++ b/extensions/swift/syntaxes/swift.tmLanguage.json
 @@ -258,7 +258,7 @@
@@ -645,7 +635,7 @@ index b5680e3..aa26c44 100644
  					"match": "(?<=^Process\\.|\\WProcess\\.|^CommandLine\\.|\\WCommandLine\\.)(arguments|argc|unsafeArgv)"
  				},
 diff --git a/extensions/terminal-suggest/src/completions/codium-insiders.ts b/extensions/terminal-suggest/src/completions/codium-insiders.ts
-index af294b9..d425176 100644
+index af294b97d5f9e704385af464796295e8879f1bb8..d425176839b25803dbc8c04304d3bc5051ba1c20 100644
 --- a/extensions/terminal-suggest/src/completions/codium-insiders.ts
 +++ b/extensions/terminal-suggest/src/completions/codium-insiders.ts
 @@ -2,8 +2,8 @@ import code from './code';
@@ -660,7 +650,7 @@ index af294b9..d425176 100644
  
  export default codiumInsidersCompletionSpec;
 diff --git a/extensions/terminal-suggest/src/completions/codium.ts b/extensions/terminal-suggest/src/completions/codium.ts
-index 4ecf188..6663424 100644
+index 4ecf18887ea270ea4c7039d77a5baab02b2028b7..66634246034704b3db05041262f49415c4a345bf 100644
 --- a/extensions/terminal-suggest/src/completions/codium.ts
 +++ b/extensions/terminal-suggest/src/completions/codium.ts
 @@ -2,8 +2,8 @@ import code from './code';
@@ -675,7 +665,7 @@ index 4ecf188..6663424 100644
  
  export default codiumCompletionSpec;
 diff --git a/extensions/tunnel-forwarding/src/extension.ts b/extensions/tunnel-forwarding/src/extension.ts
-index d65e533..9a11b16 100644
+index d65e533430499d4d7f276b7e1017394a24b5379f..9a11b16c227371bdd51e9a601da3c22881aeac5c 100644
 --- a/extensions/tunnel-forwarding/src/extension.ts
 +++ b/extensions/tunnel-forwarding/src/extension.ts
 @@ -35,7 +35,7 @@ if (process.env.VSCODE_FORWARDING_IS_DEV) {
@@ -688,7 +678,7 @@ index d65e533..9a11b16 100644
  
  	cliPath = path.join(vscode.env.appRoot, binPath, cliName) + extension;
 diff --git a/extensions/typescript-language-features/package.nls.json b/extensions/typescript-language-features/package.nls.json
-index 0440e8d..05242ff 100644
+index 0440e8d316d64299ee430e9ea913febcbd18a5f0..05242ff927f3b2285d791943e02dd86c33820dfb 100644
 --- a/extensions/typescript-language-features/package.nls.json
 +++ b/extensions/typescript-language-features/package.nls.json
 @@ -134,9 +134,9 @@
@@ -755,7 +745,7 @@ index 0440e8d..05242ff 100644
 +	"walkthroughs.nodejsWelcome.learnMoreAboutJs.altText": "Learn more about JavaScript and Node.js in Director-Code."
  }
 diff --git a/extensions/typescript-language-features/src/tsServer/versionManager.ts b/extensions/typescript-language-features/src/tsServer/versionManager.ts
-index 3644556..f4b58c1 100644
+index 36445569636c27ea2389766a535634ca71f120e8..f4b58c15021502418e1afe88b66958ac7b489f9c 100644
 --- a/extensions/typescript-language-features/src/tsServer/versionManager.ts
 +++ b/extensions/typescript-language-features/src/tsServer/versionManager.ts
 @@ -110,7 +110,7 @@ export class TypeScriptVersionManager extends Disposable {
@@ -768,7 +758,7 @@ index 3644556..f4b58c1 100644
  			detail: bundledVersion.pathLabel,
  			run: async () => {
 diff --git a/extensions/typescript-language-features/src/tsServer/versionProvider.electron.ts b/extensions/typescript-language-features/src/tsServer/versionProvider.electron.ts
-index 79ac788..2bda5d5 100644
+index 79ac78800d7958bac51ecb13edaca8a47ffcff42..2bda5d5cc42d5ca7a8006bc76bca2f21670bde90 100644
 --- a/extensions/typescript-language-features/src/tsServer/versionProvider.electron.ts
 +++ b/extensions/typescript-language-features/src/tsServer/versionProvider.electron.ts
 @@ -68,7 +68,7 @@ export class DiskTypeScriptVersionProvider implements ITypeScriptVersionProvider
@@ -781,7 +771,7 @@ index 79ac788..2bda5d5 100644
  	}
  
 diff --git a/extensions/typescript-language-features/src/tsconfig.ts b/extensions/typescript-language-features/src/tsconfig.ts
-index 219e03d..68e5228 100644
+index 219e03dafec900adbf5cbb868db3b44f1c150944..68e5228a96190a4cdae5eafff5df9fd1eaa5c4ac 100644
 --- a/extensions/typescript-language-features/src/tsconfig.ts
 +++ b/extensions/typescript-language-features/src/tsconfig.ts
 @@ -144,7 +144,7 @@ export async function openProjectConfigForFile(
@@ -794,7 +784,7 @@ index 219e03d..68e5228 100644
  	}
  
 diff --git a/extensions/typescript-language-features/src/typescriptServiceClient.ts b/extensions/typescript-language-features/src/typescriptServiceClient.ts
-index efdd84e..0d887e9 100644
+index efdd84ecc33d8492db564f623ead0c11dcee87f7..0d887e9039a7ee44e1739508f89f56e84db2a946 100644
 --- a/extensions/typescript-language-features/src/typescriptServiceClient.ts
 +++ b/extensions/typescript-language-features/src/typescriptServiceClient.ts
 @@ -658,7 +658,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
@@ -825,7 +815,7 @@ index efdd84e..0d887e9 100644
  						prompt = vscode.window.showWarningMessage(
  							vscode.l10n.t("The JS/TS language service crashed."),
 diff --git a/extensions/vscode-colorize-tests/package.json b/extensions/vscode-colorize-tests/package.json
-index 37316fa..39fc338 100644
+index 37316fa8c51e879262cc275dec305f9065523441..39fc338e2f5c2bf1c780dcf9f10941dcf4490dc9 100644
 --- a/extensions/vscode-colorize-tests/package.json
 +++ b/extensions/vscode-colorize-tests/package.json
 @@ -1,6 +1,6 @@
@@ -837,7 +827,7 @@ index 37316fa..39fc338 100644
    "publisher": "vscode",
    "license": "MIT",
 diff --git a/extensions/vscode-test-resolver/package.json b/extensions/vscode-test-resolver/package.json
-index 1ff5707..875484a 100644
+index 1ff570782486bb609ec7a06166e30b4123326b26..875484a46f83ee57094d262698950de9b2ff2556 100644
 --- a/extensions/vscode-test-resolver/package.json
 +++ b/extensions/vscode-test-resolver/package.json
 @@ -1,6 +1,6 @@
@@ -849,7 +839,7 @@ index 1ff5707..875484a 100644
    "publisher": "vscode",
    "license": "MIT",
 diff --git a/extensions/vscode-test-resolver/src/download.ts b/extensions/vscode-test-resolver/src/download.ts
-index 6b967c2..ac0c2d6 100644
+index 6b967c2a7cc2c2cc20d0d90fcf8fe4e338c7c9a6..ac0c2d614ad3f1cc30e25257772927d206bbb21f 100644
 --- a/extensions/vscode-test-resolver/src/download.ts
 +++ b/extensions/vscode-test-resolver/src/download.ts
 @@ -30,18 +30,18 @@ async function downloadVSCodeServerArchive(updateUrl: string, commit: string, qu
@@ -902,7 +892,7 @@ index 6b967c2..ac0c2d6 100644
  	}
  	return Promise.resolve(extractDir);
 diff --git a/extensions/vscode-test-resolver/src/extension.ts b/extensions/vscode-test-resolver/src/extension.ts
-index f739a5b..951c742 100644
+index f739a5b9b0504cef54bb50f0a01174f383c6044a..951c742fe1056c132ff3bd06b999453e208e8e54 100644
 --- a/extensions/vscode-test-resolver/src/extension.ts
 +++ b/extensions/vscode-test-resolver/src/extension.ts
 @@ -178,7 +178,7 @@ export function activate(context: vscode.ExtensionContext) {
@@ -915,7 +905,7 @@ index f739a5b..951c742 100644
  				}
  
 diff --git a/resources/linux/code-url-handler.desktop b/resources/linux/code-url-handler.desktop
-index 65b64eb..db7330c 100644
+index 65b64eb0ea70bbf08546c4f17cc4297419c9f6fc..db7330c4fbfa9814e693b364cfa0109f70f54668 100644
 --- a/resources/linux/code-url-handler.desktop
 +++ b/resources/linux/code-url-handler.desktop
 @@ -9,4 +9,4 @@ NoDisplay=true
@@ -925,7 +915,7 @@ index 65b64eb..db7330c 100644
 -Keywords=vscodium;codium;vscode;
 +Keywords=director-code;director;code;vscode;ai;
 diff --git a/resources/linux/code.appdata.xml b/resources/linux/code.appdata.xml
-index ba75e65..33e2d45 100644
+index ba75e65e49dc2fcbe022bd6e5ad3c336558b7ba5..33e2d45af2bb82c795922388aac8172f715e1061 100644
 --- a/resources/linux/code.appdata.xml
 +++ b/resources/linux/code.appdata.xml
 @@ -4,15 +4,14 @@
@@ -949,7 +939,7 @@ index ba75e65..33e2d45 100644
  	</screenshots>
  </component>
 diff --git a/resources/linux/code.desktop b/resources/linux/code.desktop
-index 994d3de..e49a92c 100644
+index 994d3dee41cee1ec756f233a2d5cc4ae856d676d..e49a92c93f830326b65b78cb47ba7ca0977b2eee 100644
 --- a/resources/linux/code.desktop
 +++ b/resources/linux/code.desktop
 @@ -10,7 +10,7 @@ StartupWMClass=@@NAME_SHORT@@
@@ -962,7 +952,7 @@ index 994d3de..e49a92c 100644
  [Desktop Action new-empty-window]
  Name=New Empty Window
 diff --git a/resources/win32/VisualElementsManifest.xml b/resources/win32/VisualElementsManifest.xml
-index 214861c..ddec564 100644
+index 214861c0062b6426bed98db0b75ca2ece3070624..ddec564e74700219f35e39d7bc862413f0fb0b3a 100644
 --- a/resources/win32/VisualElementsManifest.xml
 +++ b/resources/win32/VisualElementsManifest.xml
 @@ -5,5 +5,5 @@
@@ -973,7 +963,7 @@ index 214861c..ddec564 100644
 +				ShortDisplayName="Director-Code" />
  </Application>
 diff --git a/src/main.ts b/src/main.ts
-index 420a5ae..58232c3 100644
+index 420a5ae6e369007f7d3f686a86af8e1cb24c6eaa..58232c322e133000f20a0428b14a10197b23671f 100644
 --- a/src/main.ts
 +++ b/src/main.ts
 @@ -427,16 +427,16 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
@@ -997,7 +987,7 @@ index 420a5ae..58232c3 100644
  			'}'
  		];
 diff --git a/src/vs/code/electron-main/app.ts b/src/vs/code/electron-main/app.ts
-index 0c9df08..e1fd535 100644
+index 0c9df08d8118c956a2db8270dabbde031d0bb011..e1fd53535ff7bd07915955238376fad7fe177282 100644
 --- a/src/vs/code/electron-main/app.ts
 +++ b/src/vs/code/electron-main/app.ts
 @@ -548,7 +548,7 @@ export class CodeApplication extends Disposable {
@@ -1010,7 +1000,7 @@ index 0c9df08..e1fd535 100644
  		this.logService.debug('args:', this.environmentMainService.args);
  
 diff --git a/src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts b/src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts
-index 72f502e..f5ffbad 100644
+index 72f502e824ee365577780a285e22664531236422..f5ffbad351426e7032cbb1c0f8a5475d290677b8 100644
 --- a/src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts
 +++ b/src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts
 @@ -17,7 +17,7 @@ export class ToggleTabFocusModeAction extends Action2 {
@@ -1023,7 +1013,7 @@ index 72f502e..f5ffbad 100644
  			keybinding: {
  				primary: KeyMod.CtrlCmd | KeyCode.KeyM,
 diff --git a/src/vs/platform/contextkey/common/contextkeys.ts b/src/vs/platform/contextkey/common/contextkeys.ts
-index fa89f8b..341e98d 100644
+index fa89f8b327929a322860ee2d6d522c64c6b9e670..341e98d025afcb5e011361fd8603f55bca7e8123 100644
 --- a/src/vs/platform/contextkey/common/contextkeys.ts
 +++ b/src/vs/platform/contextkey/common/contextkeys.ts
 @@ -17,7 +17,7 @@ export const IsIOSContext = new RawContextKey<boolean>('isIOS', isIOS, localize(
@@ -1036,7 +1026,7 @@ index fa89f8b..341e98d 100644
  export const InputFocusedContextKey = 'inputFocus';
  export const InputFocusedContext = new RawContextKey<boolean>(InputFocusedContextKey, false, localize('inputFocus', "Whether keyboard focus is inside an input box"));
 diff --git a/src/vs/platform/extensionManagement/node/extensionManagementService.ts b/src/vs/platform/extensionManagement/node/extensionManagementService.ts
-index 5cb609b..94840d8 100644
+index 5cb609b0ebe9bffff91db42dafc4dadb9010ef6d..94840d8e73a998ea22a4b45ff5101be898063cd6 100644
 --- a/src/vs/platform/extensionManagement/node/extensionManagementService.ts
 +++ b/src/vs/platform/extensionManagement/node/extensionManagementService.ts
 @@ -151,7 +151,7 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
@@ -1067,7 +1057,7 @@ index 5cb609b..94840d8 100644
  			}
  
 diff --git a/src/vs/platform/extensions/common/extensionValidator.ts b/src/vs/platform/extensions/common/extensionValidator.ts
-index 12f2883..d39d2ac 100644
+index 12f288330a3c29519be3474de8b8695ffcc233f0..d39d2acbebf7973f571c6238393a8ddda405a19f 100644
 --- a/src/vs/platform/extensions/common/extensionValidator.ts
 +++ b/src/vs/platform/extensions/common/extensionValidator.ts
 @@ -378,9 +378,9 @@ export function areApiProposalsCompatible(apiProposals: string[], arg1?: string[
@@ -1083,7 +1073,7 @@ index 12f2883..d39d2ac 100644
  					incompatibleProposals[incompatibleProposals.length - 1]));
  			}
 diff --git a/src/vs/platform/externalTerminal/node/externalTerminalService.ts b/src/vs/platform/externalTerminal/node/externalTerminalService.ts
-index a42d8b5..966c151 100644
+index a42d8b5e5761c990fd8297233ac6a0e8568e9e82..966c1515c70677b9c78826784f6cabebb65c2bef 100644
 --- a/src/vs/platform/externalTerminal/node/externalTerminalService.ts
 +++ b/src/vs/platform/externalTerminal/node/externalTerminalService.ts
 @@ -15,7 +15,7 @@ import * as nls from '../../../nls.js';
@@ -1096,7 +1086,7 @@ index a42d8b5..966c151 100644
  abstract class ExternalTerminalService {
  	public _serviceBrand: undefined;
 diff --git a/src/vs/platform/policy/node/nativePolicyService.ts b/src/vs/platform/policy/node/nativePolicyService.ts
-index f2ea09c..792a84d 100644
+index f2ea09cfd51ea299c8432664d2bf0be618c2e282..792a84dd750a9485d5677e8cf0968a10de76cbc5 100644
 --- a/src/vs/platform/policy/node/nativePolicyService.ts
 +++ b/src/vs/platform/policy/node/nativePolicyService.ts
 @@ -30,7 +30,7 @@ export class NativePolicyService extends AbstractPolicyService implements IPolic
@@ -1108,8 +1098,21 @@ index f2ea09c..792a84d 100644
  					this._onDidPolicyChange(update);
  					c();
  				});
+diff --git a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
+index ec5972a8f8004a9f9feb9f977142010be43cef6e..3d96aec995229bb49b509a2292fd6ec422356b51 100644
+--- a/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
++++ b/src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
+@@ -394,7 +394,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
+ 		},
+ 		[TerminalSettingId.InheritEnv]: {
+ 			scope: ConfigurationScope.APPLICATION,
+-			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from VSCodium - Insiders, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
++			description: localize('terminal.integrated.inheritEnv', "Whether new shells should inherit their environment from Director-Code, which may source a login shell to ensure $PATH and other development variables are initialized. This has no effect on Windows."),
+ 			type: 'boolean',
+ 			default: true
+ 		},
 diff --git a/src/vs/platform/update/common/update.config.contribution.ts b/src/vs/platform/update/common/update.config.contribution.ts
-index 2bc4775..73e631c 100644
+index 2bc4775a02dac82b6d88610984d98c7c2e90aa57..73e631c9794275ed134c69a83fe0329f7ec6810a 100644
 --- a/src/vs/platform/update/common/update.config.contribution.ts
 +++ b/src/vs/platform/update/common/update.config.contribution.ts
 @@ -74,7 +74,7 @@ configurationRegistry.registerConfiguration({
@@ -1122,7 +1125,7 @@ index 2bc4775..73e631c 100644
  		},
  		'update.showReleaseNotes': {
 diff --git a/src/vs/platform/update/electron-main/abstractUpdateService.ts b/src/vs/platform/update/electron-main/abstractUpdateService.ts
-index 356d7e4..69e1a6b 100644
+index 356d7e493ca57a0bea9e898ab719e37cbc06c576..69e1a6b4dfec6630b415d0549bbe64561413e40a 100644
 --- a/src/vs/platform/update/electron-main/abstractUpdateService.ts
 +++ b/src/vs/platform/update/electron-main/abstractUpdateService.ts
 @@ -69,7 +69,7 @@ export function getUpdateRequestHeaders(productVersion: string): Record<string,
@@ -1135,7 +1138,7 @@ index 356d7e4..69e1a6b 100644
  
  export abstract class AbstractUpdateService implements IUpdateService {
 diff --git a/src/vs/server/node/server.cli.ts b/src/vs/server/node/server.cli.ts
-index 70f16c0..139dd1b 100644
+index 70f16c047daea556def90cabb3e96276ee4e1470..139dd1b83908b1c779b22b7dfd843e4d8226ebbf 100644
 --- a/src/vs/server/node/server.cli.ts
 +++ b/src/vs/server/node/server.cli.ts
 @@ -91,7 +91,7 @@ const cliStdInFilePath = process.env['VSCODE_STDIN_FILE_PATH'] as string;
@@ -1157,7 +1160,7 @@ index 70f16c0..139dd1b 100644
  	process.exit(1);
  }
 diff --git a/src/vs/workbench/api/browser/mainThreadAuthentication.ts b/src/vs/workbench/api/browser/mainThreadAuthentication.ts
-index bab9c57..d51fac3 100644
+index bab9c57505e76156ba260e70f9ea2c611270759f..d51fac37ea3ae8981da362bb5bc36c5bb65875d4 100644
 --- a/src/vs/workbench/api/browser/mainThreadAuthentication.ts
 +++ b/src/vs/workbench/api/browser/mainThreadAuthentication.ts
 @@ -527,7 +527,7 @@ export class MainThreadAuthentication extends Disposable implements MainThreadAu
@@ -1170,7 +1173,7 @@ index bab9c57..d51fac3 100644
  			};
  			this.telemetryService.publicLog2<{ extensionId: string }, ClientIdUsageClassification>('authentication.clientIdUsage', { extensionId });
 diff --git a/src/vs/workbench/api/browser/viewsExtensionPoint.ts b/src/vs/workbench/api/browser/viewsExtensionPoint.ts
-index 326efb5..f24ee59 100644
+index 326efb527265f027d112d084fc08aceeadfe8d76..f24ee59e1f792532890c5894f50f040875f4c2ee 100644
 --- a/src/vs/workbench/api/browser/viewsExtensionPoint.ts
 +++ b/src/vs/workbench/api/browser/viewsExtensionPoint.ts
 @@ -41,7 +41,7 @@ const viewsContainerSchema: IJSONSchema = {
@@ -1183,7 +1186,7 @@ index 326efb5..f24ee59 100644
  			pattern: '^[a-zA-Z0-9_-]+$'
  		},
 diff --git a/src/vs/workbench/api/common/extHostApiCommands.ts b/src/vs/workbench/api/common/extHostApiCommands.ts
-index b08ad3a..03ede4a 100644
+index b08ad3af2b0b9a79df36589c7ca2a4bb1f34f04a..03ede4acd81afd7eed644ecfeec3a411d3b7d9a5 100644
 --- a/src/vs/workbench/api/common/extHostApiCommands.ts
 +++ b/src/vs/workbench/api/common/extHostApiCommands.ts
 @@ -443,7 +443,7 @@ const newCommands: ApiCommand[] = [
@@ -1196,7 +1199,7 @@ index b08ad3a..03ede4a 100644
  				v => v === undefined || typeof v === 'number' || typeof v === 'object',
  				v => !v ? v : typeof v === 'number' ? [typeConverters.ViewColumn.from(v), undefined] : [typeConverters.ViewColumn.from(v.viewColumn), typeConverters.TextEditorOpenOptions.from(v)],
 diff --git a/src/vs/workbench/api/common/extHostCommands.ts b/src/vs/workbench/api/common/extHostCommands.ts
-index 4558bfe..86d80cb 100644
+index 4558bfe07e0d54f84a758fd13855b4f96c960d23..86d80cb44701db9e29070df206071a09c008b573 100644
 --- a/src/vs/workbench/api/common/extHostCommands.ts
 +++ b/src/vs/workbench/api/common/extHostCommands.ts
 @@ -462,8 +462,8 @@ export class ApiCommandArgument<V, O = V> {
@@ -1211,7 +1214,7 @@ index 4558bfe..86d80cb 100644
  	constructor(
  		readonly name: string,
 diff --git a/src/vs/workbench/browser/actions/developerActions.ts b/src/vs/workbench/browser/actions/developerActions.ts
-index 41ed1ab..009bb01 100644
+index 41ed1ab42151cb937fb46dd5b4eec0d7e56e3f40..009bb01bdc23efbb898719845f3a3fbe27d013ea 100644
 --- a/src/vs/workbench/browser/actions/developerActions.ts
 +++ b/src/vs/workbench/browser/actions/developerActions.ts
 @@ -688,7 +688,7 @@ class PolicyDiagnosticsAction extends Action2 {
@@ -1224,7 +1227,7 @@ index 41ed1ab..009bb01 100644
  		content += '## System Information\n\n';
  		content += '| Property | Value |\n';
 diff --git a/src/vs/workbench/browser/actions/helpActions.ts b/src/vs/workbench/browser/actions/helpActions.ts
-index 2578041..63ec29e 100644
+index 257804186e4164383f830bdd6b09f45afda7b8a4..63ec29e7988512c1efab00a5fe8e744f0eba001f 100644
 --- a/src/vs/workbench/browser/actions/helpActions.ts
 +++ b/src/vs/workbench/browser/actions/helpActions.ts
 @@ -162,7 +162,7 @@ class OpenNewsletterSignupUrlAction extends Action2 {
@@ -1237,7 +1240,7 @@ index 2578041..63ec29e 100644
  			f1: true
  		});
 diff --git a/src/vs/workbench/browser/web.factory.ts b/src/vs/workbench/browser/web.factory.ts
-index d2df214..3cbbeb9 100644
+index d2df214bc2bf1040447ee08ed7d3705b3fc77bd9..3cbbeb946492dd1e3e7e91e30d3e5c00398a0725 100644
 --- a/src/vs/workbench/browser/web.factory.ts
 +++ b/src/vs/workbench/browser/web.factory.ts
 @@ -33,7 +33,7 @@ export function create(domElement: HTMLElement, options: IWorkbenchConstructionO
@@ -1250,7 +1253,7 @@ index d2df214..3cbbeb9 100644
  		created = true;
  	}
 diff --git a/src/vs/workbench/browser/workbench.contribution.ts b/src/vs/workbench/browser/workbench.contribution.ts
-index bfbbdb5..e651c0f 100644
+index bfbbdb59e9c8eb9e5bc20c129a24b1bdcce5d523..e651c0f6865f68b95798138713608b430aadd2f7 100644
 --- a/src/vs/workbench/browser/workbench.contribution.ts
 +++ b/src/vs/workbench/browser/workbench.contribution.ts
 @@ -910,7 +910,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
@@ -1263,7 +1266,7 @@ index bfbbdb5..e651c0f 100644
  		localize('dirty', "`${dirty}`: an indicator for when the active editor has unsaved changes."),
  		localize('focusedView', "`${focusedView}`: the name of the view that is currently focused."),
 diff --git a/src/vs/workbench/common/contextkeys.ts b/src/vs/workbench/common/contextkeys.ts
-index 46dda4e..e58c83d 100644
+index 46dda4e2a4a2be421aac8e0a04f94d530243dd9c..e58c83dff640551f9efeb4404ef722d480e18d67 100644
 --- a/src/vs/workbench/common/contextkeys.ts
 +++ b/src/vs/workbench/common/contextkeys.ts
 @@ -38,7 +38,7 @@ export const HasWebFileSystemAccess = new RawContextKey<boolean>('hasWebFileSyst
@@ -1276,7 +1279,7 @@ index 46dda4e..e58c83d 100644
  //#endregion
  
 diff --git a/src/vs/workbench/contrib/debug/browser/debugAdapterManager.ts b/src/vs/workbench/contrib/debug/browser/debugAdapterManager.ts
-index 3abb441..acdcb82 100644
+index 3abb4410839c8273807032b109c072b4ce640062..acdcb82032dd928ab065e8d119b8485cbe171304 100644
 --- a/src/vs/workbench/contrib/debug/browser/debugAdapterManager.ts
 +++ b/src/vs/workbench/contrib/debug/browser/debugAdapterManager.ts
 @@ -175,7 +175,7 @@ export class AdapterManager extends Disposable implements IAdapterManager {
@@ -1289,7 +1292,7 @@ index 3abb441..acdcb82 100644
  					},
  					'preLaunchTask': {
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
-index dee0f35..580190e 100644
+index dee0f35d6208e4b3fb8ad49d503722092363229c..580190ecb77e1aee9c0a4d942c54365c84e5c9a7 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
 @@ -388,24 +388,24 @@ CommandsRegistry.registerCommand({
@@ -1333,7 +1336,7 @@ index dee0f35..580190e 100644
  							label: localize('InstallVSIXAction.reloadNow', "Reload Now"),
  							run: () => hostService.reload()
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
-index de1c7cd..d681bf7 100644
+index de1c7cd4cc0712e38031a8910a0a422adbfd258e..d681bf7b88aa808b58f2c31e3069607933d4bc79 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
 @@ -107,7 +107,7 @@ export class PromptExtensionInstallFailureAction extends Action {
@@ -1373,7 +1376,7 @@ index de1c7cd..d681bf7 100644
  				const message = new MarkdownString(localize('deprecated tooltip', "This extension is deprecated as it is no longer being maintained."));
  				if (this.extension.deprecationInfo.additionalInfo) {
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts b/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
-index 7418299..f5315ce 100644
+index 7418299dbda8b9db195f17ea9f1d53aaae4b0128..f5315ce66e64c18825cbce05db0cccd48c2eaf2a 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
 @@ -477,7 +477,7 @@ export class Extension implements IExtension {
@@ -1395,7 +1398,7 @@ index 7418299..f5315ce 100644
  
  		return Promise.reject(new Error('not available'));
 diff --git a/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts b/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
-index 5158363..1fcec85 100644
+index 5158363ede05948ea58931f2496384d94668009d..1fcec856867d8c4d141ba893f65a094167881a5e 100644
 --- a/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
 +++ b/src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts
 @@ -27,7 +27,7 @@ export const ExtensionsConfigurationSchema: IJSONSchema = {
@@ -1417,7 +1420,7 @@ index 5158363..1fcec85 100644
  	'\t\t',
  	'\t]',
 diff --git a/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts b/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
-index c6e95c9..d7b5ef1 100644
+index c6e95c9611f3974d14ef1dc39f09330a5187ffe7..d7b5ef1123a9e5a951aaadd848dcc0f7e5b55f08 100644
 --- a/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
 +++ b/src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
 @@ -17,7 +17,7 @@ export const InstallExtensionsToolData: IToolData = {
@@ -1430,7 +1433,7 @@ index c6e95c9..d7b5ef1 100644
  	source: ToolDataSource.Internal,
  	inputSchema: {
 diff --git a/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts b/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
-index 1f40825..632179b 100644
+index 1f408250c1aa8d4051f18620bc3d5a2afbd00b39..632179b0d2262d34c4797786b1847b783cf4e050 100644
 --- a/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
 +++ b/src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts
 @@ -151,7 +151,7 @@ class ReportExtensionSlowAction extends Action {
@@ -1443,7 +1446,7 @@ index 1f40825..632179b 100644
  		const url = `${this.repoInfo.base}/${this.repoInfo.owner}/${this.repoInfo.repo}/issues/new/?body=${body}&title=${title}`;
  		this._openerService.open(URI.parse(url));
 diff --git a/src/vs/workbench/contrib/externalUriOpener/common/configuration.ts b/src/vs/workbench/contrib/externalUriOpener/common/configuration.ts
-index 0111ac3..0e1f593 100644
+index 0111ac32db702885de40fdc036c0a6f5fc33fa5b..0e1f593ebb805e693438e00ef39f577afc6ec6a5 100644
 --- a/src/vs/workbench/contrib/externalUriOpener/common/configuration.ts
 +++ b/src/vs/workbench/contrib/externalUriOpener/common/configuration.ts
 @@ -55,7 +55,7 @@ export const externalUriOpenersConfigurationNode: IConfigurationNode = {
@@ -1456,7 +1459,7 @@ index 0111ac3..0e1f593 100644
  					externalUriOpenerIdSchemaAddition
  				]
 diff --git a/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts b/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
-index 03aa639..770cca4 100644
+index 03aa639285c11c53624ff85831c22ba5c5edfa4f..770cca41dc2dbfc3043aa9c5f057cdb7dc81f6c5 100644
 --- a/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
 +++ b/src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts
 @@ -853,7 +853,7 @@ export class BaseIssueReporterService extends Disposable {
@@ -1489,7 +1492,7 @@ index 03aa639..770cca4 100644
  			this.publicGithubButton.label = localize('openIssueReporter', "Open External Issue Reporter");
  			return;
 diff --git a/src/vs/workbench/contrib/issue/browser/issueReporterModel.ts b/src/vs/workbench/contrib/issue/browser/issueReporterModel.ts
-index d9caa12..f4bd687 100644
+index d9caa126146055011d15893b81673c4991c2ed85..f4bd687841b641d271683d6d20bf7330c4816b04 100644
 --- a/src/vs/workbench/contrib/issue/browser/issueReporterModel.ts
 +++ b/src/vs/workbench/contrib/issue/browser/issueReporterModel.ts
 @@ -96,7 +96,7 @@ Type: <b>${this.getIssueTypeTitle()}</b>
@@ -1502,7 +1505,7 @@ index d9caa12..f4bd687 100644
  Modes:${modes.length ? ' ' + modes.join(', ') : ''}
  ${this.getRemoteOSes()}
 diff --git a/src/vs/workbench/contrib/issue/browser/issueReporterPage.ts b/src/vs/workbench/contrib/issue/browser/issueReporterPage.ts
-index 255f84f..defbb2c 100644
+index 255f84fba8defea4f25e1bc7cf955801c0530b4b..defbb2c22133184c65c265064a577bf3a245d19c 100644
 --- a/src/vs/workbench/contrib/issue/browser/issueReporterPage.ts
 +++ b/src/vs/workbench/contrib/issue/browser/issueReporterPage.ts
 @@ -12,16 +12,16 @@ const sendWorkspaceInfoLabel = escape(localize('sendWorkspaceInfo', "Include my
@@ -1526,7 +1529,7 @@ index 255f84f..defbb2c 100644
  
  export default (): string => `
 diff --git a/src/vs/workbench/contrib/localization/common/localization.contribution.ts b/src/vs/workbench/contrib/localization/common/localization.contribution.ts
-index 626e683..b13efdb 100644
+index 626e68367b66c7757b1a85142b9d5586808c22f3..b13efdbbb4a2e29b7bd1215d482a58fc9714a929 100644
 --- a/src/vs/workbench/contrib/localization/common/localization.contribution.ts
 +++ b/src/vs/workbench/contrib/localization/common/localization.contribution.ts
 @@ -56,9 +56,9 @@ export class BaseLocalizationWorkbenchContribution extends Disposable implements
@@ -1542,7 +1545,7 @@ index 626e683..b13efdb 100644
  									path: {
  										type: 'string',
 diff --git a/src/vs/workbench/contrib/localization/common/localizationsActions.ts b/src/vs/workbench/contrib/localization/common/localizationsActions.ts
-index cb777ab..0492d5d 100644
+index cb777ab65c6e43b2e3d68825839a9277ae88fcc9..0492d5deea02a741d5176179680964f186438b37 100644
 --- a/src/vs/workbench/contrib/localization/common/localizationsActions.ts
 +++ b/src/vs/workbench/contrib/localization/common/localizationsActions.ts
 @@ -23,7 +23,7 @@ export class ConfigureDisplayLanguageAction extends Action2 {
@@ -1555,7 +1558,7 @@ index cb777ab..0492d5d 100644
  		});
  	}
 diff --git a/src/vs/workbench/contrib/preferences/browser/keyboardLayoutPicker.ts b/src/vs/workbench/contrib/preferences/browser/keyboardLayoutPicker.ts
-index ee02c7e..d8151a6 100644
+index ee02c7e4c30f3acec632bccfdc852167174ccf30..d8151a61e027da673e775300bb5ee012211214ba 100644
 --- a/src/vs/workbench/contrib/preferences/browser/keyboardLayoutPicker.ts
 +++ b/src/vs/workbench/contrib/preferences/browser/keyboardLayoutPicker.ts
 @@ -93,8 +93,8 @@ interface IUnknownLayout {
@@ -1570,7 +1573,7 @@ index ee02c7e..d8151a6 100644
  	`// Once you have the keyboard layout info, please paste it below.`,
  	'\n'
 diff --git a/src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts b/src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts
-index 449b8b4..f5f139f 100644
+index 449b8b4108d0bea51e52c8b5c50c44d1bc29255d..f5f139f0b41fce4509889f065805ef7c922f3ad6 100644
 --- a/src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts
 +++ b/src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts
 @@ -3481,7 +3481,7 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
@@ -1583,7 +1586,7 @@ index 449b8b4..f5f139f 100644
  							this._notificationService.error(nls.localize('TerminateAction.failed', 'Failed to terminate running task'));
  						}
 diff --git a/src/vs/workbench/contrib/tasks/common/jsonSchemaCommon.ts b/src/vs/workbench/contrib/tasks/common/jsonSchemaCommon.ts
-index d33037e..ce48440 100644
+index d33037e2185729e1e567bd72086bb770f4947509..ce484409719cc7b68a29db57cffb3c0b2dac074a 100644
 --- a/src/vs/workbench/contrib/tasks/common/jsonSchemaCommon.ts
 +++ b/src/vs/workbench/contrib/tasks/common/jsonSchemaCommon.ts
 @@ -191,7 +191,7 @@ const schema: IJSONSchema = {
@@ -1605,7 +1608,7 @@ index d33037e..ce48440 100644
  				},
  				echoCommand: {
 diff --git a/src/vs/workbench/contrib/tasks/common/jsonSchema_v2.ts b/src/vs/workbench/contrib/tasks/common/jsonSchema_v2.ts
-index 488b006..ecd2569 100644
+index 488b0063ce19dbe0808fb3de348d44f6df162055..ecd256957ff79815a26113d41929073579443ed2 100644
 --- a/src/vs/workbench/contrib/tasks/common/jsonSchema_v2.ts
 +++ b/src/vs/workbench/contrib/tasks/common/jsonSchema_v2.ts
 @@ -437,7 +437,7 @@ const taskConfiguration: IJSONSchema = {
@@ -1618,7 +1621,7 @@ index 488b006..ecd2569 100644
  		},
  		presentation: Objects.deepClone(presentation),
 diff --git a/src/vs/workbench/contrib/terminal/browser/terminalView.ts b/src/vs/workbench/contrib/terminal/browser/terminalView.ts
-index eca347a..304cbc2 100644
+index eca347a771b645b8d7394a2d9fd41a44ecd31739..304cbc274f4ad9b3596d4bea592f3e74b63682c8 100644
 --- a/src/vs/workbench/contrib/terminal/browser/terminalView.ts
 +++ b/src/vs/workbench/contrib/terminal/browser/terminalView.ts
 @@ -208,7 +208,7 @@ export class TerminalViewPane extends ViewPane {
@@ -1631,7 +1634,7 @@ index eca347a..304cbc2 100644
  			}
  		}));
 diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
-index 1f4ec19..00160e7 100644
+index 1f4ec1934a898b5433a581029a41ccf6cdc6259e..00160e77f055d982caa8353dabafb11079216786 100644
 --- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
 +++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
 @@ -105,7 +105,7 @@ if [ -z "${VSCODE_PYTHON_AUTOACTIVATE_GUARD:-}" ]; then
@@ -1644,7 +1647,7 @@ index 1f4ec19..00160e7 100644
  	fi
  	# Remove any leftover Python activation env vars.
 diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
-index a229182..2fe1c6d 100644
+index a229182e1a437556b747522900727d5c101f6c24..2fe1c6d62fdd3d6d70728f1166b0bb9ca1a42987 100644
 --- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
 +++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
 @@ -76,7 +76,7 @@ if [ -z "${VSCODE_PYTHON_AUTOACTIVATE_GUARD:-}" ]; then
@@ -1657,7 +1660,7 @@ index a229182..2fe1c6d 100644
  	fi
  	# Remove any leftover Python activation env vars.
 diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
-index 7563e67..3fa1d81 100644
+index 7563e678d375a29e8a0b25cc36f550ecabd0dfb1..3fa1d81f8382ed8652474b1ee659a632e95a9b9a 100644
 --- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
 +++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish
 @@ -92,7 +92,7 @@ if not set -q VSCODE_PYTHON_AUTOACTIVATE_GUARD
@@ -1679,7 +1682,7 @@ index 7563e67..3fa1d81 100644
  end
  
 diff --git a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1 b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
-index a700f5b..185e8ea 100644
+index a700f5b64c4277b4b7c1d6f080bec03c5f0356ad..185e8ea8950aa50d37ee7f36a9e5ccfcdd1f9a71 100644
 --- a/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
 +++ b/src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1
 @@ -85,7 +85,7 @@ if (-not $env:VSCODE_PYTHON_AUTOACTIVATE_GUARD) {
@@ -1692,7 +1695,7 @@ index a700f5b..185e8ea 100644
  	}
  	# Remove any leftover Python activation env vars.
 diff --git a/src/vs/workbench/contrib/terminalContrib/autoReplies/common/terminalAutoRepliesConfiguration.ts b/src/vs/workbench/contrib/terminalContrib/autoReplies/common/terminalAutoRepliesConfiguration.ts
-index 9c54d61..e8d2a2a 100644
+index 9c54d61f0346279ba0a98fb48e6125af7c53caca..e8d2a2a53ddf3ccd7be97c0541a2fb707c81e6c5 100644
 --- a/src/vs/workbench/contrib/terminalContrib/autoReplies/common/terminalAutoRepliesConfiguration.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/autoReplies/common/terminalAutoRepliesConfiguration.ts
 @@ -17,7 +17,7 @@ export interface ITerminalAutoRepliesConfiguration {
@@ -1705,7 +1708,7 @@ index 9c54d61..e8d2a2a 100644
  		additionalProperties: {
  			oneOf: [{
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts
-index 67f1ca8..6a02422 100644
+index 67f1ca8d98faf5071988fce93ce8dfa76bc35b1c..6a0242228950ece656eef2a8bb6a908cdbdc256c 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts
 @@ -259,7 +259,7 @@ export const CreateAndRunTaskToolData: IToolData = {
@@ -1718,7 +1721,7 @@ index 67f1ca8..6a02422 100644
  							'type': 'string'
  						}
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts
-index f5bfb1a..a2a1ab9 100644
+index f5bfb1a0a2591f7dc59f62615e658508a681b0bc..a2a1ab9788ce66fad06590f42814cbcae3bb8a1d 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts
 @@ -169,7 +169,7 @@ export const RunTaskToolData: IToolData = {
@@ -1731,7 +1734,7 @@ index f5bfb1a..a2a1ab9 100644
  	icon: Codicon.tools,
  	source: ToolDataSource.Internal,
 diff --git a/src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts b/src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts
-index e126ffa..9cecbae 100644
+index e126ffa2eb1ce6dac268685d6edcab085662b392..9cecbae0bb4016a70e4cb74d57928ba60a6e3c74 100644
 --- a/src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts
 @@ -54,7 +54,7 @@ export function registerTerminalVoiceActions() {
@@ -1744,7 +1747,7 @@ index e126ffa..9cecbae 100644
  				primaryButton = localize('installExtension', "Install Extension");
  			}
 diff --git a/src/vs/workbench/contrib/update/browser/update.ts b/src/vs/workbench/contrib/update/browser/update.ts
-index bda9ab6..0c0de79 100644
+index bda9ab6f7d651c2dc0cd2c31a8bfe6a52c3f5339..0c0de79e97e240f2b7cef21007b9a8b42fb0b197 100644
 --- a/src/vs/workbench/contrib/update/browser/update.ts
 +++ b/src/vs/workbench/contrib/update/browser/update.ts
 @@ -383,8 +383,8 @@ export class SwitchProductQualityContribution extends Disposable implements IWor
@@ -1768,7 +1771,7 @@ index bda9ab6..0c0de79 100644
  							{
  								label: nls.localize({ key: 'use insiders', comment: ['&& denotes a mnemonic'] }, "&&Insiders"),
 diff --git a/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts b/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
-index e081b77..f14b826 100644
+index e081b77b885d7e5091144926ea6d0a5fc7053b04..f14b82600dcbf1205b9983bad3435dd1ce76469d 100644
 --- a/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
 +++ b/src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts
 @@ -53,12 +53,12 @@ function computeTrustedDomainContent(defaultTrustedDomains: string[], trustedDom
@@ -1787,7 +1790,7 @@ index e081b77..f14b826 100644
  
  	content += CONFIG_HELP_TEXT_AFTER;
 diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
-index ba81de5..4726e63 100644
+index ba81de54daf105db4b1560806f1047bd455847f1..4726e63de228420e82326e2b9f5471709bf598c9 100644
 --- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
 +++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
 @@ -50,7 +50,7 @@ registerAction2(class extends Action2 {
@@ -1818,7 +1821,7 @@ index ba81de5..4726e63 100644
  				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.newUntitledFile' }, "Open a new untitled text file (only applies when opening an empty window)."),
  				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'workbench.startupEditor.welcomePageInEmptyWorkbench' }, "Open the Welcome page when opening an empty workbench."),
 diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
-index 091acf6..6de918d 100644
+index 091acf690e07c535dae2e6277590bf959d35e4f8..6de918d935b1be6f714c802e5d024a64817e014e 100644
 --- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
 +++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
 @@ -1174,7 +1174,7 @@ export class GettingStartedPage extends EditorPane {
@@ -1840,7 +1843,7 @@ index 091acf6..6de918d 100644
  						if (res.ok) {
  							var extraAnnouncements = await res.json() as AnnouncementEntry[];
 diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
-index 30cc721..85b99c0 100644
+index 30cc72123be9cf4c7c74fe6c1199bc4bf42ac18d..85b99c0ac6f7f1326366466ad20772cc9a672b3b 100644
 --- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
 +++ b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts
 @@ -159,7 +159,7 @@ export const walkthroughsExtensionPoint = ExtensionsRegistry.registerExtensionPo
@@ -1853,7 +1856,7 @@ index 30cc721..85b99c0 100644
  										},
  										{
 diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts b/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
-index 1dd316d..1c0c865 100644
+index 1dd316d107c42dbe855dfc18dd51a15103e05d68..1c0c865dfd75e6d8c609ffe0718969b80787f50a 100644
 --- a/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
 +++ b/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
 @@ -205,12 +205,12 @@ const Button = (title: string, href: string) => `[${title}](${href})`;
@@ -1977,7 +1980,7 @@ index 1dd316d..1c0c865 100644
  				},
  				{
 diff --git a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts b/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
-index 366c70e..bce5614 100644
+index 366c70e6930a889bb5acb5d04f12285de6f20ac6..bce56145b9ed1af048e0d685b4023fc2686fa930 100644
 --- a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
 +++ b/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
 @@ -11,7 +11,7 @@ export default function content(accessor: ServicesAccessor) {
@@ -2017,7 +2020,7 @@ index 366c70e..bce5614 100644
  - Work with version control by pressing kb(workbench.view.scm). Understand how to stage, commit, change branches, and view diffs and more by reviewing the [version control documentation](https://code.visualstudio.com/docs/editor/versioncontrol)
  - Browse thousands of extensions in our integrated gallery by pressing kb(workbench.view.extensions). The [documentation](https://code.visualstudio.com/docs/editor/extension-gallery) will show you how to see the most popular extensions, disable installed ones and more.
 diff --git a/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts b/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
-index d0b50c0..3890b72 100644
+index d0b50c0ef262b5f329e8320d74c666ef7b1ace20..3890b7235161caee43a5d8809c184578f7b0a21f 100644
 --- a/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
 +++ b/src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts
 @@ -799,7 +799,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
@@ -2039,7 +2042,7 @@ index d0b50c0..3890b72 100644
  				scope: ConfigurationScope.APPLICATION
  			}
 diff --git a/src/vs/workbench/electron-browser/desktop.contribution.ts b/src/vs/workbench/electron-browser/desktop.contribution.ts
-index 14b4330..dfe6635 100644
+index 14b43303ac5b9223c16cd941b2a26577ac598d74..dfe6635d4145a37006dd26c27fc3524aa8dda55f 100644
 --- a/src/vs/workbench/electron-browser/desktop.contribution.ts
 +++ b/src/vs/workbench/electron-browser/desktop.contribution.ts
 @@ -450,11 +450,11 @@ import product from '../../platform/product/common/product.js';
@@ -2056,8 +2059,59 @@ index 14b4330..dfe6635 100644
  			},
  			'remote-debugging-port': {
  				type: 'string',
+diff --git a/src/vs/workbench/services/chat/common/chatEntitlementService.ts b/src/vs/workbench/services/chat/common/chatEntitlementService.ts
+index 8e7875bdf1b9b94b5983cac13f3e6a90df042b44..d078467c9e4d67b5ffa3652a0790747bc9ee3d28 100644
+--- a/src/vs/workbench/services/chat/common/chatEntitlementService.ts
++++ b/src/vs/workbench/services/chat/common/chatEntitlementService.ts
+@@ -223,16 +223,16 @@ export function isProUser(chatEntitlement: ChatEntitlement): boolean {
+ /**
+  * Gets the full plan name for the given chat entitlement
+  * @param chatEntitlement The chat entitlement to get the plan name for
+- * @returns The localized full plan name (e.g., "Copilot Pro", "Copilot Free")
++ * @returns The localized full plan name (e.g., "Chat Pro", "Chat Free")
+  */
+ export function getChatPlanName(chatEntitlement: ChatEntitlement): string {
+ 	switch (chatEntitlement) {
+ 		case ChatEntitlement.EDU:
+ 			return localize('plan.eduName', 'Copilot EDU');
+ 		case ChatEntitlement.Pro:
+-			return localize('plan.proName', 'Copilot Pro');
++			return localize('plan.proName', 'Chat Pro');
+ 		case ChatEntitlement.ProPlus:
+-			return localize('plan.proPlusName', 'Copilot Pro+');
++			return localize('plan.proPlusName', 'Chat Pro+');
+ 		case ChatEntitlement.Max:
+ 			return localize('plan.maxName', 'Copilot Max');
+ 		case ChatEntitlement.Business:
+@@ -240,7 +240,7 @@ export function getChatPlanName(chatEntitlement: ChatEntitlement): string {
+ 		case ChatEntitlement.Enterprise:
+ 			return localize('plan.enterpriseName', 'Copilot Enterprise');
+ 		default:
+-			return localize('plan.freeName', 'Copilot Free');
++			return localize('plan.freeName', 'Chat Free');
+ 	}
+ }
+ 
+@@ -1050,7 +1050,7 @@ export class ChatEntitlementRequests extends Disposable {
+ 		if (!this.lifecycleService.willShutdown) {
+ 			const { confirmed } = await this.dialogService.confirm({
+ 				type: Severity.Error,
+-				message: localize('unknownSignUpError', "An error occurred while signing up for the GitHub Copilot Free plan. Would you like to try again?"),
++				message: localize('unknownSignUpError', "An error occurred while signing up for the Chat Free plan. Would you like to try again?"),
+ 				detail,
+ 				primaryButton: localize('retry', "Retry")
+ 			});
+@@ -1067,7 +1067,7 @@ export class ChatEntitlementRequests extends Disposable {
+ 		if (!this.lifecycleService.willShutdown) {
+ 			this.dialogService.prompt({
+ 				type: Severity.Error,
+-				message: localize('unprocessableSignUpError', "An error occurred while signing up for the GitHub Copilot Free plan."),
++				message: localize('unprocessableSignUpError', "An error occurred while signing up for the Chat Free plan."),
+ 				detail: logDetails,
+ 				buttons: [
+ 					{
 diff --git a/src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts b/src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts
-index fc231ed..4d96f35 100644
+index fc231ed8f40994ce24ea6bb637dc96aaecc8b287..4d96f35b507e6fb2e4fdef16dbb19a342ed0494f 100644
 --- a/src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts
 +++ b/src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts
 @@ -1042,7 +1042,7 @@ export class ExtensionManagementService extends CommontExtensionManagementServic
@@ -2070,7 +2124,7 @@ index fc231ed..4d96f35 100644
  		const virtualWorkspaceSupportReason = getWorkspaceSupportTypeMessage(manifest.capabilities?.virtualWorkspaces);
  		const hasLimitedSupport = virtualWorkspaceSupport === 'limited' || !!virtualWorkspaceSupportReason;
 diff --git a/src/vs/workbench/services/extensions/common/extensionsRegistry.ts b/src/vs/workbench/services/extensions/common/extensionsRegistry.ts
-index 4a17b46..6f874e7 100644
+index 4a17b4649d8831877cac8b5f155be3972d8f46e6..6f874e72e135b31323c3f86cb5ac6d01afe45d58 100644
 --- a/src/vs/workbench/services/extensions/common/extensionsRegistry.ts
 +++ b/src/vs/workbench/services/extensions/common/extensionsRegistry.ts
 @@ -179,21 +179,21 @@ export const schema: IJSONSchema = {
@@ -2154,7 +2208,7 @@ index 4a17b46..6f874e7 100644
  				}
  			}
 diff --git a/src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts b/src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts
-index 2481106..c07643f 100644
+index 248110670db441711e808a90336edd47112cae7c..c07643f45eb958726939593cbaefc10cb97b143e 100644
 --- a/src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts
 +++ b/src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts
 @@ -165,7 +165,7 @@ export class NativeExtensionService extends AbstractExtensionService implements
@@ -2167,7 +2221,7 @@ index 2481106..c07643f 100644
  							this._instantiationService.invokeFunction((accessor) => {
  								const hostService = accessor.get(IHostService);
 diff --git a/src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts b/src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts
-index f18e1d5..0bfc3d8 100644
+index f18e1d53929944e1a57d35b5554d66b82ccf92cd..0bfc3d80a4309b579273a1e3a37e33766ed6999a 100644
 --- a/src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts
 +++ b/src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts
 @@ -197,7 +197,7 @@ export class UserDataProfileManagementService extends Disposable implements IUse

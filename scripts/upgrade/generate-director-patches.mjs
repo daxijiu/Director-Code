@@ -224,6 +224,7 @@ function isProductBuildRelease(filePath) {
   return [
     'product.json',
     'package.json',
+    'package-lock.json',
     'resources/server/manifest.json',
     'build/gulpfile.reh.ts',
     'build/gulpfile.vscode.ts',
@@ -287,6 +288,7 @@ function isAgentEngine(filePath) {
     'src/vs/workbench/contrib/chat/common/participants/chatAgents.ts',
     'src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts',
     'src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts',
+    'src/vs/platform/agentHost/test/node/mockAgent.ts',
     'src/vs/workbench/services/extensions/common/extensions.ts',
     'src/vs/workbench/services/extensions/test/common/extensions.test.ts',
   ].includes(filePath);
@@ -298,12 +300,15 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatStatus/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   return [
+    'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts',
     'src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts',
+    'src/vs/workbench/contrib/chat/browser/chatManagement/chatManagement.contribution.ts',
     'src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatActions.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts',
     'src/vs/workbench/contrib/chat/browser/actions/chatLanguageModelActions.ts',
     'src/vs/workbench/contrib/chat/browser/chatEditing/chatEditingExplanationModelManager.ts',
+    'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatAnonymousRateLimitedPart.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatThinkingContentPart.ts',
     'src/vs/workbench/contrib/chat/browser/widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.ts',
@@ -315,6 +320,7 @@ function isChatBuiltInMode(filePath) {
     'src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts',
     'src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts',
     'src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts',
+    'src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts',
     'src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts',
   ].includes(filePath);
 }
@@ -347,6 +353,7 @@ function isBranding(filePath) {
     'src/vs/platform/extensionManagement/node/extensionManagementService.ts',
     'src/vs/platform/extensions/common/extensionValidator.ts',
     'src/vs/platform/externalTerminal/node/externalTerminalService.ts',
+    'src/vs/platform/policy/node/nativePolicyService.ts',
     'src/vs/platform/terminal/common/terminalPlatformConfiguration.ts',
     'src/vs/platform/update/common/update.config.contribution.ts',
     'src/vs/platform/update/electron-main/abstractUpdateService.ts',

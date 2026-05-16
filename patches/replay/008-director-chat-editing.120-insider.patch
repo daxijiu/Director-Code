@@ -1,6 +1,6 @@
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts
 new file mode 100644
-index 0000000..58d58ae
+index 0000000000000000000000000000000000000000..58d58aede50ca8527c90fcef10700ec70720ed8a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/editing/directorChatEditingAdapter.ts
 @@ -0,0 +1,382 @@
@@ -388,7 +388,7 @@ index 0000000..58d58ae
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts
 new file mode 100644
-index 0000000..a4290fe
+index 0000000000000000000000000000000000000000..a4290fe400981438d1a1672cf697b4a65b04dc02
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/test/common/agentEngine/directorChatEditingAdapter.test.ts
 @@ -0,0 +1,195 @@

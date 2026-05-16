@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-16T20:06:48.211Z",
+  "generatedAt": "2026-05-16T21:48:51.872Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/120-insider-win32-x64-client.json",
@@ -60,57 +60,57 @@
     {
       "layer": "director",
       "patch": "patches/replay/002-director-branding.120-insider.patch",
-      "size": 168929,
-      "sha256": "16b5825f45109671ab1dd5478e3fecd09bb2bd29def903e37993068703b138e6",
+      "size": 178632,
+      "sha256": "915de490390261d1dcba894b3e0025e5bb1417b4bfa06dc87b0e51a756adad03",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/003-director-product-build-release.120-insider.patch",
-      "size": 21082,
-      "sha256": "09f06a980b94a94eab3d21fa1b4a55360591401e1c7d837958fe557ce2c8b257",
+      "size": 30903,
+      "sha256": "f5cbbfa3b1adf2b85a4e0c33724f1edc89a02c241f327f7637a0661f3b551b53",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/004-director-agent-engine.120-insider.patch",
-      "size": 1056856,
-      "sha256": "f9b0267cd6289f88c2cc911564340160197b11b79029c12045074562a59ea532",
+      "size": 1067713,
+      "sha256": "ba2df01e21140a5d6cf731f3d48390a17cc5411b92743be5736c43a33284ee82",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "size": 97375,
-      "sha256": "d4a64c0ac51cb34ce0e8f4d9c66e76a9f0d873fa7d49aeed0735949f50eb5aa6",
+      "size": 97111,
+      "sha256": "1597b445f27ecffdf3be16e2f1b51e68984ea5efe29c01f08e7f2f712cb1302f",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/006-director-text-polish.120-insider.patch",
-      "size": 20196,
-      "sha256": "30c9ae913104f62925f2420db95805e18ab46acb0bee0e1a511080711b060e4d",
+      "size": 19532,
+      "sha256": "7a575adcc31e9d2ad321b6dca3843a347e6b3fdc2bdcfc1433e500b1ea76dab0",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/007-director-tool-layer.120-insider.patch",
-      "size": 82052,
-      "sha256": "7a5f5a458d01105ca2022e405874d43807f934133ebcb9eece0add08f1db5a86",
+      "size": 82382,
+      "sha256": "12f900639654586092385668360d14c553876672fa4f2332129417293f75dbe7",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/008-director-chat-editing.120-insider.patch",
-      "size": 21189,
-      "sha256": "04daec12d5290bd3f75fa9e7027b0f38ee2b22ed4e5f8a800d14afa8bec5c75c",
+      "size": 21321,
+      "sha256": "c6278007133640563dabcb0d3439d3cc91eb403528942807df99af72ef418b3b",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/009-director-edit-tools.120-insider.patch",
-      "size": 45128,
-      "sha256": "c55466cc25cfbcfc9244c47c8c94103b44ae96ac43f62a4f4b01de6fa8ef65f8",
+      "size": 45326,
+      "sha256": "9e1d2be7be60aa045abb2fbed620c28c61b6bf68ff9997395c65b9e2bad3c84c",
       "status": "passed"
     }
   ],
@@ -135,7 +135,7 @@
     {
       "name": "director",
       "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "e678bf35d64b36ba884792abf8ba867a31d66ce06972e922b55b481c30a6e5a4"
+      "fileManifestHash": "bcb380208ce65d4a07665ee08d7840728e0f076e043779e2774702665fd97bfc"
     }
   ],
   "checks": {
