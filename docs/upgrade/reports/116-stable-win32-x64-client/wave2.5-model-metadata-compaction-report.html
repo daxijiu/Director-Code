@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Director Code Wave 2.5 Model Metadata, Compaction, Reasoning Effort Report</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #1f2328;
+      --muted: #667085;
+      --border: #d0d7de;
+      --accent: #0969da;
+      --accent-soft: #ddf4ff;
+      --warn: #9a6700;
+      --warn-soft: #fff8c5;
+      --good: #1a7f37;
+      --good-soft: #dafbe1;
+      --bad: #cf222e;
+      --bad-soft: #ffebe9;
+      --code: #f6f8fa;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --border: #30363d;
+        --accent: #58a6ff;
+        --accent-soft: #0c2d48;
+        --warn: #d29922;
+        --warn-soft: #3b2e00;
+        --good: #3fb950;
+        --good-soft: #0f2a17;
+        --bad: #ff7b72;
+        --bad-soft: #3d1518;
+        --code: #0d1117;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.58 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 24px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 { font-size: 30px; letter-spacing: 0; }
+    h2 {
+      margin-top: 30px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      font-size: 22px;
+    }
+    h3 {
+      margin-top: 20px;
+      font-size: 17px;
+    }
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 5px 0; }
+    code {
+      background: var(--code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 12px;
+    }
+    pre {
+      overflow: auto;
+      background: var(--code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      background: var(--panel);
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: color-mix(in srgb, var(--panel) 80%, var(--accent-soft));
+      font-weight: 600;
+    }
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .meta {
+      margin-top: 12px;
+      color: var(--muted);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 6px 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin: 14px 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      margin: 2px 4px 2px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .tag.good { color: var(--good); background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
+    .tag.warn { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 40%, var(--border)); }
+    .tag.bad { color: var(--bad); background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+    .small { color: var(--muted); font-size: 12px; }
+    .path { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>Wave 2.5: 模型元数据、上下文压缩、Reasoning Effort 调研报告</h1>
+    <p>目标是在 Wave 3 前补齐 Provider/Model Registry 的关键用户可见能力：上下文窗口与模型能力展示、模型选择处的 effort UI、以及更清楚可靠的上下文压缩策略。</p>
+    <div class="meta">
+      <div><strong>日期</strong>: 2026-05-16</div>
+      <div><strong>分支</strong>: <code>refactor/112-replay-baseline</code></div>
+      <div><strong>本轮性质</strong>: 只读调研 + HTML 报告</div>
+      <div><strong>建议阶段名</strong>: Phase 2 Wave 2.5</div>
+    </div>
+  </section>
+
+  <h2>0. 结论摘要</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>模型信息展示</h3>
+      <p>好改。Director 已经在 registry model entry 保存 <code>maxInputTokens</code>、<code>maxOutputTokens</code>、<code>capabilities</code>，设置页模型行也已有第二行 <code>.dc-model-meta</code>。需要扩展能力 schema 和统一 formatter。</p>
+      <span class="tag good">低到中风险</span>
+    </div>
+    <div class="card">
+      <h3>模型选择 tips</h3>
+      <p>好改。VS Code picker 已经展示 <code>metadata.tooltip</code>、context size 和 configurable properties。Director 只要在 <code>DirectorCodeModelProvider</code> 的 metadata 里补 <code>tooltip</code> 与 <code>configurationSchema</code>。</p>
+      <span class="tag good">低风险</span>
+    </div>
+    <div class="card">
+      <h3>Reasoning Effort</h3>
+      <p>中等改动。VS Code 116 已有 effort button 机制，关键是 Director 要生成 per-model variants，并在 Agent/LM request 中读取 <code>modelConfiguration.reasoningEffort</code> 后映射到各 provider 原生参数。</p>
+      <span class="tag warn">中风险</span>
+    </div>
+    <div class="card">
+      <h3>上下文压缩</h3>
+      <p>当前实现确实接近 open-agent-sdk-typescript，但比 OpenCode/Copilot 粗。它把整个历史替换成 summary + acknowledgement，没有保留最近 tail。Wave 2.5 建议先加精确说明、模型真实窗口接入、保留最近 2 轮的轻量改造。</p>
+      <span class="tag warn">中到高风险</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>推荐总方向:</strong> 新增 Director-owned <code>modelMetadata</code> 层，吸收 OpenCode 的 <code>limit/capabilities/variants</code> 形状；上游 VS Code picker 只消费 metadata，不放 Director 业务逻辑。
+  </div>
+
+  <h2>1. 参考产品形状</h2>
+  <h3>1.1 OpenCode: models.dev + tooltip + variants</h3>
+  <table>
+    <thead>
+      <tr><th>主题</th><th>OpenCode 实现</th><th>可复刻点</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>模型目录</td>
+        <td>主数据来自 <code>models.dev</code>，schema 包含 <code>limit.context/input/output</code>、<code>modalities.input/output</code>、<code>reasoning</code>、<code>tool_call</code>、<code>attachment</code>。本地 cache/snapshot 兜底，用户配置可 override。</td>
+        <td>Director 可保留现有 provider API -> CDN -> static catalog，但 catalog 结构改成 OpenCode 式 limits/capabilities/variants。</td>
+      </tr>
+      <tr>
+        <td>模型选择 tips</td>
+        <td><code>ModelTooltip</code> 显示 provider/model、允许输入类型、reasoning 是否支持、context limit。</td>
+        <td>Director picker tooltip 也按四行信息组织：名称、输入能力、推理/工具/stream、上下文窗口。</td>
+      </tr>
+      <tr>
+        <td>思考强度</td>
+        <td>把 effort 建模为 model <code>variants</code>。UI 在 prompt model selector 旁边有 variant select，常见值 <code>low/medium/high/max</code>。</td>
+        <td>Director 不应只做一个全局 thinking budget，应做 per-model variants。</td>
+      </tr>
+      <tr>
+        <td>媒体能力</td>
+        <td>能力是 <code>input.{text,image,audio,video,pdf}</code> 和 <code>output.{...}</code>。不支持媒体时，message lowering 会显式替换成文字错误/说明。</td>
+        <td>Director 当前只有 <code>vision</code>，应扩成 modality map，并在 image attachment / message conversion 层可用。</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small path">关键文件: <code>E:\Projects\sub-projects\opencode\packages\core\src\models.ts</code>, <code>E:\Projects\sub-projects\opencode\packages\opencode\src\provider\provider.ts</code>, <code>E:\Projects\sub-projects\opencode\packages\app\src\components\model-tooltip.tsx</code>, <code>E:\Projects\sub-projects\opencode\packages\opencode\src\provider\transform.ts</code></p>
+
+  <h3>1.2 VS Code/Copilot: provider metadata + picker configuration schema</h3>
+  <table>
+    <thead>
+      <tr><th>主题</th><th>VS Code/Copilot 实现</th><th>对 Director 的意义</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>模型 metadata</td>
+        <td><code>LanguageModelChatInformation</code> / <code>ILanguageModelChatMetadata</code> 由 provider 提供，字段包括 <code>tooltip</code>、<code>detail</code>、<code>maxInputTokens</code>、<code>maxOutputTokens</code>、<code>capabilities</code>。</td>
+        <td>Director 的 <code>DirectorCodeModelProvider</code> 可以直接填这些字段，不需要改 VS Code core。</td>
+      </tr>
+      <tr>
+        <td>模型 tips</td>
+        <td>picker hover 自动显示 tooltip、成本、max context。max context 用 <code>maxInputTokens + maxOutputTokens</code>。</td>
+        <td>Director 只需要保证 metadata 准确；tips UI 已有。</td>
+      </tr>
+      <tr>
+        <td>Effort UI</td>
+        <td>Copilot 在 metadata 的 <code>configurationSchema.properties.reasoningEffort</code> 设置 <code>group: "navigation"</code>，picker 会自动出现 Thinking Effort 按钮。</td>
+        <td>Director Wave 2.5 可以复用这个机制，不必先 fork picker UI。</td>
+      </tr>
+      <tr>
+        <td>请求传递</td>
+        <td>chat service 会把 <code>languageModelsService.getModelConfiguration(modelId)</code> 填入 <code>IChatAgentRequest.modelConfiguration</code>；LM API 请求则走 <code>options.configuration</code>。</td>
+        <td>Director Agent 和 direct LM provider 都需要读取这个配置，当前没有用。</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small path">关键文件: <code>E:\Projects\sub-projects\vscode\src\vs\workbench\contrib\chat\browser\widget\input\chatModelPicker.ts</code>, <code>E:\Projects\sub-projects\vscode\extensions\copilot\src\extension\conversation\vscode-node\languageModelAccess.ts</code>, <code>E:\Projects\sub-projects\vscode\src\vs\workbench\contrib\chat\common\languageModels.ts</code></p>
+
+  <h3>1.3 open-agent-sdk-typescript: Director 压缩逻辑来源</h3>
+  <table>
+    <thead>
+      <tr><th>行为</th><th>SDK</th><th>Director 当前</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>触发</td>
+        <td>估算消息 tokens 超过 <code>getContextWindowSize(model) - 13_000</code>。</td>
+        <td>一致，并额外支持全局 <code>maxInputTokens</code> override 与最小阈值 8k。</td>
+      </tr>
+      <tr>
+        <td>压缩方法</td>
+        <td>strip images，构造 summarization prompt，用同一模型生成 summary。</td>
+        <td>基本一致，但支持 compact model 选择和 compact model unavailable fallback。</td>
+      </tr>
+      <tr>
+        <td>注入方式</td>
+        <td>把历史替换成两个消息：summary user message + assistant acknowledgement。</td>
+        <td>一致。当前没有保留最近 tail。</td>
+      </tr>
+      <tr>
+        <td>工具输出</td>
+        <td>请求前临时截断大 tool_result。</td>
+        <td>一致，并增加 binary/base64 placeholder 检测。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. Director 当前状态与好不好改</h2>
+  <h3>2.1 已经具备的基础</h3>
+  <ul>
+    <li><code>IDirectorProviderModelEntry</code> 已有 <code>maxInputTokens</code>、<code>maxOutputTokens</code>、<code>capabilities</code>。</li>
+    <li><code>ProviderSettingsWidget.renderModelRow</code> 已有模型名称下方的 <code>.dc-model-meta</code> 第二行，当前只显示 id/family。</li>
+    <li><code>DirectorCodeModelProvider.provideLanguageModelChatInfo</code> 已向 VS Code 注册 <code>maxInputTokens</code>、<code>maxOutputTokens</code>、<code>capabilities</code>。</li>
+    <li><code>modelResolver</code> 已有三层 fallback: provider API -> CDN JSON -> static catalog。</li>
+    <li>VS Code 116 picker 已有 hover tips、context size、configuration schema 驱动的 effort/tokens 按钮。</li>
+    <li><code>IChatAgentRequest</code> 已有 <code>modelConfiguration</code>，Direct LM API request options 也已有 <code>configuration</code>。</li>
+  </ul>
+
+  <h3>2.2 当前缺口</h3>
+  <table>
+    <thead>
+      <tr><th>缺口</th><th>影响</th><th>改动难度</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>能力 schema 太粗</td>
+        <td>只有 <code>vision/toolCalling/streaming/thinking/agentMode</code>，无法表达 text/image/audio/video/pdf、输入/输出差异、image limit。</td>
+        <td>中。需要兼容旧字段。</td>
+      </tr>
+      <tr>
+        <td>Tooltip 未填</td>
+        <td>模型 picker tips 缺少 Director 自己的能力说明。</td>
+        <td>低。补 formatter + metadata.tooltip。</td>
+      </tr>
+      <tr>
+        <td>Reasoning variants 缺失</td>
+        <td>无法让 picker 显示 effort，也无法把 effort 传给 provider。</td>
+        <td>中。schema、request、provider mapping 都要补。</td>
+      </tr>
+      <tr>
+        <td>Agent compaction 没有使用 registry 真实窗口</td>
+        <td>动态发现的模型即使有 <code>maxInputTokens</code>，Agent 仍主要靠全局 setting 或 catalog/heuristic。</td>
+        <td>低。创建 AgentEngine config 时传 selected model 的 max input。</td>
+      </tr>
+      <tr>
+        <td>压缩不保留最近 tail</td>
+        <td>summary 可能丢失最新代码片段、最后一次工具输出、用户刚给的细节。</td>
+        <td>中。可在当前 compact 函数内加轻量 tail selection。</td>
+      </tr>
+      <tr>
+        <td>压缩边界非持久化 first-class message</td>
+        <td>不如 OpenCode 容易审计、重放和多次更新 summary。</td>
+        <td>高。不建议 Wave 2.5 一次做完整 OpenCode 化。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Wave 2.5 建议实现方案</h2>
+  <h3>3.1 新增/扩展 Director 模型元数据形状</h3>
+  <p>建议新建或扩展 Director-owned common helper，例如 <code>src/vs/workbench/contrib/directorCode/common/agentEngine/modelMetadata.ts</code>，避免把格式化散落在 UI/provider 里。</p>
+  <pre><code>export interface DirectorModelLimits {
+  readonly context?: number;
+  readonly input?: number;
+  readonly output?: number;
+}
+
+export interface DirectorModelModalities {
+  readonly text?: boolean;
+  readonly image?: boolean;
+  readonly audio?: boolean;
+  readonly video?: boolean;
+  readonly pdf?: boolean;
+}
+
+export interface DirectorModelCapabilities {
+  readonly input?: DirectorModelModalities;
+  readonly output?: DirectorModelModalities;
+  readonly toolCalling?: boolean;
+  readonly streaming?: boolean;
+  readonly reasoning?: boolean;
+  readonly thinking?: boolean;
+  readonly agentMode?: boolean;
+  readonly reasoningEcho?: false | ProviderReasoningEcho;
+}
+
+export interface DirectorReasoningVariant {
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly request: {
+    readonly reasoningEffort?: string;
+    readonly thinking?: { readonly type: string; readonly budget_tokens?: number; readonly effort?: string };
+    readonly providerOptions?: Record&lt;string, unknown&gt;;
+  };
+}</code></pre>
+  <p>兼容规则:</p>
+  <ul>
+    <li>旧 <code>maxInputTokens</code> 继续保留，映射为 <code>limits.input/context</code>。</li>
+    <li>旧 <code>maxOutputTokens</code> 映射为 <code>limits.output</code>。</li>
+    <li>旧 <code>vision: true</code> 映射为 <code>capabilities.input.image: true</code>。</li>
+    <li>旧 <code>thinking: true</code> 映射为 <code>capabilities.reasoning/thinking: true</code>。</li>
+  </ul>
+
+  <h3>3.2 数据来源策略</h3>
+  <table>
+    <thead>
+      <tr><th>来源</th><th>适用</th><th>Wave 2.5 做法</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Provider API</td>
+        <td>Anthropic/Gemini/Codex/Copilot 这类 endpoint 可返回 token limit 或 capabilities。</td>
+        <td>优先用。当前 Anthropic/Gemini/Codex 已解析 limit，继续扩展 capabilities。</td>
+      </tr>
+      <tr>
+        <td>OpenAI <code>/models</code></td>
+        <td>通常只给 id，缺 context/capability。</td>
+        <td>只作为模型 id 发现。元数据仍走 Director catalog/CDN。</td>
+      </tr>
+      <tr>
+        <td>Director CDN catalog</td>
+        <td>快速更新已知模型上下文/能力/variants。</td>
+        <td>扩 schema，加入 <code>limits</code>、<code>capabilities</code>、<code>variants</code>。</td>
+      </tr>
+      <tr>
+        <td>Static catalog</td>
+        <td>离线兜底、打包默认体验。</td>
+        <td>复刻 OpenCode 的模型 metadata 表理念，但只维护 Director 支持/常用模型。</td>
+      </tr>
+      <tr>
+        <td>用户 override</td>
+        <td>OpenAI-compatible、本地代理、私有模型。</td>
+        <td>后续可在设置页给高级编辑；Wave 2.5 至少保留手动模型 id + unknown metadata 显示。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.3 设置页模型列表显示</h3>
+  <p>改动点集中在 <code>ProviderSettingsWidget.renderModelRow</code>。当前:</p>
+  <pre><code>DOM.append(info, $('.dc-model-name')).textContent = modelDisplayName(instance, model);
+const meta = DOM.append(info, $('.dc-model-meta'));
+meta.textContent = model.displayName &amp;&amp; model.displayName !== model.id ? model.id : (model.family || model.id);</code></pre>
+  <p>建议改成共享 formatter:</p>
+  <pre><code>const metadata = resolveDirectorModelMetadata(instance, model);
+meta.textContent = formatModelSummaryLine(metadata);
+row.title = formatModelTooltip(metadata);</code></pre>
+  <p>建议展示格式:</p>
+  <ul>
+    <li>已知模型: <code>gpt-4o · 128k ctx · 16k out · Input: text, image · Tools · Stream · No thinking</code></li>
+    <li>推理模型: <code>claude-sonnet-4-6 · 200k ctx · 8k out · Input: text, image · Tools · Thinking · Effort: high/max</code></li>
+    <li>未知模型: <code>custom · context unknown · output 8k default · capabilities unknown</code></li>
+  </ul>
+  <p>CSS 基本够用。<code>.dc-model-meta</code> 已是 12px 第二行；如果内容较长，可加 <code>white-space: normal</code> 或只显示 short line，完整内容放 title。</p>
+
+  <h3>3.4 模型选择界面 tips</h3>
+  <p>Director 不必先改 VS Code picker。只需在 <code>DirectorCodeModelProvider</code> metadata 里填:</p>
+  <ul>
+    <li><code>tooltip</code>: 多行字符串，复刻 OpenCode 的 ModelTooltip 内容。</li>
+    <li><code>detail</code>: 可选短标签，例如 <code>200k ctx · image · thinking</code>。</li>
+    <li><code>maxInputTokens/maxOutputTokens</code>: 继续提供，VS Code hover 会自动显示 Max context。</li>
+    <li><code>capabilities.vision/toolCalling/agentMode</code>: 继续映射给 VS Code 附件/Agent mode。</li>
+    <li><code>configurationSchema</code>: 有 variants 时添加 reasoning effort。</li>
+  </ul>
+  <pre><code>configurationSchema: hasReasoningVariants(model) ? {
+  properties: {
+    reasoningEffort: {
+      type: 'string',
+      title: 'Thinking Effort',
+      enum: variants.map(v =&gt; v.id),
+      enumItemLabels: variants.map(v =&gt; v.label),
+      enumDescriptions: variants.map(v =&gt; v.description ?? ''),
+      default: defaultVariantId,
+      group: 'navigation',
+    },
+  },
+} : undefined</code></pre>
+
+  <h3>3.5 Reasoning effort 请求链路</h3>
+  <p>需要同时覆盖 Chat Agent 和 Direct Language Model API 两条路径。</p>
+  <table>
+    <thead>
+      <tr><th>路径</th><th>当前状态</th><th>改法</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Chat Agent</td>
+        <td><code>DirectorCodeAgent.invoke</code> 收到 <code>request.modelConfiguration</code> 但未读取。</td>
+        <td>解析 <code>request.modelConfiguration?.reasoningEffort</code>，用 selected model variants 映射成 <code>AgentEngineConfig.thinking</code> 或 provider request options。</td>
+      </tr>
+      <tr>
+        <td>Direct LM API</td>
+        <td><code>DirectorCodeModelProvider.sendChatRequest</code> 参数名为 <code>_options</code>，当前未使用 <code>options.configuration</code>。</td>
+        <td>读取 <code>options.configuration?.reasoningEffort</code>，传给 provider。</td>
+      </tr>
+      <tr>
+        <td>Provider abstraction</td>
+        <td><code>CreateMessageParams</code> 只有 Anthropic/Gemini 风格 <code>thinking</code>。</td>
+        <td>扩展为 <code>reasoningEffort?</code> 或 <code>providerOptions?</code>。OpenAI provider 映射 <code>reasoning_effort</code> 或对应 API 选项；Anthropic/Gemini 继续映射 <code>thinking</code>/<code>thinkingConfig</code>。</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>最小推荐 variants:</p>
+  <ul>
+    <li>OpenAI o/gpt reasoning family: <code>low</code>, <code>medium</code>, <code>high</code>，必要时 <code>minimal</code>。</li>
+    <li>Anthropic thinking-capable models: <code>high</code> = 16k budget, <code>max</code> = min(output - 1, 31,999)。</li>
+    <li>Gemini 2.5: <code>high</code> = 16k budget, <code>max</code> = 24,576/32,768 budget。</li>
+    <li>Codex OAuth models: 如果 backend 支持 effort，就从 endpoint/Catalog 给 variants；否则先只显示 Thinking capability，不暴露 effort。</li>
+  </ul>
+
+  <h2>4. 会话上下文压缩深挖</h2>
+  <h3>4.1 Director 当前压缩完整流程</h3>
+  <ol>
+    <li>每个 Agent loop turn 开始时，调用 <code>shouldAutoCompact(messages, model, state, maxInputTokens)</code>。</li>
+    <li>估算 tokens 使用 UTF-8 byte / 3.5 的粗估；阈值是 <code>maxInputTokens - 13_000</code> 或 <code>getContextWindowSize(model) - 13_000</code>，最低 8k。</li>
+    <li>压缩前 strip image blocks，防止总结请求吞掉大量图片 tokens。</li>
+    <li><code>buildCompactionPrompt</code> 把所有历史线性化: string message 截 5,000 chars，text block 截 3,000 chars，tool result 截 1,000 chars。</li>
+    <li>调用 compact model 或主模型，<code>maxTokens: 8192</code>，system prompt 要求保留上下文、决策、文件修改、工具输出、当前状态。</li>
+    <li>压缩成功要求 summary 长度至少 10，并且新两条消息估算 tokens 小于原始 tokens 的 90%。否则视为失败，保留原历史并累计失败次数。</li>
+    <li>成功后把整段 history 替换为:
+      <pre><code>User: [Previous conversation summary]
+
+&lt;summary&gt;
+
+[End of summary - conversation continues below]
+
+Assistant: I understand the context from the previous conversation. I'll continue from where we left off.</code></pre>
+    </li>
+    <li>Agent 继续当前 turn；请求前再对 tool result 做 micro-compact。</li>
+    <li>如果 provider 报 prompt too long 且本次还没 compact 过，会 compact 一次，回滚 turn counter 并 retry 当前 turn。</li>
+    <li>请求结束时 <code>DirectorCodeAgent</code> 把 engine messages 写入内存 replay snapshot；下一轮如果 VS Code rich history 缺工具细节，会优先用 replay snapshot。</li>
+  </ol>
+
+  <h3>4.2 与 OpenCode 的差距</h3>
+  <table>
+    <thead>
+      <tr><th>能力</th><th>OpenCode</th><th>Director 当前</th><th>Wave 2.5 建议</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>保留最近上下文</td>
+        <td>默认保留最近 2 个 user turns，并按 token budget 裁剪。</td>
+        <td>不保留 tail，全部总结掉。</td>
+        <td>加 <code>tailTurns=2</code> 与 <code>preserveRecentTokens=2k-8k</code> 的轻量 selection。</td>
+      </tr>
+      <tr>
+        <td>压缩边界</td>
+        <td>synthetic compaction user part + summary assistant message。</td>
+        <td>普通 user summary + ack assistant，且主要存在 engine/replay snapshot。</td>
+        <td>先保留现状，增加更明确 <code>compact_boundary</code> progress/metadata；完整 first-class boundary 留给后续。</td>
+      </tr>
+      <tr>
+        <td>旧工具输出 pruning</td>
+        <td>可标记旧 tool output compacted，保护最近工具。</td>
+        <td>只有请求前 micro-compact，不持久化。</td>
+        <td>Wave 2.5 可不做持久 pruning，但 tail 里应避免吞掉最后一次重要工具结果。</td>
+      </tr>
+      <tr>
+        <td>自动继续</td>
+        <td>compact 后可生成 synthetic continue user message。</td>
+        <td>当前 compact 在同一 turn 内继续执行，不需要额外 continue message。</td>
+        <td>不建议改变，避免影响 VS Code chat request 生命周期。</td>
+      </tr>
+      <tr>
+        <td>可配置</td>
+        <td><code>compaction.auto/prune/tail_turns/preserve_recent_tokens/reserved</code>。</td>
+        <td>只有全局 context window 和 compact model。</td>
+        <td>至少增加内部常量或 hidden setting；公开设置可后置。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.3 推荐的 Wave 2.5 压缩改造</h3>
+  <ol>
+    <li><strong>接入真实模型窗口:</strong> 在 <code>DirectorCodeAgent.invoke</code> 解析出 selected registry model 后，如果用户没有设置全局 <code>directorCode.ai.maxInputTokens</code>，把 <code>registryModel.maxInputTokens</code> 传给 <code>AgentEngineConfig.maxInputTokens</code>。</li>
+    <li><strong>保留最近 tail:</strong> 在 <code>compactConversation</code> 中拆分 <code>head</code> 与 <code>tail</code>。summary prompt 只总结 head，返回 <code>[summary user, ack assistant, ...tail]</code>。</li>
+    <li><strong>tail selection:</strong> 从最后往前找最近 N 个 user turns，预算默认 <code>min(8_000, max(2_000, floor(usable * 0.25)))</code>，复刻 OpenCode 思路但实现更轻。</li>
+    <li><strong>避免重复总结 summary:</strong> 如果第一条消息已经是 <code>[Previous conversation summary]</code>，再次 compact 时把旧 summary 当 previous summary anchor，并总结 summary 之后的 head。</li>
+    <li><strong>进度可见:</strong> 成功 compact 时现有 <code>compact_boundary</code> 可扩 metadata: original tokens、new tokens、tail messages count、used compact model。</li>
+  </ol>
+
+  <h2>5. 文件落点和 replay ownership</h2>
+  <table>
+    <thead>
+      <tr><th>改动</th><th>主要文件</th><th>Replay stage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>模型 metadata schema/formatter</td>
+        <td class="path"><code>src/vs/workbench/contrib/directorCode/common/agentEngine/modelMetadata.ts</code> 新增；扩 <code>modelCatalog.ts</code>、<code>providerTypes.ts</code>、<code>providerRegistry.ts</code>、<code>modelResolver.ts</code></td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+      <tr>
+        <td>设置页模型第二行</td>
+        <td class="path"><code>src/vs/workbench/contrib/directorCode/browser/agentEngine/providerSettingsWidget.ts</code>；可能少量 CSS</td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+      <tr>
+        <td>picker tooltip / effort schema</td>
+        <td class="path"><code>src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeModelProvider.ts</code></td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+      <tr>
+        <td>Chat Agent effort 请求</td>
+        <td class="path"><code>directorCodeAgent.ts</code>、<code>agentEngineTypes.ts</code>、<code>agentEngine.ts</code>、providers</td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+      <tr>
+        <td>Direct LM effort 请求</td>
+        <td class="path"><code>directorCodeModelProvider.ts</code>、providers</td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+      <tr>
+        <td>压缩 tail/真实窗口</td>
+        <td class="path"><code>compact.ts</code>、<code>tokens.ts</code>、<code>directorCodeAgent.ts</code>、tests</td>
+        <td><code>004-director-agent-engine.116.patch</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>预计不需要改 upstream picker。只有当当前 Director Chat UI 没走 UBB effort button 时，才考虑在 <code>005-director-chat-built-in-mode.116.patch</code> 加极薄 hook；优先避免。</p>
+
+  <h2>6. 测试建议</h2>
+  <table>
+    <thead>
+      <tr><th>测试</th><th>覆盖点</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>directorCodeModelMetadata.test.ts</code></td>
+        <td>limits/capabilities/variants 合并、旧字段兼容、unknown metadata formatter。</td>
+      </tr>
+      <tr>
+        <td><code>directorCodeModelProvider.test.ts</code></td>
+        <td>metadata.tooltip、detail、configurationSchema、VS Code capabilities 映射。</td>
+      </tr>
+      <tr>
+        <td><code>providerSettingsWidget.test.ts</code></td>
+        <td>模型列表第二行包含 context、input modalities、tool/thinking tags。</td>
+      </tr>
+      <tr>
+        <td><code>compact.test.ts</code></td>
+        <td>压缩后 summary + ack + retained tail；image stripping；tool result 截断；失败不替换历史。</td>
+      </tr>
+      <tr>
+        <td><code>agentEngine.test.ts</code></td>
+        <td>选中模型 maxInputTokens 传入 auto-compact；prompt-too-long retry；effort 进入 provider request。</td>
+      </tr>
+      <tr>
+        <td>Browser/UI smoke</td>
+        <td>Director Settings 模型列表第二行可读；Chat model picker hover 可见 tips；有 variants 时 effort button 出现并可切换。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. 建议分批</h2>
+  <ol>
+    <li><strong>Wave 2.5a - Metadata display:</strong> schema/formatter、settings model row、picker tooltip、tests。风险最低，用户立刻可见。</li>
+    <li><strong>Wave 2.5b - Reasoning variants:</strong> catalog variants、configurationSchema、Agent/LM request propagation、provider mapping、tests。</li>
+    <li><strong>Wave 2.5c - Compaction hardening:</strong> selected model maxInputTokens、retained tail、summary anchor、progress metadata、tests。</li>
+  </ol>
+  <p>如果只做一个 PR/commit，也建议按上面顺序实现和验证，避免 effort/provider request 和 compaction 同时变化时难以定位回归。</p>
+
+  <h2>8. 风险清单</h2>
+  <ul>
+    <li><strong>模型能力假阳性:</strong> 如果本地 catalog 误标 image/audio/video，用户会以为能用但 provider 报错。需要 <code>metadataSource</code> 和 unknown 显示。</li>
+    <li><strong>OpenAI-compatible 多样性:</strong> 同一个 OpenAI-compatible endpoint 对 <code>reasoning_effort</code> 支持差异很大。默认只给已知模型/用户 override 开 variants。</li>
+    <li><strong>VS Code configuration schema 生命周期:</strong> picker effort config 存在 language model service 内，model identifier 变化会丢配置。Director identifier 已包含 provider instance id，符合预期。</li>
+    <li><strong>压缩 tail 角色顺序:</strong> 必须保证 summary user + ack assistant 后追加的 tail 仍是 provider 可接受的 user/assistant 交替历史。</li>
+    <li><strong>Replay landing:</strong> 最终源码改动必须回写 <code>004-director-agent-engine.116.patch</code>，不能只改 <code>vscode.generated</code>。</li>
+  </ul>
+
+  <h2>9. 推荐接受标准</h2>
+  <ul>
+    <li>Director Settings 模型列表每个模型名称下方显示 context/output/input modalities/tool/thinking/effort summary。</li>
+    <li>Chat model picker hover tips 显示 OpenCode 风格的模型详情；VS Code 自带 max context section 仍正常。</li>
+    <li>支持 variants 的模型在 picker 旁出现 Thinking Effort UI，选择值能进入 Agent request 和 direct LM request。</li>
+    <li>OpenAI/Anthropic/Gemini/Codex provider 对不支持的 effort 不发送错误字段。</li>
+    <li>自动 compact 使用 selected model 的真实 max input；压缩后保留最近 tail；prompt-too-long fallback 仍可 retry。</li>
+    <li>Clean materialize 后至少跑 replay validators、TS compile/transpile、相关 unit tests 和一轮 browser model picker/settings smoke。</li>
+  </ul>
+</main>
+</body>
+</html>
