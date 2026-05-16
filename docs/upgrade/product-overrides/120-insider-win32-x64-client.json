@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "policy": "director-owned-keys-only",
+  "set": {
+    "nameShort": "Director-Code",
+    "nameLong": "Director-Code",
+    "applicationName": "director-code",
+    "dataFolderName": ".director-code",
+    "linuxIconName": "director-code",
+    "serverApplicationName": "director-code-server",
+    "serverDataFolderName": ".director-code-server",
+    "darwinBundleIdentifier": "com.director-code",
+    "darwinProfileUUID": "47827DD9-4734-49A0-AF80-7E19B11495CC",
+    "darwinProfilePayloadUUID": "CF808BE7-53F3-46C6-A7E2-7EDB98A5E959",
+    "tunnelApplicationName": "director-code-tunnel",
+    "urlProtocol": "director-code",
+    "reportIssueUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+    "downloadUrl": "https://github.com/daxijiu/Director-Code/releases",
+    "updateUrl": "https://raw.githubusercontent.com/daxijiu/Director-Code/refs/heads/main",
+    "licenseUrl": "https://github.com/daxijiu/Director-Code/blob/master/LICENSE",
+    "serverLicenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+    "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/",
+    "documentationUrl": "https://daxijiu.github.io/Director-Code/",
+    "introductoryVideosUrl": "https://daxijiu.github.io/Director-Code/",
+    "keyboardShortcutsUrlLinux": "https://daxijiu.github.io/Director-Code/",
+    "keyboardShortcutsUrlMac": "https://daxijiu.github.io/Director-Code/",
+    "keyboardShortcutsUrlWin": "https://daxijiu.github.io/Director-Code/",
+    "releaseNotesUrl": "https://github.com/daxijiu/Director-Code/releases",
+    "requestFeatureUrl": "https://github.com/daxijiu/Director-Code/issues/new",
+    "tipsAndTricksUrl": "https://daxijiu.github.io/Director-Code/",
+    "twitterUrl": "https://github.com/daxijiu/Director-Code",
+    "win32AppUserModelId": "DirectorCode.DirectorCode",
+    "win32DirName": "Director-Code",
+    "win32MutexName": "directorcode",
+    "win32NameVersion": "Director-Code",
+    "win32RegValueName": "DirectorCode",
+    "win32ShellNameShort": "Director-Code",
+    "win32AppId": "{{FEDDF97F-C8B6-41A4-9EB2-2C1A9508D15A}",
+    "win32x64AppId": "{{090D32AF-B850-4F8C-8EAB-21BAE98B32A2}",
+    "win32arm64AppId": "{{78331107-FA83-4537-8FDD-8F9909B808C7}",
+    "win32UserAppId": "{{DB9D8238-04F1-414F-8444-40880ACC1ADF}",
+    "win32x64UserAppId": "{{268AD3D7-13D7-48BD-B05D-413FFCF6A1A9}",
+    "win32arm64UserAppId": "{{A5EC4F3F-B08C-4613-B1F6-0548C6B960BE}",
+    "win32TunnelServiceMutex": "directorcode-tunnelservice",
+    "win32TunnelMutex": "directorcode-tunnel",
+    "win32ContextMenu": {
+      "x64": {
+        "clsid": "D910D5E6-B277-4F4A-BDC5-759A34EEE25D"
+      },
+      "arm64": {
+        "clsid": "4852FC55-4A84-4EA1-9C86-D53BE3DF83C0"
+      }
+    },
+    "defaultChatAgent": {
+      "extensionId": "director-code.agent",
+      "chatExtensionId": "",
+      "chatExtensionOutputId": "",
+      "chatExtensionOutputExtensionStateCommand": "",
+      "provider": {
+        "default": {
+          "id": "director-code",
+          "name": "Director Code"
+        },
+        "enterprise": {
+          "id": "",
+          "name": ""
+        },
+        "google": {
+          "id": "",
+          "name": ""
+        },
+        "apple": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "providerExtensionId": "",
+      "providerUriSetting": "",
+      "providerScopes": [],
+      "documentationUrl": "https://daxijiu.github.io/Director-Code/",
+      "skusDocumentationUrl": "https://github.com/daxijiu/Director-Code",
+      "publicCodeMatchesUrl": "",
+      "termsStatementUrl": "https://daxijiu.github.io/Director-Code/terms/",
+      "privacyStatementUrl": "https://daxijiu.github.io/Director-Code/privacy/",
+      "manageSettingsUrl": "command:director-code.openSettings",
+      "managePlanUrl": "",
+      "completionsRefreshTokenCommand": "",
+      "chatRefreshTokenCommand": "",
+      "upgradePlanUrl": "",
+      "manageOverageUrl": "",
+      "signUpUrl": "",
+      "entitlementUrl": "",
+      "entitlementSignupLimitedUrl": "",
+      "tokenEntitlementUrl": "",
+      "mcpRegistryDataUrl": "",
+      "completionsAdvancedSetting": "",
+      "completionsEnablementSetting": "",
+      "nextEditSuggestionsSetting": "",
+      "completionsMenuCommand": "",
+      "chatQuotaExceededContext": "",
+      "completionsQuotaExceededContext": "",
+      "walkthroughCommand": "",
+      "generateCommitMessageCommand": "",
+      "resolveMergeConflictsCommand": ""
+    }
+  }
+}

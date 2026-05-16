@@ -11,6 +11,11 @@
       "profile": "116-stable-win32-x64-client",
       "path": "docs/upgrade/profiles/116-stable-win32-x64-client.json",
       "validationMode": "canonical-replay"
+    },
+    {
+      "profile": "120-insider-win32-x64-client",
+      "path": "docs/upgrade/profiles/120-insider-win32-x64-client.json",
+      "validationMode": "canonical-replay"
     }
   ]
 }

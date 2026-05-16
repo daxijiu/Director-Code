@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "validationMode": "canonical-replay",
+  "quality": "insider",
+  "osName": "windows",
+  "platform": "win32",
+  "arch": "x64",
+  "buildTarget": "client",
+  "releaseVersion": "1.120.03280-insider",
+  "directorVersion": "1.120.0",
+  "BUILD_SOURCEVERSION": "0958016b2af9f09bb4257e0df4a95e2f90590f9f",
+  "APP_NAME": "Director-Code",
+  "BINARY_NAME": "director-code",
+  "VSCODE_QUALITY": "insider",
+  "OS_NAME": "windows",
+  "VSCODE_ARCH": "x64",
+  "upstreams": {
+    "vscode": {
+      "remote": "https://github.com/microsoft/vscode.git",
+      "tag": "1.120.0",
+      "commit": "0958016b2af9f09bb4257e0df4a95e2f90590f9f"
+    },
+    "vscodium": {
+      "remote": "https://github.com/VSCodium/vscodium.git",
+      "tag": "insider-120",
+      "commit": "82fad9417eb473df07c9c398fef01023be4e036d"
+    }
+  },
+  "replayInputs": {
+    "patchSeries": "patches/series.120-insider.json",
+    "vscodiumLayerPatch": "patches/replay/001-vscodium-layer.120-insider.patch",
+    "directorDeltaPatches": [
+      "patches/replay/002-director-branding.120-insider.patch",
+      "patches/replay/003-director-product-build-release.120-insider.patch",
+      "patches/replay/004-director-agent-engine.120-insider.patch",
+      "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
+      "patches/replay/006-director-text-polish.120-insider.patch",
+      "patches/replay/007-director-tool-layer.120-insider.patch",
+      "patches/replay/008-director-chat-editing.120-insider.patch",
+      "patches/replay/009-director-edit-tools.120-insider.patch"
+    ],
+    "vscodiumLayerManifest": "docs/upgrade/vscodium-layer.120-insider.json",
+    "prepareParityReport": "docs/upgrade/reports/120-insider-win32-x64-client/prepare-parity-report.json"
+  },
+  "expectedPaths": {
+    "product": "docs/upgrade/expected/120-insider-win32-x64-client/product.expected.json",
+    "package": "docs/upgrade/expected/120-insider-win32-x64-client/package.expected.json",
+    "serverManifest": "docs/upgrade/expected/120-insider-win32-x64-client/server-manifest.expected.json",
+    "announcementsBuiltin": "docs/upgrade/expected/120-insider-win32-x64-client/announcements-builtin.expected.json",
+    "announcementsExtra": "docs/upgrade/expected/120-insider-win32-x64-client/announcements-extra.expected.json"
+  },
+  "reportPaths": {
+    "upgradeEstimator": "docs/upgrade/reports/120-insider-win32-x64-client/upgrade-estimator-report.json",
+    "prepareParity": "docs/upgrade/reports/120-insider-win32-x64-client/prepare-parity-report.json",
+    "vscodiumLayer": "docs/upgrade/reports/120-insider-win32-x64-client/vscodium-layer-report.json",
+    "materialize": "docs/upgrade/reports/120-insider-win32-x64-client/materialize-report.json",
+    "canonicalManifest": "docs/upgrade/reports/120-insider-win32-x64-client/canonical-manifest-report.json"
+  },
+  "allowlistPaths": {
+    "depsSourceMutation": "docs/upgrade/deps-source-mutation-allowlist.120-insider.json",
+    "overlay": "docs/upgrade/overlay-allowlist.120-insider.json",
+    "productDelete": "docs/upgrade/product.delete.120-insider.json"
+  },
+  "canonicalManifestPath": "docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json",
+  "productOverridePath": "docs/upgrade/product-overrides/120-insider-win32-x64-client.json",
+  "productOwnedKeysPath": "docs/upgrade/product-owned-keys.120-insider.json",
+  "artifactPaths": {
+    "generatedRoot": "vscode.generated",
+    "directorSource": "vscode.generated/layers/director/vscode",
+    "clientIntermediate": "vscode.generated/layers/director/VSCode-win32-x64",
+    "outRoot": "artifacts/out/insider/win32-x64",
+    "generatedReports": "artifacts/generated/120-insider-win32-x64-client",
+    "committedReports": "docs/upgrade/reports/120-insider-win32-x64-client"
+  },
+  "toolRanges": {
+    "node": ">=22 <23",
+    "git": ">=2.40",
+    "bash": "git-bash-or-compatible"
+  },
+  "canonicalCommand": "scripts/upgrade/materialize-vscode.sh --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target vscode.generated --up-to-layer director --install-deps --build-artifact --fresh-cache --force"
+}

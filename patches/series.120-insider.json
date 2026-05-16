@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "generatedAt": "2026-05-16T17:53:46.638Z",
+  "policy": {
+    "source": "profile replayInputs",
+    "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
+    "missingPlannedPatchRule": "planned Director semantic patches may be deferred until ported; enabled patches must exist and match sha256"
+  },
+  "patches": [
+    {
+      "path": "patches/replay/001-vscodium-layer.120-insider.patch",
+      "sha256": "386a7484711d6e9c89b437d4b8a7a6237b110be62729a6ef277ee6f603bb3b4f",
+      "enabled": true,
+      "status": "enabled",
+      "layer": "vscodium",
+      "stage": "aggregate-replay",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 1,
+      "placeholders": []
+    },
+    {
+      "path": "patches/replay/002-director-branding.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "branding",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 2,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/003-director-product-build-release.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "product-build-release",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 3,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/004-director-agent-engine.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "agent-engine",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 4,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "chat-built-in-mode",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 5,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/006-director-text-polish.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "text-polish",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 6,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/007-director-tool-layer.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "tool-layer",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 7,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/008-director-chat-editing.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "chat-editing",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 8,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    },
+    {
+      "path": "patches/replay/009-director-edit-tools.120-insider.patch",
+      "sha256": "pending",
+      "enabled": false,
+      "status": "deferred",
+      "layer": "director",
+      "stage": "edit-tools",
+      "platforms": [
+        "win32"
+      ],
+      "arches": [
+        "x64"
+      ],
+      "qualities": [
+        "insider"
+      ],
+      "targets": [
+        "client"
+      ],
+      "order": 9,
+      "placeholders": [],
+      "note": "planned patch; deferred until ported"
+    }
+  ]
+}

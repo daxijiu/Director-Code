@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Director-Code 116 -> 120 Insider 升级冲突报告</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f7f8fa;
+			--paper: #ffffff;
+			--ink: #172033;
+			--muted: #5f6b7a;
+			--line: #d9dee7;
+			--accent: #215a9f;
+			--accent-soft: #e9f1fb;
+			--risk-high: #a33a2f;
+			--risk-medium: #9a6400;
+			--risk-low: #267348;
+			--risk-soft-high: #fdecea;
+			--risk-soft-medium: #fff3d8;
+			--risk-soft-low: #eaf6ef;
+			--code: #f1f4f8;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+			line-height: 1.55;
+		}
+
+		header {
+			background: #10243d;
+			color: #fff;
+			padding: 32px 40px;
+		}
+
+		header h1 {
+			margin: 0 0 10px;
+			font-size: 30px;
+			font-weight: 650;
+			letter-spacing: 0;
+		}
+
+		header p {
+			margin: 4px 0;
+			color: #d7e2ef;
+			font-size: 14px;
+		}
+
+		main {
+			max-width: 1180px;
+			margin: 0 auto;
+			padding: 28px 24px 56px;
+		}
+
+		section {
+			background: var(--paper);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 22px 24px;
+			margin: 18px 0;
+		}
+
+		h2 {
+			margin: 0 0 14px;
+			font-size: 21px;
+			font-weight: 650;
+		}
+
+		h3 {
+			margin: 20px 0 10px;
+			font-size: 16px;
+			font-weight: 650;
+		}
+
+		p {
+			margin: 8px 0;
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 12px;
+			margin: 16px 0 8px;
+		}
+
+		.metric {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 14px;
+			background: #fbfcfe;
+		}
+
+		.metric strong {
+			display: block;
+			font-size: 26px;
+			line-height: 1.1;
+		}
+
+		.metric span {
+			display: block;
+			margin-top: 4px;
+			color: var(--muted);
+			font-size: 13px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 12px 0 18px;
+			font-size: 13px;
+		}
+
+		th,
+		td {
+			border: 1px solid var(--line);
+			padding: 8px 10px;
+			text-align: left;
+			vertical-align: top;
+		}
+
+		th {
+			background: #f2f5f9;
+			font-weight: 650;
+		}
+
+		code {
+			background: var(--code);
+			border: 1px solid #dfe5ee;
+			border-radius: 4px;
+			padding: 1px 5px;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 12px;
+		}
+
+		.badge {
+			display: inline-block;
+			border-radius: 999px;
+			padding: 2px 9px;
+			font-size: 12px;
+			font-weight: 650;
+			white-space: nowrap;
+		}
+
+		.high {
+			color: var(--risk-high);
+			background: var(--risk-soft-high);
+		}
+
+		.medium {
+			color: var(--risk-medium);
+			background: var(--risk-soft-medium);
+		}
+
+		.low {
+			color: var(--risk-low);
+			background: var(--risk-soft-low);
+		}
+
+		.info {
+			color: var(--accent);
+			background: var(--accent-soft);
+		}
+
+		.callout {
+			border-left: 4px solid var(--accent);
+			background: var(--accent-soft);
+			padding: 12px 14px;
+			margin: 14px 0;
+			border-radius: 6px;
+		}
+
+		.warning {
+			border-left-color: var(--risk-medium);
+			background: var(--risk-soft-medium);
+		}
+
+		ul {
+			margin: 8px 0 14px 22px;
+			padding: 0;
+		}
+
+		li {
+			margin: 5px 0;
+		}
+
+		details {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			margin: 12px 0;
+			background: #fbfcfe;
+		}
+
+		summary {
+			cursor: pointer;
+			padding: 12px 14px;
+			font-weight: 650;
+		}
+
+		details .detail-body {
+			border-top: 1px solid var(--line);
+			padding: 12px 14px;
+			overflow-x: auto;
+		}
+
+		.path-list {
+			columns: 2;
+			column-gap: 30px;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 12px;
+			line-height: 1.45;
+		}
+
+		.path-list div {
+			break-inside: avoid;
+			margin-bottom: 4px;
+		}
+
+		@media (max-width: 880px) {
+			header {
+				padding: 24px;
+			}
+
+			main {
+				padding: 18px 14px 40px;
+			}
+
+			.grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.path-list {
+				columns: 1;
+			}
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Director-Code 116 -> 120 Insider 升级冲突报告</h1>
+		<p>生成时间：2026-05-17 01:28 +08:00；分支：<code>120-replay-baseline</code></p>
+		<p>范围：基于本地缓存的 VS Code <code>1.120.0</code> 与 VSCodium <code>insider-120</code>，探测现有 116 Director replay patch 在 120 Insider 基线上的冲突。</p>
+	</header>
+
+	<main>
+		<section>
+			<h2>结论摘要</h2>
+			<div class="grid">
+				<div class="metric"><strong>8</strong><span>探测的 Director patch 阶段</span></div>
+				<div class="metric"><strong>3</strong><span>干净应用：<code>007</code>、<code>008</code>、<code>009</code></span></div>
+				<div class="metric"><strong>125</strong><span>reject 文件数</span></div>
+				<div class="metric"><strong>216</strong><span>reject hunk 数</span></div>
+			</div>
+			<p>VSCodium 120 Insider 层可干净生成；冲突主要来自把 116 Director 层直接套到 120 上。数量最多的是 branding/text drift，但真正需要人工决策的是 product/build 契约、chat/provider/model UI、AgentHost/Claude/MCP 桥接面。</p>
+			<div class="callout warning">
+				本报告只做冲突梳理与建议，没有解决冲突，也没有改动 120 profile、patch series 或 replay patch。
+			</div>
+		</section>
+
+		<section>
+			<h2>输入与证据</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>项目</th>
+						<th>值</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>VS Code 上游</td>
+						<td><code>.cache/upstreams/vscode/1.120.0</code>，tag <code>1.120.0</code>，commit <code>0958016b2af9f09bb4257e0df4a95e2f90590f9f</code></td>
+					</tr>
+					<tr>
+						<td>VSCodium 上游</td>
+						<td><code>.cache/upstreams/vscodium/insider-120</code>，branch/cache tag <code>insider-120</code>。冲突 probe 使用 commit <code>02577422eac2aa0b5e646bef6ee3e96e952bc8cf</code>；正式 120 profile 已对齐当前缓存 HEAD <code>82fad9417eb473df07c9c398fef01023be4e036d</code>。</td>
+					</tr>
+					<tr>
+						<td>VSCodium insider 元数据</td>
+						<td><code>.cache/upstreams/vscodium/insider-120/upstream/insider.json</code> 指向 VS Code <code>1.120.0</code> 与同一 VS Code commit</td>
+					</tr>
+					<tr>
+						<td>冲突探测报告</td>
+						<td><code>artifacts/generated/120-insider-win32-x64-client-probe/director-replay-probe-report.json</code></td>
+					</tr>
+					<tr>
+						<td>VSCodium 层报告</td>
+						<td><code>artifacts/generated/120-insider-win32-x64-client-probe/vscodium-layer-report.json</code></td>
+					</tr>
+					<tr>
+						<td>探测方法</td>
+						<td>在生成的 VSCodium 120 Insider 层上，顺序执行 116 Director patch <code>002</code> 到 <code>009</code> 的 <code>git apply --reject --binary --whitespace=nowarn</code>。已成功的 hunk 保留，以暴露后续阶段的连锁冲突。</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section>
+			<h2>Patch 阶段结果</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>阶段</th>
+						<th>结果</th>
+						<th>Reject 文件</th>
+						<th>Reject hunk</th>
+						<th>主要含义</th>
+						<th>建议处理方式</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>002-director-branding.116.patch</code></td>
+						<td><span class="badge medium">partial</span></td>
+						<td>98</td>
+						<td>156</td>
+						<td>品牌、扩展文案、欢迎页、终端文案、Issue/Extension/Tasks 等浅层漂移。</td>
+						<td>延后到功能桥接稳定后批量再生；用商业名称 allowlist 与 targeted grep 校验，不逐个手改全部文案。</td>
+					</tr>
+					<tr>
+						<td><code>003-director-product-build-release.116.patch</code></td>
+						<td><span class="badge high">partial</span></td>
+						<td>6</td>
+						<td>8</td>
+						<td><code>product.json</code>、<code>package.json</code>、gulp build、server manifest 形状变化。</td>
+						<td>最先人工 port。要同步 profile、series、expected contracts、product overrides，并保护 <code>defaultChatAgent.provider</code> 完整对象形状。</td>
+					</tr>
+					<tr>
+						<td><code>004-director-agent-engine.116.patch</code></td>
+						<td><span class="badge high">partial</span></td>
+						<td>3</td>
+						<td>6</td>
+						<td>Director-owned agent engine 大多可用，冲突集中在 chat 注册、language model tool service、MCP view。</td>
+						<td>作为 Wave 3/AgentHost 入口审查。只恢复必要 Director hook，避免覆盖 120 新增 AgentHost/Claude 结构。</td>
+					</tr>
+					<tr>
+						<td><code>005-director-chat-built-in-mode.116.patch</code></td>
+						<td><span class="badge high">partial</span></td>
+						<td>15</td>
+						<td>35</td>
+						<td>chat setup/status、model picker、permission picker、agent sessions、provider/模型 UI 冲突。</td>
+						<td>这是最大功能决策区。先比较 120 原生 chat management/model picker，再决定 Director Provider Registry 如何投射进去。</td>
+					</tr>
+					<tr>
+						<td><code>006-director-text-polish.116.patch</code></td>
+						<td><span class="badge medium">partial</span></td>
+						<td>3</td>
+						<td>11</td>
+						<td>prompt validator、extension search tool、terminal configuration 文案漂移。</td>
+						<td>低优先级。功能桥接完成后重放并按 120 文案结构重新 polish。</td>
+					</tr>
+					<tr>
+						<td><code>007-director-tool-layer.116.patch</code></td>
+						<td><span class="badge low">passed</span></td>
+						<td>0</td>
+						<td>0</td>
+						<td>Director read-only tool registry 可直接应用。</td>
+						<td>保留为 Director-owned 核心，后续只跑编译和单测验证。</td>
+					</tr>
+					<tr>
+						<td><code>008-director-chat-editing.116.patch</code></td>
+						<td><span class="badge low">passed</span></td>
+						<td>0</td>
+						<td>0</td>
+						<td>Director Chat Editing adapter 可直接应用。</td>
+						<td>保留，等 120 chat/editing API 编译后再微调类型。</td>
+					</tr>
+					<tr>
+						<td><code>009-director-edit-tools.116.patch</code></td>
+						<td><span class="badge low">passed</span></td>
+						<td>0</td>
+						<td>0</td>
+						<td>Director reviewable edit tools 可直接应用。</td>
+						<td>保留，重点验证工具权限、reviewable edit progress、测试契约。</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section>
+			<h2>按模块归类</h2>
+
+			<h3>1. VSCodium 120 Insider 基线</h3>
+			<p><span class="badge low">低风险</span> VSCodium 120 Insider layer 生成通过：VSCodium patch 45 个、overlay 2 个、source mutation 8 个，临时文件 0 个。</p>
+			<p><strong>建议：</strong>不要把 <code>001-vscodium-layer.116.patch</code> 搬到 120。应基于 <code>insider-120</code> 重新生成 <code>001-vscodium-layer.120-insider.patch</code>、layer manifest 和 report，再把它纳入新的 120 profile/series。</p>
+
+			<h3>2. Product / Build / Release 契约</h3>
+			<p><span class="badge high">高风险</span> 冲突集中在 <code>product.json</code>、<code>package.json</code>、gulp build 与 <code>resources/server/manifest.json</code>。这些文件决定 packaged runtime 是否能启动、产品元数据是否正确、依赖是否符合 120。</p>
+			<table>
+				<thead>
+					<tr>
+						<th>路径</th>
+						<th>Reject hunk</th>
+						<th>决策点</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td><code>product.json</code></td><td>3</td><td>需要重新应用 Director branding、默认 chat agent、gallery/update/telemetry 策略；特别保留 116 已踩坑的 <code>defaultChatAgent.provider.enterprise.id</code> 对象形状。</td></tr>
+					<tr><td><code>package.json</code></td><td>1</td><td>120 新增 <code>@anthropic-ai/sdk</code>、<code>@anthropic-ai/claude-agent-sdk</code>、<code>@vscode/copilot-api</code>，会直接影响 Wave 3 Claude/AgentHost 依赖选择。</td></tr>
+					<tr><td><code>build/gulpfile.reh.ts</code></td><td>1</td><td>REH/server 构建入口变化，需确认 Director server manifest 与 Windows packaging 逻辑。</td></tr>
+					<tr><td><code>build/gulpfile.vscode.ts</code></td><td>1</td><td>桌面构建 task 名称/依赖可能变化，不能按 116 hunk 硬套。</td></tr>
+					<tr><td><code>build/gulpfile.vscode.win32.ts</code></td><td>1</td><td>Windows installer/app id/asset 流程需要重新核对。</td></tr>
+					<tr><td><code>resources/server/manifest.json</code></td><td>1</td><td>server artifact 契约需要与 120 expected contract 同步。</td></tr>
+				</tbody>
+			</table>
+			<p><strong>建议：</strong>先完成这一组，再进入 chat runtime。它是 materialize/build smoke 的前置条件。</p>
+
+			<h3>3. Chat / Provider / Model UI</h3>
+			<p><span class="badge high">高风险</span> 这是 Phase 2 Wave 2 provider/model registry 与 120 原生 chat UI 的交汇点。主要冲突来自 <code>005</code>，另有 <code>004</code> 的 <code>chat.contribution.ts</code> 与 <code>languageModelToolsService.ts</code>。</p>
+			<table>
+				<thead>
+					<tr>
+						<th>功能面</th>
+						<th>冲突路径</th>
+						<th>建议</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Chat setup / commercial flow bypass</td>
+						<td><code>chatSetupContributions.ts</code>、<code>chatSetupProviders.ts</code>、<code>chatSetupRunner.ts</code></td>
+						<td>不要简单恢复 116 bypass。先看 120 setup provider shape，再用 Director-owned provider registry 注入最小 hook。</td>
+					</tr>
+					<tr>
+						<td>Chat status / dashboard</td>
+						<td><code>chatStatusDashboard.ts</code>、<code>chatStatusEntry.ts</code></td>
+						<td>决定 Director 状态入口是否继续替换 Copilot 状态，或改为注册一个 Director status item。</td>
+					</tr>
+					<tr>
+						<td>Model picker / provider manager</td>
+						<td><code>chatModelPicker.ts</code>、<code>modelPickerActionItem.ts</code>、<code>chatModelsWidget.ts</code>、<code>chatModelPicker.test.ts</code></td>
+						<td>优先复用 120 的 <code>chatManagement/chatModelsWidget</code> 与 <code>modelPickerWidget</code>，让 Director Provider Registry 继续做事实源，VS Code UI 只做投影。</td>
+					</tr>
+					<tr>
+						<td>Permission / session target</td>
+						<td><code>permissionPickerActionItem.ts</code>、agent sessions 相关文件</td>
+						<td>把 Director mode policy 和 tool permission 映射到 120 的 agent session permission UI，避免双套权限状态。</td>
+					</tr>
+					<tr>
+						<td>Quota / Copilot-only UI</td>
+						<td><code>chatQuotaExceededPart.ts</code></td>
+						<td>保留 Director 对 Copilot 商业流的屏蔽，但应改成条件化或 Director service hook，减少上游 UI patch 面。</td>
+					</tr>
+				</tbody>
+			</table>
+			<p><strong>建议：</strong>这组应作为人工 review 的核心。不要让 raw patch 决定架构；先确认 120 UI surface，再决定 Director Provider Registry 的投影点。</p>
+
+			<h3>4. AgentHost / Claude / MCP / Tool Bridge</h3>
+			<p><span class="badge high">高风险</span> 120 已经明显扩展 AgentHost 和 Claude：<code>src/vs/platform/agentHost/node/claude/**</code> 新增 Claude SDK/session/proxy/tool-display 文件，<code>package.json</code> 也新增 Anthropic 依赖。这与下一步 Phase 2 Wave 3 直接相关。</p>
+			<table>
+				<thead>
+					<tr>
+						<th>冲突路径</th>
+						<th>Reject hunk</th>
+						<th>影响</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td><code>src/vs/workbench/contrib/chat/browser/chat.contribution.ts</code></td><td>3</td><td>chat 注册入口现在包含更多 AgentHost/plan review/service 注册，Director hook 需要重挂。</td></tr>
+					<tr><td><code>src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts</code></td><td>2</td><td>工具服务和 language model tool bridge 变化，影响 Director tool registry 与 readonly/edit tool policy。</td></tr>
+					<tr><td><code>src/vs/workbench/contrib/mcp/browser/mcpServersView.ts</code></td><td>1</td><td>MCP UI 入口变化，影响 Director MCP context/tool 体验。</td></tr>
+					<tr><td><code>terminalContrib/chatAgentTools/.../createAndRunTaskTool.ts</code></td><td>1</td><td>task tool 文案/品牌冲突，但也提示 terminal task tools 在 120 有变更。</td></tr>
+					<tr><td><code>terminalContrib/chatAgentTools/.../runTaskTool.ts</code></td><td>1</td><td>同上。</td></tr>
+				</tbody>
+			</table>
+			<p><strong>建议：</strong>Wave 3 不应从 116 的 Claude 设计假设开始。先评估 120 原生 Claude adapter，可复用 AgentHost session/proxy/tool-display 骨架；Director 仍保留 provider registry、proxy/auth policy、model routing、diagnostics、permission policy 的所有权。</p>
+
+			<h3>5. Plan Mode / Review Plan</h3>
+			<p><span class="badge medium">中风险</span> 120 已包含 <code>vscode_reviewPlan</code>、<code>ChatPlanReviewData</code>、<code>ChatPlanReviewPart</code> 和 <code>planReviewFeedback</code> editor contribution。当前 Director 116 的 Plan Mode 是 Director Agent/session state，计划文件写入 <code>.director/plans/*.md</code>，完成通过 <code>director_present_plan</code>。</p>
+			<p><strong>建议：</strong>不要并行维护两个互不相通的 plan review UI。优先考虑把 Director 的 <code>director_present_plan</code> 输出映射到 120 的 <code>ChatPlanReviewData</code> / review widget，同时保留 Director 的 Plan-only 工具策略和 workspace-local plan file 规则。是否直接改用上游 <code>vscode_reviewPlan</code> 需要你决策。</p>
+
+			<h3>6. Director-owned Tool / Editing Core</h3>
+			<p><span class="badge low">低风险</span> <code>007</code>、<code>008</code>、<code>009</code> 干净应用，说明 Director-owned read-only tools、Chat Editing contract、reviewable edit tools 的主体可迁移。</p>
+			<p><strong>建议：</strong>保持这些 patch 的 Director-owned 边界。等 <code>004/005</code> 的上游桥接面确定后，再跑工具 registry、edit tools、chat editing adapter 的 focused tests。</p>
+
+			<h3>7. Branding / Extensions / Text Polish</h3>
+			<p><span class="badge medium">中风险数量，低风险架构</span> <code>002</code> 有 98 个 reject 文件，<code>006</code> 有 3 个 reject 文件。大多数是 <code>VS Code</code>、<code>VSCodium</code>、marketplace、extension、welcome/getting-started、terminal 文案的上下文漂移。</p>
+			<p><strong>建议：</strong>不要把这组放在第一位手工处理。建议等 functional bridge 通过后，用品牌替换规则、allowlist、grep report 重新生成/审查，避免把浅层文案冲突混进 AgentHost/Provider 设计决策。</p>
+		</section>
+
+		<section>
+			<h2>需要你决策的点</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>决策</th>
+						<th>选项</th>
+						<th>建议</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>120 profile 的正式形态</td>
+						<td>创建 <code>120-insider-win32-x64-client</code> canonical profile，或继续只做 probe。</td>
+						<td>建议创建正式 profile，但不要立刻切 active index，等 120 replay 能 materialize 到 Director 层后再切。</td>
+					</tr>
+					<tr>
+						<td>Provider/model UI 取向</td>
+						<td>继续 Director 自有 provider manager UI，或复用 120 <code>chatManagement/chatModelsWidget</code> 并投影 Director registry。</td>
+						<td>建议复用 120 UI 作为壳，Director Provider Registry 仍是事实源。</td>
+					</tr>
+					<tr>
+						<td>Claude AgentHost 取向</td>
+						<td>保留 Director 独立 Claude adapter，或基于 120 原生 Claude AgentHost 做 Director-owned policy/proxy/routing 包装。</td>
+						<td>建议先审 120 <code>agentHost/node/claude</code>，优先复用 upstream session/tool-display/protocol 形状。</td>
+					</tr>
+					<tr>
+						<td>Plan Mode UI 取向</td>
+						<td>继续 Director minimal plan review，或映射到 120 <code>vscode_reviewPlan</code> / <code>ChatPlanReviewPart</code>。</td>
+						<td>建议映射到 120 review UI，但保留 Director Plan state、工具策略和 <code>.director/plans</code> 持久化。</td>
+					</tr>
+					<tr>
+						<td>Branding 覆盖深度</td>
+						<td>维持 116 的广泛文案替换，或收窄到产品可见面和法规/manifest 必要项。</td>
+						<td>建议保留用户可见产品体验的完整 Director branding，但测试 fixture、低价值内部文案可用 allowlist 减少升级噪声。</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section>
+			<h2>建议执行顺序</h2>
+			<ol>
+				<li>建立正式 <code>120-insider-win32-x64-client</code> profile、expected/report 目录和 <code>series.120-insider.json</code>，先不切 active profile。</li>
+				<li>基于 <code>insider-120</code> 重新生成 <code>001-vscodium-layer.120-insider.patch</code> 与 layer manifest。</li>
+				<li>人工 port <code>003</code> product/build/release，并同步 product overrides、expected contracts、server/package/product manifest。</li>
+				<li>人工 review <code>004/005</code>：先确定 chat contribution、provider/model picker、agent session permission、MCP/tool bridge 的 120 挂点。</li>
+				<li>在功能桥接稳定后重放 <code>007</code>、<code>008</code>、<code>009</code>，跑 focused tests。</li>
+				<li>最后处理 <code>002</code> 与 <code>006</code> 的 branding/text polish，并生成商业名称 grep/allowlist 报告。</li>
+				<li>完成后运行 profile-scoped replay validation，再考虑将 active profile index 从 116 切到 120。</li>
+			</ol>
+		</section>
+
+		<section>
+			<h2>详细 Reject 索引</h2>
+			<details>
+				<summary>002-director-branding.116.patch：98 个 reject 文件</summary>
+				<div class="detail-body path-list">
+					<div>extensions/configuration-editing/src/configurationEditingMain.ts</div>
+					<div>extensions/configuration-editing/src/settingsDocumentHelper.ts</div>
+					<div>extensions/css-language-features/package.nls.json</div>
+					<div>extensions/emmet/package.nls.json</div>
+					<div>extensions/extension-editing/src/constants.ts</div>
+					<div>extensions/extension-editing/src/extensionLinter.ts</div>
+					<div>extensions/git/package.nls.json</div>
+					<div>extensions/github/package.nls.json</div>
+					<div>extensions/grunt/package.nls.json</div>
+					<div>extensions/html-language-features/client/src/htmlClient.ts</div>
+					<div>extensions/html-language-features/package.nls.json</div>
+					<div>extensions/html-language-features/schemas/package.schema.json</div>
+					<div>extensions/jake/package.nls.json</div>
+					<div>extensions/json-language-features/package.nls.json</div>
+					<div>extensions/markdown-language-features/package.nls.json</div>
+					<div>extensions/media-preview/package.nls.json</div>
+					<div>extensions/media-preview/src/audioPreview.ts</div>
+					<div>extensions/media-preview/src/imagePreview/index.ts</div>
+					<div>extensions/media-preview/src/videoPreview.ts</div>
+					<div>extensions/notebook-renderers/package.json</div>
+					<div>extensions/npm/package.nls.json</div>
+					<div>extensions/swift/syntaxes/swift.tmLanguage.json</div>
+					<div>extensions/terminal-suggest/src/completions/codium-insiders.ts</div>
+					<div>extensions/terminal-suggest/src/completions/codium.ts</div>
+					<div>extensions/tunnel-forwarding/src/extension.ts</div>
+					<div>extensions/typescript-language-features/package.nls.json</div>
+					<div>extensions/typescript-language-features/src/tsServer/versionManager.ts</div>
+					<div>extensions/typescript-language-features/src/tsServer/versionProvider.electron.ts</div>
+					<div>extensions/typescript-language-features/src/tsconfig.ts</div>
+					<div>extensions/typescript-language-features/src/typescriptServiceClient.ts</div>
+					<div>extensions/vscode-api-tests/package.json</div>
+					<div>extensions/vscode-colorize-tests/package.json</div>
+					<div>extensions/vscode-colorize-tests/test/colorize-fixtures/14119.less</div>
+					<div>extensions/vscode-colorize-tests/test/colorize-results/14119_less.json</div>
+					<div>extensions/vscode-test-resolver/package.json</div>
+					<div>extensions/vscode-test-resolver/src/download.ts</div>
+					<div>extensions/vscode-test-resolver/src/extension.ts</div>
+					<div>resources/win32/VisualElementsManifest.xml</div>
+					<div>src/main.ts</div>
+					<div>src/vs/code/electron-main/app.ts</div>
+					<div>src/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.ts</div>
+					<div>src/vs/platform/contextkey/common/contextkeys.ts</div>
+					<div>src/vs/platform/extensionManagement/node/extensionManagementService.ts</div>
+					<div>src/vs/platform/extensions/common/extensionValidator.ts</div>
+					<div>src/vs/platform/externalTerminal/node/externalTerminalService.ts</div>
+					<div>src/vs/platform/terminal/common/terminalPlatformConfiguration.ts</div>
+					<div>src/vs/platform/update/common/update.config.contribution.ts</div>
+					<div>src/vs/platform/update/electron-main/abstractUpdateService.ts</div>
+					<div>src/vs/server/node/server.cli.ts</div>
+					<div>src/vs/workbench/api/browser/mainThreadAuthentication.ts</div>
+					<div>src/vs/workbench/api/browser/viewsExtensionPoint.ts</div>
+					<div>src/vs/workbench/api/common/extHostApiCommands.ts</div>
+					<div>src/vs/workbench/api/common/extHostCommands.ts</div>
+					<div>src/vs/workbench/api/test/browser/extHostNotebook.test.ts</div>
+					<div>src/vs/workbench/browser/actions/developerActions.ts</div>
+					<div>src/vs/workbench/browser/actions/helpActions.ts</div>
+					<div>src/vs/workbench/browser/web.factory.ts</div>
+					<div>src/vs/workbench/browser/workbench.contribution.ts</div>
+					<div>src/vs/workbench/common/contextkeys.ts</div>
+					<div>src/vs/workbench/contrib/debug/browser/debugAdapterManager.ts</div>
+					<div>src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts</div>
+					<div>src/vs/workbench/contrib/extensions/browser/extensionsActions.ts</div>
+					<div>src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts</div>
+					<div>src/vs/workbench/contrib/extensions/common/extensionsFileTemplate.ts</div>
+					<div>src/vs/workbench/contrib/extensions/electron-browser/extensionsSlowActions.ts</div>
+					<div>src/vs/workbench/contrib/externalUriOpener/common/configuration.ts</div>
+					<div>src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts</div>
+					<div>src/vs/workbench/contrib/issue/browser/issueReporterModel.ts</div>
+					<div>src/vs/workbench/contrib/issue/browser/issueReporterPage.ts</div>
+					<div>src/vs/workbench/contrib/localization/common/localization.contribution.ts</div>
+					<div>src/vs/workbench/contrib/localization/common/localizationsActions.ts</div>
+					<div>src/vs/workbench/contrib/preferences/browser/keyboardLayoutPicker.ts</div>
+					<div>src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts</div>
+					<div>src/vs/workbench/contrib/tasks/common/jsonSchemaCommon.ts</div>
+					<div>src/vs/workbench/contrib/tasks/common/jsonSchema_v2.ts</div>
+					<div>src/vs/workbench/contrib/terminal/browser/terminalView.ts</div>
+					<div>src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh</div>
+					<div>src/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh</div>
+					<div>src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish</div>
+					<div>src/vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1</div>
+					<div>src/vs/workbench/contrib/terminalContrib/autoReplies/common/terminalAutoRepliesConfiguration.ts</div>
+					<div>src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts</div>
+					<div>src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts</div>
+					<div>src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts</div>
+					<div>src/vs/workbench/contrib/update/browser/update.ts</div>
+					<div>src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts</div>
+					<div>src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts</div>
+					<div>src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts</div>
+					<div>src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts</div>
+					<div>src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts</div>
+					<div>src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts</div>
+					<div>src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts</div>
+					<div>src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts</div>
+					<div>src/vs/workbench/electron-browser/desktop.contribution.ts</div>
+					<div>src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts</div>
+					<div>src/vs/workbench/services/extensions/common/extensionsRegistry.ts</div>
+					<div>src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts</div>
+					<div>src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts</div>
+				</div>
+			</details>
+
+			<details>
+				<summary>003-director-product-build-release.116.patch：6 个 reject 文件</summary>
+				<div class="detail-body path-list">
+					<div>build/gulpfile.reh.ts</div>
+					<div>build/gulpfile.vscode.ts</div>
+					<div>build/gulpfile.vscode.win32.ts</div>
+					<div>package.json</div>
+					<div>product.json</div>
+					<div>resources/server/manifest.json</div>
+				</div>
+			</details>
+
+			<details>
+				<summary>004-director-agent-engine.116.patch：3 个 reject 文件</summary>
+				<div class="detail-body path-list">
+					<div>src/vs/workbench/contrib/chat/browser/chat.contribution.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts</div>
+					<div>src/vs/workbench/contrib/mcp/browser/mcpServersView.ts</div>
+				</div>
+			</details>
+
+			<details>
+				<summary>005-director-chat-built-in-mode.116.patch：15 个 reject 文件</summary>
+				<div class="detail-body path-list">
+					<div>src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/agentSessions/experiments/agentTitleBarStatusWidget.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/aiCustomization/mcpListWidget.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupProviders.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupRunner.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatQuotaExceededPart.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/widget/input/chatModelPicker.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/widget/input/modelPickerActionItem.ts</div>
+					<div>src/vs/workbench/contrib/chat/browser/widget/input/permissionPickerActionItem.ts</div>
+					<div>src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts</div>
+				</div>
+			</details>
+
+			<details>
+				<summary>006-director-text-polish.116.patch：3 个 reject 文件</summary>
+				<div class="detail-body path-list">
+					<div>src/vs/workbench/contrib/chat/common/promptSyntax/languageProviders/promptValidator.ts</div>
+					<div>src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts</div>
+					<div>src/vs/workbench/contrib/terminal/common/terminalConfiguration.ts</div>
+				</div>
+			</details>
+		</section>
+	</main>
+</body>
+</html>

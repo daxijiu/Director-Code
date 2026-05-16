@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "phase": "P2",
+  "batch": "layer",
+  "status": "passed",
+  "generatedAt": "2026-05-16T18:10:48.463Z",
+  "command": [
+    "--profile",
+    "docs/upgrade/profiles/120-insider-win32-x64-client.json",
+    "--target",
+    ".cache/upgrade-estimator/materialize-120-insider",
+    "--up-to-layer",
+    "vscodium",
+    "--force",
+    "--allow-nondefault-target-force"
+  ],
+  "target": ".cache/upgrade-estimator/materialize-120-insider",
+  "upToLayer": "vscodium",
+  "upstreams": {
+    "vscode": {
+      "path": ".cache/upstreams/vscode/1.120.0",
+      "remote": "https://github.com/microsoft/vscode.git",
+      "tag": "1.120.0",
+      "commit": "0958016b2af9f09bb4257e0df4a95e2f90590f9f",
+      "cleanStatus": "clean",
+      "treeHash": "9eae17ea2fd6ec79f1a5604ae7684cb6ab37b5e81da787e14d1411023e16d756"
+    },
+    "vscodium": {
+      "path": ".cache/upstreams/vscodium/insider-120",
+      "remote": "https://github.com/VSCodium/vscodium.git",
+      "tag": "insider-120",
+      "commit": "82fad9417eb473df07c9c398fef01023be4e036d",
+      "cleanStatus": "clean",
+      "treeHash": "e3d2caedfa1d15e168265e7ac132359135e890d97d25ee477ab4215e4d7bce8f"
+    }
+  },
+  "replayInputs": {
+    "canonicalManifest": "docs/upgrade/manifests/120-insider-win32-x64-client.canonical.json",
+    "patchSeries": "patches/series.120-insider.json",
+    "vscodiumLayerPatch": "patches/replay/001-vscodium-layer.120-insider.patch",
+    "directorDeltaPatches": [
+      "patches/replay/002-director-branding.120-insider.patch",
+      "patches/replay/003-director-product-build-release.120-insider.patch",
+      "patches/replay/004-director-agent-engine.120-insider.patch",
+      "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
+      "patches/replay/006-director-text-polish.120-insider.patch",
+      "patches/replay/007-director-tool-layer.120-insider.patch",
+      "patches/replay/008-director-chat-editing.120-insider.patch",
+      "patches/replay/009-director-edit-tools.120-insider.patch"
+    ]
+  },
+  "applications": [
+    {
+      "layer": "vscodium",
+      "patch": "patches/replay/001-vscodium-layer.120-insider.patch",
+      "size": 65990121,
+      "sha256": "386a7484711d6e9c89b437d4b8a7a6237b110be62729a6ef277ee6f603bb3b4f",
+      "status": "passed"
+    }
+  ],
+  "referenceOverlays": {
+    "status": "not-requested",
+    "overlays": []
+  },
+  "equivalence": {
+    "status": "not-requested"
+  },
+  "checkpoints": [
+    {
+      "name": "vscode",
+      "path": ".cache/upgrade-estimator/materialize-120-insider/layers/vscode/vscode",
+      "fileManifestHash": "9eae17ea2fd6ec79f1a5604ae7684cb6ab37b5e81da787e14d1411023e16d756"
+    },
+    {
+      "name": "vscodium",
+      "path": ".cache/upgrade-estimator/materialize-120-insider/layers/vscodium/vscode",
+      "fileManifestHash": "244cdffb46bc791c205532db75b5f026ea999762eddfb0a437a4f420356531cd"
+    }
+  ],
+  "checks": {
+    "targetPolicy": "passed",
+    "cleanVscodeMaterialized": "passed",
+    "cleanVscodiumCache": "passed",
+    "vscodiumTransformApplication": "passed",
+    "directorDeltaApplication": "not-requested",
+    "referenceOverlayApplication": "not-requested",
+    "sourceEquivalence": "not-requested",
+    "installDeps": "not-requested",
+    "buildArtifact": "not-requested"
+  },
+  "blockers": []
+}

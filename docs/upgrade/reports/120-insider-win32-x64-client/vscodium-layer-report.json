@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "phase": "P2",
+  "batch": "vscodium-layer",
+  "status": "passed",
+  "generatedAt": "2026-05-16T17:53:40.865Z",
+  "checks": {
+    "cleanVscodeCache": "passed",
+    "cleanVscodiumCache": "passed",
+    "sourceMutationReplay": "passed",
+    "temporaryFilesExcluded": "passed",
+    "patchGenerated": "passed"
+  },
+  "upstream": {
+    "remote": "https://github.com/VSCodium/vscodium.git",
+    "tag": "insider-120",
+    "commit": "82fad9417eb473df07c9c398fef01023be4e036d",
+    "cachePath": ".cache/upstreams/vscodium/insider-120",
+    "cleanStatus": "clean"
+  },
+  "layerManifest": "docs/upgrade/vscodium-layer.120-insider.json",
+  "patch": {
+    "status": "passed",
+    "path": "patches/replay/001-vscodium-layer.120-insider.patch",
+    "size": 65990121,
+    "sha256": "386a7484711d6e9c89b437d4b8a7a6237b110be62729a6ef277ee6f603bb3b4f"
+  },
+  "transformCounts": {
+    "overlays": 2,
+    "patches": 47,
+    "productInputs": 1,
+    "sourceMutations": 8
+  },
+  "temporaryFiles": []
+}

@@ -18,6 +18,14 @@ This file is the chronological working memory for the project. Keep durable proj
 - Before coding 120-specific changes, inspect or create the 120 profile/series/reports as needed and make sure replay validation, expected contracts, product overrides, and canonical manifests are updated for the new upstream baseline.
 - Do not assume the current 116 active profile has already been switched to 120 just because this branch exists; make the profile/control-plane transition explicit.
 
+## 2026-05-17 Active 120 Insider Upgrade Plan
+
+- Current active work is the 120 Insider upgrade. The detailed handoff and decisions are in `docs/upgrade/120-insider-upgrade-plan.md`.
+- 120 profile infrastructure has been created and VSCodium layer replay is proven, but `activeProfile` intentionally remains `116-stable-win32-x64-client`.
+- `patches/series.120-insider.json` currently enables only `001-vscodium-layer.120-insider.patch`; Director stages `002` through `009` are still deferred.
+- User decisions are captured in the plan file: keep Director Provider/Model UI, use 120 native Claude AgentHost with Director-owned policy/proxy/routing, map Plan Mode to 120 review UI while keeping `.director/plans`, and preserve user-visible Director branding.
+- Immediate next step: port `003-director-product-build-release.120-insider.patch`, regenerate `series.120-insider.json`, and rerun the 120 profile/series/product override validations.
+
 ## 2026-05-16 Phase 2 Wave 2 Provider Registry Completed And Packaged
 
 - Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push per previous handoff.

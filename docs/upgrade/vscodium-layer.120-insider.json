@@ -1,0 +1,1174 @@
+{
+  "schemaVersion": 1,
+  "profile": "120-insider-win32-x64-client",
+  "layer": "vscodium",
+  "status": "passed",
+  "generatedAt": "2026-05-16T17:53:40.865Z",
+  "upstream": {
+    "remote": "https://github.com/VSCodium/vscodium.git",
+    "tag": "insider-120",
+    "commit": "82fad9417eb473df07c9c398fef01023be4e036d",
+    "cachePath": ".cache/upstreams/vscodium/insider-120",
+    "cleanStatus": "clean"
+  },
+  "vscodeBase": {
+    "tag": "1.120.0",
+    "commit": "0958016b2af9f09bb4257e0df4a95e2f90590f9f"
+  },
+  "transformPolicy": {
+    "source": "clean-vscodium-tag",
+    "dependencyInstall": "skipped",
+    "temporaryFiles": "excluded",
+    "note": "Layer 1 replays VSCodium source mutations from clean upstream inputs. npm install and artifact build are intentionally outside this source replay batch."
+  },
+  "transforms": {
+    "overlays": [
+      {
+        "path": "src/insider",
+        "sha256": "bac463167d4770f12f0f7ffdf918bd20dee53585810bae2f9bf9e39277b5565f",
+        "stage": "overlay"
+      },
+      {
+        "path": "LICENSE",
+        "destination": "LICENSE.txt",
+        "sha256": "ed289092386002771285e3423f66f49af65ff918e1b667b517d977fa4fe1f057",
+        "stage": "license"
+      }
+    ],
+    "patches": [
+      {
+        "path": "patches/00-binary-fix-name.patch",
+        "sha256": "eb4dda2faa88f699f8ae23398f56514c6f0ea0ae8147dd14c440f69e590ef71f",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-brand-remove-branding.patch",
+        "sha256": "8382636d2bd6df167d1f6d03d6718187d19f7204c7527154df61c7c1db8bb162",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-build-disable-esbuild.patch",
+        "sha256": "a9d65cfbbf90fd748d22dd8cfff7d20293d107e928203a095d13e59d8ea5e78c",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-build-disable-mangle.patch",
+        "sha256": "52d77886de9550670c323cf0366151f0571059172ba879c04d4acaca8f2a2622",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-build-download-extensions-from-gh.patch",
+        "sha256": "5f61f1067d4fa1bf7e82bacd411292e0b163b3960e3009e378cc866e4ede02c8",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-build-fix-npm-preinstall.patch",
+        "sha256": "c524c59b630915b4b139805595c78282d7933851d4d2c2fd13a507df4f780422",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-build-update-sourcemap-url.patch",
+        "sha256": "c1417e6594ab171e26b5a3c701f50898801b67788127e691bbf73e0e2c378f1f",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-cloud-remove.patch",
+        "sha256": "e1217f9be94dd7eb5ad3c8856a43fc2b32d812363f33bd093476ddb44414c2cb",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-community-add-announcements.patch",
+        "sha256": "cf0601af2ed383c1088b491247fde8044f598b6b62c6c9a85121bea8016f2f7e",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-copilot-disable-terminal-suggest.patch",
+        "sha256": "9181186263872f9915c5fe896794d544def01b5e77f86551f1fbe7790b80a270",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-copilot-fix-action-condition.patch",
+        "sha256": "7ea24f46341d67d6e8bb61cdd0dc30bdc24544ea80a759ef1ee064bb5180aa87",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ext-git-ai-coauthor-off.patch",
+        "sha256": "f9f473bce11b1597de718dc4701bd51579d4f3c441f7b1c3d0eedefef99689e9",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ext-github-authentication-use-pat.patch",
+        "sha256": "a164346b2b0e47e5796bcd36a33a0e6895ef2ffd3ff27fe0bf26a9ed522493c6",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ext-github-remove-vscodedev.patch",
+        "sha256": "5fd81aec78958d582c7655a88c4ba94d6be080c09287e3ec92c091a511d2e50e",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-extension-disable-signature-verification.patch",
+        "sha256": "02ae9bff811559a95d4db8467f6db3899c032bedbdf18c99b97e4490a3cec432",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-remote-add-missing-dependencies.patch",
+        "sha256": "2514cbfc298a9ff5ceca601360d1db9d778b86d645a501762ab2af0cdd4c96d3",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-remote-add-url.patch",
+        "sha256": "ba3f3daaccf6af6cfc1071bd1a84c453b859ab5c2aea95844716716ee81d87e2",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-remote-remove-missing-vsda.patch",
+        "sha256": "9424d915e15bbeeb3f7ce599f7cc1c82c77e37df099c9502efe38d30be6f3eef",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-security-add-command-filter.patch",
+        "sha256": "04560b23d89fb063d755c4553ca2a9bfeb30d713de7604658174d4156b5fe468",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-settings-gallery.patch",
+        "sha256": "9e210dab33d5d38e335d025cf29abf7b9914defce9652c55cc6bf28fa53be2cf",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-settings-user-product.patch",
+        "sha256": "448587a362307e3bc527583866ae53a2f0194c215e5374fa900bb8f50388a5d9",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-telemetry-disable.patch",
+        "sha256": "be7de72ef8ed64bd18d059dbaadd97071a7949a9da9d6b3d39a63203c852eb1d",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-tunnel-disable-recommendation.patch",
+        "sha256": "0e4bcf1233b54b989c4bd42a2f40acc0be7cb85f1dd7ab93d083f387bfdabfb3",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ui-custom-font.patch",
+        "sha256": "7058f40a5aa9b55c20e470ac7b9ba3835786a5423c3faeac1b7484272c298763",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ui-improve-eol-banner.patch",
+        "sha256": "b9ffd3eaf1997ca68d5c0b8874e04b7c39ffe4ed415323abfffda231e2ffa5c9",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-ui-report-issue.patch",
+        "sha256": "4de02e27966c12fd7a6ec0f7162c1088d2359317daa10f2cb6a4481096126d3c",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-update-rename-cache-path.patch",
+        "sha256": "1877033f30058eed2a80c2c401892af00cefbdde7940c906ed188927aa022936",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/00-vsce-use-custom-lib.patch",
+        "sha256": "821426a515d18a840e21f38750ff8fb7c090f70a1861a88636d977adc0cb6975",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/10-version-add-release.patch",
+        "sha256": "a445b748e2a8c6cc587425367f8fe14763ff657828ff513f1102a1b12217b1a4",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/11-update-use-github-release.patch",
+        "sha256": "75032c83b0d25c7c037956281c5ec5fe17aaf125690d93633a89fa9de921d5ec",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/12-update-add-cooldown.patch",
+        "sha256": "16cc186fea3ba9b893696206b1d3ea57517f0d665754ab000b9fe7d1c43a1dd1",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/20-keymap-use-custom-lib.patch",
+        "sha256": "97e768dd7ed52da63c79b42000bf3bc7fcdfbffbb0a146ed22063501a2eb9185",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/21-policy-use-custom-lib.patch",
+        "sha256": "d7abbd363c8074c619f8c23f85422f631714c9d0f3d8552646cfb5e6c5c96d30",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/30-build-add-missing-dependencies.patch",
+        "sha256": "d72260710872ac417589a5dd47a3829a598d3e2954f6bcd38931ed47bab7ccac",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/40-cli-use-reh-archive.patch",
+        "sha256": "dbafb34167ad56929e16aa53b7350f63c29258effc922376dd4c9949971c636c",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/50-build-improve-gulp-tasks.patch",
+        "sha256": "9ea566abd825b66bfa4d7298f07827d26ced30d5ec3b709def11e768f58147bb",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/52-ext-copilot-remove-it.patch",
+        "sha256": "a8f7925c5843ac3b4c54358a09bede25f1494549bae491cedbf03fa880bef0e7",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/60-security-add-option-for-malicious-ext.patch",
+        "sha256": "21d01fd845ba8598f1e6c9b6b182036aa10e5eebaba1d4422cc2f0004886ff46",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/61-extension-close-connection.patch",
+        "sha256": "2b704345dec03b2d3338409aafba2a736fe0fe564b863c5a9c6b478a8726a6f4",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/81-ui-disable-onboarding.patch",
+        "sha256": "23a1d751036b2488ea595eb17db7782034c1c1abd5013b9906b6581ff5fadb2e",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/build-replace-unicode.patch",
+        "sha256": "3f131765f689f6287d30e8cd5846b2bef85615441441028d44a2746664428262",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/insider/system-extensions.patch",
+        "sha256": "8a73f8f3bf21e9b4cf40f9e6ae25071557a348ace7e5b54dcc19431d5e974fd8",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "source",
+        "platforms": [
+          "all"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/windows/00-build-min-version-win7.patch",
+        "sha256": "4ac0265f589649d5422733d5c919af7e52bd29fdf0c023eb74213934c83d1875",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "platform",
+        "platforms": [
+          "win32"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/windows/00-remote-use-open-ext.patch",
+        "sha256": "8ca0cabe25a6e10495db08680fe24d31bc6aa057d3619426db35bf5920289f2d",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "platform",
+        "platforms": [
+          "win32"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/windows/41-cli-fix-update-url.patch",
+        "sha256": "f0a5875a1bdbea1c755053537b68817c93c421ecaa8b8310ab7c162b4beb5aab",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "platform",
+        "platforms": [
+          "win32"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/windows/70-build-contextmenu-appx.patch",
+        "sha256": "289a771ba499318ef6152530daa7791e3dd83dbce76b172e4d450a979ac9fcab",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "platform",
+        "platforms": [
+          "win32"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      },
+      {
+        "path": "patches/windows/71-build-disable-appx.patch",
+        "sha256": "1798f949cca83fc50b92b5d6abba43adda65635142b59c8c82bc34b82d5e67a9",
+        "status": "enabled",
+        "layer": "vscodium",
+        "stage": "platform",
+        "platforms": [
+          "win32"
+        ],
+        "arches": [
+          "all"
+        ],
+        "qualities": [
+          "stable",
+          "insider"
+        ],
+        "targets": [
+          "client",
+          "cli",
+          "reh",
+          "reh-web"
+        ]
+      }
+    ],
+    "productInputs": [
+      {
+        "path": "product.json",
+        "sha256": "0e6567bbaf6fe8971480332ee2b768fb270e0eaaf30705b43a2e550cc53a3d48",
+        "stage": "product-merge"
+      }
+    ],
+    "sourceMutations": [
+      {
+        "id": "remove-copilot-extension",
+        "status": "passed"
+      },
+      {
+        "id": "product-json",
+        "status": "passed"
+      },
+      {
+        "id": "package-json",
+        "status": "passed"
+      },
+      {
+        "id": "server-manifest",
+        "status": "passed"
+      },
+      {
+        "id": "announcements",
+        "status": "passed",
+        "source": "announcements-builtin.json",
+        "sha256": "3fbbd4c6d76130399b0c79cdf41758669224a91e05b7b216953f0c9728750865"
+      },
+      {
+        "id": "undo-telemetry",
+        "status": "passed",
+        "changedCount": 1,
+        "samples": [
+          "src/vs/platform/telemetry/common/1dsAppender.ts"
+        ]
+      },
+      {
+        "id": "electron-copyright",
+        "status": "passed"
+      },
+      {
+        "id": "windows-code-iss",
+        "status": "passed"
+      }
+    ]
+  },
+  "patch": {
+    "status": "passed",
+    "path": "patches/replay/001-vscodium-layer.120-insider.patch",
+    "size": 65990121,
+    "sha256": "386a7484711d6e9c89b437d4b8a7a6237b110be62729a6ef277ee6f603bb3b4f"
+  }
+}
