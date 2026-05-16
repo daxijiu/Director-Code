@@ -54,7 +54,7 @@ Current 120 series state:
 
 - `001-vscodium-layer.120-insider.patch`: `enabled`
 - `002-director-branding.120-insider.patch`: `deferred`
-- `003-director-product-build-release.120-insider.patch`: `deferred`
+- `003-director-product-build-release.120-insider.patch`: `enabled`
 - `004-director-agent-engine.120-insider.patch`: `deferred`
 - `005-director-chat-built-in-mode.120-insider.patch`: `deferred`
 - `006-director-text-polish.120-insider.patch`: `deferred`
@@ -302,7 +302,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Stage | Status | Completed | Validation | Self-review | Push |
 | --- | --- | --- | --- | --- | --- |
 | Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
-| Phase B: `003` product/build/release | pending | | | | |
+| Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pending push |
 | Phase C: `004` agent engine / Claude / MCP | pending | | | | |
 | Phase D: `005` chat/provider/model UI | pending | | | | |
 | Phase E: Plan Mode to 120 review UI | pending | | | | |
@@ -354,6 +354,21 @@ Acceptance:
 - `001 + 003` can replay on a scratch target.
 - Product override validation passes.
 - No generated-tree-only product fix remains.
+
+Completion note, 2026-05-17:
+
+- Created `patches/replay/003-director-product-build-release.120-insider.patch` from a 120 VSCodium scratch layer.
+- Updated 120 product override ownership for `sharedDataFolderName`.
+- Regenerated `patches/series.120-insider.json`; `003` is now enabled with a real sha256.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Independent scratch replay of `003` on the 120 VSCodium layer, followed by JSON parsing and assertions for `sharedDataFolderName`, `quality: insider`, and complete `defaultChatAgent.provider` shape.
+- Self-review passed:
+  - `git diff --check` found no whitespace errors in the stage files.
+  - `rg "^\\+.*(1\\.116|116-stable|VSCodium|vscodium|GitHub\\.copilot|github\\.copilot)" patches/replay/003-director-product-build-release.120-insider.patch` found no newly added old-version, VSCodium, or Copilot strings.
+  - Patch ownership is limited to product/package/server manifest, gulp, and Windows installer release wiring.
 
 ### Phase C: Port Agent Engine / Claude / MCP (`004`)
 
@@ -569,7 +584,7 @@ Do:
 
 ## Immediate Next Step
 
-Start with `003-director-product-build-release.120-insider.patch`.
+Continue with `004-director-agent-engine.120-insider.patch` after Phase B is pushed.
 
 The next window should:
 

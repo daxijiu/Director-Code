@@ -7,6 +7,7 @@
     "nameLong": "Director-Code",
     "applicationName": "director-code",
     "dataFolderName": ".director-code",
+    "sharedDataFolderName": ".director-code-shared",
     "linuxIconName": "director-code",
     "serverApplicationName": "director-code-server",
     "serverDataFolderName": ".director-code-server",
