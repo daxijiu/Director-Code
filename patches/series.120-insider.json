@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T18:18:05.607Z",
+  "generatedAt": "2026-05-16T18:28:36.343Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -77,9 +77,9 @@
     },
     {
       "path": "patches/replay/004-director-agent-engine.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "6e6c4ed62379f599414ae538d82d73d2095ce9ded5916ecc9e6763976c81da08",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "agent-engine",
       "platforms": [
@@ -95,8 +95,7 @@
         "client"
       ],
       "order": 4,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",

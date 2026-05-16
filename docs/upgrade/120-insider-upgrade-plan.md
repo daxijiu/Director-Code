@@ -55,7 +55,7 @@ Current 120 series state:
 - `001-vscodium-layer.120-insider.patch`: `enabled`
 - `002-director-branding.120-insider.patch`: `deferred`
 - `003-director-product-build-release.120-insider.patch`: `enabled`
-- `004-director-agent-engine.120-insider.patch`: `deferred`
+- `004-director-agent-engine.120-insider.patch`: `enabled`
 - `005-director-chat-built-in-mode.120-insider.patch`: `deferred`
 - `006-director-text-polish.120-insider.patch`: `deferred`
 - `007-director-tool-layer.120-insider.patch`: `deferred`
@@ -303,7 +303,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | --- | --- | --- | --- | --- | --- |
 | Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
 | Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
-| Phase C: `004` agent engine / Claude / MCP | pending | | | | |
+| Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pending push |
 | Phase D: `005` chat/provider/model UI | pending | | | | |
 | Phase E: Plan Mode to 120 review UI | pending | | | | |
 | Phase F: `007`-`009` tool/editing stages | pending | | | | |
@@ -406,6 +406,36 @@ Acceptance:
 - Director agent engine compiles against 120 chat/tool/AgentHost interfaces.
 - Claude AgentHost wrapper plan is represented in code or in a concrete follow-up TODO if not fully implemented in this stage.
 - MCP view/tool bridge behavior is preserved.
+
+Completion note, 2026-05-17:
+
+- Created `patches/replay/004-director-agent-engine.120-insider.patch` from a 120 VSCodium + `003` scratch layer.
+- Raw 116 `004` replay failed only in three bridge files:
+  - `src/vs/workbench/contrib/chat/browser/chat.contribution.ts`
+  - `src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts`
+  - `src/vs/workbench/contrib/mcp/browser/mcpServersView.ts`
+- Manual conflict decisions:
+  - Kept Director AI enabled by default through `ChatConfiguration.AIDisabled: false`.
+  - Preserved Director request-bound tool permission behavior by porting `_isSessionInAutoApproveLevel` to resolve the stamped request by `chatRequestId` on 120's helper path.
+  - Kept user-visible MCP wording Director-branded where this stage already touched MCP bridge behavior.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Independent scratch replay of `003` and `004` on the 120 VSCodium layer, followed by checks for reject files, `git diff --check`, required Director engine files, and the 120 `chatRequestId` auto-approval helper.
+- Self-review passed:
+  - `git diff --check` found no whitespace errors in the stage files.
+  - `rg "^\\+.*(1\\.116|116-stable|VSCodium|vscodium|GitHub\\.copilot|github\\.copilot)" patches/replay/004-director-agent-engine.120-insider.patch` found no newly added old-version, VSCodium, or Copilot extension identifiers.
+  - Patch ownership is limited to Director agent engine files, thin chat/tool/MCP/shared-process bridges, and corresponding tests.
+- Compile limitation:
+  - `npm run compile-check-ts-native` was attempted in the scratch tree using existing generated-tree dependencies and did not pass.
+  - The failures are expected at this partial stage: the available dependencies are still from the 116 generated tree and are missing 120 AgentHost packages/types such as `@anthropic-ai/*`, `@github/copilot-sdk`, and `chrome-remote-interface`; `004` also references Director tool/editing files that are intentionally introduced by later `007`-`009` stages.
+  - Full TypeScript compile remains a Phase H gate after `007`-`009` are enabled and the 120 dependency install/build environment is materialized.
+- Concrete Claude AgentHost follow-up:
+  - Create a small Director adapter island such as `src/vs/platform/agentHost/node/directorClaude/**`.
+  - Reuse native 120 `ClaudeAgent`, `ClaudeProxyService`, session event mapping, prompt/tool display, and session config shapes where possible.
+  - Route provider secrets, model selection, proxy policy, diagnostics, and auth through Director-owned services under `src/vs/workbench/contrib/directorCode/**`.
+  - Do not route Director Claude through `ICopilotApiService`, `GITHUB_COPILOT_PROTECTED_RESOURCE`, or GitHub Copilot entitlement/CAPI token assumptions.
 
 ### Phase D: Port Chat Built-in Mode / Provider UI Shielding (`005`)
 
@@ -584,17 +614,17 @@ Do:
 
 ## Immediate Next Step
 
-Continue with `004-director-agent-engine.120-insider.patch` after Phase B is pushed.
+Continue with `005-director-chat-built-in-mode.120-insider.patch` after Phase C is pushed.
 
 The next window should:
 
 1. Confirm branch/status.
-2. Materialize 120 to a scratch VSCodium layer.
-3. Port product/build/release changes carefully against 120.
-4. Generate `003`.
+2. Start from the 120 VSCodium layer plus enabled `003` and `004`.
+3. Port chat/provider/model UI shielding changes carefully against 120.
+4. Generate `005`.
 5. Regenerate `series.120-insider.json`.
 6. Validate profile, series, and product overrides.
-7. Do not touch `004/005` until `003` is stable.
+7. Self-review, update this plan, commit, and push before starting the next stage.
 
 Suggested first commands:
 
@@ -608,12 +638,11 @@ node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-
 
 ## Current Dirty Worktree Snapshot
 
-At the time this plan was written, the expected dirty worktree includes:
+As of 2026-05-17 during Phase C closeout, the expected dirty worktree before the Phase C commit includes:
 
-- Modified: `docs/upgrade/profiles/index.json`
-- New 120 profile/config/report files
-- New `patches/replay/001-vscodium-layer.120-insider.patch`
-- New `patches/series.120-insider.json`
+- Modified: `docs/upgrade/120-insider-upgrade-plan.md`
+- Modified: `patches/series.120-insider.json`
+- New `patches/replay/004-director-agent-engine.120-insider.patch`
 - Existing untracked `artifacts/`
 
-This is expected. Do not clean or revert these files unless explicitly asked.
+After the Phase C commit and push, only the untracked `artifacts/` directory should remain. Do not clean or revert `artifacts/` unless explicitly asked.
