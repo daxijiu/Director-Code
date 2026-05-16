@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T18:28:36.343Z",
+  "generatedAt": "2026-05-16T18:48:09.191Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -99,9 +99,9 @@
     },
     {
       "path": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "cc6c45b5056b5fe69604ac4e56980cb24ca1d4edfc88b66bb7cd16e2faea7483",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "chat-built-in-mode",
       "platforms": [
@@ -117,8 +117,7 @@
         "client"
       ],
       "order": 5,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/006-director-text-polish.120-insider.patch",

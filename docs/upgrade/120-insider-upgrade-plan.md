@@ -4,7 +4,7 @@ Date: 2026-05-17
 
 Branch: `120-replay-baseline`
 
-Status: 120 profile infrastructure created; Director runtime port not started.
+Status: 120 profile infrastructure plus `003`, `004`, and `005` Director runtime/product stages are ported; active profile is still 116 until full 120 Director materialize passes.
 
 ## Purpose
 
@@ -44,6 +44,9 @@ Completed in this branch:
 - Registered the 120 profile in `docs/upgrade/profiles/index.json`
 - Kept `activeProfile` unchanged as `116-stable-win32-x64-client`
 - Generated VSCodium aggregate replay patch: `patches/replay/001-vscodium-layer.120-insider.patch`
+- Ported product/build/release replay stage: `patches/replay/003-director-product-build-release.120-insider.patch`
+- Ported agent engine / Claude / MCP replay stage: `patches/replay/004-director-agent-engine.120-insider.patch`
+- Ported chat built-in mode / provider UI shielding replay stage: `patches/replay/005-director-chat-built-in-mode.120-insider.patch`
 - Generated 120 series file: `patches/series.120-insider.json`
 - Generated VSCodium layer manifest: `docs/upgrade/vscodium-layer.120-insider.json`
 - Added 120 product override, owned-key, delete, overlay, and deps mutation files
@@ -56,7 +59,7 @@ Current 120 series state:
 - `002-director-branding.120-insider.patch`: `deferred`
 - `003-director-product-build-release.120-insider.patch`: `enabled`
 - `004-director-agent-engine.120-insider.patch`: `enabled`
-- `005-director-chat-built-in-mode.120-insider.patch`: `deferred`
+- `005-director-chat-built-in-mode.120-insider.patch`: `enabled`
 - `006-director-text-polish.120-insider.patch`: `deferred`
 - `007-director-tool-layer.120-insider.patch`: `deferred`
 - `008-director-chat-editing.120-insider.patch`: `deferred`
@@ -304,7 +307,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase A: 120 profile + VSCodium layer | complete | 2026-05-17 | passed, commands listed above | passed | pushed: `bd81f12e` |
 | Phase B: `003` product/build/release | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003` scratch apply/json check, diff self-check | passed: 120 `quality`, `sharedDataFolderName`, full `defaultChatAgent.provider`, Director build/install metadata | pushed: `38ac3e71` |
 | Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pushed: `31a4e9e6` |
-| Phase D: `005` chat/provider/model UI | pending | | | | |
+| Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | push pending |
 | Phase E: Plan Mode to 120 review UI | pending | | | | |
 | Phase F: `007`-`009` tool/editing stages | pending | | | | |
 | Phase G: `002`/`006` branding/text polish | pending | | | | |
@@ -480,6 +483,31 @@ Acceptance:
 - 120 UI additions are suppressed, bridged, or made Director-aware.
 - Existing Wave 2 provider/model registry assumptions remain valid.
 
+Completion note, 2026-05-17:
+
+- Created `patches/replay/005-director-chat-built-in-mode.120-insider.patch` from a 120 VSCodium + `003` + `004` scratch layer.
+- Regenerated `patches/series.120-insider.json`; `005` is now enabled with a real sha256.
+- Manual conflict decisions:
+  - Preserved Director Provider/Model UI as the primary experience.
+  - Routed 120 `MANAGE_CHAT_COMMAND_ID` to `director-code.openSettings` in Director built-in mode so the upstream Models Management editor does not become the product owner.
+  - Kept 120 model picker grouping but made unavailable-model actions Director-neutral and pointed configuration to Director settings.
+  - Kept `ChatSetup.run` from launching Copilot setup in Director built-in mode.
+  - Hid or bypassed Copilot upgrade/additional-spend/setup paths in chat status, quota, anonymous-rate-limit, quick-chat, and welcome/TOS surfaces touched by this stage.
+  - Did not blindly port obsolete 116 hunks for removed or radically changed 120 files such as `chatStatusWidget.ts` and `modelPickerActionItem.ts`.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Independent scratch replay of `003`, `004`, and `005` on the 120 VSCodium layer, followed by checks for reject files, `git diff --check`, Director model-picker/setup/provider-management assertions, `MANAGE_CHAT_COMMAND_ID` Director routing, and anonymous-rate-limit Director wording.
+- Self-review passed:
+  - `git diff --check` found no whitespace errors in the stage files.
+  - `rg "^\\+.*(1\\.116|116-stable|VSCodium|VSCodium - Insiders|GitHub\\.copilot|github\\.copilot|Upgrade to GitHub Copilot|Manage GitHub|Copilot uses your configured|code.visualstudio.com/docs/copilot/agents/agent-tools|free account gets 50 premium|By continuing with .* Copilot)" patches/replay/005-director-chat-built-in-mode.120-insider.patch` found no newly added old-version, VSCodium, Copilot extension id, or Copilot commercial-flow strings.
+  - Patch ownership is limited to chat built-in mode, setup/status/model-picker/provider UI shielding, AI customization visibility, and corresponding focused tests.
+- Materialize note:
+  - `node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target .cache/upgrade-estimator/phase-d-materialize-check --up-to-layer director --force --allow-nondefault-target-force` currently stops before applying Director stages because the script requires the deferred `002` patch to be enabled. This is expected until Phase G enables branding/text stages; Phase D was therefore validated through an independent scratch replay of the enabled stages.
+- Compile limitation:
+  - Full TypeScript compile remains a Phase H gate after `007`-`009`, 120 dependencies, expected contracts, and full materialize are ready.
+
 ### Phase E: Plan Mode To 120 Review UI
 
 Goal: map Director Plan Mode to 120 plan review UI without losing Director Plan ownership.
@@ -614,16 +642,16 @@ Do:
 
 ## Immediate Next Step
 
-Continue with `005-director-chat-built-in-mode.120-insider.patch` after Phase C is pushed.
+After Phase D is committed and pushed, continue with Phase E: map Director Plan Mode to the 120 review UI.
 
 The next window should:
 
 1. Confirm branch/status.
-2. Start from the 120 VSCodium layer plus enabled `003` and `004`.
-3. Port chat/provider/model UI shielding changes carefully against 120.
-4. Generate `005`.
-5. Regenerate `series.120-insider.json`.
-6. Validate profile, series, and product overrides.
+2. Start from the 120 VSCodium layer plus enabled `003`, `004`, and `005`.
+3. Inventory Director Plan state, `director_present_plan`, and `.director/plans/*.md` persistence.
+4. Map the Director plan result into 120 `ChatPlanReviewData` / `ChatPlanReviewPart` without changing Director Plan ownership.
+5. Generate the replay-backed Phase E changes in the appropriate existing stage or a clearly justified new stage.
+6. Validate profile, series, product overrides, focused plan-mode assertions/tests, and scratch replay.
 7. Self-review, update this plan, commit, and push before starting the next stage.
 
 Suggested first commands:
@@ -633,9 +661,16 @@ git branch --show-current
 git status --short
 node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client
 node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client
-node scripts/upgrade/materialize-vscode.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json --target .cache/upgrade-estimator/materialize-120-insider --up-to-layer vscodium --force --allow-nondefault-target-force
+node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client
 ```
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase C push, only the untracked `artifacts/` directory should remain. Do not clean or revert `artifacts/` unless explicitly asked.
+As of 2026-05-17 after Phase D validation and before the Phase D commit, expected dirty files are:
+
+- `docs/upgrade/120-insider-upgrade-plan.md`
+- `patches/series.120-insider.json`
+- `patches/replay/005-director-chat-built-in-mode.120-insider.patch`
+- untracked `artifacts/`
+
+Do not clean or revert `artifacts/` unless explicitly asked.
