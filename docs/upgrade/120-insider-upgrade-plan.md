@@ -4,7 +4,7 @@ Date: 2026-05-17
 
 Branch: `120-replay-baseline`
 
-Status: 120 profile infrastructure plus `003`, `004`, `005`, and the Phase E Plan Review UI adaptation are ported; active profile is still 116 until full 120 Director materialize passes.
+Status: 120 profile infrastructure plus `003`, `004`, `005`, Phase E Plan Review UI adaptation, and `007`-`009` tool/editing stages are ported; active profile is still 116 until full 120 Director materialize passes.
 
 ## Purpose
 
@@ -48,6 +48,10 @@ Completed in this branch:
 - Ported agent engine / Claude / MCP replay stage: `patches/replay/004-director-agent-engine.120-insider.patch`
 - Ported chat built-in mode / provider UI shielding replay stage: `patches/replay/005-director-chat-built-in-mode.120-insider.patch`
 - Amended `004-director-agent-engine.120-insider.patch` for Phase E Plan Mode -> 120 review UI adaptation.
+- Ported tool/editing replay stages:
+  - `patches/replay/007-director-tool-layer.120-insider.patch`
+  - `patches/replay/008-director-chat-editing.120-insider.patch`
+  - `patches/replay/009-director-edit-tools.120-insider.patch`
 - Generated 120 series file: `patches/series.120-insider.json`
 - Generated VSCodium layer manifest: `docs/upgrade/vscodium-layer.120-insider.json`
 - Added 120 product override, owned-key, delete, overlay, and deps mutation files
@@ -62,9 +66,9 @@ Current 120 series state:
 - `004-director-agent-engine.120-insider.patch`: `enabled`
 - `005-director-chat-built-in-mode.120-insider.patch`: `enabled`
 - `006-director-text-polish.120-insider.patch`: `deferred`
-- `007-director-tool-layer.120-insider.patch`: `deferred`
-- `008-director-chat-editing.120-insider.patch`: `deferred`
-- `009-director-edit-tools.120-insider.patch`: `deferred`
+- `007-director-tool-layer.120-insider.patch`: `enabled`
+- `008-director-chat-editing.120-insider.patch`: `enabled`
+- `009-director-edit-tools.120-insider.patch`: `enabled`
 
 Validation already run and passed:
 
@@ -310,7 +314,7 @@ Append future completed stages here after tests and self-review pass, then commi
 | Phase C: `004` agent engine / Claude / MCP | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004` scratch apply/bridge assertions, diff self-check | passed: 3 rejects manually resolved; request-bound auto-approval preserved; Claude wrapper follow-up recorded | pushed: `31a4e9e6` |
 | Phase D: `005` chat/provider/model UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/bridge assertions, diff/grep self-check | passed: 120 provider/model UI shielded; commercial setup/status paths routed to Director settings; obsolete 116 paths not blindly ported | pushed: `73ce4e21` |
 | Phase E: Plan Mode to 120 review UI | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005` scratch apply/Plan Review assertions, diff self-check | passed: `director_present_plan` remains Director-owned; 120 review UI is an adapter; `.director/plans` persistence remains source of truth | pushed: `eca254a7` |
-| Phase F: `007`-`009` tool/editing stages | pending | | | | |
+| Phase F: `007`-`009` tool/editing stages | complete | 2026-05-17 | passed: profile, series, product overrides, independent `001+003+004+005+007+008+009` scratch apply/tool assertions, diff/grep self-check | passed: read-only tool registry, Plan-only policy, Chat Editing adapter, and reviewable edit tools remain Director-owned | push pending |
 | Phase G: `002`/`006` branding/text polish | pending | | | | |
 | Phase H: expected contracts/canonical/full materialize | pending | | | | |
 
@@ -583,6 +587,26 @@ Acceptance:
 - Reviewable edit tool tests pass or compile.
 - Tool permission/mode policy remains consistent with Plan, Agent, and future Claude sessions.
 
+Completion note, 2026-05-17:
+
+- Created the 120 tool/editing replay patches from a 120 VSCodium + `003` + Phase E `004` + `005` scratch layer:
+  - `patches/replay/007-director-tool-layer.120-insider.patch`
+  - `patches/replay/008-director-chat-editing.120-insider.patch`
+  - `patches/replay/009-director-edit-tools.120-insider.patch`
+- Regenerated `patches/series.120-insider.json`; `007`, `008`, and `009` are now enabled with real sha256 values.
+- Validation passed:
+  - `node scripts/upgrade/validate-profile.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-series.mjs --profile 120-insider-win32-x64-client`
+  - `node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-x64-client`
+  - Independent scratch replay of `003`, Phase E `004`, `005`, `007`, `008`, and `009` on the 120 VSCodium layer, followed by checks for reject files, `git diff --check`, `DirectorToolMode.Plan`, `PLAN_ONLY`, `DirectorChatEditingAdapter`, `directorEditTools.contribution.ts`, `apply_patch`, `replace_string_in_file`, `multi_replace_string_in_file`, `directorEditTools.test.ts`, and the Phase E `ChatPlanReviewData` adapter.
+- Self-review passed:
+  - `git diff --check` found no whitespace errors in `patches/replay/007-director-tool-layer.120-insider.patch`, `008`, `009`, or `patches/series.120-insider.json`.
+  - `git apply --numstat` shows patch ownership is limited to Director read-only tools/registry/tests, Director Chat Editing adapter/tests, and Director reviewable edit tools/registration/tests.
+  - `rg "^\\+.*(1\\.116|116-stable|VSCodium|vscodium|GitHub\\.copilot|github\\.copilot|vscode_reviewPlan|Upgrade to GitHub Copilot|Manage GitHub)" patches/replay/007-director-tool-layer.120-insider.patch patches/replay/008-director-chat-editing.120-insider.patch patches/replay/009-director-edit-tools.120-insider.patch` found no newly added old-version, VSCodium, Copilot extension id, or unrelated commercial-flow strings.
+- Test runner limitation:
+  - The available 120 scratch trees and repository root do not have `node_modules`, so focused VS Code unit tests for these files could not be executed without a dependency install.
+  - The replay/apply assertions confirm the expected test files are present and wired for the later Phase H dependency/build gate.
+
 ### Phase G: Branding / Text Polish (`002`, `006`)
 
 Goal: restore user-visible Director branding and copy after runtime port is stable.
@@ -669,17 +693,18 @@ Do:
 
 ## Immediate Next Step
 
-After Phase E is committed and pushed, continue with Phase F: port clean tool/editing stages `007`-`009`.
+After Phase F is committed and pushed, continue with Phase G: branding/text polish stages `002` and `006`.
 
 The next window should:
 
 1. Confirm branch/status.
-2. Start from the 120 VSCodium layer plus enabled `003`, `004`, and `005`.
-3. Apply existing 116 `007`, `008`, and `009` patches against the 120 `003+004+005` tree.
-4. Confirm clean apply still holds after the Phase E `004` amendment; manually review any new rejects instead of taking either side blindly.
-5. Generate `007`, `008`, and `009` 120 replay patches and regenerate `series.120-insider.json`.
-6. Validate profile, series, product overrides, focused tool/editing assertions/tests, and scratch replay.
-7. Self-review, update this plan, commit, and push before starting the next stage.
+2. Start from the 120 VSCodium layer plus enabled `003`, Phase E `004`, `005`, and `007`-`009`.
+3. Create `002-director-branding.120-insider.patch` from current 120 sources, not by blindly replaying the 116 branding patch.
+4. Prioritize visible leftovers from the Phase G pre-review: onboarding/welcome, extension reload/gallery UX, server CLI terminal wording, policy watcher, Windows visual/installer-adjacent text.
+5. Create `006-director-text-polish.120-insider.patch` narrowly for prompt syntax/search extension/terminal text that is user-visible.
+6. Update allowlists for accepted fixtures/internal/protocol strings instead of hand-editing low-value upstream text.
+7. Regenerate `series.120-insider.json`, validate profile/series/product overrides, run branding grep checks and scratch replay.
+8. Self-review, update this plan, commit, and push before starting the next stage.
 
 Suggested first commands:
 
@@ -693,6 +718,13 @@ node scripts/upgrade/validate-product-overrides.mjs --profile 120-insider-win32-
 
 ## Current Dirty Worktree Snapshot
 
-As of 2026-05-17 after Phase E push, only the untracked `artifacts/` directory should remain.
+As of 2026-05-17 after Phase F validation and before the Phase F commit, expected dirty files are:
+
+- `docs/upgrade/120-insider-upgrade-plan.md`
+- `patches/series.120-insider.json`
+- `patches/replay/007-director-tool-layer.120-insider.patch`
+- `patches/replay/008-director-chat-editing.120-insider.patch`
+- `patches/replay/009-director-edit-tools.120-insider.patch`
+- untracked `artifacts/`
 
 Do not clean or revert `artifacts/` unless explicitly asked.

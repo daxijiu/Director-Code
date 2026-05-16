@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T18:56:59.089Z",
+  "generatedAt": "2026-05-16T19:02:29.441Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -144,9 +144,9 @@
     },
     {
       "path": "patches/replay/007-director-tool-layer.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "7a5f5a458d01105ca2022e405874d43807f934133ebcb9eece0add08f1db5a86",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "tool-layer",
       "platforms": [
@@ -162,14 +162,13 @@
         "client"
       ],
       "order": 7,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/008-director-chat-editing.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "04daec12d5290bd3f75fa9e7027b0f38ee2b22ed4e5f8a800d14afa8bec5c75c",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "chat-editing",
       "platforms": [
@@ -185,14 +184,13 @@
         "client"
       ],
       "order": 8,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     },
     {
       "path": "patches/replay/009-director-edit-tools.120-insider.patch",
-      "sha256": "pending",
-      "enabled": false,
-      "status": "deferred",
+      "sha256": "c55466cc25cfbcfc9244c47c8c94103b44ae96ac43f62a4f4b01de6fa8ef65f8",
+      "enabled": true,
+      "status": "enabled",
       "layer": "director",
       "stage": "edit-tools",
       "platforms": [
@@ -208,8 +206,7 @@
         "client"
       ],
       "order": 9,
-      "placeholders": [],
-      "note": "planned patch; deferred until ported"
+      "placeholders": []
     }
   ]
 }
