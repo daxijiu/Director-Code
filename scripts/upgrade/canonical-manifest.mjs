@@ -38,7 +38,9 @@ function main() {
   run('node', ['scripts/upgrade/validate-json.mjs', MANIFEST_SCHEMA, manifestPath], { cwd: root });
   const expected = JSON.parse(fs.readFileSync(path.join(root, manifestPath), 'utf8'));
   const failures = compareManifest(expected, manifest);
-  writeReport(root, profile, manifest, manifestPath, 'validate', failures);
+  if (args.writeReport) {
+    writeReport(root, profile, manifest, manifestPath, 'validate', failures);
+  }
   if (failures.length > 0) {
     throw new Error(`Canonical manifest drift for ${profile.profile}\n${failures.slice(0, 100).join('\n')}`);
   }
@@ -53,6 +55,7 @@ function parseArgs(argv) {
     else if (arg === '--source') out.source = argv[++index];
     else if (arg === '--output') out.output = argv[++index];
     else if (arg === '--write') out.write = true;
+    else if (arg === '--write-report') out.writeReport = true;
     else throw new Error(`Unknown canonical-manifest argument: ${arg}`);
   }
   return out;

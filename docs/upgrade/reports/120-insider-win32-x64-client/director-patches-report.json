@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-17T06:04:43.560Z",
+  "generatedAt": "2026-05-17T08:24:36.121Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -244,8 +244,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 91,
-      "size": 1073699,
-      "sha256": "11dd6261165eb37710fbca12825b50da27d88c6b04a5dcf4d017540a44146383"
+      "size": 1077001,
+      "sha256": "99bf30a7abf0082b241e41da2e736cb73991d4161a65d6f20719d8ce7b4b241b"
     },
     {
       "stage": "chat-built-in-mode",

@@ -55,7 +55,9 @@ function main() {
     failures,
   };
 
-  writeReport(root, profile, report);
+  if (args.write || args.writeReport) {
+    writeReport(root, profile, report);
+  }
   if (failures.length > 0) {
     throw new Error(`Expected contract validation failed for ${profile.profile}\n${failures.join('\n')}`);
   }
@@ -71,6 +73,7 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === '--profile') out.profile = argv[++index];
     else if (arg === '--write') out.write = true;
+    else if (arg === '--write-report') out.writeReport = true;
     else throw new Error(`Unknown expected-contracts argument: ${arg}`);
   }
   return out;

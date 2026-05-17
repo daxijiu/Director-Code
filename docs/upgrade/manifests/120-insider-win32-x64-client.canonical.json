@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-17T06:13:02.213Z",
-  "treeHash": "7c15d57d78c4d30fa5d2ca923ba5dcbacc727e30ce8fd482e6f8173a09aae6ce",
+  "generatedAt": "2026-05-17T08:32:12.807Z",
+  "treeHash": "bc18d0450b43cd2296ac6f7c3cf6271cf6569922293c46a68926ef8bfd39499d",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -45188,7 +45188,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts",
-      "sha256": "31ac3a02bb5fe0589f7be9dd669dd3adb506d217b53ec4964e7eb05e49cbe93b",
+      "sha256": "eb92fa2b8bfc61a577a8416dce25946b4620c0b7d27b31e96aa1ad0038751a0d",
       "mode": 33206,
       "type": "file"
     },
@@ -47342,7 +47342,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts",
-      "sha256": "85fa850b861c9d4af50f1e10891ec0f29866b3fb107431be1d6e599aee2d3a90",
+      "sha256": "b5aafb4d75bbb2cbffe89c2c893b50e1d72cb5a319b733eb59b600e01ca0c3b4",
       "mode": 33206,
       "type": "file"
     },

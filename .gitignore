@@ -12,8 +12,7 @@ sourcemaps/
 # --- P1 replay/freeze local outputs ---
 .cache/
 vscode.generated/
-artifacts/generated/
-artifacts/out/
+artifacts/
 
 # --- P1 remove-active-source guards ---
 vscode/

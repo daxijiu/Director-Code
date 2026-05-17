@@ -2,12 +2,23 @@
 
 This file is the chronological working memory for the project. Keep durable project overview, goals, and direction in `AGENTS.md` and `CLAUDE.md`; keep detailed state, phase facts, package hashes, and handoff notes here.
 
+## 2026-05-17 Worker D Final Review Fixes
+
+- Worker D fixed the final review items without committing or pushing: `validate-all.mjs --all-profiles` now fails fast when the active profile's generated tree is missing or product/package hashes do not match expected contracts, while non-active canonical profiles may still skip generated-tree deep checks with an explicit skipped summary.
+- `.gitignore` now ignores `artifacts/` by default after confirming no tracked files exist under `artifacts/`, matching the project rule that local artifacts should not be accidentally committed.
+
+## 2026-05-17 Worker A Validation Toolchain Fix
+
+- Worker A observed branch `120-replay-baseline`; pre-fix dirty state only had untracked `artifacts/`.
+- Task scope: make ordinary `expected-contracts.mjs` and `canonical-manifest.mjs` validation read-only by default, make report refresh opt-in via `--write` / `--write-report`, and clarify/fix `validate-all.mjs --all-profiles` so it traverses all profiles instead of active-only validation.
+- Implementation is pending commit: `validate-all --all-profiles` now validates legacy profile artifacts, canonical profile series/product-overrides/allowlists/reports, and only runs generated-tree expected/canonical drift checks for profiles matching the current materialized `vscode.generated` tree.
+
 ## 2026-05-17 120 Review/Fix Memory Sync
 
 - Worker D observed branch `120-replay-baseline`; pre-sync dirty state included untracked `artifacts/`, then other worker updates to `AGENTS.md` / `CLAUDE.md` Build And Package plus untracked `scripts/build-director-120-insider.ps1` and `.cmd`.
 - `AGENTS.md` and `CLAUDE.md` now document the 120 Insider build entry points `scripts/build-director-120-insider.ps1` and `.cmd`, defaulting to `docs/upgrade/profiles/120-insider-win32-x64-client.json`; the older 116 scripts remain legacy/stable fallback.
 - 120 review/fix notes to carry forward: canonical manifest drift must be treated as a reviewed source/build-output signal and cleared by regenerating or clean-materializing before final canonical validation; `validate-all` should be profile-driven for the active 120 profile rather than retaining 116-only report paths; runtime provider hardening belongs in Director-owned provider/model/auth code and replay patches, not generated-tree-only edits.
-- Worker D only performed documentation/memory synchronization and light validation. This round of fixes is prepared for commit and push; final status is governed by the git commit/push record.
+- Worker D only performed documentation/memory synchronization and light validation. The follow-up validation/provider hardening is pushed in commit `504deb1a06098d97f6c3271bb46c415139f8a9bb` (`fix: harden 120 replay validation and provider registry`).
 
 ## 2026-05-17 Documentation Split
 
@@ -36,7 +47,7 @@ This file is the chronological working memory for the project. Keep durable proj
 
 ## 2026-05-16 Phase 2 Wave 2 Provider Registry Completed And Packaged
 
-- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push per previous handoff.
+- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and pushed as part of follow-up commit `504deb1a06098d97f6c3271bb46c415139f8a9bb`.
 - Director Provider Registry is the canonical source for provider instances and persists profile data in `directorCodeProviders.json`.
 - VS Code `chatLanguageModels.json` is only a projected provider-group bridge.
 - Model ids exposed to VS Code use `director-code/<providerInstanceId>/<modelId>`, allowing multiple instances of the same provider or compatible endpoint.

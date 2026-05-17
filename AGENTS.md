@@ -108,7 +108,7 @@ Prefer using existing stage ownership for follow-up work. Do not add empty or ca
 ## Current Feature State
 
 - Phase 2 Wave 1 Plan Mode is complete, replay-backed, packaged, committed, and pushed.
-- Phase 2 Wave 2 Provider / Model Registry + UI is implemented, replay-backed, packaged, and ready for commit/push per memory.
+- Phase 2 Wave 2 Provider / Model Registry + UI plus 120 replay validation/provider hardening is replay-backed and pushed in commit `504deb1a06098d97f6c3271bb46c415139f8a9bb`.
 - Plan Mode is Director Agent/session state, not a new top-level `ChatModeKind`.
 - Plan drafts are written to workspace-local `.director/plans/*.md` by Director-owned host code.
 - Plan completion goes through the Plan-only `director_present_plan` tool.

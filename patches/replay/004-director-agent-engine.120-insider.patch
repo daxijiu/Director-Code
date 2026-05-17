@@ -11023,19 +11023,23 @@ index 0000000000000000000000000000000000000000..2e4c065f088c3723764ce1e34ae8db98
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..7f89457baf7539b0637a42f6a26a7e4bff2e5fbb
+index 0000000000000000000000000000000000000000..1a4beb97f2397e459041f2761f6c0c7cd4ec4d5f
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,225 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +
 +import assert from 'assert';
++import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
 +import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 +import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
++import { UriIdentityService } from '../../../../../../platform/uriIdentity/common/uriIdentityService.js';
 +import {
++	DIRECTOR_PROVIDER_REGISTRY_FILE,
++	DirectorProviderRegistryService,
 +	createLegacyMigratedState,
 +	getDefaultSelectionFromProviderRegistryState,
 +	makeDirectorModelIdentifier,
@@ -11047,6 +11051,7 @@ index 0000000000000000000000000000000000000000..7f89457baf7539b0637a42f6a26a7e4b
 +import { OPENAI_CODEX_AUTH_VARIANT } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
 +import { Event } from '../../../../../../base/common/event.js';
 +import { URI } from '../../../../../../base/common/uri.js';
++import { InMemoryTestFileService, TestUserDataProfileService } from '../../../../../test/common/workbenchTestServices.js';
 +import type { ILanguageModelsConfigurationService, ILanguageModelsProviderGroup } from '../../../common/languageModelsConfiguration.js';
 +
 +suite('AgentEngine - ProviderRegistry', () => {
@@ -11157,6 +11162,72 @@ index 0000000000000000000000000000000000000000..7f89457baf7539b0637a42f6a26a7e4b
 +		assert.ok(state);
 +		assert.ok(state!.instances[0].models.some(model => model.id === 'claude-opus-4-6'));
 +		assert.strictEqual(getDefaultSelectionFromProviderRegistryState(state!)?.modelId, 'claude-opus-4-6');
++	});
++
++	test('keeps registry empty after removing the last provider instance', async () => {
++		const disposables = new DisposableStore();
++		try {
++			const fileService = disposables.add(new InMemoryTestFileService());
++			const configurationService = new TestConfigurationService({
++				'directorCode.ai.provider': 'openai-compatible',
++				'directorCode.ai.model': 'deepseek-chat',
++				'directorCode.ai.baseURL': 'https://api.deepseek.com',
++				'directorCode.ai.authVariant': 'default',
++			});
++			const userDataProfileService = new TestUserDataProfileService();
++			const uriIdentityService = disposables.add(new UriIdentityService(fileService));
++			const firstService = disposables.add(new DirectorProviderRegistryService(fileService, userDataProfileService, uriIdentityService, configurationService));
++
++			const migrated = await firstService.getState();
++			assert.strictEqual(migrated.instances.length, 1);
++
++			const empty = await firstService.removeInstance(migrated.instances[0].id);
++			assert.strictEqual(empty.instances.length, 0);
++			assert.strictEqual(empty.defaultProviderId, undefined);
++			assert.strictEqual(empty.migratedLegacy, true);
++
++			const secondService = disposables.add(new DirectorProviderRegistryService(fileService, userDataProfileService, uriIdentityService, configurationService));
++			const reread = await secondService.getState();
++
++			assert.strictEqual(reread.instances.length, 0);
++			assert.strictEqual(reread.defaultProviderId, undefined);
++			assert.strictEqual(reread.defaultModelId, undefined);
++			assert.strictEqual(reread.migratedLegacy, true);
++		} finally {
++			disposables.dispose();
++		}
++	});
++
++	test('migrates legacy settings when no registry state exists yet', async () => {
++		const disposables = new DisposableStore();
++		try {
++			const fileService = disposables.add(new InMemoryTestFileService());
++			const profileService = new TestUserDataProfileService();
++			const uriIdentityService = disposables.add(new UriIdentityService(fileService));
++			const registryFile = uriIdentityService.extUri.joinPath(profileService.currentProfile.location, DIRECTOR_PROVIDER_REGISTRY_FILE);
++			fileService.notExistsSet.set(registryFile, true);
++			const configurationService = new TestConfigurationService({
++				'directorCode.ai.provider': 'openai-compatible',
++				'directorCode.ai.model': 'deepseek-chat',
++				'directorCode.ai.baseURL': 'https://api.deepseek.com',
++				'directorCode.ai.authVariant': 'default',
++			});
++			const service = disposables.add(new DirectorProviderRegistryService(
++				fileService,
++				profileService,
++				uriIdentityService,
++				configurationService
++			));
++
++			const state = await service.getState();
++
++			assert.strictEqual(state.instances.length, 1);
++			assert.strictEqual(state.instances[0].kind, 'openai-compatible');
++			assert.strictEqual(state.defaultModelId, 'deepseek-chat');
++			assert.strictEqual(state.migratedLegacy, true);
++		} finally {
++			disposables.dispose();
++		}
 +	});
 +
 +	test('logs a warning when chatLanguageModels projection sync fails', async () => {
@@ -24057,7 +24128,7 @@ index 0000000000000000000000000000000000000000..9c57d5bb322ce3e09492e61a0ddabb7c
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..61ec6840ae127d0efa5f4de8a0f470e546eadbaa
+index 0000000000000000000000000000000000000000..5a550a6aaadc503b54103651d8bd25fdd63d98e8
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
 @@ -0,0 +1,489 @@
@@ -24492,7 +24563,7 @@ index 0000000000000000000000000000000000000000..61ec6840ae127d0efa5f4de8a0f470e5
 +			try {
 +				const state = normalizeDirectorProviderRegistryState(JSON.parse(raw));
 +				if (state) {
-+					return state.instances.length ? state : await this.ensureLegacyState(state);
++					return state;
 +				}
 +			} catch {
 +				// Fall through to a legacy/default migration rather than blocking startup.
