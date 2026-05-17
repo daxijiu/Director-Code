@@ -27,6 +27,7 @@ function main() {
   if (args.write) {
     writeJson(path.join(root, manifestPath), manifest);
     run('node', ['scripts/upgrade/validate-json.mjs', MANIFEST_SCHEMA, manifestPath], { cwd: root });
+    writeReport(root, profile, manifest, manifestPath, 'write', []);
     console.log(`wrote canonical manifest ${manifestPath}`);
     return;
   }
@@ -37,6 +38,7 @@ function main() {
   run('node', ['scripts/upgrade/validate-json.mjs', MANIFEST_SCHEMA, manifestPath], { cwd: root });
   const expected = JSON.parse(fs.readFileSync(path.join(root, manifestPath), 'utf8'));
   const failures = compareManifest(expected, manifest);
+  writeReport(root, profile, manifest, manifestPath, 'validate', failures);
   if (failures.length > 0) {
     throw new Error(`Canonical manifest drift for ${profile.profile}\n${failures.slice(0, 100).join('\n')}`);
   }
@@ -167,6 +169,40 @@ function compareManifest(expected, actual) {
     }
   }
   return failures;
+}
+
+function writeReport(root, profile, manifest, manifestPath, mode, failures) {
+  const report = {
+    schemaVersion: 1,
+    profile: profile.profile,
+    phase: profile.validationMode === 'canonical-replay' ? 'P2' : 'P1',
+    batch: 'canonical-manifest',
+    status: failures.length === 0 ? 'passed' : 'failed',
+    generatedAt: new Date().toISOString(),
+    mode,
+    manifest: toPosix(manifestPath),
+    sourceRoot: manifest.sourceRoot,
+    treeHash: manifest.treeHash,
+    fileCount: manifest.files.length,
+    caseInsensitivePathCollisions: manifest.caseInsensitivePathCollisions,
+    checks: {
+      schema: 'passed',
+      manifestMatch: failures.length === 0 ? 'passed' : 'failed',
+    },
+    failures,
+  };
+
+  const reportPaths = new Set();
+  if (profile.reportPaths?.canonicalManifest) reportPaths.add(profile.reportPaths.canonicalManifest);
+  if (profile.artifactPaths?.generatedReports) {
+    reportPaths.add(path.join(profile.artifactPaths.generatedReports, 'canonical-manifest-report.json'));
+  }
+  if (profile.artifactPaths?.committedReports) {
+    reportPaths.add(path.join(profile.artifactPaths.committedReports, 'canonical-manifest-report.json'));
+  }
+  for (const reportPath of reportPaths) {
+    writeJson(path.join(root, reportPath), report);
+  }
 }
 
 function sha256File(filePath) {

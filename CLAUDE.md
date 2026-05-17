@@ -128,7 +128,19 @@ Prefer using existing stage ownership for follow-up work. Do not add empty or ca
 
 ## Build And Package
 
-Current packaged build entry points are still 116-specific until a 120 package script is added:
+Current 120 Insider packaged build entry points:
+
+```powershell
+.\scripts\build-director-120-insider.ps1
+```
+
+```cmd
+.\scripts\build-director-120-insider.cmd
+```
+
+These default to `docs/upgrade/profiles/120-insider-win32-x64-client.json`.
+
+The older 116 entry points remain available only as legacy/stable fallback:
 
 ```powershell
 .\scripts\build-director-116.ps1

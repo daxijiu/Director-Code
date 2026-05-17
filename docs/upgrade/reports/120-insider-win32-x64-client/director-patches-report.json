@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-16T21:43:40.579Z",
+  "generatedAt": "2026-05-17T06:04:43.560Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 256,
+  "changedFileCount": 257,
   "patches": [
     {
       "stage": "branding",
@@ -220,6 +220,7 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/modelResolver.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthLoginController.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/oauthService.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/providerGroupProjection.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/abstractProvider.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/providers/anthropicProvider.ts",
@@ -242,9 +243,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 90,
-      "size": 1067713,
-      "sha256": "ba2df01e21140a5d6cf731f3d48390a17cc5411b92743be5736c43a33284ee82"
+      "fileCount": 91,
+      "size": 1073699,
+      "sha256": "11dd6261165eb37710fbca12825b50da27d88c6b04a5dcf4d017540a44146383"
     },
     {
       "stage": "chat-built-in-mode",

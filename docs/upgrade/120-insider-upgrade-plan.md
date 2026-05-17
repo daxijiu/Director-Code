@@ -731,10 +731,10 @@ Completion note, 2026-05-17:
 - Regenerated `002-director-branding.120-insider.patch` with broader user-visible Director branding coverage.
 - Regenerated `006-director-text-polish.120-insider.patch` to include 120 terminal platform configuration branding.
 - Amended `005-director-chat-built-in-mode.120-insider.patch` so terms/disclaimer, plan labels, and Claude session descriptions no longer expose Copilot commercial framing.
-- Final follow-up patch hashes:
-  - `002-director-branding.120-insider.patch`: `16b5825f45109671ab1dd5478e3fecd09bb2bd29def903e37993068703b138e6`
-  - `005-director-chat-built-in-mode.120-insider.patch`: `d4a64c0ac51cb34ce0e8f4d9c66e76a9f0d873fa7d49aeed0735949f50eb5aa6`
-  - `006-director-text-polish.120-insider.patch`: `30c9ae913104f62925f2420db95805e18ab46acb0bee0e1a511080711b060e4d`
+- Final follow-up patch hashes are governed by `patches/series.120-insider.json`; current series hashes:
+  - `002-director-branding.120-insider.patch`: `915de490390261d1dcba894b3e0025e5bb1417b4bfa06dc87b0e51a756adad03`
+  - `005-director-chat-built-in-mode.120-insider.patch`: `1597b445f27ecffdf3be16e2f1b51e68984ea5efe29c01f08e7f2f712cb1302f`
+  - `006-director-text-polish.120-insider.patch`: `7a575adcc31e9d2ad321b6dca3843a347e6b3fdc2bdcfc1433e500b1ea76dab0`
 - Validation passed:
   - `node scripts/upgrade/validate-profile.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`
   - `node scripts/upgrade/validate-series.mjs --profile docs/upgrade/profiles/120-insider-win32-x64-client.json`

@@ -2,6 +2,13 @@
 
 This file is the chronological working memory for the project. Keep durable project overview, goals, and direction in `AGENTS.md` and `CLAUDE.md`; keep detailed state, phase facts, package hashes, and handoff notes here.
 
+## 2026-05-17 120 Review/Fix Memory Sync
+
+- Worker D observed branch `120-replay-baseline`; pre-sync dirty state included untracked `artifacts/`, then other worker updates to `AGENTS.md` / `CLAUDE.md` Build And Package plus untracked `scripts/build-director-120-insider.ps1` and `.cmd`.
+- `AGENTS.md` and `CLAUDE.md` now document the 120 Insider build entry points `scripts/build-director-120-insider.ps1` and `.cmd`, defaulting to `docs/upgrade/profiles/120-insider-win32-x64-client.json`; the older 116 scripts remain legacy/stable fallback.
+- 120 review/fix notes to carry forward: canonical manifest drift must be treated as a reviewed source/build-output signal and cleared by regenerating or clean-materializing before final canonical validation; `validate-all` should be profile-driven for the active 120 profile rather than retaining 116-only report paths; runtime provider hardening belongs in Director-owned provider/model/auth code and replay patches, not generated-tree-only edits.
+- Worker D only performed documentation/memory synchronization and light validation. This round of fixes is prepared for commit and push; final status is governed by the git commit/push record.
+
 ## 2026-05-17 Documentation Split
 
 - Current checkout path observed during this cleanup: `E:\Projects\Director-Code-batch\Director-Code-112-check`.

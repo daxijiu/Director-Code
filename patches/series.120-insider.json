@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
-  "generatedAt": "2026-05-16T21:44:32.164Z",
+  "generatedAt": "2026-05-17T06:04:48.326Z",
   "policy": {
     "source": "profile replayInputs",
     "materializeRule": "materialize consumes only patches listed by this profile-scoped series",
@@ -76,7 +76,7 @@
     },
     {
       "path": "patches/replay/004-director-agent-engine.120-insider.patch",
-      "sha256": "ba2df01e21140a5d6cf731f3d48390a17cc5411b92743be5736c43a33284ee82",
+      "sha256": "11dd6261165eb37710fbca12825b50da27d88c6b04a5dcf4d017540a44146383",
       "enabled": true,
       "status": "enabled",
       "layer": "director",

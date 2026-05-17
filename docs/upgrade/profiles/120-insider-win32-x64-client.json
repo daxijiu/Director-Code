@@ -51,10 +51,11 @@
     "announcementsExtra": "docs/upgrade/expected/120-insider-win32-x64-client/announcements-extra.expected.json"
   },
   "reportPaths": {
-    "upgradeEstimator": "docs/upgrade/reports/120-insider-win32-x64-client/upgrade-estimator-report.json",
     "prepareParity": "docs/upgrade/reports/120-insider-win32-x64-client/prepare-parity-report.json",
     "vscodiumLayer": "docs/upgrade/reports/120-insider-win32-x64-client/vscodium-layer-report.json",
+    "directorPatches": "docs/upgrade/reports/120-insider-win32-x64-client/director-patches-report.json",
     "materialize": "docs/upgrade/reports/120-insider-win32-x64-client/materialize-report.json",
+    "expectedContracts": "docs/upgrade/reports/120-insider-win32-x64-client/expected-contracts-report.json",
     "canonicalManifest": "docs/upgrade/reports/120-insider-win32-x64-client/canonical-manifest-report.json"
   },
   "allowlistPaths": {

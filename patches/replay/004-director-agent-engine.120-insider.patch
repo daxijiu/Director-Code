@@ -11023,10 +11023,10 @@ index 0000000000000000000000000000000000000000..2e4c065f088c3723764ce1e34ae8db98
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..6bf16a016e0e296bd433264b349ffbfe51ad113e
+index 0000000000000000000000000000000000000000..7f89457baf7539b0637a42f6a26a7e4bff2e5fbb
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerRegistry.test.ts
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,154 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -11037,12 +11037,17 @@ index 0000000000000000000000000000000000000000..6bf16a016e0e296bd433264b349ffbfe
 +import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
 +import {
 +	createLegacyMigratedState,
++	getDefaultSelectionFromProviderRegistryState,
 +	makeDirectorModelIdentifier,
 +	normalizeDirectorProviderRegistryState,
 +	parseDirectorModelIdentifier,
 +	sanitizeProviderInstanceId,
 +} from '../../../../directorCode/common/agentEngine/providerRegistry.js';
++import { syncDirectorProviderGroupProjection } from '../../../../directorCode/common/agentEngine/providerGroupProjection.js';
 +import { OPENAI_CODEX_AUTH_VARIANT } from '../../../../directorCode/common/agentEngine/providers/providerTypes.js';
++import { Event } from '../../../../../../base/common/event.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import type { ILanguageModelsConfigurationService, ILanguageModelsProviderGroup } from '../../../common/languageModelsConfiguration.js';
 +
 +suite('AgentEngine - ProviderRegistry', () => {
 +	ensureNoDisposablesAreLeakedInTestSuite();
@@ -11110,6 +11115,70 @@ index 0000000000000000000000000000000000000000..6bf16a016e0e296bd433264b349ffbfe
 +		assert.strictEqual(state!.instances[0].id, 'openai-work');
 +		assert.strictEqual(state!.instances[0].models[0].hidden, true);
 +		assert.strictEqual(state!.instances[0].models[1].enabled, false);
++	});
++
++	test('drops persisted provider instances with unknown provider kind', () => {
++		const state = normalizeDirectorProviderRegistryState({
++			version: 1,
++			defaultProviderId: 'unknown',
++			instances: [{
++				id: 'unknown',
++				kind: 'made-up-provider',
++				displayName: 'Unknown',
++				enabled: true,
++				authKind: 'api-key',
++				authVariant: 'default',
++				models: [{ id: 'model-x' }],
++			}],
++		});
++
++		assert.ok(state);
++		assert.strictEqual(state!.instances.length, 0);
++		assert.strictEqual(state!.defaultProviderId, undefined);
++	});
++
++	test('normalizes empty model lists from catalog and keeps default selection aligned with picker fallback', () => {
++		const state = normalizeDirectorProviderRegistryState({
++			version: 1,
++			defaultProviderId: 'anthropic-api-key',
++			defaultModelId: 'claude-opus-4-6',
++			instances: [{
++				id: 'anthropic-api-key',
++				kind: 'anthropic',
++				displayName: 'Anthropic',
++				enabled: true,
++				authKind: 'api-key',
++				authVariant: 'default',
++				models: [],
++				defaultModelId: 'claude-opus-4-6',
++			}],
++		});
++
++		assert.ok(state);
++		assert.ok(state!.instances[0].models.some(model => model.id === 'claude-opus-4-6'));
++		assert.strictEqual(getDefaultSelectionFromProviderRegistryState(state!)?.modelId, 'claude-opus-4-6');
++	});
++
++	test('logs a warning when chatLanguageModels projection sync fails', async () => {
++		const registry = {
++			getProjectionGroups: async () => [{ name: 'Anthropic', providerInstanceId: 'anthropic-api-key' }],
++		} as any;
++		const languageModels = new class implements ILanguageModelsConfigurationService {
++			declare readonly _serviceBrand: undefined;
++			readonly configurationFile = URI.file('/profile/chatLanguageModels.json');
++			readonly onDidChangeLanguageModelGroups = Event.None;
++			getLanguageModelsProviderGroups(): readonly ILanguageModelsProviderGroup[] { return []; }
++			async addLanguageModelsProviderGroup(_languageModelsProviderGroup: ILanguageModelsProviderGroup): Promise<ILanguageModelsProviderGroup> { throw new Error('write failed'); }
++			async updateLanguageModelsProviderGroup(_from: ILanguageModelsProviderGroup, to: ILanguageModelsProviderGroup): Promise<ILanguageModelsProviderGroup> { return to; }
++			async removeLanguageModelsProviderGroup(_languageModelGroup: ILanguageModelsProviderGroup): Promise<void> { }
++			async configureLanguageModels(): Promise<void> { }
++		}();
++		const warnings: string[] = [];
++
++		const ok = await syncDirectorProviderGroupProjection(registry, languageModels, { warn: message => warnings.push(message) });
++
++		assert.strictEqual(ok, false);
++		assert.ok(warnings.some(message => message.includes('Failed to sync chatLanguageModels.json')));
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/providerSettingsWidget.test.ts
@@ -11875,10 +11944,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02c1cfe0cf
+index 0000000000000000000000000000000000000000..90d3306950f69b6ad84c421834c85ffcbb397224
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,567 @@
+@@ -0,0 +1,544 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -11908,7 +11977,7 @@ index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02
 +import { DirectorCodeAgent } from './directorCodeAgent.js';
 +import { DirectorCodeModelProvider } from './directorCodeModelProvider.js';
 +import { ILanguageModelsService } from '../../../chat/common/languageModels.js';
-+import { ILanguageModelsConfigurationService, type ILanguageModelsProviderGroup } from '../../../chat/common/languageModelsConfiguration.js';
++import { ILanguageModelsConfigurationService } from '../../../chat/common/languageModelsConfiguration.js';
 +import { SyncDescriptor } from '../../../../../platform/instantiation/common/descriptors.js';
 +import { IEditorPaneRegistry, EditorPaneDescriptor } from '../../../../browser/editor.js';
 +import { EditorExtensions, IEditorFactoryRegistry } from '../../../../common/editor.js';
@@ -11917,6 +11986,7 @@ index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02
 +import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
 +import { localize, localize2 } from '../../../../../nls.js';
 +import { INotificationService } from '../../../../../platform/notification/common/notification.js';
++import { ILogService } from '../../../../../platform/log/common/log.js';
 +import { CHAT_CONFIG_MENU_ID } from '../../../chat/browser/actions/chatActions.js';
 +import { ChatViewId, IChatWidgetService } from '../../../chat/browser/chat.js';
 +import { ChatContextKeys } from '../../../chat/common/actions/chatContextKeys.js';
@@ -11931,6 +12001,7 @@ index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02
 +import { IAuthStateService, AuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
 +import { DIRECTOR_LANGUAGE_MODEL_VENDOR, IDirectorProviderRegistryService, DirectorProviderRegistryService } from '../../common/agentEngine/providerRegistry.js';
++import { syncDirectorProviderGroupProjection } from '../../common/agentEngine/providerGroupProjection.js';
 +import {
 +	createApprovedPlanExecutionPrompt,
 +	DIRECTOR_PLAN_EXECUTE_COMMAND_ID,
@@ -12319,6 +12390,7 @@ index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02
 +	constructor(
 +		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
 +		@ILanguageModelsConfigurationService private readonly languageModelsConfigurationService: ILanguageModelsConfigurationService,
++		@ILogService private readonly logService: ILogService,
 +	) {
 +		super();
 +		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => this.queueSync()));
@@ -12326,37 +12398,11 @@ index 0000000000000000000000000000000000000000..47b025998cec385fe043478c88dbda02
 +	}
 +
 +	private queueSync(): void {
-+		this.syncPromise = this.syncPromise.then(() => this.sync()).catch(() => undefined);
++		this.syncPromise = this.syncPromise.then(() => this.sync()).then(() => undefined);
 +	}
 +
 +	private async sync(): Promise<void> {
-+		const projectionGroups = await this.providerRegistryService.getProjectionGroups();
-+		const desired = new Map(projectionGroups.map(group => [group.providerInstanceId, group]));
-+		const existing = this.languageModelsConfigurationService.getLanguageModelsProviderGroups()
-+			.filter(group => group.vendor === VENDOR);
-+
-+		for (const group of existing) {
-+			const providerInstanceId = typeof group.directorProviderInstanceId === 'string' ? group.directorProviderInstanceId : undefined;
-+			if (!providerInstanceId || !desired.has(providerInstanceId)) {
-+				await this.languageModelsConfigurationService.removeLanguageModelsProviderGroup(group);
-+			}
-+		}
-+
-+		const refreshedExisting = this.languageModelsConfigurationService.getLanguageModelsProviderGroups()
-+			.filter(group => group.vendor === VENDOR);
-+		for (const desiredGroup of desired.values()) {
-+			const existingGroup = refreshedExisting.find(group => group.directorProviderInstanceId === desiredGroup.providerInstanceId);
-+			const target: ILanguageModelsProviderGroup = {
-+				name: desiredGroup.name,
-+				vendor: VENDOR,
-+				directorProviderInstanceId: desiredGroup.providerInstanceId,
-+			};
-+			if (!existingGroup) {
-+				await this.languageModelsConfigurationService.addLanguageModelsProviderGroup(target);
-+			} else if (existingGroup.name !== target.name || existingGroup.directorProviderInstanceId !== target.directorProviderInstanceId) {
-+				await this.languageModelsConfigurationService.updateLanguageModelsProviderGroup(existingGroup, target);
-+			}
-+		}
++		await syncDirectorProviderGroupProjection(this.providerRegistryService, this.languageModelsConfigurationService, this.logService);
 +	}
 +}
 +
@@ -23952,12 +23998,69 @@ index 0000000000000000000000000000000000000000..3cc84fb42e77a4c204cf20e4dab169b8
 +		}
 +	}
 +}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providerGroupProjection.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerGroupProjection.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..9c57d5bb322ce3e09492e61a0ddabb7c7a4c7d99
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerGroupProjection.ts
+@@ -0,0 +1,51 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import type { ILanguageModelsConfigurationService, ILanguageModelsProviderGroup } from '../../../chat/common/languageModelsConfiguration.js';
++import type { IDirectorProviderRegistryService } from './providerRegistry.js';
++
++export interface IDirectorProviderProjectionLog {
++	warn(message: string, ...args: unknown[]): void;
++}
++
++export async function syncDirectorProviderGroupProjection(
++	providerRegistryService: IDirectorProviderRegistryService,
++	languageModelsConfigurationService: ILanguageModelsConfigurationService,
++	logService?: IDirectorProviderProjectionLog,
++): Promise<boolean> {
++	try {
++		const projectionGroups = await providerRegistryService.getProjectionGroups();
++		const desired = new Map(projectionGroups.map(group => [group.providerInstanceId, group]));
++		const existing = languageModelsConfigurationService.getLanguageModelsProviderGroups()
++			.filter(group => group.vendor === 'director-code');
++
++		for (const group of existing) {
++			const providerInstanceId = typeof group.directorProviderInstanceId === 'string' ? group.directorProviderInstanceId : undefined;
++			if (!providerInstanceId || !desired.has(providerInstanceId)) {
++				await languageModelsConfigurationService.removeLanguageModelsProviderGroup(group);
++			}
++		}
++
++		const refreshedExisting = languageModelsConfigurationService.getLanguageModelsProviderGroups()
++			.filter(group => group.vendor === 'director-code');
++		for (const desiredGroup of desired.values()) {
++			const existingGroup = refreshedExisting.find(group => group.directorProviderInstanceId === desiredGroup.providerInstanceId);
++			const target: ILanguageModelsProviderGroup = {
++				name: desiredGroup.name,
++				vendor: 'director-code',
++				directorProviderInstanceId: desiredGroup.providerInstanceId,
++			};
++			if (!existingGroup) {
++				await languageModelsConfigurationService.addLanguageModelsProviderGroup(target);
++			} else if (existingGroup.name !== target.name || existingGroup.directorProviderInstanceId !== target.directorProviderInstanceId) {
++				await languageModelsConfigurationService.updateLanguageModelsProviderGroup(existingGroup, target);
++			}
++		}
++		return true;
++	} catch (error) {
++		logService?.warn('[Director Code] Failed to sync chatLanguageModels.json provider groups.', error);
++		return false;
++	}
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de84650df4
+index 0000000000000000000000000000000000000000..61ec6840ae127d0efa5f4de8a0f470e546eadbaa
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/providerRegistry.ts
-@@ -0,0 +1,467 @@
+@@ -0,0 +1,489 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -23973,7 +24076,7 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +import { IUserDataProfileService } from '../../../../services/userDataProfile/common/userDataProfile.js';
 +import { DEFAULT_AUTH_VARIANT, OPENAI_CODEX_AUTH_VARIANT, type AuthVariantName, type ProviderCapabilities } from './providers/providerTypes.js';
 +import { getDefaultModelForAuthVariant, getModelsForProviderAndAuthVariant, type IModelDefinition } from './modelCatalog.js';
-+import { PROVIDER_DISPLAY_NAMES, type ProviderName } from './apiKeyService.js';
++import { PROVIDER_DISPLAY_NAMES, SUPPORTED_PROVIDERS, type ProviderName } from './apiKeyService.js';
 +
 +export const DIRECTOR_PROVIDER_REGISTRY_FILE = 'directorCodeProviders.json';
 +export const DIRECTOR_LANGUAGE_MODEL_VENDOR = 'director-code';
@@ -24094,12 +24197,16 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +	const instances = raw.instances
 +		.map(normalizeInstance)
 +		.filter((instance): instance is IDirectorProviderInstance => !!instance);
++	const defaultProviderId = typeof raw.defaultProviderId === 'string'
++		? sanitizeProviderInstanceId(raw.defaultProviderId)
++		: undefined;
++	const defaultInstance = instances.find(instance => instance.id === defaultProviderId) ?? instances[0];
 +
 +	return {
 +		version: 1,
 +		instances,
-+		defaultProviderId: typeof raw.defaultProviderId === 'string' ? sanitizeProviderInstanceId(raw.defaultProviderId) : instances[0]?.id,
-+		defaultModelId: typeof raw.defaultModelId === 'string' ? raw.defaultModelId : instances[0]?.defaultModelId,
++		defaultProviderId: defaultInstance?.id,
++		defaultModelId: typeof raw.defaultModelId === 'string' ? raw.defaultModelId : defaultInstance?.defaultModelId,
 +		migratedLegacy: raw.migratedLegacy === true,
 +	};
 +}
@@ -24113,14 +24220,21 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +		return undefined;
 +	}
 +	const id = sanitizeProviderInstanceId(raw.id);
-+	const kind = raw.kind as ProviderName;
++	const kind = normalizeProviderName(raw.kind);
++	if (!kind) {
++		return undefined;
++	}
 +	const authVariant = normalizeRegistryAuthVariant(kind, raw.authVariant);
 +	const authKind = raw.authKind === 'oauth' ? 'oauth' : 'api-key';
-+	const models = Array.isArray(raw.models)
++	const normalizedModels = Array.isArray(raw.models)
 +		? raw.models
 +			.map(normalizeModelEntry)
 +			.filter((model): model is IDirectorProviderModelEntry => !!model)
 +		: [];
++	const defaultModelId = typeof raw.defaultModelId === 'string' && raw.defaultModelId.trim() ? raw.defaultModelId.trim() : normalizedModels[0]?.id;
++	const models = normalizedModels.length
++		? normalizedModels
++		: modelEntriesFromCatalog(kind, authVariant, defaultModelId);
 +	const now = Date.now();
 +	return {
 +		id,
@@ -24133,10 +24247,14 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +		headers: normalizeHeaders(raw.headers),
 +		apiKeySource: normalizeApiKeySource(raw.apiKeySource),
 +		models,
-+		defaultModelId: typeof raw.defaultModelId === 'string' && raw.defaultModelId.trim() ? raw.defaultModelId.trim() : models[0]?.id,
++		defaultModelId: defaultModelId ?? models[0]?.id,
 +		createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : now,
 +		updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : now,
 +	};
++}
++
++function normalizeProviderName(value: string): ProviderName | undefined {
++	return SUPPORTED_PROVIDERS.find(candidate => candidate === value);
 +}
 +
 +function normalizeHeaders(value: unknown): Record<string, string> | undefined {
@@ -24202,6 +24320,27 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +		name,
 +		providerInstanceId: instance.id,
 +	};
++}
++
++export function getDefaultSelectionFromProviderRegistryState(state: IDirectorProviderRegistryState): IDirectorProviderSelection | undefined {
++	const enabled = state.instances.filter(instance => instance.enabled);
++	const instance = enabled.find(candidate => candidate.id === state.defaultProviderId) ?? enabled[0];
++	if (!instance) {
++		return undefined;
++	}
++	const preferredModelId = state.defaultProviderId === instance.id && state.defaultModelId
++		? state.defaultModelId
++		: instance.defaultModelId;
++	const models = instance.models.length
++		? instance.models
++		: modelEntriesFromCatalog(instance.kind, instance.authVariant, preferredModelId);
++	const model = preferredModelId && models.some(candidate => candidate.id === preferredModelId && candidate.enabled !== false)
++		? preferredModelId
++		: models.find(candidate => candidate.enabled !== false)?.id;
++	if (!model) {
++		return undefined;
++	}
++	return { instance, modelId: model };
 +}
 +
 +export function modelEntriesFromCatalog(provider: ProviderName, authVariant: AuthVariantName, extraModelId?: string): readonly IDirectorProviderModelEntry[] {
@@ -24328,21 +24467,7 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +
 +	async getDefaultSelection(): Promise<IDirectorProviderSelection | undefined> {
 +		const state = await this.getState();
-+		const enabled = state.instances.filter(instance => instance.enabled);
-+		const instance = enabled.find(candidate => candidate.id === state.defaultProviderId) ?? enabled[0];
-+		if (!instance) {
-+			return undefined;
-+		}
-+		const modelId = state.defaultProviderId === instance.id && state.defaultModelId
-+			? state.defaultModelId
-+			: instance.defaultModelId;
-+		const model = modelId && instance.models.some(candidate => candidate.id === modelId && candidate.enabled !== false)
-+			? modelId
-+			: instance.models.find(candidate => candidate.enabled !== false)?.id;
-+		if (!model) {
-+			return undefined;
-+		}
-+		return { instance, modelId: model };
++		return getDefaultSelectionFromProviderRegistryState(state);
 +	}
 +
 +	async getInstance(instanceId: string): Promise<IDirectorProviderInstance | undefined> {
@@ -24394,7 +24519,7 @@ index 0000000000000000000000000000000000000000..0f1b8d1d1d515bc45722dace038e63de
 +}
 +
 +export function createLegacyMigratedState(configurationService: IConfigurationService): IDirectorProviderRegistryState {
-+	const provider = ((configurationService.getValue<string>(CONFIG_PROVIDER) || 'anthropic') as ProviderName);
++	const provider = normalizeProviderName(configurationService.getValue<string>(CONFIG_PROVIDER) || '') ?? 'anthropic';
 +	const authVariant = normalizeRegistryAuthVariant(provider, configurationService.getValue<string>(CONFIG_AUTH_VARIANT));
 +	const configuredModel = configurationService.getValue<string>(CONFIG_MODEL) || getDefaultModelForAuthVariant(provider, authVariant);
 +	const defaultModelId = provider === 'openai' && authVariant === OPENAI_CODEX_AUTH_VARIANT
