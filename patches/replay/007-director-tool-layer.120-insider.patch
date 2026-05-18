@@ -301,10 +301,10 @@ index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e4d3fb3dda74defd9eb1dfcbdbf3e839dc379f98
+index 0000000000000000000000000000000000000000..7942c3f3a71bdb9c56c416973acd8bb4bb230348
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,217 @@
+@@ -0,0 +1,222 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -369,6 +369,10 @@ index 0000000000000000000000000000000000000000..e4d3fb3dda74defd9eb1dfcbdbf3e839
 +		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runTask']);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runInTerminal')?.entry.timeoutCategory, 'stage-aware-terminal');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.entry.timeoutCategory, 'tool-owned');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'createAndRunTask')?.entry.timeoutCategory, 'tool-owned');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.entry.timeoutCategory, 'tool-owned');
 +	});
 +
 +	test('exposes read-only facade workspace tools in Ask/Edit/Agent only', () => {
@@ -517,6 +521,7 @@ index 0000000000000000000000000000000000000000..e4d3fb3dda74defd9eb1dfcbdbf3e839
 +		assert.strictEqual(planTools.find(item => item.modelName === 'director_present_plan')?.definition.isReadOnly, false);
 +		assert.strictEqual(planTools.find(item => item.modelName === 'director_present_plan')?.definition.inputSchema.additionalProperties, false);
 +		assert.strictEqual(planTools.find(item => item.modelName === 'askQuestions')?.definition.isReadOnly, false);
++		assert.strictEqual(planTools.find(item => item.modelName === 'askQuestions')?.entry.timeoutCategory, 'user-interaction-owned');
 +		assert.ok(!planTools.some(item => item.modelName === 'apply_patch'));
 +		assert.ok(!planTools.some(item => item.modelName === 'runInTerminal'));
 +		assert.ok(!planTools.some(item => item.modelName === 'runSubagent'));
@@ -1255,10 +1260,10 @@ index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c04302570
+index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08f850a2f6
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
-@@ -0,0 +1,283 @@
+@@ -0,0 +1,288 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1280,6 +1285,7 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +export type DirectorToolDisposition = 'keep' | 'wrap' | 'rename' | 'hide' | 'defer';
 +export type DirectorToolBacking = 'vscode-core' | 'vscode-extension' | 'director' | 'deferred';
 +export type DirectorToolConfirmationPolicy = 'none' | 'pre-approval' | 'post-approval' | 'pre-and-post-approval' | 'director-pre-approval' | 'director-session-approval' | 'not-model-callable';
++export type DirectorToolTimeoutCategory = 'generic-bridge' | 'stage-aware-terminal' | 'tool-owned' | 'user-interaction-owned';
 +
 +export interface DirectorToolRegistryEntry {
 +	readonly modelName: string;
@@ -1293,6 +1299,7 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +	readonly backing: DirectorToolBacking;
 +	readonly requiredCapabilities?: readonly string[];
 +	readonly directorPreApprovalReason?: string;
++	readonly timeoutCategory?: DirectorToolTimeoutCategory;
 +	readonly disposition: DirectorToolDisposition;
 +	readonly migrationNote: string;
 +}
@@ -1341,6 +1348,7 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +		readonly inputSchema?: IJSONSchema;
 +		readonly requiredCapabilities?: readonly string[];
 +		readonly directorPreApprovalReason?: string;
++		readonly timeoutCategory?: DirectorToolTimeoutCategory;
 +	},
 +): DirectorToolRegistryEntry {
 +	return {
@@ -1355,6 +1363,7 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +		backing: options?.backing ?? 'vscode-core',
 +		requiredCapabilities: options?.requiredCapabilities,
 +		directorPreApprovalReason: options?.directorPreApprovalReason,
++		timeoutCategory: options?.timeoutCategory,
 +		disposition,
 +		migrationNote,
 +	};
@@ -1364,10 +1373,10 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +const DIRECTOR_BROWSER_SESSION_PRE_APPROVAL = 'Director browser policy requires explicit approval before the agent reads or captures integrated browser page content outside a user-opened Director browser session.';
 +
 +export const directorToolRegistry: readonly DirectorToolRegistryEntry[] = [
-+	entry('askQuestions', ['vscode_askQuestions'], ['askQuestions'], 'confirmation', PLAN_AND_AGENT, 'pre-approval', 'keep', 'Preserve the existing user-question helper for Agent and Plan prompts that need explicit user input.'),
-+	entry('vscode_get_confirmation', ['vscode_get_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve generic confirmation behavior for current Agent flows.'),
-+	entry('vscode_get_confirmation_with_options', ['vscode_get_confirmation_with_options'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve option-based confirmation behavior for current Agent flows.'),
-+	entry('vscode_get_modified_files_confirmation', ['vscode_get_modified_files_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve modified-files confirmation behavior until Phase 3/4 reviewable edit tools replace direct mutation paths.'),
++	entry('askQuestions', ['vscode_askQuestions'], ['askQuestions'], 'confirmation', PLAN_AND_AGENT, 'pre-approval', 'keep', 'Preserve the existing user-question helper for Agent and Plan prompts that need explicit user input.', { timeoutCategory: 'user-interaction-owned' }),
++	entry('vscode_get_confirmation', ['vscode_get_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve generic confirmation behavior for current Agent flows.', { timeoutCategory: 'user-interaction-owned' }),
++	entry('vscode_get_confirmation_with_options', ['vscode_get_confirmation_with_options'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve option-based confirmation behavior for current Agent flows.', { timeoutCategory: 'user-interaction-owned' }),
++	entry('vscode_get_modified_files_confirmation', ['vscode_get_modified_files_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve modified-files confirmation behavior until Phase 3/4 reviewable edit tools replace direct mutation paths.', { timeoutCategory: 'user-interaction-owned' }),
 +
 +	entry('todo', ['manage_todo_list'], ['todo'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task planning visible to the Agent loop.'),
 +	entry('task_complete', ['task_complete'], [], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task completion signaling available to the Agent loop.'),
@@ -1423,16 +1432,17 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +	entry('replace_string_in_file', ['director_replace_string_in_file'], ['replace_string_in_file'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable exact-string replacement through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +	entry('multi_replace_string_in_file', ['director_multi_replace_string_in_file'], ['multi_replace_string_in_file'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable multi-string replacement through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +
-+	entry('runInTerminal', ['run_in_terminal'], ['runInTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal execution for Agent mode only.'),
++	entry('runInTerminal', ['run_in_terminal'], ['runInTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal execution for Agent mode only.', { timeoutCategory: 'stage-aware-terminal' }),
++	entry('execution_subagent', ['director_execution_subagent'], ['execution_subagent'], 'execute', AGENT_ONLY, 'none', 'keep', 'Director-owned execution wrapper exposed only in Agent mode. Runs a terminal-only subagent with sync timeout-bounded runInTerminal calls and compact output summaries.', { backing: 'director', timeoutCategory: 'tool-owned' }),
 +	entry('sendToTerminal', ['send_to_terminal'], ['sendToTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal input routing for Agent mode only.'),
 +	entry('getTerminalOutput', ['get_terminal_output'], ['getTerminalOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal output inspection, but keep terminal context out of Ask v1.'),
 +	entry('killTerminal', ['kill_terminal'], ['killTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal cleanup for Agent mode only.'),
 +	entry('terminalSelection', ['terminal_selection'], ['terminalSelection'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal selection context for Agent mode only.'),
 +	entry('terminalLastCommand', ['terminal_last_command'], ['terminalLastCommand'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal command context for Agent mode only.'),
-+	entry('vscode_get_terminal_confirmation', ['vscode_get_terminal_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal confirmation helper for Agent terminal tools.'),
-+	entry('runTask', ['run_task'], ['runTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task execution for Agent mode only.'),
-+	entry('createAndRunTask', ['create_and_run_task'], ['createAndRunTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task creation/execution for Agent mode only.'),
-+	entry('getTaskOutput', ['get_task_output'], ['getTaskOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve task output inspection for Agent mode only.'),
++	entry('vscode_get_terminal_confirmation', ['vscode_get_terminal_confirmation'], [], 'confirmation', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal confirmation helper for Agent terminal tools.', { timeoutCategory: 'user-interaction-owned' }),
++	entry('runTask', ['run_task'], ['runTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task execution for Agent mode only.', { timeoutCategory: 'tool-owned' }),
++	entry('createAndRunTask', ['create_and_run_task'], ['createAndRunTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task creation/execution for Agent mode only.', { timeoutCategory: 'tool-owned' }),
++	entry('getTaskOutput', ['get_task_output'], ['getTaskOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve task output inspection for Agent mode only.', { timeoutCategory: 'tool-owned' }),
 +
 +	entry('openBrowserPage', ['open_browser_page'], ['openBrowserPage'], 'execute', AGENT_ONLY, 'director-pre-approval', 'keep', 'Reuse VS Code core integrated-browser open tool with a Director pre-approval gate that global auto-approve cannot bypass.', { directorPreApprovalReason: DIRECTOR_BROWSER_MUTATION_PRE_APPROVAL }),
 +	entry('readPage', ['read_page'], ['readPage'], 'read', AGENT_ONLY, 'director-session-approval', 'keep', 'Reuse VS Code core browser page reader. Director conservatively requires page/session approval in Phase 3.', { directorPreApprovalReason: DIRECTOR_BROWSER_SESSION_PRE_APPROVAL }),
@@ -1542,3 +1552,344 @@ index 0000000000000000000000000000000000000000..3165a1bb19d03a2b2ee57f04e3a8845c
 +		properties: {},
 +	};
 +}
+diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
+index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b555234425a4b14bd 100644
+--- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
++++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
+@@ -469,6 +469,7 @@ const telemetryIgnoredSequences = [
+ 
+ const altBufferMessage = '\n' + localize('runInTerminalTool.altBufferMessage', "The command opened the alternate buffer.");
+ 
++type TerminalSendText = ITerminalInstance['sendText'];
+ 
+ export class RunInTerminalTool extends Disposable implements IToolImpl {
+ 
+@@ -487,6 +488,7 @@ export class RunInTerminalTool extends Disposable implements IToolImpl {
+ 	protected readonly _sessionTerminalAssociations = new ResourceMap<IToolTerminal>();
+ 	protected readonly _sessionTerminalInstances = new ResourceMap<Set<ITerminalInstance>>();
+ 	private readonly _terminalsBeingDisposedBySessionCleanup = new Set<ITerminalInstance>();
++	private readonly _toolInitiatedInputDataIgnoreDepth = new WeakMap<IToolTerminal, number>();
+ 
+ 	/**
+ 	 * Tracks active background completion notifications per terminal instance ID.
+@@ -1535,7 +1537,8 @@ export class RunInTerminalTool extends Disposable implements IToolImpl {
+ 				termId,
+ 				toolTerminal,
+ 				commandDetection!,
+-				executionOptions.persistentSession
++				executionOptions.persistentSession,
++				(text: string, shouldExecute: boolean, bracketedPasteMode?: boolean) => this._sendTextAsTool(toolTerminal, text, shouldExecute, bracketedPasteMode)
+ 			);
+ 			this._logService.info(`RunInTerminalTool: Using \`${execution.strategy.type}\` execute strategy for command \`${command}\``);
+ 			store.add(execution);
+@@ -2197,7 +2200,10 @@ export class RunInTerminalTool extends Disposable implements IToolImpl {
+ 	}
+ 
+ 	private _registerInputListener(toolTerminal: IToolTerminal): void {
+-		const disposable = toolTerminal.instance.onData(data => {
++		const disposable = toolTerminal.instance.onDidInputData(data => {
++			if (this._isIgnoringToolInitiatedInputData(toolTerminal)) {
++				return;
++			}
+ 			if (!telemetryIgnoredSequences.includes(data)) {
+ 				toolTerminal.receivedUserInput = data.length > 0;
+ 			}
+@@ -2205,6 +2211,32 @@ export class RunInTerminalTool extends Disposable implements IToolImpl {
+ 		Event.once(toolTerminal.instance.onDisposed)(() => disposable.dispose());
+ 	}
+ 
++	private async _sendTextAsTool(toolTerminal: IToolTerminal, text: string, shouldExecute: boolean, bracketedPasteMode?: boolean): Promise<void> {
++		this._beginIgnoringToolInitiatedInputData(toolTerminal);
++		try {
++			await toolTerminal.instance.sendText(text, shouldExecute, bracketedPasteMode);
++		} finally {
++			this._endIgnoringToolInitiatedInputData(toolTerminal);
++		}
++	}
++
++	private _beginIgnoringToolInitiatedInputData(toolTerminal: IToolTerminal): void {
++		this._toolInitiatedInputDataIgnoreDepth.set(toolTerminal, (this._toolInitiatedInputDataIgnoreDepth.get(toolTerminal) ?? 0) + 1);
++	}
++
++	private _endIgnoringToolInitiatedInputData(toolTerminal: IToolTerminal): void {
++		const depth = this._toolInitiatedInputDataIgnoreDepth.get(toolTerminal) ?? 0;
++		if (depth <= 1) {
++			this._toolInitiatedInputDataIgnoreDepth.delete(toolTerminal);
++		} else {
++			this._toolInitiatedInputDataIgnoreDepth.set(toolTerminal, depth - 1);
++		}
++	}
++
++	private _isIgnoringToolInitiatedInputData(toolTerminal: IToolTerminal): boolean {
++		return (this._toolInitiatedInputDataIgnoreDepth.get(toolTerminal) ?? 0) > 0;
++	}
++
+ 
+ 	// #endregion
+ 
+@@ -2734,6 +2766,7 @@ class ActiveTerminalExecution extends Disposable implements IActiveTerminalExecu
+ 		toolTerminal: IToolTerminal,
+ 		commandDetection: ICommandDetectionCapability,
+ 		isBackground: boolean,
++		private readonly _sendTextAsTool: TerminalSendText,
+ 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+ 	) {
+ 		super();
+@@ -2752,13 +2785,24 @@ class ActiveTerminalExecution extends Disposable implements IActiveTerminalExecu
+ 		}));
+ 	}
+ 
++	private _createToolInitiatedInputGuardedInstance(): ITerminalInstance {
++		return new Proxy(this._toolTerminal.instance, {
++			get: (target, property, receiver) => {
++				if (property === 'sendText') {
++					return this._sendTextAsTool;
++				}
++				return Reflect.get(target, property, receiver);
++			}
++		});
++	}
++
+ 	private _createStrategy(commandDetection: ICommandDetectionCapability): ITerminalExecuteStrategy {
+ 		const isSyncMode = !this._isBackground;
+ 		switch (this._toolTerminal.shellIntegrationQuality) {
+ 			case ShellIntegrationQuality.None:
+-				return this._instantiationService.createInstance(NoneExecuteStrategy, this._toolTerminal.instance, () => this._toolTerminal.receivedUserInput ?? false);
++				return this._instantiationService.createInstance(NoneExecuteStrategy, this._createToolInitiatedInputGuardedInstance(), () => this._toolTerminal.receivedUserInput ?? false);
+ 			case ShellIntegrationQuality.Basic:
+-				return this._instantiationService.createInstance(BasicExecuteStrategy, this._toolTerminal.instance, () => this._toolTerminal.receivedUserInput ?? false, commandDetection);
++				return this._instantiationService.createInstance(BasicExecuteStrategy, this._createToolInitiatedInputGuardedInstance(), () => this._toolTerminal.receivedUserInput ?? false, commandDetection);
+ 			case ShellIntegrationQuality.Rich:
+ 				return this._instantiationService.createInstance(RichExecuteStrategy, this._toolTerminal.instance, commandDetection, isSyncMode);
+ 		}
+diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts
+index 5b9e1feb19b0ee92526303ace649c11b42fd462b..d8191e0db68d2e50d0862dbd2cb04a40012e457f 100644
+--- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts
++++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts
+@@ -47,7 +47,7 @@ import { ITerminalChatService, ITerminalService, type ITerminalInstance } from '
+ import { ITerminalProfileResolverService } from '../../../../terminal/common/terminal.js';
+ import type { ICommandLinePresenter } from '../../browser/tools/commandLinePresenter/commandLinePresenter.js';
+ import { createRunInTerminalToolData, RunInTerminalTool, shouldAutomaticallyRetryUnsandboxed, type IRunInTerminalInputParams } from '../../browser/tools/runInTerminalTool.js';
+-import { ShellIntegrationQuality } from '../../browser/toolTerminalCreator.js';
++import { ShellIntegrationQuality, type IToolTerminal } from '../../browser/toolTerminalCreator.js';
+ import { terminalChatAgentToolsConfiguration, TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
+ import { AgentNetworkDomainSettingId } from '../../../../../../platform/networkFilter/common/settings.js';
+ import { AgentSandboxEnabledValue, AgentSandboxSettingId } from '../../../../../../platform/sandbox/common/settings.js';
+@@ -69,6 +69,14 @@ class TestRunInTerminalTool extends RunInTerminalTool {
+ 	get profileFetcher() { return this._profileFetcher; }
+ 	get commandLinePresenters(): ICommandLinePresenter[] { return (this as unknown as Record<string, ICommandLinePresenter[]>)['_commandLinePresenters']; }
+ 
++	registerInputListenerForTest(toolTerminal: IToolTerminal): void {
++		(this as unknown as { _registerInputListener(toolTerminal: IToolTerminal): void })._registerInputListener(toolTerminal);
++	}
++
++	sendTextAsToolForTest(toolTerminal: IToolTerminal, text: string, shouldExecute: boolean, bracketedPasteMode?: boolean): Promise<void> {
++		return (this as unknown as { _sendTextAsTool(toolTerminal: IToolTerminal, text: string, shouldExecute: boolean, bracketedPasteMode?: boolean): Promise<void> })._sendTextAsTool(toolTerminal, text, shouldExecute, bracketedPasteMode);
++	}
++
+ 	setBackendOs(os: OperatingSystem) {
+ 		this._osBackend = Promise.resolve(os);
+ 	}
+@@ -348,6 +356,202 @@ suite('RunInTerminalTool', () => {
+ 		return (tool as unknown as Record<string, (shellType: string, blockedDomains: string[] | undefined) => IMarkdownString>)['_getAutomaticUnsandboxRetryTitle'](shellType, blockedDomains);
+ 	}
+ 
++	function createInputTrackingTerminal(sendTextImpl?: (text: string, shouldExecute: boolean, bracketedPasteMode?: boolean) => Promise<void>): {
++		toolTerminal: IToolTerminal;
++		onDataEmitter: Emitter<string>;
++		onDidInputDataEmitter: Emitter<string>;
++	} {
++		const onDataEmitter = store.add(new Emitter<string>());
++		const onDidInputDataEmitter = store.add(new Emitter<string>());
++		const onDisposedEmitter = store.add(new Emitter<void>());
++		const terminal = {
++			onData: onDataEmitter.event,
++			onDidInputData: onDidInputDataEmitter.event,
++			onDisposed: onDisposedEmitter.event,
++			sendText: sendTextImpl ?? (async (text: string) => {
++				onDidInputDataEmitter.fire(text);
++			}),
++		} as unknown as ITerminalInstance;
++		return {
++			toolTerminal: {
++				instance: terminal,
++				shellIntegrationQuality: ShellIntegrationQuality.None,
++				receivedUserInput: false,
++			},
++			onDataEmitter,
++			onDidInputDataEmitter,
++		};
++	}
++
++	function createConsecutiveSyncTerminal(shellIntegrationQuality: ShellIntegrationQuality.Basic | ShellIntegrationQuality.None): {
++		toolTerminal: IToolTerminal;
++		onDataEmitter: Emitter<string>;
++		sentTexts: string[];
++	} {
++		const onDataEmitter = store.add(new Emitter<string>());
++		const onDidInputDataEmitter = store.add(new Emitter<string>());
++		const onDisposedEmitter = store.add(new Emitter<void>());
++		const onExitEmitter = store.add(new Emitter<number | undefined>());
++		const onCommandFinishedEmitter = store.add(new Emitter<{ id: string; marker: object; getOutput(): string; exitCode: number; timestamp: number; duration: number }>());
++		const sentTexts: string[] = [];
++		let commandCount = 0;
++		let lastCommand = '';
++		let lastOutput = '';
++		let cursorY = 0;
++		const marker = {
++			line: 0,
++			isDisposed: false,
++			onDispose: Event.None,
++			dispose: () => { },
++		};
++		const xterm = {
++			raw: {
++				onData: onDataEmitter.event,
++				onWriteParsed: Event.None,
++				registerMarker: () => marker,
++				buffer: {
++					active: {
++						baseY: 0,
++						get cursorY() { return cursorY; },
++						getLine: () => ({
++							translateToString: () => '$ ',
++						}),
++					},
++					alternate: {},
++					onBufferChange: () => toDisposable(() => { }),
++				},
++			},
++			getContentsAsText: () => `${lastCommand}\n${lastOutput}\n$ `,
++			getXtermTheme: () => undefined,
++		};
++		const commandDetection = shellIntegrationQuality === ShellIntegrationQuality.Basic
++			? {
++				hasRichCommandDetection: false,
++				onCommandFinished: onCommandFinishedEmitter.event,
++				commands: [],
++				executingCommandObject: undefined,
++			}
++			: undefined;
++		const terminal = {
++			instanceId: shellIntegrationQuality === ShellIntegrationQuality.Basic ? 1001 : 1002,
++			resource: URI.parse(`terminal://test/${shellIntegrationQuality}`),
++			processReady: Promise.resolve(),
++			processId: shellIntegrationQuality === ShellIntegrationQuality.Basic ? 2001 : 2002,
++			hasRemoteAuthority: false,
++			isDisposed: false,
++			exitCode: undefined,
++			xtermReadyPromise: Promise.resolve(xterm),
++			xterm,
++			onData: onDataEmitter.event,
++			onDidInputData: onDidInputDataEmitter.event,
++			onDisposed: onDisposedEmitter.event,
++			onExit: onExitEmitter.event,
++			capabilities: {
++				get: (capability: TerminalCapability) => capability === TerminalCapability.CommandDetection ? commandDetection : undefined,
++				onDidAddCapability: Event.None,
++			},
++			sendText: async (text: string, shouldExecute: boolean) => {
++				sentTexts.push(text);
++				onDidInputDataEmitter.fire(text);
++				if (shouldExecute) {
++					commandCount++;
++					lastCommand = text;
++					lastOutput = `${shellIntegrationQuality}-output-${commandCount}`;
++					cursorY = 1;
++					onDataEmitter.fire(`${text}\n${lastOutput}\n$ `);
++					const finishedMarker = {};
++					queueMicrotask(() => onCommandFinishedEmitter.fire({
++						id: `command-${commandCount}`,
++						marker: finishedMarker,
++						getOutput: () => `${text}\n${lastOutput}\n$ `,
++						exitCode: 0,
++						timestamp: Date.now(),
++						duration: 1,
++					}));
++				} else {
++					onDataEmitter.fire(text);
++				}
++			},
++			getCwdResource: async () => undefined,
++			focus: () => { },
++			dispose: () => { },
++		} as unknown as ITerminalInstance;
++		return {
++			toolTerminal: {
++				instance: terminal,
++				shellIntegrationQuality,
++				receivedUserInput: false,
++				isBackground: false,
++			},
++			onDataEmitter,
++			sentTexts,
++		};
++	}
++
++	async function invokeConsecutiveSyncCommand(command: string): Promise<string> {
++		const result = await invokeToolTest({ command, mode: 'sync', timeout: 1000 });
++		const firstContent = result.content[0];
++		return firstContent?.kind === 'text' ? firstContent.value : '';
++	}
++
++	suite('input origin tracking', () => {
++		test('should not treat PTY output onData as user input', () => {
++			const { toolTerminal, onDataEmitter } = createInputTrackingTerminal();
++			runInTerminalTool.registerInputListenerForTest(toolTerminal);
++
++			onDataEmitter.fire('shell output');
++
++			strictEqual(toolTerminal.receivedUserInput, false);
++		});
++
++		test('should treat real onDidInputData as user input', () => {
++			const { toolTerminal, onDidInputDataEmitter } = createInputTrackingTerminal();
++			runInTerminalTool.registerInputListenerForTest(toolTerminal);
++
++			onDidInputDataEmitter.fire('x');
++
++			strictEqual(toolTerminal.receivedUserInput, true);
++		});
++
++		test('should ignore tool-originated sendText onDidInputData and clear the guard after errors', async () => {
++			const { toolTerminal, onDidInputDataEmitter } = createInputTrackingTerminal(async text => {
++				onDidInputDataEmitter.fire(text);
++				throw new Error('send failed');
++			});
++			runInTerminalTool.registerInputListenerForTest(toolTerminal);
++
++			await runInTerminalTool.sendTextAsToolForTest(toolTerminal, 'echo from tool', true).then(
++				() => { throw new Error('Expected sendTextAsToolForTest to reject'); },
++				() => { }
++			);
++			strictEqual(toolTerminal.receivedUserInput, false, 'Tool-owned sendText input should be ignored');
++
++			onDidInputDataEmitter.fire('real user input');
++			strictEqual(toolTerminal.receivedUserInput, true, 'Guard should be cleared after sendText throws');
++		});
++	});
++
++	suite('consecutive sync input regression', () => {
++		for (const shellIntegrationQuality of [ShellIntegrationQuality.Basic, ShellIntegrationQuality.None] as const) {
++			test(`should not send control characters before the second ${shellIntegrationQuality} sync command after PTY output`, async () => {
++				setConfig(TerminalChatAgentToolsSettingId.IdlePollInterval, 1);
++				const sessionResource = LocalChatSessionUri.forSession('run-in-terminal-test');
++				const { toolTerminal, onDataEmitter, sentTexts } = createConsecutiveSyncTerminal(shellIntegrationQuality);
++				runInTerminalTool.registerInputListenerForTest(toolTerminal);
++				runInTerminalTool.sessionTerminalAssociations.set(sessionResource, toolTerminal);
++
++				await invokeConsecutiveSyncCommand(`echo ${shellIntegrationQuality}-first`);
++				onDataEmitter.fire('$ ');
++
++				const secondOutput = await invokeConsecutiveSyncCommand(`echo ${shellIntegrationQuality}-second`);
++
++				strictEqual(sentTexts.includes('\x03'), false, 'Second command should not send Ctrl+C');
++				strictEqual(sentTexts.includes('\x15'), false, 'Second command should not send Ctrl+U');
++				ok(secondOutput.includes(`${shellIntegrationQuality}-output-2`), 'Expected the second sync command to return non-empty output');
++			});
++		}
++	});
++
+ 	suite('sandbox invocation messaging', () => {
+ 		test('should instruct models to use $TMPDIR instead of /tmp when sandboxed', async () => {
+ 			sandboxEnabled = true;

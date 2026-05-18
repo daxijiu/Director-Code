@@ -1,3 +1,46 @@
+diff --git a/src/vs/sessions/browser/accountTitleBarState.ts b/src/vs/sessions/browser/accountTitleBarState.ts
+index 2ba44ecf1143d55c97891f292b79f55c4891f48e..745cdf531e6e3a8d0c4ed5ad6320f7fb6a9d5bb5 100644
+--- a/src/vs/sessions/browser/accountTitleBarState.ts
++++ b/src/vs/sessions/browser/accountTitleBarState.ts
+@@ -156,10 +156,10 @@ function getCopilotPresentation(
+ 			source: 'copilot',
+ 			kind: 'warning',
+ 			icon: Codicon.account,
+-			label: localize('copilotUnavailable', "Copilot Unavailable"),
++			label: localize('copilotUnavailable', "AI Unavailable"),
+ 			ariaLabel: sentiment.untrusted
+-				? localize('copilotUnavailableUntrustedAria', "GitHub Copilot is unavailable in untrusted workspaces")
+-				: localize('copilotUnavailableDisabledAria', "GitHub Copilot is disabled"),
++				? localize('copilotUnavailableUntrustedAria', "AI features are unavailable in untrusted workspaces")
++				: localize('copilotUnavailableDisabledAria', "AI features are disabled"),
+ 		};
+ 	}
+ 
+@@ -185,7 +185,7 @@ function getCopilotPresentation(
+ 			label: localize('copilotTokensRemaining', "Tokens Remaining"),
+ 			badge: `${remainingPercent}%`,
+ 			dotBadge: remainingPercent <= 10 ? 'error' : 'warning',
+-			ariaLabel: localize('copilotTokensRemainingAria', "{0}% GitHub Copilot tokens remaining", remainingPercent),
++			ariaLabel: localize('copilotTokensRemainingAria', "{0}% AI tokens remaining", remainingPercent),
+ 		};
+ 	}
+ 
+@@ -209,12 +209,12 @@ function getLowestPositivePercent(...quotas: Array<IQuotaSnapshot | undefined>):
+ 
+ function getQuotaReachedAriaLabel(chatQuotaExceeded: boolean, completionsQuotaExceeded: boolean): string {
+ 	if (chatQuotaExceeded && completionsQuotaExceeded) {
+-		return localize('copilotAllQuotaReachedAria', "GitHub Copilot chat and inline suggestion quota reached");
++		return localize('copilotAllQuotaReachedAria', "AI chat and inline suggestion quota reached");
+ 	}
+ 
+ 	if (chatQuotaExceeded) {
+-		return localize('copilotChatQuotaReachedAria', "GitHub Copilot chat quota reached");
++		return localize('copilotChatQuotaReachedAria', "AI chat quota reached");
+ 	}
+ 
+-	return localize('copilotCompletionsQuotaReachedAria', "GitHub Copilot inline suggestion quota reached");
++	return localize('copilotCompletionsQuotaReachedAria', "AI inline suggestion quota reached");
+ }
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
 index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06bd9a8bd1d 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
@@ -12,10 +55,58 @@ index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06b
  		[LOCAL_SESSION_ENABLED_SETTING]: {
  			type: 'boolean',
 diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
-index 1c1e72015573dadab5c602921c6f4444ade66841..d103b772f749a4b26d94a261e90c738cbcc254e4 100644
+index 1c1e72015573dadab5c602921c6f4444ade66841..142d44a909d5ed6c20f08c21b2bd7a255ac72dc1 100644
 --- a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
 +++ b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
-@@ -1137,7 +1137,7 @@ export function registerChatActions() {
+@@ -69,6 +69,7 @@ import { getChatSessionType, LocalChatSessionUri } from '../../common/model/chat
+ import { localChatSessionType } from '../../common/chatSessionsService.js';
+ import { generateUuid } from '../../../../../base/common/uuid.js';
+ import { ChatViewPane } from '../widgetHosts/viewPane/chatViewPane.js';
++import { isDirectorCodeBuiltInMode } from '../../../directorCode/common/agentEngine/builtInModeUtil.js';
+ 
+ export const CHAT_CATEGORY = localize2('chat.category', 'Chat');
+ 
+@@ -95,6 +96,7 @@ const defaultChat = {
+ 	completionsAdvancedSetting: product.defaultChatAgent?.completionsAdvancedSetting ?? '',
+ 	completionsMenuCommand: product.defaultChatAgent?.completionsMenuCommand ?? '',
+ };
++const directorBuiltInMode = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ 
+ export interface IChatViewOpenOptions {
+ 	/**
+@@ -1108,12 +1110,14 @@ export function registerChatActions() {
+ 		}
+ 	});
+ 
+-	const nonEnterpriseCopilotUsers = ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id));
++	const nonEnterpriseChatUsers = directorBuiltInMode
++		? ChatContextKeys.enabled
++		: ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id));
+ 	registerAction2(class extends Action2 {
+ 		constructor() {
+ 			super({
+ 				id: 'workbench.action.chat.manageSettings',
+-				title: localize2('manageChat', "Manage Copilot Settings"),
++				title: localize2('manageDirectorCodeSettings', "Manage Director Code Settings"),
+ 				category: CHAT_CATEGORY,
+ 				f1: true,
+ 				precondition: ContextKeyExpr.and(
+@@ -1124,20 +1128,20 @@ export function registerChatActions() {
+ 						ChatContextKeys.Entitlement.planProPlus,
+ 						ChatContextKeys.Entitlement.planMax
+ 					),
+-					nonEnterpriseCopilotUsers
++					nonEnterpriseChatUsers
+ 				),
+ 				menu: {
+ 					id: MenuId.ChatTitleBarMenu,
+ 					group: 'y_manage',
+ 					order: 1,
+-					when: nonEnterpriseCopilotUsers
++					when: nonEnterpriseChatUsers
+ 				}
+ 			});
+ 		}
  
  		override async run(accessor: ServicesAccessor): Promise<void> {
  			const openerService = accessor.get(IOpenerService);
@@ -24,7 +115,7 @@ index 1c1e72015573dadab5c602921c6f4444ade66841..d103b772f749a4b26d94a261e90c738c
  		}
  	});
  
-@@ -1146,7 +1146,7 @@ export function registerChatActions() {
+@@ -1146,7 +1150,7 @@ export function registerChatActions() {
  		constructor() {
  			super({
  				id: 'workbench.action.chat.showExtensionsUsingCopilot',
@@ -33,7 +124,7 @@ index 1c1e72015573dadab5c602921c6f4444ade66841..d103b772f749a4b26d94a261e90c738c
  				f1: true,
  				category: EXTENSIONS_CATEGORY,
  				precondition: ChatContextKeys.enabled
-@@ -1189,7 +1189,7 @@ export function registerChatActions() {
+@@ -1189,7 +1193,7 @@ export function registerChatActions() {
  		constructor() {
  			super({
  				id: OPEN_CHAT_QUOTA_EXCEEDED_DIALOG,
@@ -42,7 +133,7 @@ index 1c1e72015573dadab5c602921c6f4444ade66841..d103b772f749a4b26d94a261e90c738c
  			});
  		}
  
-@@ -1217,18 +1217,18 @@ export function registerChatActions() {
+@@ -1217,18 +1221,18 @@ export function registerChatActions() {
  			}
  
  			const free = chatEntitlementService.entitlement === ChatEntitlement.Free;
@@ -713,10 +804,10 @@ index 3b5f1dc6eed0039fdde67d4a51ec280173f43b0e..983320a176aabf2145bc6f2ca118af7a
  		await this.viewModel.refresh();
  	}
 diff --git a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
-index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877e54a3462 100644
+index bf942e22653fdc31062f06ccd6b9fe78f3760622..ee7e5e306a752021d995c9fa8152be204dac7152 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupContributions.ts
-@@ -57,9 +57,11 @@ import { ChatSetupController } from './chatSetupController.js';
+@@ -57,14 +57,17 @@ import { ChatSetupController } from './chatSetupController.js';
  import { GrowthSessionController, registerGrowthSession } from './chatSetupGrowthSession.js';
  import { AICodeActionsHelper, AINewSymbolNamesProvider, ChatCodeActionsProvider, SetupAgent } from './chatSetupProviders.js';
  import { ChatSetup } from './chatSetupRunner.js';
@@ -728,7 +819,13 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  	manageOverageUrl: product.defaultChatAgent?.manageOverageUrl ?? '',
  	upgradePlanUrl: product.defaultChatAgent?.upgradePlanUrl ?? '',
  	chatRefreshTokenCommand: product.defaultChatAgent?.chatRefreshTokenCommand ?? '',
-@@ -186,6 +188,10 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ };
+ 
++const directorBuiltInMode = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ const SIGN_IN_TITLE_BAR_ACTION_ID = 'workbench.action.chat.signInIndicator';
+ 
+ export class ChatSetupContribution extends Disposable implements IWorkbenchContribution {
+@@ -186,6 +189,10 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  	}
  
  	private registerGrowthSession(chatEntitlementService: ChatEntitlementService): void {
@@ -739,7 +836,16 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  		const growthSessionDisposables = markAsSingleton(new MutableDisposable());
  
  		const updateGrowthSession = () => {
-@@ -252,6 +258,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+@@ -222,7 +229,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 
+ 		class ChatSetupTriggerAction extends Action2 {
+ 
+-			static CHAT_SETUP_ACTION_LABEL = localize2('triggerChatSetup', "Use AI Features with Copilot for free...");
++			static CHAT_SETUP_ACTION_LABEL = localize2('triggerDirectorSetup', "Configure Director Code AI...");
+ 
+ 			constructor() {
+ 				super({
+@@ -252,6 +259,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  				await context.update({ hidden: false });
  				configurationService.updateValue(ChatConfiguration.AIDisabled, false);
  
@@ -751,7 +857,36 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  				if (mode) {
  					const chatWidget = await widgetService.revealWidget();
  					if (chatWidget) {
-@@ -447,7 +458,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+@@ -326,7 +338,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 			constructor() {
+ 				super({
+ 					id: 'workbench.action.chat.triggerSetupForceSignIn',
+-					title: localize2('forceSignIn', "Sign in to use AI features")
++					title: localize2('configureDirectorAI', "Configure Director Code AI")
+ 				});
+ 			}
+ 
+@@ -364,7 +376,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 			constructor() {
+ 				super({
+ 					id: 'workbench.action.chat.triggerSetupFromAccounts',
+-					title: localize2('triggerChatSetupFromAccounts', "Sign in to use AI features..."),
++					title: localize2('triggerDirectorSetupFromAccounts', "Configure Director Code AI..."),
+ 					menu: {
+ 						id: MenuId.AccountsContext,
+ 						group: '2_copilot',
+@@ -429,8 +441,8 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 			constructor() {
+ 				super(
+ 					ChatConfiguration.TitleBarSignInEnabled,
+-					localize('toggle.chatSignIn', 'Copilot Sign In'),
+-					localize('toggle.chatSignInDescription', "Toggle visibility of the Copilot Sign In button in title bar"),
++					localize('toggle.chatSignIn', 'AI Setup'),
++					localize('toggle.chatSignInDescription', "Toggle visibility of the AI setup button in title bar"),
+ 					3,
+ 					ContextKeyExpr.and(
+ 						IsWebContext.negate(),
+@@ -447,7 +459,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  			constructor() {
  				super({
  					id: 'workbench.action.chat.upgradePlan',
@@ -760,7 +895,7 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  					category: localize2('chat.category', 'Chat'),
  					f1: true,
  					precondition: ContextKeyExpr.and(
-@@ -481,7 +492,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+@@ -481,7 +493,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  				const telemetryService = accessor.get(ITelemetryService);
  
  				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: 'workbench.action.chat.upgradePlan', from: 'command' });
@@ -773,7 +908,7 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  
  				const entitlement = context.state.entitlement;
  				if (!isProUser(entitlement)) {
-@@ -507,7 +522,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+@@ -507,7 +523,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  			constructor() {
  				super({
  					id: 'workbench.action.chat.manageAdditionalSpend',
@@ -782,7 +917,22 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  					category: localize2('chat.category', 'Chat'),
  					f1: true,
  					precondition: ContextKeyExpr.and(
-@@ -663,6 +678,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+@@ -551,9 +567,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
+ 
+ 		registerAction2(ChatSetupTriggerAction);
+ 		registerAction2(ChatSetupTriggerForceSignInDialogAction);
+-		registerAction2(ChatSetupFromAccountsAction);
+-		registerAction2(ChatSetupSignInTitleBarAction);
+-		registerAction2(ToggleSignInTitleBarAction);
++		if (!directorBuiltInMode) {
++			registerAction2(ChatSetupFromAccountsAction);
++			registerAction2(ChatSetupSignInTitleBarAction);
++			registerAction2(ToggleSignInTitleBarAction);
++		}
+ 		registerAction2(ChatSetupTriggerAnonymousWithoutDialogAction);
+ 		registerAction2(ChatSetupTriggerSupportAnonymousAction);
+ 		registerAction2(UpgradePlanAction);
+@@ -663,6 +681,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
  	}
  
  	private async checkExtensionInstallation(context: ChatEntitlementContext): Promise<void> {
@@ -794,7 +944,7 @@ index bf942e22653fdc31062f06ccd6b9fe78f3760622..ab5b6d68696259a446fb461578952877
  
  		// When developing extensions, await registration and then check
  		if (this.environmentService.isExtensionDevelopment) {
-@@ -804,6 +824,10 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
+@@ -804,6 +827,10 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
  	}
  
  	private async maybeEnableOrDisableExtension(state: EnablementState.EnabledGlobally | EnablementState.EnabledWorkspace | EnablementState.DisabledGlobally | EnablementState.DisabledWorkspace): Promise<void> {
@@ -956,7 +1106,7 @@ index acfbffefe05ca50891bab6023263bf3cf6422008..a6ec0a57affffc50d4680e4ceae9a097
  		let footer: string;
  		if (options?.forceAnonymous || this.telemetryService.telemetryLevel === TelemetryLevel.NONE) {
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
-index f842f92db91b4d10142f0b4f9abb3a7450ddab6a..bcb3281d9859e58b6cf51190b20453f4be0dd47c 100644
+index f842f92db91b4d10142f0b4f9abb3a7450ddab6a..461f1ab0555a708fd124219c3980164d06c4cff3 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts
 @@ -45,6 +45,7 @@ import { isNewUser } from './chatStatus.js';
@@ -973,8 +1123,8 @@ index f842f92db91b4d10142f0b4f9abb3a7450ddab6a..bcb3281d9859e58b6cf51190b20453f4
  				id: 'workbench.action.manageCopilot',
 -				label: localize('quotaLabel', "Manage Copilot Settings"),
 -				tooltip: localize('quotaTooltip', "Manage Copilot Settings"),
-+				label: isDirectorCodeBuiltInMode(product.defaultChatAgent) ? localize('quotaLabel.dc', "Manage Chat") : localize('quotaLabel', "Manage Copilot Settings"),
-+				tooltip: isDirectorCodeBuiltInMode(product.defaultChatAgent) ? localize('quotaTooltip.dc', "Manage Chat") : localize('quotaTooltip', "Manage Copilot Settings"),
++				label: localize('quotaLabel.dc', "Manage Chat"),
++				tooltip: localize('quotaTooltip.dc', "Manage Chat"),
  				class: ThemeIcon.asClassName(Codicon.settings),
 -				run: () => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageSettingsUrl))),
 +				run: () => this.runCommandAndClose(() => this.openerService.open(URI.parse(defaultChat.manageSettingsUrl), { allowCommands: true })),
@@ -1009,7 +1159,15 @@ index f842f92db91b4d10142f0b4f9abb3a7450ddab6a..bcb3281d9859e58b6cf51190b20453f4
  			this.createQuotaIndicator(container, localize('quotaLimited', "Limited"), localize('chatsLabel', "Chat messages"));
  		}
  	}
-@@ -507,7 +511,7 @@ export class ChatStatusDashboard extends DomWidget {
+@@ -494,6 +498,7 @@ export class ChatStatusDashboard extends DomWidget {
+ 	}
+ 
+ 	private renderSetupSection(): void {
++		const builtIn = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ 		const newUser = isNewUser(this.chatEntitlementService);
+ 		const anonymousUser = this.chatEntitlementService.anonymous;
+ 		const disabled = this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted;
+@@ -507,20 +512,22 @@ export class ChatStatusDashboard extends DomWidget {
  		let descriptionText: string | MarkdownString;
  		let descriptionClass = '.description';
  		if (newUser && anonymousUser) {
@@ -1017,9 +1175,29 @@ index f842f92db91b4d10142f0b4f9abb3a7450ddab6a..bcb3281d9859e58b6cf51190b20453f4
 +			descriptionText = new MarkdownString(localize({ key: 'activeDescriptionAnonymous', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0}, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", defaultChat.provider.default.name, defaultChat.provider.default.name, defaultChat.termsStatementUrl, defaultChat.privacyStatementUrl), { isTrusted: true });
  			descriptionClass = `${descriptionClass}.terms`;
  		} else if (newUser) {
- 			descriptionText = localize('activateDescription', "Set up Copilot to use AI features.");
+-			descriptionText = localize('activateDescription', "Set up Copilot to use AI features.");
++			descriptionText = localize('activateDescription.director', "Configure Director Code to use AI features.");
+ 		} else if (anonymousUser) {
+-			descriptionText = localize('enableMoreDescription', "Sign in to enable more Copilot AI features.");
++			descriptionText = localize('enableMoreDescription.director', "Configure Director Code to enable more AI features.");
+ 		} else if (disabled) {
+-			descriptionText = localize('enableDescription', "Enable Copilot to use AI features.");
++			descriptionText = localize('enableDescription.director', "Enable Director Code AI features.");
+ 		} else {
+-			descriptionText = localize('signInDescription', "Sign in to use Copilot AI features.");
++			descriptionText = localize('signInDescription.director', "Configure Director Code to use AI features.");
+ 		}
+ 
+ 		let buttonLabel: string;
+-		if (newUser) {
++		if (builtIn && !disabled) {
++			buttonLabel = localize('configureDirectorCode', "Configure Director Code");
++		} else if (newUser) {
+ 			buttonLabel = localize('enableAIFeatures', "Use AI Features");
+ 		} else if (anonymousUser) {
+ 			buttonLabel = localize('enableMoreAIFeatures', "Enable more AI Features");
 diff --git a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
-index d03f2a73f0fe6fa14d352b3facad151c50c89d5c..9d2d51e9c5108b2ae4de1bde743e5816e013048e 100644
+index d03f2a73f0fe6fa14d352b3facad151c50c89d5c..c5756c2a40b2f75b221c952ae1775252f1d30177 100644
 --- a/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusEntry.ts
 @@ -29,6 +29,7 @@ import { IContextKeyService } from '../../../../../platform/contextkey/common/co
@@ -1030,7 +1208,7 @@ index d03f2a73f0fe6fa14d352b3facad151c50c89d5c..9d2d51e9c5108b2ae4de1bde743e5816
  
  export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribution {
  
-@@ -148,6 +149,37 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
+@@ -148,8 +149,39 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
  	}
  
  	private getEntryProps(): IStatusbarEntry {
@@ -1066,8 +1244,41 @@ index d03f2a73f0fe6fa14d352b3facad151c50c89d5c..9d2d51e9c5108b2ae4de1bde743e5816
 +		}
 +
  		let text = '$(copilot)';
- 		let ariaLabel = localize('chatStatusAria', "Copilot status");
+-		let ariaLabel = localize('chatStatusAria', "Copilot status");
++		let ariaLabel = localize('chatStatusAria', "AI status");
  		let kind: StatusbarEntryKind | undefined;
+ 
+ 		if (isNewUser(this.chatEntitlementService)) {
+@@ -171,7 +203,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
+ 			// Disabled
+ 			if (this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted) {
+ 				text = '$(copilot-unavailable)';
+-				ariaLabel = localize('copilotDisabledStatus', "Copilot disabled");
++				ariaLabel = localize('copilotDisabledStatus', "AI disabled");
+ 			}
+ 
+ 			// Sessions in progress
+@@ -219,7 +251,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
+ 		}
+ 
+ 		const baseResult = {
+-			name: localize('chatStatus', "Copilot Status"),
++			name: localize('chatStatus', "AI Status"),
+ 			text,
+ 			ariaLabel,
+ 			command: ShowTooltipCommand,
+@@ -253,9 +285,9 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
+ 		const showSignInLabel = !this.isSignInTitleBarAffordanceVisible();
+ 		const signInLabel = localize('signIn', "Sign In");
+ 		return {
+-			name: localize('chatStatus', "Copilot Status"),
++			name: localize('chatStatus', "AI Status"),
+ 			text: showSignInLabel ? `$(copilot) ${signInLabel}` : '$(copilot)',
+-			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "Copilot status"),
++			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "AI status"),
+ 			command: CHAT_SETUP_ACTION_ID,
+ 			showInAllWindows: true,
+ 			kind: undefined,
 diff --git a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatAnonymousRateLimitedPart.ts b/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatAnonymousRateLimitedPart.ts
 index 874e34931712d104acd08ada5d9380b12eb1c952..12725855e95aa5c949020dbadef9318c1e3fca37 100644
 --- a/src/vs/workbench/contrib/chat/browser/widget/chatContentParts/chatAnonymousRateLimitedPart.ts

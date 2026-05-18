@@ -30,7 +30,7 @@ function main() {
 
   const stageToPatch = patchMap(profile);
   const enabledStages = [...stageToPatch.keys()];
-  const worktree = path.join(root, '.cache', 'upgrade-estimator', 'director-patch-diff', profile.profile);
+  const worktree = resolveDiffWorktree(root, profile.profile);
 
   createDiffWorktree(vscodiumAbsolute, directorAbsolute, worktree);
   const changed = stagedChangedFiles(worktree);
@@ -110,6 +110,14 @@ function parseArgs(argv) {
     else throw new Error(`Unknown generate-director-patches argument: ${arg}`);
   }
   return out;
+}
+
+function resolveDiffWorktree(root, profileId) {
+  const override = process.env.DIRECTOR_PATCH_DIFF_WORKTREE;
+  if (override) {
+    return path.isAbsolute(override) ? override : path.join(root, override);
+  }
+  return path.join(root, '.cache', 'upgrade-estimator', 'director-patch-diff', profileId);
 }
 
 function loadProfile(root, requestedProfile) {
@@ -253,6 +261,12 @@ function isToolLayer(filePath) {
     'src/vs/workbench/contrib/chat/browser/agentEngine/directorReadOnlyTools.contribution.ts',
     'src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts',
     'src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/basicExecuteStrategy.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/noneExecuteStrategy.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/basicExecuteStrategy.test.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/noneExecuteStrategy.test.ts',
   ].includes(filePath);
 }
 
@@ -285,6 +299,7 @@ function isAgentEngine(filePath) {
     'src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts',
     'src/vs/workbench/contrib/chat/browser/chat.contribution.ts',
     'src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts',
+    'src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts',
     'src/vs/workbench/contrib/chat/common/participants/chatAgents.ts',
     'src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts',
     'src/vs/workbench/contrib/chat/test/common/participants/chatAgents.test.ts',
@@ -321,6 +336,7 @@ function isChatBuiltInMode(filePath) {
     'src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts',
     'src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts',
     'src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts',
+    'src/vs/sessions/browser/accountTitleBarState.ts',
     'src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts',
   ].includes(filePath);
 }
@@ -341,6 +357,7 @@ function isBranding(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/terminalContrib/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/welcomeAgentSessions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/welcomeGettingStarted/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/welcomeOnboarding/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/welcomeWalkthrough/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/workspace/')) return true;
   if (filePath.startsWith('src/vs/workbench/services/')) return true;

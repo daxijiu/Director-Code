@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-17T08:24:36.121Z",
+  "generatedAt": "2026-05-18T13:58:31.470Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 257,
+  "changedFileCount": 269,
   "patches": [
     {
       "stage": "branding",
@@ -113,10 +113,12 @@
         "src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts",
         "src/vs/workbench/contrib/update/browser/update.ts",
         "src/vs/workbench/contrib/url/browser/trustedDomainsFileSystemProvider.ts",
+        "src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts",
         "src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts",
         "src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts",
         "src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedExtensionPoint.ts",
         "src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts",
+        "src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts",
         "src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts",
         "src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts",
         "src/vs/workbench/electron-browser/desktop.contribution.ts",
@@ -126,9 +128,9 @@
         "src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts",
         "src/vs/workbench/services/userDataProfile/browser/userDataProfileManagement.ts"
       ],
-      "fileCount": 106,
-      "size": 178632,
-      "sha256": "915de490390261d1dcba894b3e0025e5bb1417b4bfa06dc87b0e51a756adad03"
+      "fileCount": 108,
+      "size": 182364,
+      "sha256": "08bacf5559bf591c17061efb4b792f8c11cad9fd081504a10b43fda106f77bf7"
     },
     {
       "stage": "product-build-release",
@@ -157,11 +159,14 @@
         "src/vs/workbench/api/common/extHostLanguageModelTools.ts",
         "src/vs/workbench/api/common/extHostLanguageModels.ts",
         "src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts",
+        "src/vs/workbench/contrib/chat/browser/agentEngine/directorExecutionSubagent.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/chat.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts",
         "src/vs/workbench/contrib/chat/common/participants/chatAgents.ts",
+        "src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/abstractProvider.test.ts",
@@ -214,6 +219,9 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts",
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/geminiAuth.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/modelCatalog.ts",
@@ -233,6 +241,7 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/retry.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/settingsWriteQueue.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/tokens.ts",
+        "src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts",
         "src/vs/workbench/contrib/mcp/browser/mcpServersView.ts",
         "src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts",
@@ -243,14 +252,15 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 91,
-      "size": 1077001,
-      "sha256": "99bf30a7abf0082b241e41da2e736cb73991d4161a65d6f20719d8ce7b4b241b"
+      "fileCount": 98,
+      "size": 1137631,
+      "sha256": "129aea81bcebc54f538ce5751b998aaa83a3fbb0a728215a4eaccb131af9a443"
     },
     {
       "stage": "chat-built-in-mode",
       "path": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
       "files": [
+        "src/vs/sessions/browser/accountTitleBarState.ts",
         "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatActions.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts",
@@ -288,9 +298,9 @@
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts",
         "src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts"
       ],
-      "fileCount": 36,
-      "size": 97111,
-      "sha256": "1597b445f27ecffdf3be16e2f1b51e68984ea5efe29c01f08e7f2f712cb1302f"
+      "fileCount": 37,
+      "size": 107159,
+      "sha256": "aede7bb835b095c752d041f31d08e26ce3a4e1dc81032f8c88a0178ce1617553"
     },
     {
       "stage": "text-polish",
@@ -315,11 +325,13 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorReadOnlyTools.test.ts",
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts",
-        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts"
+        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts",
+        "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts",
+        "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts"
       ],
-      "fileCount": 5,
-      "size": 82382,
-      "sha256": "12f900639654586092385668360d14c553876672fa4f2332129417293f75dbe7"
+      "fileCount": 7,
+      "size": 100188,
+      "sha256": "db17388709d94a760e4a4f2b26c79a55a5e5075a8d2d8ec272e454294ff34701"
     },
     {
       "stage": "chat-editing",

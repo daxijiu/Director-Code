@@ -578,6 +578,37 @@ index 0000000000000000000000000000000000000000..4ded1d778613fcad0223a5cf16922a3f
 +		enabledApiProposals: proposals
 +	};
 +}
+diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorExecutionSubagent.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorExecutionSubagent.contribution.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..1764cf38dab596144e01da5caeebb702f59b0011
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/browser/agentEngine/directorExecutionSubagent.contribution.ts
+@@ -0,0 +1,25 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
++import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../../common/contributions.js';
++import { DirectorExecutionSubagentTool, DirectorExecutionSubagentToolData } from '../../../directorCode/common/agentEngine/executionSubagentTool.js';
++import { ILanguageModelToolsService } from '../../common/tools/languageModelToolsService.js';
++
++class DirectorExecutionSubagentContribution extends Disposable implements IWorkbenchContribution {
++	static readonly ID = 'workbench.contrib.directorExecutionSubagent';
++
++	constructor(
++		@ILanguageModelToolsService toolsService: ILanguageModelToolsService,
++		@IInstantiationService instantiationService: IInstantiationService,
++	) {
++		super();
++
++		this._register(toolsService.registerTool(DirectorExecutionSubagentToolData, instantiationService.createInstance(DirectorExecutionSubagentTool)));
++	}
++}
++
++registerWorkbenchContribution2(DirectorExecutionSubagentContribution.ID, DirectorExecutionSubagentContribution, WorkbenchPhase.AfterRestored);
 diff --git a/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts b/src/vs/workbench/contrib/chat/browser/agentEngine/directorPlanTools.contribution.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..8ab07f36b18eab99b469135093691bfaf4a45b27
@@ -610,7 +641,7 @@ index 0000000000000000000000000000000000000000..8ab07f36b18eab99b469135093691bfa
 +
 +registerWorkbenchContribution2(DirectorPlanToolsContribution.ID, DirectorPlanToolsContribution, WorkbenchPhase.AfterRestored);
 diff --git a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
-index 89e5d008de9f558aeb85176db1f0191b24eb62d8..704f36dd0489c61c9f8156b89672dba9b2e16cdb 100644
+index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd3284fa8640f 100644
 --- a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 @@ -74,6 +74,7 @@ import { Extensions as JSONExtensions, IJSONContributionRegistry } from '../../.
@@ -657,7 +688,7 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..704f36dd0489c61c9f8156b89672dba9
  			default: false,
  			restricted: true,
  			disallowConfigurationDefault: true,
-@@ -1560,8 +1561,8 @@ configurationRegistry.registerConfiguration({
+@@ -1560,13 +1561,13 @@ configurationRegistry.registerConfiguration({
  		},
  		[ChatConfiguration.AIDisabled]: {
  			type: 'boolean',
@@ -668,6 +699,12 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..704f36dd0489c61c9f8156b89672dba9
  			scope: ConfigurationScope.WINDOW,
  		},
  		[ChatConfiguration.TitleBarSignInEnabled]: {
+ 			type: 'boolean',
+-			description: nls.localize('chat.titleBar.signIn.enabled', "Controls whether the Copilot Sign In button is shown in the title bar when signed out. When disabled, the Sign In affordance falls back to the status bar."),
++			description: nls.localize('chat.titleBar.signIn.enabled.director', "Controls whether the AI setup button is shown in the title bar when setup is required. When disabled, the setup affordance falls back to the status bar."),
+ 			default: true,
+ 		},
+ 		'chat.approvedAccountOrganizations': {
 @@ -1598,7 +1599,7 @@ configurationRegistry.registerConfiguration({
  		},
  		[ChatConfiguration.GrowthNotificationEnabled]: {
@@ -687,9 +724,18 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..704f36dd0489c61c9f8156b89672dba9
  			tags: ['experimental'],
  			experiment: {
 diff --git a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
-index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e138c4ee5 100644
+index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..c2139323d2777f27a50bb611bc5b263bd62c9b60 100644
 --- a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
 +++ b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
+@@ -49,7 +49,7 @@ import { ChatToolInvocation } from '../../common/model/chatProgressTypes/chatToo
+ import { chatSessionResourceToId, getChatSessionType } from '../../common/model/chatUri.js';
+ import { HookType } from '../../common/promptSyntax/hookTypes.js';
+ import { ILanguageModelToolsConfirmationService } from '../../common/tools/languageModelToolsConfirmationService.js';
+-import { CountTokensCallback, createToolSchemaUri, IBeginToolCallOptions, IExternalPreToolUseHookResult, ILanguageModelToolsService, IPreparedToolInvocation, isToolSet, IToolAndToolSetEnablementMap, IToolData, IToolImpl, IToolInvocation, IToolInvokedEvent, IToolResult, IToolResultInputOutputDetails, IToolSet, SpecedToolAliases, stringifyPromptTsxPart, ToolDataSource, ToolInvocationPresentation, toolMatchesModel, ToolSet, ToolSetForModel, VSCodeToolReference } from '../../common/tools/languageModelToolsService.js';
++import { CountTokensCallback, createToolSchemaUri, IDirectorToolInvocationStageEvent, ILanguageModelToolsService, IBeginToolCallOptions, IExternalPreToolUseHookResult, IPreparedToolInvocation, isToolSet, IToolAndToolSetEnablementMap, IToolData, IToolImpl, IToolInvocation, IToolInvokedEvent, IToolResult, IToolResultInputOutputDetails, IToolSet, SpecedToolAliases, stringifyPromptTsxPart, ToolDataSource, ToolInvocationPresentation, toolMatchesModel, ToolSet, ToolSetForModel, VSCodeToolReference, type DirectorToolInvocationStage } from '../../common/tools/languageModelToolsService.js';
+ import { IToolResultCompressor } from '../../common/tools/toolResultCompressor.js';
+ import { getToolConfirmationAlert } from '../accessibility/chatAccessibilityProvider.js';
+ import { IChatWidgetService } from '../chat.js';
 @@ -84,12 +84,12 @@ export const globalAutoApproveDescription = localize2(
  		comment: [
  			'{Locked=\'](https://github.com/features/codespaces)\'}',
@@ -705,7 +751,16 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  );
  
  export class LanguageModelToolsService extends Disposable implements ILanguageModelToolsService {
-@@ -120,6 +120,20 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -105,6 +105,8 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 	readonly onDidPrepareToolCallBecomeUnresponsive = this._onDidPrepareToolCallBecomeUnresponsive.event;
+ 	private readonly _onDidInvokeTool = this._register(new Emitter<IToolInvokedEvent>());
+ 	readonly onDidInvokeTool = this._onDidInvokeTool.event;
++	private readonly _onDidChangeDirectorToolInvocationStage = this._register(new Emitter<IDirectorToolInvocationStageEvent>());
++	readonly onDidChangeDirectorToolInvocationStage = this._onDidChangeDirectorToolInvocationStage.event;
+ 
+ 	/** Throttle tools updates because it sends all tools and runs on context key updates */
+ 	private readonly _onDidChangeToolsScheduler = this._register(new RunOnceScheduler(() => this._onDidChangeTools.fire(), 750));
+@@ -120,6 +122,20 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  	/** Deduplicates _checkGlobalAutoApprove calls within this window */
  	private _pendingGlobalAutoApproveCheck: Promise<boolean> | undefined;
  
@@ -726,7 +781,7 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  	private readonly _isAgentModeEnabled: IObservable<boolean>;
  
  	constructor(
-@@ -174,7 +188,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -174,7 +190,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  			VSCodeToolReference.vscode,
  			{
  				icon: ThemeIcon.fromId(Codicon.vscode.id),
@@ -735,7 +790,41 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  			}
  		));
  
-@@ -457,7 +471,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -449,6 +465,33 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 		return undefined;
+ 	}
+ 
++	private fireDirectorToolInvocationStage(dto: IToolInvocation, stage: DirectorToolInvocationStage): void {
++		this._onDidChangeDirectorToolInvocationStage.fire({
++			callId: dto.callId,
++			toolId: dto.toolId,
++			sessionResource: dto.context?.sessionResource,
++			chatRequestId: dto.chatRequestId,
++			stage,
++		});
++	}
++
++	private async waitForDirectorUserStage<T>(dto: IToolInvocation, wait: () => Promise<T>): Promise<T> {
++		this.fireDirectorToolInvocationStage(dto, 'user-waiting-started');
++		try {
++			return await wait();
++		} finally {
++			this.fireDirectorToolInvocationStage(dto, 'user-waiting-ended');
++		}
++	}
++
++	private isDirectorTerminalExecutionTool(toolData: IToolData, dto: IToolInvocation): boolean {
++		return toolData.id === 'run_in_terminal'
++			|| toolData.id === 'runInTerminal'
++			|| toolData.toolReferenceName === 'runInTerminal'
++			|| dto.toolId === 'run_in_terminal'
++			|| dto.toolId === 'runInTerminal';
++	}
++
+ 	async invokeTool(dto: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken): Promise<IToolResult> {
+ 		this._logService.trace(`[LanguageModelToolsService#invokeTool] Invoking tool ${dto.toolId} with parameters ${JSON.stringify(dto.parameters)}`);
+ 
+@@ -457,7 +500,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  		let request: IChatRequestModel | undefined;
  		if (dto.context?.sessionResource) {
  			model = this._chatService.getSession(dto.context.sessionResource);
@@ -744,7 +833,55 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  			if (request?.response?.isCanceled || request?.response?.isComplete) {
  				this._logService.debug(`[LanguageModelToolsService#invokeTool] Ignoring tool ${dto.toolId} for cancelled/complete request ${request.id}`);
  				throw new CancellationError();
-@@ -1131,12 +1145,12 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -599,10 +642,14 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 
+ 				dto.toolSpecificData = toolInvocation?.toolSpecificData;
+ 				if (preparedInvocation?.confirmationMessages?.title) {
+-					if (!IChatToolInvocation.executionConfirmedOrDenied(toolInvocation) && !autoConfirmed) {
+-						this.playAccessibilitySignal([toolInvocation], dto.context?.sessionResource);
++					const activeToolInvocation = toolInvocation!;
++					const shouldWaitForUserConfirmation = !IChatToolInvocation.executionConfirmedOrDenied(activeToolInvocation) && !autoConfirmed;
++					if (shouldWaitForUserConfirmation) {
++						this.playAccessibilitySignal([activeToolInvocation], dto.context?.sessionResource);
+ 					}
+-					const userConfirmed = await IChatToolInvocation.awaitConfirmation(toolInvocation, token);
++					const userConfirmed = shouldWaitForUserConfirmation
++						? await this.waitForDirectorUserStage(dto, () => IChatToolInvocation.awaitConfirmation(activeToolInvocation, token))
++						: await IChatToolInvocation.awaitConfirmation(activeToolInvocation, token);
+ 					this._logToolApprovalTelemetry(tool, dto, userConfirmed);
+ 					if (userConfirmed.type === ToolConfirmKind.Denied) {
+ 						throw new CancellationError();
+@@ -636,7 +683,8 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 				const { autoConfirmed: fallbackAutoConfirmed, preparedInvocation: updatedPreparedInvocation } = await this.resolveAutoConfirmFromHook(preToolUseHookResult, tool, dto, preparedInvocation, undefined);
+ 				preparedInvocation = updatedPreparedInvocation;
+ 				if (preparedInvocation?.confirmationMessages?.title && !fallbackAutoConfirmed) {
+-					const result = await this._dialogService.confirm({ message: renderAsPlaintext(preparedInvocation.confirmationMessages.title), detail: renderAsPlaintext(preparedInvocation.confirmationMessages.message!) });
++					const confirmationMessages = preparedInvocation.confirmationMessages;
++					const result = await this.waitForDirectorUserStage(dto, () => this._dialogService.confirm({ message: renderAsPlaintext(confirmationMessages.title!), detail: renderAsPlaintext(confirmationMessages.message!) }));
+ 					if (!result.confirmed) {
+ 						throw new CancellationError();
+ 					}
+@@ -649,6 +697,9 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 			}
+ 
+ 			invocationTimeWatch = StopWatch.create(true);
++			if (this.isDirectorTerminalExecutionTool(tool.data, dto)) {
++				this.fireDirectorToolInvocationStage(dto, 'terminal-invocation-started');
++			}
+ 			toolResult = await tool.impl.invoke(dto, countTokens, {
+ 				report: step => {
+ 					toolInvocation?.acceptProgress(step);
+@@ -668,7 +719,8 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+ 				this.shouldAutoConfirmPostExecution(tool.data.id, tool.data.runsInWorkspace, tool.data.source, dto.parameters, dto.context?.sessionResource, dto.chatRequestId, dto.context?.workingDirectory));
+ 
+ 			if (toolInvocation && afterExecuteState?.type === IChatToolInvocation.StateKind.WaitingForPostApproval) {
+-				const postConfirm = await IChatToolInvocation.awaitPostConfirmation(toolInvocation, token);
++				const activeToolInvocation = toolInvocation;
++				const postConfirm = await this.waitForDirectorUserStage(dto, () => IChatToolInvocation.awaitPostConfirmation(activeToolInvocation, token));
+ 				if (postConfirm.type === ToolConfirmKind.Denied) {
+ 					throw new CancellationError();
+ 				}
+@@ -1131,12 +1183,12 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  	 * True if the session is in an auto-approve level (Auto-Approve / Autopilot),
  	 * via either the last request's stamped level or the live picker level.
  	 */
@@ -759,7 +896,7 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  		return isAutoApproveLevel(request?.modeInfo?.permissionLevel) || this._isSessionLiveAutoApproveLevel(chatSessionResource);
  	}
  
-@@ -1192,7 +1206,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -1192,7 +1244,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  
  		// Bypass confirmation under Auto-Approve / Autopilot, unless enterprise
  		// policy disables global auto-approve.
@@ -768,7 +905,7 @@ index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..2d0db5379e79f2b3f5e104092b266a7e
  			// CLI sessions still need their multi-option dialogs (e.g. uncommitted changes).
  			if (!(toolIdsThatCannotBeAutoApproved.has(tool.data.id) && getChatSessionType(chatSessionResource) !== localChatSessionType)) {
  				return { type: ToolConfirmKind.ConfirmationNotNeeded, reason: 'auto-approve-all' };
-@@ -1233,7 +1247,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
+@@ -1233,7 +1285,7 @@ export class LanguageModelToolsService extends Disposable implements ILanguageMo
  	private async shouldAutoConfirmPostExecution(toolId: string, runsInWorkspace: boolean | undefined, source: ToolDataSource, parameters: unknown, chatSessionResource: URI | undefined, chatRequestId: string | undefined, workingDirectory?: URI): Promise<ConfirmedReason | undefined> {
  		// Bypass post-execution confirmation under Auto-Approve / Autopilot,
  		// unless enterprise policy disables global auto-approve.
@@ -835,6 +972,35 @@ index 8cfef4cbb74a93fea7be1909874ea603ffb1f5c6..462efa2aaa9573c0049fdee5c85551d7
  	}
  
  	private _agentCompletionProviders = new Map<string, (query: string, token: CancellationToken) => Promise<IChatAgentCompletionItem[]>>();
+diff --git a/src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts b/src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts
+index e5326f91fbc08e6080e7622c725f1a6cee58233e..850113c8924574510dc82df2ad6250ad6c28ce8e 100644
+--- a/src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts
++++ b/src/vs/workbench/contrib/chat/common/tools/languageModelToolsService.ts
+@@ -531,6 +531,16 @@ export interface IToolInvokedEvent {
+ 	readonly subagentInvocationId: string | undefined;
+ }
+ 
++export type DirectorToolInvocationStage = 'user-waiting-started' | 'user-waiting-ended' | 'terminal-invocation-started';
++
++export interface IDirectorToolInvocationStageEvent {
++	readonly callId: string;
++	readonly toolId: string;
++	readonly sessionResource: URI | undefined;
++	readonly chatRequestId: string | undefined;
++	readonly stage: DirectorToolInvocationStage;
++}
++
+ export const ILanguageModelToolsService = createDecorator<ILanguageModelToolsService>('ILanguageModelToolsService');
+ 
+ export type CountTokensCallback = (input: string, token: CancellationToken) => Promise<number>;
+@@ -544,6 +554,7 @@ export interface ILanguageModelToolsService {
+ 	readonly onDidChangeTools: Event<void>;
+ 	readonly onDidPrepareToolCallBecomeUnresponsive: Event<{ readonly sessionResource: URI; readonly toolData: IToolData }>;
+ 	readonly onDidInvokeTool: Event<IToolInvokedEvent>;
++	readonly onDidChangeDirectorToolInvocationStage?: Event<IDirectorToolInvocationStageEvent>;
+ 	registerToolData(toolData: IToolData): IDisposable;
+ 	registerToolImplementation(id: string, tool: IToolImpl): IDisposable;
+ 	registerTool(toolData: IToolData, tool: IToolImpl): IDisposable;
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/apiKeysWidget.test.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80aa1c2752
@@ -1109,6 +1275,56 @@ index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80
 +		assert.strictEqual(await apiKeyService.getApiKey(provider), 'sk-enter-test');
 +	});
 +});
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..88f01074bd7129beffeeda8b089a4e6f571d090a
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
+@@ -0,0 +1,44 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { DirectorToolMode, getDirectorToolAllowlist } from '../../../../directorCode/common/agentEngine/directorToolRegistry.js';
++import { DirectorExecutionSubagentToolData } from '../../../../directorCode/common/agentEngine/executionSubagentTool.js';
++import { getDirectorModeAppendSystemPrompt } from '../../../../directorCode/common/agentEngine/executionSubagentPrompt.js';
++
++suite('Director execution_subagent', () => {
++
++	test('is model-callable only in Agent mode', () => {
++		const agentTools = getDirectorToolAllowlist([DirectorExecutionSubagentToolData], DirectorToolMode.Agent);
++		assert.strictEqual(agentTools.length, 1);
++		assert.strictEqual(agentTools[0].modelName, 'execution_subagent');
++		assert.strictEqual(agentTools[0].toolId, 'director_execution_subagent');
++		assert.strictEqual(agentTools[0].entry.timeoutCategory, 'tool-owned');
++
++		for (const mode of [DirectorToolMode.Ask, DirectorToolMode.Edit, DirectorToolMode.Inline, DirectorToolMode.Plan]) {
++			assert.deepStrictEqual(getDirectorToolAllowlist([DirectorExecutionSubagentToolData], mode), []);
++		}
++	});
++
++	test('uses a strict parent-facing schema', () => {
++		assert.strictEqual(DirectorExecutionSubagentToolData.inputSchema?.additionalProperties, false);
++		assert.deepStrictEqual(DirectorExecutionSubagentToolData.inputSchema?.required, ['query', 'description']);
++		assert.ok(DirectorExecutionSubagentToolData.inputSchema?.properties?.query);
++		assert.ok(DirectorExecutionSubagentToolData.inputSchema?.properties?.description);
++	});
++
++	test('appends guidance only for Agent mode', () => {
++		const agentPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Agent, 'custom instructions');
++		assert.ok(agentPrompt?.includes('custom instructions'));
++		assert.ok(agentPrompt?.includes('execution_subagent'));
++		assert.ok(agentPrompt?.includes('runInTerminal'));
++
++		const askPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Ask, 'custom instructions');
++		assert.strictEqual(askPrompt, 'custom instructions');
++
++		const planPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Plan, undefined);
++		assert.strictEqual(planPrompt, undefined);
++	});
++});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..6cfbd95ed9021cc6a611bab2ba92c8d35410ea00
@@ -1210,10 +1426,65 @@ index 0000000000000000000000000000000000000000..6cfbd95ed9021cc6a611bab2ba92c8d3
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts b/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
-index 0df0af2ee2282ab3cb18ef90d8bfd8b087c4d726..2a426d62e9e7438c067e163a13e2967c5fbf7aa9 100644
+index 0df0af2ee2282ab3cb18ef90d8bfd8b087c4d726..623f834fdaafde512ade26ffaaa73ba22f2635a0 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/browser/tools/languageModelToolsService.test.ts
-@@ -4535,4 +4535,118 @@ suite('LanguageModelToolsService', () => {
+@@ -512,6 +512,54 @@ suite('LanguageModelToolsService', () => {
+ 		assert.strictEqual(result.content[0].value, 'ran');
+ 	});
+ 
++	test('director stage events bracket user confirmation', async () => {
++		const events: Array<{ callId: string; toolId: string; stage: string; command?: string; output?: string }> = [];
++		store.add(service.onDidChangeDirectorToolInvocationStage(e => events.push(e)));
++		const tool = registerToolForTest(service, store, 'testToolDirectorStageConfirm', {
++			prepareToolInvocation: async () => ({ confirmationMessages: { title: 'Confirm', message: 'Go?' } }),
++			invoke: async () => ({ content: [{ kind: 'text', value: 'ran' }] }),
++		});
++
++		const sessionId = 'sessionId-director-stage-confirm';
++		const capture: { invocation?: any } = {};
++		stubGetSession(chatService, sessionId, { requestId: 'requestId-director-stage-confirm', capture });
++
++		const promise = service.invokeTool(tool.makeDto({ x: 1 }, { sessionId }), async () => 0, CancellationToken.None);
++		const published = await waitForPublishedInvocation(capture);
++
++		assert.deepStrictEqual(events.map(e => e.stage), ['user-waiting-started']);
++		IChatToolInvocation.confirmWith(published, { type: ToolConfirmKind.UserAction });
++		await promise;
++
++		assert.deepStrictEqual(events.map(e => e.stage), ['user-waiting-started', 'user-waiting-ended']);
++		assert.strictEqual(events[0].toolId, tool.id);
++		assert.strictEqual(events[0].command, undefined);
++		assert.strictEqual(events[0].output, undefined);
++	});
++
++	test('director stage event fires immediately before terminal tool invoke', async () => {
++		const events: Array<{ callId: string; toolId: string; stage: string; command?: string; output?: string }> = [];
++		store.add(service.onDidChangeDirectorToolInvocationStage(e => events.push(e)));
++		let eventCountAtInvoke = -1;
++		const tool = registerToolForTest(service, store, 'run_in_terminal', {
++			invoke: async () => {
++				eventCountAtInvoke = events.length;
++				return { content: [{ kind: 'text', value: 'terminal ran' }] };
++			},
++		}, {
++			toolReferenceName: 'runInTerminal',
++		});
++
++		const result = await service.invokeTool(tool.makeDto({ command: 'echo hi', timeout: 1 }), async () => 0, CancellationToken.None);
++
++		assert.strictEqual(result.content[0].value, 'terminal ran');
++		assert.strictEqual(eventCountAtInvoke, 1);
++		assert.deepStrictEqual(events.map(e => e.stage), ['terminal-invocation-started']);
++		assert.strictEqual(events[0].toolId, 'run_in_terminal');
++		assert.strictEqual(events[0].command, undefined);
++		assert.strictEqual(events[0].output, undefined);
++	});
++
+ 	test('selectedCustomButton is passed to tool invoke when user selects a custom button', async () => {
+ 		let receivedInvocation: IToolInvocation | undefined;
+ 		const tool = registerToolForTest(service, store, 'testToolCustomButton', {
+@@ -4535,4 +4583,118 @@ suite('LanguageModelToolsService', () => {
  			assert.deepStrictEqual(receivedParameters, { command: 'safe-command' });
  		});
  	});
@@ -12015,10 +12286,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..90d3306950f69b6ad84c421834c85ffcbb397224
+index 0000000000000000000000000000000000000000..4ba8ee4601e3203b29745fd26b0a18137a0cce49
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,544 @@
+@@ -0,0 +1,545 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12085,6 +12356,7 @@ index 0000000000000000000000000000000000000000..90d3306950f69b6ad84c421834c85ffc
 +import '../../../chat/browser/agentEngine/directorReadOnlyTools.contribution.js';
 +import '../../../chat/browser/agentEngine/editTools/directorEditTools.contribution.js';
 +import '../../../chat/browser/agentEngine/directorPlanTools.contribution.js';
++import '../../../chat/browser/agentEngine/directorExecutionSubagent.contribution.js';
 +
 +// ============================================================================
 +// Service Registration
@@ -13013,10 +13285,10 @@ index 0000000000000000000000000000000000000000..9ed53a1ba667a09ae2276e6ba4fd6336
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6d1bceece
+index 0000000000000000000000000000000000000000..402b3a077faf80597374521ebbdf2a07e06aa4d7
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/directorCodeAgent.ts
-@@ -0,0 +1,973 @@
+@@ -0,0 +1,991 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -13070,6 +13342,8 @@ index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6
 +import { ChatAgentLocation, ChatModeKind } from '../../../chat/common/constants.js';
 +import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
 +import { DirectorToolMode } from '../../common/agentEngine/directorToolRegistry.js';
++import { directorExecutionSubagentContextService } from '../../common/agentEngine/executionSubagentContext.js';
++import { getDirectorModeAppendSystemPrompt } from '../../common/agentEngine/executionSubagentPrompt.js';
 +import {
 +	createDirectorPlanReviewContent,
 +	createPlanModeUserPrompt,
@@ -13084,6 +13358,7 @@ index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6
 +import { requestToUserMessage, historyToNormalizedMessages } from './messageNormalization.js';
 +import { VSCodeToolBridge, getAgentToolDefinitions, waitForAgentToolRegistryReady } from './toolBridge.js';
 +import type { NormalizedMessageParam } from '../../common/agentEngine/providers/providerTypes.js';
++import '../../../chat/browser/agentEngine/directorExecutionSubagent.contribution.js';
 +
 +// ============================================================================
 +// Configuration keys
@@ -13318,7 +13593,7 @@ index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6
 +				provider: llmProvider,
 +				tools: toolDefinitions,
 +				systemPrompt: getDirectorModeSystemPrompt(directorMode),
-+				appendSystemPrompt: request.modeInstructions?.content,
++				appendSystemPrompt: getDirectorModeAppendSystemPrompt(directorMode, request.modeInstructions?.content),
 +				maxTurns: getDirectorModeMaxTurns(maxTurns, directorMode),
 +				maxTokens,
 +				maxInputTokens: maxInputTokens > 0 ? maxInputTokens : undefined,
@@ -13349,6 +13624,20 @@ index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6
 +			const userMessage = directorMode === DirectorToolMode.Plan
 +				? createPlanModeUserPrompt(baseUserMessage, planRequestContext)
 +				: baseUserMessage;
++			const executionSubagentContext = directorMode === DirectorToolMode.Agent
++				? directorExecutionSubagentContextService.register({
++					provider: llmProvider,
++					model: modelId,
++					cwd,
++					sessionResource: request.sessionResource,
++					chatRequestId: request.requestId,
++					directorMode,
++					toolDefinitions,
++					abortSignal: abortController.signal,
++					maxTokens,
++					maxInputTokens: maxInputTokens > 0 ? maxInputTokens : undefined,
++				})
++				: undefined;
 +
 +			try {
 +				// 10. Run the agentic loop
@@ -13522,6 +13811,7 @@ index 0000000000000000000000000000000000000000..eae104c181b67c0db41e200cf2735ad6
 +					break;
 +				}
 +			} finally {
++				executionSubagentContext?.dispose();
 +				cancelListener.dispose();
 +				this.pushReplaySnapshot(request.sessionResource, engine.getMessages(), provider, modelId, apiType);
 +			}
@@ -17936,10 +18226,10 @@ index 0000000000000000000000000000000000000000..156c83a7301ac41b6b89d5b3465a4c76
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5d6133428
+index 0000000000000000000000000000000000000000..9197a938cf9be4e57faf7a5974df3a7149b93477
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
-@@ -0,0 +1,247 @@
+@@ -0,0 +1,449 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -17954,25 +18244,44 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 + */
 +
 +import { generateUuid } from '../../../../../base/common/uuid.js';
-+import { CancellationToken } from '../../../../../base/common/cancellation.js';
++import { CancellationToken, CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 +import { CancellationError, isCancellationError } from '../../../../../base/common/errors.js';
 +import { IDisposable } from '../../../../../base/common/lifecycle.js';
 +import { URI } from '../../../../../base/common/uri.js';
 +import type { IToolExecutor } from '../../common/agentEngine/agentEngine.js';
 +import type { AgentToolDefinition } from '../../common/agentEngine/agentEngineTypes.js';
-+import { DirectorToolMode, getDirectorToolAllowlist } from '../../common/agentEngine/directorToolRegistry.js';
++import { DirectorToolMode, getDirectorToolAllowlist, type DirectorToolTimeoutCategory } from '../../common/agentEngine/directorToolRegistry.js';
 +import type {
 +	ILanguageModelToolsService,
 +	IToolInvocation,
 +	CountTokensCallback,
 +	IExternalPreToolUseHookResult,
++	IToolResult,
++	IDirectorToolInvocationStageEvent,
 +} from '../../../chat/common/tools/languageModelToolsService.js';
 +import type { ILanguageModelChatMetadata } from '../../../chat/common/languageModels.js';
 +
 +const TOOL_TIMEOUT_MS = 120_000; // 2 minutes max per tool invocation
-+const INTERACTIVE_USER_INPUT_TOOLS = new Set(['askQuestions']);
++const TERMINAL_INFRA_TIMEOUT_GRACE_MS = 60_000;
 +const TOOL_REGISTRY_READY_QUIET_MS = 350;
 +const TOOL_REGISTRY_READY_TIMEOUT_MS = 2_500;
++
++export interface DirectorStructuredToolOptions {
++	readonly subAgentInvocationId?: string;
++	readonly requirePositiveSyncTimeout?: boolean;
++	readonly timeoutPolicy?: DirectorToolTimeoutCategory;
++}
++
++export interface DirectorStructuredToolResult {
++	readonly text: string;
++	readonly content: IToolResult['content'];
++	readonly toolResultError?: string | boolean;
++	readonly toolResultMessage?: IToolResult['toolResultMessage'];
++	readonly toolResultDetails?: IToolResult['toolResultDetails'];
++	readonly toolMetadata?: unknown;
++}
++
++const MAX_SYNC_TERMINAL_TIMEOUT_MS = 120_000;
 +
 +// ============================================================================
 +// Tool Discovery: VS Code tools → AgentToolDefinition[]
@@ -18061,6 +18370,7 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +	private readonly toolNameToId = new Map<string, string>();
 +	private readonly readOnlyTools = new Set<string>();
 +	private readonly directorPreApprovalReasons = new Map<string, string>();
++	private readonly timeoutCategories = new Map<string, DirectorToolTimeoutCategory>();
 +
 +	constructor(
 +		private readonly toolsService: ILanguageModelToolsService,
@@ -18078,23 +18388,40 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +			if (tool.directorPreApprovalReason) {
 +				this.directorPreApprovalReasons.set(tool.modelName, tool.directorPreApprovalReason);
 +			}
++			if (tool.entry.timeoutCategory) {
++				this.timeoutCategories.set(tool.modelName, tool.entry.timeoutCategory);
++			}
 +		}
 +	}
 +
 +	async invokeTool(name: string, input: unknown): Promise<string> {
++		try {
++			const result = await this.invokeToolStructured(name, input);
++			return this.resultToString(result);
++		} catch (err: any) {
++			if (isCancellationError(err)) {
++				return `[Tool '${name}' was cancelled] The tool confirmation was denied or the request was cancelled. If this was unexpected, try enabling auto-approve in the Chat panel's mode picker (select "Agent" mode with auto-approve).`;
++			}
++			throw err;
++		}
++	}
++
++	async invokeToolStructured(name: string, input: unknown, options: DirectorStructuredToolOptions = {}): Promise<DirectorStructuredToolResult> {
 +		const toolId = this.toolNameToId.get(name);
 +		if (!toolId) {
 +			throw new Error(`Tool not found: ${name}`);
 +		}
++		const parameters = (typeof input === 'object' && input !== null) ? input as Record<string, any> : {};
 +
 +		const invocation: IToolInvocation = {
 +			callId: generateUuid(),
 +			toolId,
-+			parameters: (typeof input === 'object' && input !== null) ? input as Record<string, any> : {},
++			parameters,
 +			context: {
 +				sessionResource: this.sessionResource,
 +			} as any,
 +			chatRequestId: this.requestId,
++			subAgentInvocationId: options.subAgentInvocationId,
 +		};
 +		const directorPreApprovalReason = this.directorPreApprovalReasons.get(name);
 +		if (directorPreApprovalReason) {
@@ -18105,15 +18432,17 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +			return Math.ceil(_input.length / 4);
 +		};
 +
-+		try {
-+			const result = await this.invokeWithTimeout(invocation, countTokens, name);
-+			return this.resultToString(result);
-+		} catch (err: any) {
-+			if (isCancellationError(err)) {
-+				return `[Tool '${name}' was cancelled] The tool confirmation was denied or the request was cancelled. If this was unexpected, try enabling auto-approve in the Chat panel's mode picker (select "Agent" mode with auto-approve).`;
-+			}
-+			throw err;
++		const terminalValidationError = validateRunInTerminalSyncTimeout(name, parameters, options.requirePositiveSyncTimeout);
++		if (terminalValidationError) {
++			return this.createStructuredErrorResult(terminalValidationError, {
++				directorErrorKind: 'invalid-sync-terminal-timeout',
++				toolName: name,
++			});
 +		}
++
++		const requestedSyncTimeoutMs = getRequestedRunInTerminalSyncTimeout(name, parameters);
++		const result = await this.invokeWithTimeout(invocation, countTokens, name, options, requestedSyncTimeoutMs);
++		return this.toStructuredResult(result);
 +	}
 +
 +	isReadOnlyTool(name: string): boolean {
@@ -18136,34 +18465,144 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +		invocation: IToolInvocation,
 +		countTokens: CountTokensCallback,
 +		toolName: string,
-+	): Promise<{ content: Array<any>; toolResultError?: string | boolean }> {
-+		if (INTERACTIVE_USER_INPUT_TOOLS.has(toolName)) {
-+			return this.toolsService.invokeTool(invocation, countTokens, this.token) as Promise<{ content: Array<any>; toolResultError?: string | boolean }>;
++		options: DirectorStructuredToolOptions,
++		requestedSyncTimeoutMs: number | undefined,
++	): Promise<IToolResult> {
++		const timeoutCategory = options.timeoutPolicy ?? this.timeoutCategories.get(toolName) ?? 'generic-bridge';
++		if (timeoutCategory === 'user-interaction-owned' || timeoutCategory === 'tool-owned') {
++			return this.toolsService.invokeTool(invocation, countTokens, this.token);
 +		}
-+		let timeoutHandle: any;
++
++		const linkedSource = new CancellationTokenSource(this.token);
++		let bridgeTimeoutHandle: any;
++		let terminalInfraTimeoutHandle: any;
 +		let cancelListener: IDisposable | undefined;
-+		try {
-+			return await new Promise<{ content: Array<any>; toolResultError?: string | boolean }>((resolve, reject) => {
-+				timeoutHandle = setTimeout(() => reject(new Error(
-+					`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s. ` +
-+					`This usually means the tool is waiting for user confirmation that didn't render. ` +
-+					`Try enabling auto-approve in the Chat panel's mode picker.`
-+				)), TOOL_TIMEOUT_MS);
-+				cancelListener = this.token.onCancellationRequested(() => reject(new CancellationError()));
-+				this.toolsService.invokeTool(invocation, countTokens, this.token)
-+					.then(resolve as any, reject);
++		let stageListener: IDisposable | undefined;
++		let terminalOwned = false;
++		let settled = false;
++
++		const clearBridgeTimeout = () => {
++			if (bridgeTimeoutHandle !== undefined) {
++				clearTimeout(bridgeTimeoutHandle);
++				bridgeTimeoutHandle = undefined;
++			}
++		};
++
++		const clearTerminalInfraTimeout = () => {
++			if (terminalInfraTimeoutHandle !== undefined) {
++				clearTimeout(terminalInfraTimeoutHandle);
++				terminalInfraTimeoutHandle = undefined;
++			}
++		};
++
++		return await new Promise<IToolResult>((resolve, reject) => {
++			const cleanup = () => {
++				clearBridgeTimeout();
++				clearTerminalInfraTimeout();
++				cancelListener?.dispose();
++				stageListener?.dispose();
++				linkedSource.dispose();
++			};
++
++			const finishResolve = (result: IToolResult) => {
++				if (settled) {
++					return;
++				}
++				settled = true;
++				cleanup();
++				resolve(result);
++			};
++
++			const finishReject = (err: unknown) => {
++				if (settled) {
++					return;
++				}
++				settled = true;
++				cleanup();
++				reject(err);
++			};
++
++			const scheduleBridgeTimeout = () => {
++				if (settled || terminalOwned || bridgeTimeoutHandle !== undefined) {
++					return;
++				}
++				bridgeTimeoutHandle = setTimeout(() => {
++					linkedSource.cancel();
++					finishResolve(this.createStructuredErrorResult(
++						`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s before it reached a tool-owned lifecycle. This usually means the tool is waiting for user confirmation that did not render or blocked during preparation. Try enabling auto-approve in the Chat panel's mode picker.`,
++						{ directorErrorKind: 'bridge-timeout', toolName, timeoutMs: TOOL_TIMEOUT_MS }
++					));
++				}, TOOL_TIMEOUT_MS);
++			};
++
++			const scheduleTerminalInfraTimeout = () => {
++				if (settled || requestedSyncTimeoutMs === undefined || terminalInfraTimeoutHandle !== undefined) {
++					return;
++				}
++				const timeoutMs = requestedSyncTimeoutMs + TERMINAL_INFRA_TIMEOUT_GRACE_MS;
++				terminalInfraTimeoutHandle = setTimeout(() => {
++					finishResolve(this.createStructuredErrorResult(
++						`Tool '${toolName}' exceeded Director's terminal infrastructure timeout after ${timeoutMs}ms. The terminal command timeout was ${requestedSyncTimeoutMs}ms; this indicates the terminal tool did not report completion, timeout, background, or input-needed state in time.`,
++						{ directorErrorKind: 'terminal-infra-timeout', toolName, timeoutMs, requestedTimeoutMs: requestedSyncTimeoutMs }
++					));
++				}, timeoutMs);
++			};
++
++			if (timeoutCategory === 'stage-aware-terminal') {
++				stageListener = this.toolsService.onDidChangeDirectorToolInvocationStage?.((event: IDirectorToolInvocationStageEvent) => {
++					if (settled || event.callId !== invocation.callId || event.toolId !== invocation.toolId || event.chatRequestId !== invocation.chatRequestId) {
++						return;
++					}
++					if (event.stage === 'user-waiting-started') {
++						clearBridgeTimeout();
++					} else if (event.stage === 'user-waiting-ended') {
++						scheduleBridgeTimeout();
++					} else if (event.stage === 'terminal-invocation-started' && requestedSyncTimeoutMs !== undefined) {
++						terminalOwned = true;
++						clearBridgeTimeout();
++						stageListener?.dispose();
++						stageListener = undefined;
++						scheduleTerminalInfraTimeout();
++					}
++				});
++			}
++
++			cancelListener = this.token.onCancellationRequested(() => {
++				linkedSource.cancel();
++				finishReject(new CancellationError());
 +			});
-+		} finally {
-+			if (timeoutHandle !== undefined) { clearTimeout(timeoutHandle); }
-+			cancelListener?.dispose();
-+		}
++
++			scheduleBridgeTimeout();
++			this.toolsService.invokeTool(invocation, countTokens, linkedSource.token)
++				.then(finishResolve, finishReject);
++		});
 +	}
 +
 +	// ========================================================================
 +	// Helpers
 +	// ========================================================================
 +
-+	private resultToString(result: { content: Array<any>; toolResultError?: string | boolean }): string {
++	private createStructuredErrorResult(message: string, toolMetadata?: unknown): DirectorStructuredToolResult {
++		return {
++			text: message,
++			content: [{ kind: 'text', value: message }],
++			toolResultError: message,
++			toolMetadata,
++		};
++	}
++
++	private toStructuredResult(result: IToolResult): DirectorStructuredToolResult {
++		return {
++			text: this.contentToString(result.content),
++			content: result.content,
++			toolResultError: result.toolResultError,
++			toolResultMessage: result.toolResultMessage,
++			toolResultDetails: result.toolResultDetails,
++			toolMetadata: result.toolMetadata,
++		};
++	}
++
++	private resultToString(result: Pick<DirectorStructuredToolResult, 'content' | 'toolResultError'>): string {
 +		if (result.toolResultError) {
 +			const errMsg = typeof result.toolResultError === 'string'
 +				? result.toolResultError
@@ -18171,8 +18610,12 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +			throw new Error(errMsg);
 +		}
 +
++		return this.contentToString(result.content);
++	}
++
++	private contentToString(content: IToolResult['content']): string {
 +		const parts: string[] = [];
-+		for (const part of result.content) {
++		for (const part of content) {
 +			if (part.kind === 'text' && part.value) {
 +				parts.push(part.value);
 +			} else if (part.kind === 'data' && part.value) {
@@ -18186,6 +18629,55 @@ index 0000000000000000000000000000000000000000..1fe2285a55d2b6b13e246af525a595a5
 +
 +		return parts.join('\n') || 'Tool completed with no output.';
 +	}
++}
++
++export function validateRunInTerminalSyncTimeout(toolName: string, parameters: Record<string, any>, requirePositiveSyncTimeout: boolean = false): string | undefined {
++	if (toolName !== 'runInTerminal' && !requirePositiveSyncTimeout) {
++		return undefined;
++	}
++
++	const resolvedMode = parameters.mode ?? (parameters.isBackground ? 'async' : 'sync');
++	if (resolvedMode !== 'sync') {
++		return undefined;
++	}
++
++	const timeout = parameters.timeout;
++	if (typeof timeout !== 'number' || !Number.isFinite(timeout)) {
++		return `runInTerminal sync calls require a finite numeric timeout in milliseconds from 1 to ${MAX_SYNC_TERMINAL_TIMEOUT_MS}. Received ${describeTimeoutValue(timeout)}. Use 30000 for short commands, ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for builds/tests, or use async/background/task semantics for longer-running work.`;
++	}
++	if (timeout < 1) {
++		return `runInTerminal sync calls require timeout to be at least 1ms. Received ${timeout}. Use 30000 for short commands, ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for builds/tests, or use async/background/task semantics for longer-running work.`;
++	}
++	if (timeout > MAX_SYNC_TERMINAL_TIMEOUT_MS) {
++		return `runInTerminal sync timeout must be no more than ${MAX_SYNC_TERMINAL_TIMEOUT_MS}ms. Received ${timeout}. Use async/background semantics, an appropriate task flow, or a narrower command instead of extending a direct sync terminal wait.`;
++	}
++	return undefined;
++}
++
++function getRequestedRunInTerminalSyncTimeout(toolName: string, parameters: Record<string, any>): number | undefined {
++	if (toolName !== 'runInTerminal') {
++		return undefined;
++	}
++	const resolvedMode = parameters.mode ?? (parameters.isBackground ? 'async' : 'sync');
++	return resolvedMode === 'sync' && typeof parameters.timeout === 'number' && Number.isFinite(parameters.timeout)
++		? parameters.timeout
++		: undefined;
++}
++
++function describeTimeoutValue(value: unknown): string {
++	if (typeof value === 'number') {
++		return String(value);
++	}
++	if (Array.isArray(value)) {
++		return 'an array';
++	}
++	if (value === undefined) {
++		return 'missing timeout';
++	}
++	if (value === null) {
++		return 'null';
++	}
++	return `a ${typeof value}`;
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/agentEngine.ts
 new file mode 100644
@@ -21453,6 +21945,651 @@ index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea
 +export const DirectorPlanToolData = [
 +	DirectorPresentPlanToolData,
 +] as const;
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f58acfbdb40cd39b73e8fc85c63c69761779738
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts
+@@ -0,0 +1,56 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { toDisposable } from '../../../../../base/common/lifecycle.js';
++import { URI } from '../../../../../base/common/uri.js';
++import type { AgentEngineConfig, AgentToolDefinition } from './agentEngineTypes.js';
++import { DirectorToolMode } from './directorToolRegistry.js';
++
++export interface DirectorExecutionSubagentParentContext {
++	readonly provider: AgentEngineConfig['provider'];
++	readonly model: string;
++	readonly cwd: string;
++	readonly sessionResource: URI;
++	readonly chatRequestId: string;
++	readonly directorMode: DirectorToolMode;
++	readonly toolDefinitions: readonly AgentToolDefinition[];
++	readonly abortSignal: AbortSignal;
++	readonly maxTokens: number;
++	readonly maxInputTokens?: number;
++}
++
++export class DirectorExecutionSubagentContextService {
++
++	private readonly contexts = new Map<string, DirectorExecutionSubagentParentContext>();
++	private readonly runningRequests = new Set<string>();
++
++	register(context: DirectorExecutionSubagentParentContext) {
++		this.contexts.set(context.chatRequestId, context);
++		return toDisposable(() => this.clear(context.chatRequestId));
++	}
++
++	get(chatRequestId: string | undefined): DirectorExecutionSubagentParentContext | undefined {
++		return chatRequestId ? this.contexts.get(chatRequestId) : undefined;
++	}
++
++	clear(chatRequestId: string): void {
++		this.contexts.delete(chatRequestId);
++		this.runningRequests.delete(chatRequestId);
++	}
++
++	tryBegin(chatRequestId: string): boolean {
++		if (this.runningRequests.has(chatRequestId)) {
++			return false;
++		}
++		this.runningRequests.add(chatRequestId);
++		return true;
++	}
++
++	end(chatRequestId: string): void {
++		this.runningRequests.delete(chatRequestId);
++	}
++}
++
++export const directorExecutionSubagentContextService = new DirectorExecutionSubagentContextService();
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a85dd3b85
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts
+@@ -0,0 +1,47 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { DirectorToolMode } from './directorToolRegistry.js';
++
++export const DIRECTOR_EXECUTION_SUBAGENT_PROMPT = [
++	'You are Director Code\'s execution subagent. Your job is to run terminal commands for one execution-focused task and return a compact result.',
++	'',
++	'When calling runInTerminal, you MUST follow these rules:',
++	'- Always use mode="sync".',
++	'- Always include timeout in milliseconds.',
++	'- Use timeout=30000 for short commands.',
++	'- Use timeout=120000 for builds and test suites.',
++	'- Do not exceed timeout=120000. Commands that run longer should move to terminal timeout/background handling and be summarized with terminal id/status.',
++	'- Call runInTerminal at most once per turn. Do not call it in parallel.',
++	'- If a command may prompt for confirmation, use non-interactive flags such as --yes or -y when appropriate.',
++	'- Prefer focused output.',
++	'',
++	'When finished, return a compact final answer:',
++	'- List each command that was run.',
++	'- State whether it succeeded, failed, timed out, moved to background, or needed input.',
++	'- Include only the relevant output excerpts needed by the parent Agent.',
++	'- If more work is needed, say exactly what remains.',
++].join('\n');
++
++const DIRECTOR_PARENT_AGENT_EXECUTION_GUIDANCE = [
++	'For most execution tasks and terminal commands, use execution_subagent to run commands and get the relevant portions of the output.',
++	'Use runInTerminal only in rare cases when the entire output of a single command is needed without summarization or truncation.',
++	'When directly calling runInTerminal in sync mode, always include timeout in milliseconds from 1 to 120000. Use 30000 for short commands and 120000 for builds/tests. Do not omit timeout and do not use timeout=0.',
++	'Use mode="async" only for servers, watchers, dev daemons, or other commands that should keep running while you continue other work.',
++	'Do not call execution_subagent multiple times in parallel. Invoke one execution subagent and wait for its response before starting another execution task.',
++	'Do not call runInTerminal multiple times in parallel. Run one command and wait for output before running the next command.',
++	'Use runTask or createAndRunTask when the request is better represented as a VS Code task and the expected task lifecycle is appropriate for the current timeout behavior.',
++].join('\n');
++
++export function getDirectorModeAppendSystemPrompt(mode: DirectorToolMode, existingAppend: string | undefined): string | undefined {
++	const parts: string[] = [];
++	if (existingAppend) {
++		parts.push(existingAppend);
++	}
++	if (mode === DirectorToolMode.Agent) {
++		parts.push(DIRECTOR_PARENT_AGENT_EXECUTION_GUIDANCE);
++	}
++	return parts.length > 0 ? parts.join('\n\n') : undefined;
++}
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2ca6a154b7
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
+@@ -0,0 +1,524 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { CancellationToken, CancellationTokenSource } from '../../../../../base/common/cancellation.js';
++import { CancellationError } from '../../../../../base/common/errors.js';
++import { MarkdownString } from '../../../../../base/common/htmlContent.js';
++import type { IDisposable } from '../../../../../base/common/lifecycle.js';
++import { generateUuid } from '../../../../../base/common/uuid.js';
++import { CountTokensCallback, IDirectorToolInvocationStageEvent, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../../../chat/common/tools/languageModelToolsService.js';
++import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
++import type { NormalizedContentBlock, NormalizedMessageParam, NormalizedResponseBlock, NormalizedTool } from './providers/providerTypes.js';
++import { DirectorToolMode } from './directorToolRegistry.js';
++import { directorExecutionSubagentContextService } from './executionSubagentContext.js';
++import { DIRECTOR_EXECUTION_SUBAGENT_PROMPT } from './executionSubagentPrompt.js';
++
++export const DirectorExecutionSubagentToolId = 'director_execution_subagent';
++export const DirectorExecutionSubagentToolReferenceName = 'execution_subagent';
++
++const MAX_INNER_TURNS = 5;
++const MAX_QUERY_LENGTH = 4000;
++const MAX_DESCRIPTION_LENGTH = 160;
++const MAX_SYNC_TIMEOUT_MS = 120_000;
++const MODEL_ONLY_WATCHDOG_MS = 120_000;
++const PRE_TERMINAL_WATCHDOG_MS = 120_000;
++const TERMINAL_TIMEOUT_GRACE_MS = 60_000;
++
++interface ExecutionSubagentInput {
++	readonly query: string;
++	readonly description: string;
++}
++
++interface TerminalResultSummary {
++	readonly command: string;
++	readonly status: string;
++	readonly output: string;
++	readonly metadata?: any;
++}
++
++type StructuredToolService = ILanguageModelToolsService & {
++	invokeToolStructured?: (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => Promise<IToolResult>;
++};
++
++export const DirectorExecutionSubagentToolData: IToolData = {
++	id: DirectorExecutionSubagentToolId,
++	toolReferenceName: DirectorExecutionSubagentToolReferenceName,
++	displayName: 'Execution Subagent',
++	userDescription: 'Run a terminal-focused execution task through a constrained Director subagent.',
++	modelDescription: 'Run an execution-focused task with a terminal-only subagent. Provide a short description and a query. The subagent uses only runInTerminal with sync mode and explicit timeouts, summarizes terminal output, and stops after timeout/background/input-needed terminal state.',
++	source: ToolDataSource.Internal,
++	runsInWorkspace: true,
++	canRequestPreApproval: false,
++	canRequestPostApproval: false,
++	inputSchema: {
++		type: 'object',
++		additionalProperties: false,
++		properties: {
++			query: {
++				type: 'string',
++				minLength: 1,
++				maxLength: MAX_QUERY_LENGTH,
++				description: 'Execution task or command goal. Do not include arbitrary metadata, credentials, command output, or terminal transcripts.',
++			},
++			description: {
++				type: 'string',
++				minLength: 1,
++				maxLength: MAX_DESCRIPTION_LENGTH,
++				description: 'Short user-visible description of the execution task.',
++			},
++		},
++		required: ['query', 'description'],
++	},
++};
++
++export class DirectorExecutionSubagentTool implements IToolImpl {
++
++	constructor(
++		@ILanguageModelToolsService private readonly toolsService: ILanguageModelToolsService,
++	) { }
++
++	async invoke(invocation: IToolInvocation, countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
++		const input = this.validateInput(invocation.parameters);
++		if (!input.ok) {
++			return this.errorResult(input.message);
++		}
++
++		if (!invocation.chatRequestId) {
++			return this.errorResult('execution_subagent requires a parent chatRequestId.');
++		}
++
++		const parentContext = directorExecutionSubagentContextService.get(invocation.chatRequestId);
++		if (!parentContext) {
++			return this.errorResult(`execution_subagent could not find request-scoped parent context for chatRequestId "${invocation.chatRequestId}".`);
++		}
++		if (parentContext.directorMode !== DirectorToolMode.Agent) {
++			return this.errorResult('execution_subagent is only available in Agent mode.');
++		}
++		if (!directorExecutionSubagentContextService.tryBegin(parentContext.chatRequestId)) {
++			return this.errorResult('An execution_subagent is already running for this parent Agent request. Wait for it to finish before starting another execution task.');
++		}
++
++		const subAgentInvocationId = generateUuid();
++		const abortController = new AbortController();
++		const parentAbortListener = () => abortController.abort();
++		parentContext.abortSignal.addEventListener('abort', parentAbortListener, { once: true });
++
++		try {
++			const terminalToolData = this.toolsService.getToolByName('runInTerminal') ?? this.toolsService.getTool('run_in_terminal');
++			if (!terminalToolData) {
++				return this.errorResult('execution_subagent could not find the runInTerminal tool.');
++			}
++
++			const terminalTool: NormalizedTool = {
++				name: 'runInTerminal',
++				description: terminalToolData.modelDescription || terminalToolData.displayName || 'Run a terminal command.',
++				input_schema: this.toNormalizedInputSchema(terminalToolData.inputSchema),
++			};
++			const messages: NormalizedMessageParam[] = [{
++				role: 'user',
++				content: this.createUserPrompt(input.value, parentContext.cwd),
++			}];
++			const terminalSummaries: TerminalResultSummary[] = [];
++			let toolsAvailable = true;
++			let terminalActiveTimeoutMs: number | undefined;
++
++			for (let turn = 0; turn < MAX_INNER_TURNS; turn++) {
++				if (token.isCancellationRequested || parentContext.abortSignal.aborted || abortController.signal.aborted) {
++					return this.result(input.value, subAgentInvocationId, terminalSummaries, 'execution_subagent was cancelled before it could finish.');
++				}
++
++				const response = await this.withWatchdog(
++					parentContext.provider.createMessage({
++						model: parentContext.model,
++						maxTokens: Math.min(parentContext.maxTokens || 4096, 4096),
++						system: DIRECTOR_EXECUTION_SUBAGENT_PROMPT,
++						messages,
++						tools: toolsAvailable ? [terminalTool] : undefined,
++						abortSignal: abortController.signal,
++					}),
++					terminalActiveTimeoutMs,
++				);
++				terminalActiveTimeoutMs = undefined;
++
++				const responseContent = this.contentForHistory(response.content);
++				const toolUses = response.content.filter((block): block is Extract<NormalizedResponseBlock, { type: 'tool_use' }> => block.type === 'tool_use');
++				if (toolUses.length === 0) {
++					const finalText = this.extractText(response.content) || this.renderSummaries(terminalSummaries) || 'execution_subagent completed with no terminal output.';
++					return this.result(input.value, subAgentInvocationId, terminalSummaries, finalText);
++				}
++
++				if (!toolsAvailable) {
++					messages.push({ role: 'assistant', content: responseContent });
++					messages.push({ role: 'user', content: toolUses.map(toolUse => this.syntheticToolError(toolUse.id, 'No tools are available after timeout, background, or input-needed terminal state. Return a compact final summary instead.')) });
++					continue;
++				}
++
++				if (toolUses.length > 1) {
++					messages.push({ role: 'assistant', content: responseContent });
++					messages.push({ role: 'user', content: toolUses.map(toolUse => this.syntheticToolError(toolUse.id, 'execution_subagent rejected this turn because it called runInTerminal more than once. No command from this turn was executed. Retry with at most one runInTerminal call.')) });
++					continue;
++				}
++
++				const toolUse = toolUses[0];
++				if (toolUse.name !== 'runInTerminal') {
++					messages.push({ role: 'assistant', content: responseContent });
++					messages.push({ role: 'user', content: [this.syntheticToolError(toolUse.id, `execution_subagent exposes only runInTerminal, not "${toolUse.name}".`)] });
++					continue;
++				}
++
++				const terminalValidation = this.validateTerminalInput(toolUse.input);
++				if (!terminalValidation.ok) {
++					messages.push({ role: 'assistant', content: responseContent });
++					messages.push({ role: 'user', content: [this.syntheticToolError(toolUse.id, terminalValidation.message)] });
++					continue;
++				}
++
++				terminalActiveTimeoutMs = terminalValidation.timeoutMs;
++				const terminalResult = await this.invokeRunInTerminalStructured({
++					terminalToolId: terminalToolData.id,
++					input: terminalValidation.input,
++					parentContext,
++					subAgentInvocationId,
++					countTokens,
++					token,
++				});
++				const terminalText = this.resultToString(terminalResult);
++				const metadata = terminalResult.toolMetadata as any;
++				const status = this.statusFromMetadata(metadata);
++				terminalSummaries.push({
++					command: String(terminalValidation.input.command ?? ''),
++					status,
++					output: terminalText,
++					metadata,
++				});
++
++				messages.push({ role: 'assistant', content: responseContent });
++				messages.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: terminalText, is_error: terminalResult.toolResultError ? true : undefined }] });
++
++				if (this.shouldStopAfterTerminalResult(metadata)) {
++					toolsAvailable = false;
++				}
++			}
++
++			return this.result(input.value, subAgentInvocationId, terminalSummaries, this.renderSummaries(terminalSummaries) || 'execution_subagent reached its internal turn limit without a final summary.');
++		} catch (err: any) {
++			return this.errorResult(`execution_subagent failed: ${err?.message || String(err)}`);
++		} finally {
++			parentContext.abortSignal.removeEventListener('abort', parentAbortListener);
++			abortController.abort();
++			directorExecutionSubagentContextService.end(parentContext.chatRequestId);
++		}
++	}
++
++	async prepareToolInvocation(context: IToolInvocationPreparationContext, _token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
++		const description = typeof context.parameters?.description === 'string' ? context.parameters.description : 'execution task';
++		return {
++			invocationMessage: new MarkdownString(`Running execution subagent: ${description}`),
++			pastTenseMessage: new MarkdownString(`Ran execution subagent: ${description}`),
++		};
++	}
++
++	private validateInput(input: Record<string, any>): { readonly ok: true; readonly value: ExecutionSubagentInput } | { readonly ok: false; readonly message: string } {
++		if (!input || typeof input !== 'object' || Array.isArray(input)) {
++			return { ok: false, message: 'execution_subagent input must be an object with query and description.' };
++		}
++		const keys = Object.keys(input);
++		const unknown = keys.filter(key => key !== 'query' && key !== 'description');
++		if (unknown.length > 0) {
++			return { ok: false, message: `execution_subagent rejects unknown properties: ${unknown.join(', ')}.` };
++		}
++		if (typeof input.query !== 'string' || input.query.trim().length === 0 || input.query.length > MAX_QUERY_LENGTH) {
++			return { ok: false, message: `execution_subagent query must be a non-empty string no longer than ${MAX_QUERY_LENGTH} characters.` };
++		}
++		if (typeof input.description !== 'string' || input.description.trim().length === 0 || input.description.length > MAX_DESCRIPTION_LENGTH) {
++			return { ok: false, message: `execution_subagent description must be a non-empty string no longer than ${MAX_DESCRIPTION_LENGTH} characters.` };
++		}
++		return { ok: true, value: { query: input.query, description: input.description } };
++	}
++
++	private validateTerminalInput(input: any): { readonly ok: true; readonly input: Record<string, any>; readonly timeoutMs: number } | { readonly ok: false; readonly message: string } {
++		if (!input || typeof input !== 'object' || Array.isArray(input)) {
++			return { ok: false, message: 'runInTerminal input must be an object.' };
++		}
++		const resolvedMode = input.mode ?? (input.isBackground === true ? 'async' : 'sync');
++		if (resolvedMode !== 'sync') {
++			return { ok: false, message: 'execution_subagent only allows runInTerminal with mode="sync".' };
++		}
++		if (typeof input.timeout !== 'number' || !Number.isFinite(input.timeout) || input.timeout <= 0 || input.timeout > MAX_SYNC_TIMEOUT_MS) {
++			return { ok: false, message: 'execution_subagent requires sync runInTerminal timeout as a finite number from 1 to 120000 milliseconds.' };
++		}
++		return { ok: true, input: { ...input, mode: 'sync', isBackground: false }, timeoutMs: input.timeout };
++	}
++
++	private async invokeRunInTerminalStructured(options: {
++		readonly terminalToolId: string;
++		readonly input: Record<string, any>;
++		readonly parentContext: { readonly sessionResource: any; readonly chatRequestId: string };
++		readonly subAgentInvocationId: string;
++		readonly countTokens: CountTokensCallback;
++		readonly token: CancellationToken;
++	}): Promise<IToolResult> {
++		const invocation: IToolInvocation = {
++			callId: generateUuid(),
++			toolId: options.terminalToolId,
++			parameters: options.input,
++			context: {
++				sessionResource: options.parentContext.sessionResource,
++			},
++			chatRequestId: options.parentContext.chatRequestId,
++			subAgentInvocationId: options.subAgentInvocationId,
++		};
++		return this.invokeRunInTerminalWithWatchdog(invocation, options.countTokens, options.token, Number(options.input.timeout));
++	}
++
++	private async invokeRunInTerminalWithWatchdog(invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken, requestedTimeoutMs: number): Promise<IToolResult> {
++		const service = this.toolsService as StructuredToolService;
++		const linkedSource = new CancellationTokenSource(token);
++		const stageEvents = this.toolsService.onDidChangeDirectorToolInvocationStage;
++		let preTerminalHandle: any;
++		let terminalInfraHandle: any;
++		let stageListener: IDisposable | undefined;
++		let cancelListener: IDisposable | undefined;
++		let settled = false;
++		let terminalOwned = false;
++
++		return await new Promise<IToolResult>((resolve, reject) => {
++			const clearPreTerminal = () => {
++				if (preTerminalHandle !== undefined) {
++					clearTimeout(preTerminalHandle);
++					preTerminalHandle = undefined;
++				}
++			};
++			const clearTerminalInfra = () => {
++				if (terminalInfraHandle !== undefined) {
++					clearTimeout(terminalInfraHandle);
++					terminalInfraHandle = undefined;
++				}
++			};
++			const cleanup = () => {
++				clearPreTerminal();
++				clearTerminalInfra();
++				stageListener?.dispose();
++				cancelListener?.dispose();
++				linkedSource.dispose();
++			};
++			const finishResolve = (result: IToolResult) => {
++				if (settled) {
++					return;
++				}
++				settled = true;
++				cleanup();
++				resolve(result);
++			};
++			const finishReject = (err: unknown) => {
++				if (settled) {
++					return;
++				}
++				settled = true;
++				cleanup();
++				reject(err);
++			};
++			const schedulePreTerminal = () => {
++				if (settled || terminalOwned || preTerminalHandle !== undefined) {
++					return;
++				}
++				preTerminalHandle = setTimeout(() => {
++					linkedSource.cancel();
++					finishResolve(this.errorToolResult(
++						`execution_subagent terminal preparation timed out after ${PRE_TERMINAL_WATCHDOG_MS}ms before runInTerminal reached terminal execution.`,
++						{ directorErrorKind: 'execution-subagent-pre-terminal-timeout', timeoutMs: PRE_TERMINAL_WATCHDOG_MS }
++					));
++				}, PRE_TERMINAL_WATCHDOG_MS);
++			};
++			const scheduleTerminalInfra = () => {
++				if (settled || terminalInfraHandle !== undefined) {
++					return;
++				}
++				const timeoutMs = requestedTimeoutMs + TERMINAL_TIMEOUT_GRACE_MS;
++				terminalInfraHandle = setTimeout(() => {
++					finishResolve(this.errorToolResult(
++						`execution_subagent terminal infrastructure timed out after ${timeoutMs}ms. The requested runInTerminal timeout was ${requestedTimeoutMs}ms, but no terminal completion, timeout, background, or input-needed result returned in time.`,
++						{ directorErrorKind: 'execution-subagent-terminal-infra-timeout', timeoutMs, requestedTimeoutMs }
++					));
++				}, timeoutMs);
++			};
++
++			if (stageEvents) {
++				stageListener = stageEvents((event: IDirectorToolInvocationStageEvent) => {
++					if (settled || event.callId !== invocation.callId || event.toolId !== invocation.toolId || event.chatRequestId !== invocation.chatRequestId) {
++						return;
++					}
++					if (event.stage === 'user-waiting-started') {
++						clearPreTerminal();
++					} else if (event.stage === 'user-waiting-ended') {
++						schedulePreTerminal();
++					} else if (event.stage === 'terminal-invocation-started') {
++						terminalOwned = true;
++						clearPreTerminal();
++						stageListener?.dispose();
++						stageListener = undefined;
++						scheduleTerminalInfra();
++					}
++				});
++				schedulePreTerminal();
++			} else {
++				terminalOwned = true;
++				scheduleTerminalInfra();
++			}
++
++			cancelListener = token.onCancellationRequested(() => {
++				linkedSource.cancel();
++				finishReject(new CancellationError());
++			});
++
++			const invoke = service.invokeToolStructured
++				? service.invokeToolStructured(invocation, countTokens, linkedSource.token)
++				: this.toolsService.invokeTool(invocation, countTokens, linkedSource.token);
++			invoke.then(finishResolve, finishReject);
++		});
++	}
++
++	private withWatchdog<T>(promise: Promise<T>, terminalTimeoutMs: number | undefined): Promise<T> {
++		const timeoutMs = terminalTimeoutMs === undefined
++			? MODEL_ONLY_WATCHDOG_MS
++			: terminalTimeoutMs + TERMINAL_TIMEOUT_GRACE_MS;
++		return new Promise<T>((resolve, reject) => {
++			const handle = setTimeout(() => reject(new Error(`execution_subagent infrastructure timeout after ${timeoutMs}ms.`)), timeoutMs);
++			promise.then(
++				value => {
++					clearTimeout(handle);
++					resolve(value);
++				},
++				err => {
++					clearTimeout(handle);
++					reject(err);
++				},
++			);
++		});
++	}
++
++	private toNormalizedInputSchema(schema: any): NormalizedTool['input_schema'] {
++		return {
++			type: 'object',
++			properties: schema?.properties ?? {},
++			required: Array.isArray(schema?.required) ? schema.required : undefined,
++		};
++	}
++
++	private createUserPrompt(input: ExecutionSubagentInput, cwd: string): string {
++		return [
++			`Task: ${input.description}`,
++			`Working directory: ${cwd}`,
++			'',
++			input.query,
++		].join('\n');
++	}
++
++	private contentForHistory(content: readonly NormalizedResponseBlock[]): NormalizedContentBlock[] {
++		return content.filter(block => block.type !== 'thinking') as NormalizedContentBlock[];
++	}
++
++	private syntheticToolError(toolUseId: string, content: string): NormalizedContentBlock {
++		return { type: 'tool_result', tool_use_id: toolUseId, content, is_error: true };
++	}
++
++	private extractText(content: readonly NormalizedResponseBlock[]): string {
++		return content
++			.filter((block): block is Extract<NormalizedResponseBlock, { type: 'text' }> => block.type === 'text')
++			.map(block => block.text)
++			.join('')
++			.trim();
++	}
++
++	private resultToString(result: IToolResult): string {
++		const parts: string[] = [];
++		for (const part of result.content) {
++			if (part.kind === 'text') {
++				parts.push(part.value);
++			} else if (part.kind === 'data') {
++				parts.push(`[data:${part.value.mimeType || 'unknown'}]`);
++			}
++		}
++		if (result.toolResultError) {
++			const error = typeof result.toolResultError === 'string' ? result.toolResultError : 'Tool execution failed.';
++			parts.push(`Error: ${error}`);
++		}
++		return parts.join('\n').trim() || 'runInTerminal completed with no output.';
++	}
++
++	private statusFromMetadata(metadata: any): string {
++		if (metadata?.directorErrorKind) {
++			return `infrastructure error: ${metadata.directorErrorKind}`;
++		}
++		if (metadata?.inputNeeded) {
++			return 'input-needed';
++		}
++		if (metadata?.timedOut) {
++			return `timed-out${metadata.timeoutMs ? ` after ${metadata.timeoutMs}ms` : ''}`;
++		}
++		if (metadata?.id && metadata.exitCode === undefined) {
++			return 'background';
++		}
++		if (typeof metadata?.exitCode === 'number') {
++			return metadata.exitCode === 0 ? 'succeeded' : `failed with exit code ${metadata.exitCode}`;
++		}
++		return 'completed';
++	}
++
++	private shouldStopAfterTerminalResult(metadata: any): boolean {
++		return Boolean(metadata?.directorErrorKind || metadata?.timedOut || metadata?.inputNeeded || (metadata?.id && metadata.exitCode === undefined));
++	}
++
++	private renderSummaries(summaries: readonly TerminalResultSummary[]): string {
++		if (summaries.length === 0) {
++			return '';
++		}
++		return summaries.map((summary, index) => {
++			const terminalId = summary.metadata?.id ? ` terminal id=${summary.metadata.id}.` : '';
++			return [
++				`Command ${index + 1}: ${summary.command || '(unknown command)'}`,
++				`Status: ${summary.status}.${terminalId}`,
++				this.truncateOutput(summary.output),
++			].join('\n');
++		}).join('\n\n');
++	}
++
++	private truncateOutput(output: string): string {
++		const trimmed = output.trim();
++		return trimmed.length <= 6000 ? trimmed : trimmed.slice(0, 6000) + '\n[output truncated by execution_subagent]';
++	}
++
++	private result(input: ExecutionSubagentInput, subAgentInvocationId: string, summaries: readonly TerminalResultSummary[], text: string): IToolResult {
++		return {
++			toolResultMessage: new MarkdownString(`Execution subagent completed: ${input.description}`),
++			toolMetadata: {
++				query: input.query,
++				description: input.description,
++				subAgentInvocationId,
++				agentName: 'execution',
++				terminalResults: summaries.map(summary => ({
++					status: summary.status,
++					terminalId: summary.metadata?.id,
++					timeoutMs: summary.metadata?.timeoutMs,
++					timedOut: summary.metadata?.timedOut,
++					inputNeeded: summary.metadata?.inputNeeded,
++				})),
++			},
++			content: [{ kind: 'text', value: text }],
++		};
++	}
++
++	private errorResult(message: string): IToolResult {
++		return this.errorToolResult(message);
++	}
++
++	private errorToolResult(message: string, toolMetadata?: unknown): IToolResult {
++		return {
++			toolResultError: message,
++			toolMetadata,
++			content: [{ kind: 'text', value: message }],
++		};
++	}
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/fetchUtils.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..b81a2e62096a3bc49eca509991829bfe89efb23f
@@ -27534,6 +28671,136 @@ index 0000000000000000000000000000000000000000..0a88d6819b9d68b7803b898bec408be8
 +
 +	return usage.input_tokens * pricing.input + usage.output_tokens * pricing.output;
 +}
+diff --git a/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171cdb5805c1
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts
+@@ -0,0 +1,124 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { Event } from '../../../../../../base/common/event.js';
++import { URI } from '../../../../../../base/common/uri.js';
++import { VSCodeToolBridge } from '../../../browser/agentEngine/toolBridge.js';
++import { DirectorToolMode } from '../../../common/agentEngine/directorToolRegistry.js';
++import { CountTokensCallback, ILanguageModelToolsService, IToolData, IToolInvocation, IToolResult, ToolDataSource } from '../../../../chat/common/tools/languageModelToolsService.js';
++
++suite('VSCodeToolBridge', () => {
++	function runInTerminalToolData(): IToolData {
++		return {
++			id: 'run_in_terminal',
++			toolReferenceName: 'runInTerminal',
++			modelDescription: 'Run terminal command',
++			displayName: 'Run Terminal Command',
++			source: ToolDataSource.Internal,
++			inputSchema: {
++				type: 'object',
++				properties: {
++					command: { type: 'string' },
++					timeout: { type: 'number' },
++					mode: { type: 'string' },
++					isBackground: { type: 'boolean' },
++				},
++			},
++		};
++	}
++
++	function createBridge(invoke: (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => Promise<IToolResult>): { bridge: VSCodeToolBridge; invocations: IToolInvocation[] } {
++		const invocations: IToolInvocation[] = [];
++		const service = {
++			vscodeToolSet: {},
++			executeToolSet: {},
++			readToolSet: {},
++			agentToolSet: {},
++			toolSets: undefined,
++			onDidChangeTools: Event.None,
++			onDidPrepareToolCallBecomeUnresponsive: Event.None,
++			onDidInvokeTool: Event.None,
++			onDidChangeDirectorToolInvocationStage: Event.None,
++			getTools: () => [runInTerminalToolData()],
++			invokeTool: async (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => {
++				invocations.push(invocation);
++				return invoke(invocation, countTokens, token);
++			},
++			flushToolUpdates: () => { },
++		} as unknown as ILanguageModelToolsService;
++
++		return {
++			bridge: new VSCodeToolBridge(service, URI.parse('vscode-chat://director-test/session'), 'request-1', CancellationToken.None, undefined, DirectorToolMode.Agent),
++			invocations,
++		};
++	}
++
++	test('structured path preserves tool metadata and rendered text', async () => {
++		const { bridge } = createBridge(async () => ({
++			content: [{ kind: 'text', value: 'hello' }],
++			toolMetadata: { timedOut: true, timeoutMs: 5 },
++			toolResultMessage: 'terminal finished',
++			toolResultDetails: [],
++		}));
++
++		const result = await bridge.invokeToolStructured('runInTerminal', { command: 'echo hello', timeout: 5 });
++
++		assert.strictEqual(result.text, 'hello');
++		assert.deepStrictEqual(result.content, [{ kind: 'text', value: 'hello' }]);
++		assert.deepStrictEqual(result.toolMetadata, { timedOut: true, timeoutMs: 5 });
++		assert.strictEqual(result.toolResultMessage, 'terminal finished');
++		assert.deepStrictEqual(result.toolResultDetails, []);
++	});
++
++	test('rejects invalid sync runInTerminal timeout before invoking core tool', async () => {
++		const cases: unknown[] = [
++			undefined,
++			0,
++			-1,
++			NaN,
++			Infinity,
++			'30000',
++			{},
++			[],
++			120001,
++		];
++
++		for (const timeout of cases) {
++			const { bridge, invocations } = createBridge(async () => {
++				throw new Error('core tool should not be invoked');
++			});
++			const result = await bridge.invokeToolStructured('runInTerminal', { command: 'echo nope', timeout });
++
++			assert.strictEqual(invocations.length, 0);
++			assert.ok(result.toolResultError, `expected toolResultError for timeout=${String(timeout)}`);
++			assert.match(result.text, /runInTerminal sync|sync timeout|timeout/i);
++		}
++	});
++
++	test('string path rejects invalid sync runInTerminal timeout before invoking core tool', async () => {
++		const { bridge, invocations } = createBridge(async () => {
++			throw new Error('core tool should not be invoked');
++		});
++
++		await assert.rejects(
++			() => bridge.invokeTool('runInTerminal', { command: 'echo nope' }),
++			/runInTerminal sync calls require a finite numeric timeout/
++		);
++		assert.strictEqual(invocations.length, 0);
++	});
++
++	test('valid sync and async runInTerminal calls invoke core tool', async () => {
++		const { bridge, invocations } = createBridge(async () => ({
++			content: [{ kind: 'text', value: 'ok' }],
++		}));
++
++		assert.strictEqual(await bridge.invokeTool('runInTerminal', { command: 'echo ok', timeout: 1 }), 'ok');
++		await bridge.invokeToolStructured('runInTerminal', { command: 'npm start', mode: 'async' });
++
++		assert.strictEqual(invocations.length, 2);
++	});
++});
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
 index ea735f845e95276e50cdc8451eb02635af8bb099..94ad664182a5f8072975d00632b8f63a37eaa79e 100644
 --- a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts

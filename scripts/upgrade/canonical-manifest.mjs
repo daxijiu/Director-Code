@@ -218,7 +218,12 @@ function sha256Buffer(buffer) {
 
 function shouldExcludeSourceEntry(baseName, relativePath) {
   if (!relativePath) return false;
-  return baseName === '.git'
+  return relativePath.endsWith('.tsbuildinfo')
+    || (relativePath.startsWith('extensions/') && relativePath.includes('/dist/'))
+    || (relativePath.startsWith('extensions/') && relativePath.includes('/notebook-out/'))
+    || relativePath === 'extensions/markdown-language-features/media/index.js'
+    || relativePath === 'extensions/markdown-language-features/media/pre.js'
+    || baseName === '.git'
     || baseName === 'upstream-cache-manifest.json'
     || baseName === 'node_modules'
     || baseName === '.build'

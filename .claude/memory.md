@@ -2,6 +2,22 @@
 
 This file is the chronological working memory for the project. Keep durable project overview, goals, and direction in `AGENTS.md` and `CLAUDE.md`; keep detailed state, phase facts, package hashes, and handoff notes here.
 
+## 2026-05-18 runInTerminal Sync Regression And execution_subagent
+
+- Fixed the 120 Insider `runInTerminal` consecutive sync regression in replay-backed form.
+- Root cause: tool terminal input tracking listened to PTY `onData`, so shell output/prompt bytes were misclassified as manual user input; Basic/None shell integration then sent `Ctrl+C` / `Ctrl+U` before the next sync command.
+- `runInTerminalTool.ts` now listens to `onDidInputData` and ignores tool-originated `sendText(...)` through a per-terminal suppression guard. Basic/None strategies receive the guarded terminal instance for command sends and control sends.
+- Added regression coverage for PTY `onData` not setting `receivedUserInput`, real `onDidInputData` still setting it, guarded tool-owned sends, and consecutive Basic/None sync commands returning non-empty output without unintended control characters.
+- Added Director-owned `execution_subagent`, exposed only in Agent mode. It uses request-scoped parent context, only exposes internal `runInTerminal`, requires sync mode plus explicit `1..120000` ms timeout, rejects multiple terminal calls in one inner turn, passes `subAgentInvocationId`, and reads structured terminal metadata for timeout/background/input-needed decisions.
+- `VSCodeToolBridge` now has a structured result path that preserves `toolMetadata`, `toolResultMessage`, `toolResultDetails`, and rendered text while keeping the old string-return path for the generic Agent loop.
+- Timeout ownership is explicit in the Director tool registry: `runInTerminal` is `stage-aware-terminal`; `execution_subagent`, `runTask`, `createAndRunTask`, and `getTaskOutput` are `tool-owned`; dedicated user confirmation/question tools are `user-interaction-owned`.
+- `scripts/upgrade/generate-director-patches.mjs` now classifies terminal-tool runtime/test paths into `007-director-tool-layer` instead of broad branding, and keeps chat common tool-service stage signal changes in `004-director-agent-engine`.
+- `scripts/upgrade/canonical-manifest.mjs` excludes generated TypeScript build info and extension package outputs (`*.tsbuildinfo`, extension `dist`, extension `notebook-out`, and markdown preview generated JS) so build/test artifacts do not pollute canonical manifests.
+- Targeted validation passed: `compile-check-ts-native`, Director tool bridge / execution_subagent / tool registry tests, replay `validate-series`, product override validation, expected contracts, and canonical manifest write+validate.
+- Full package validation passed with `scripts/build-director-120-insider.ps1` (no `-SkipReplay`), producing:
+  - `artifacts/out/insider/win32-x64/system-setup/Director-CodeSetup-x64-1.120.0.exe`, sha256 `65EEA3E1DFE278502BECE976022E4C9218AF9687F85893385C9141800639D31D`
+  - `artifacts/out/insider/win32-x64/user-setup/Director-CodeUserSetup-x64-1.120.0.exe`, sha256 `0006FC3EA7A96151501959ABBA90566B34BE5FBEE5F5A855289EB66B2C165B1A`
+
 ## 2026-05-17 Worker D Final Review Fixes
 
 - Worker D fixed the final review items without committing or pushing: `validate-all.mjs --all-profiles` now fails fast when the active profile's generated tree is missing or product/package hashes do not match expected contracts, while non-active canonical profiles may still skip generated-tree deep checks with an explicit skipped summary.

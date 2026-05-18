@@ -1789,6 +1789,19 @@ index e081b77b885d7e5091144926ea6d0a5fc7053b04..f14b82600dcbf1205b9983bad3435dd1
  	}
  
  	content += CONFIG_HELP_TEXT_AFTER;
+diff --git a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
+index 70b572902f3589e6b5baa772b09653a8d54d4096..4695f0ee6c44f7ba455f087fc367cf7149abfd44 100644
+--- a/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
++++ b/src/vs/workbench/contrib/welcomeAgentSessions/browser/agentSessionsWelcome.ts
+@@ -732,7 +732,7 @@ export class AgentSessionsWelcomePage extends EditorPane {
+ 		// Content
+ 		const content = append(tosCard, $('.agentSessionsWelcome-walkthroughCard-content'));
+ 		const title = append(content, $('.agentSessionsWelcome-walkthroughCard-title'));
+-		title.textContent = localize('tosTitle', "Try GitHub Copilot for free, no sign-in required!");
++		title.textContent = localize('tosTitle.director', "Try Director Code AI, no sign-in required!");
+ 
+ 		const desc = append(content, $('.agentSessionsWelcome-walkthroughCard-description'));
+ 		const descriptionMarkdown = new MarkdownString(
 diff --git a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts b/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
 index ba81de54daf105db4b1560806f1047bd455847f1..4726e63de228420e82326e2b9f5471709bf598c9 100644
 --- a/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
@@ -1979,6 +1992,53 @@ index 1dd316d107c42dbe855dfc18dd51a15103e05d68..1c0c865dfd75e6d8c609ffe0718969b8
  					},
  				},
  				{
+diff --git a/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts b/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
+index a77b2cdbbc1f04ac7ea926e418ebd62cf139fb04..d12e9ac8a12f3730c6eaf1e7aa476c87ae5df48a 100644
+--- a/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
++++ b/src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts
+@@ -43,6 +43,7 @@ import {
+ 	getOnboardingStepSubtitle,
+ } from '../common/onboardingTypes.js';
+ import { IOnboardingService } from '../common/onboardingService.js';
++import { isDirectorCodeBuiltInMode } from '../../directorCode/common/agentEngine/builtInModeUtil.js';
+ 
+ type OnboardingStepViewClassification = {
+ 	owner: 'cwebster-99';
+@@ -72,6 +73,7 @@ type OnboardingActionEvent = {
+ 
+ assertDefined(product.defaultChatAgent, 'Onboarding requires a default chat agent product configuration.');
+ const defaultChat = product.defaultChatAgent;
++const directorBuiltInMode = isDirectorCodeBuiltInMode(product.defaultChatAgent);
+ 
+ /**
+  * Variation A — Classic Wizard Modal
+@@ -110,7 +112,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 	private _footerSignInBtn: HTMLButtonElement | undefined;
+ 
+ 	private currentStepIndex = 0;
+-	private readonly steps = ONBOARDING_STEPS;
++	private readonly steps = directorBuiltInMode ? ONBOARDING_STEPS.filter(step => step !== OnboardingStepId.SignIn) : ONBOARDING_STEPS;
+ 	private readonly disposables = this._register(new DisposableStore());
+ 	private readonly stepDisposables = this._register(new DisposableStore());
+ 	private previouslyFocusedElement: HTMLElement | undefined;
+@@ -402,7 +404,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 			this.backButton.style.display = this.currentStepIndex === 0 ? 'none' : '';
+ 		}
+ 		if (this.nextButton) {
+-			if (this.currentStepIndex === 0) {
++			if (this.steps[this.currentStepIndex] === OnboardingStepId.SignIn) {
+ 				// Sign-in step: secondary "Continue without Signing In"
+ 				this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-secondary';
+ 				this.nextButton.textContent = localize('onboarding.continueWithoutSignIn', "Continue without Signing In");
+@@ -415,7 +417,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
+ 			}
+ 		}
+ 		if (this.footerLeft) {
+-			if (this._isLastStep()) {
++			if (this._isLastStep() && !directorBuiltInMode) {
+ 				// Show sign-in nudge in footer
+ 				if (!this._footerSignInBtn && !this._userSignedIn) {
+ 					this._footerSignInBtn = append(this.footerLeft, $<HTMLButtonElement>('button.onboarding-a-signin-nudge-btn'));
 diff --git a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts b/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
 index 366c70e6930a889bb5acb5d04f12285de6f20ac6..bce56145b9ed1af048e0d685b4023fc2686fa930 100644
 --- a/src/vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough.ts
