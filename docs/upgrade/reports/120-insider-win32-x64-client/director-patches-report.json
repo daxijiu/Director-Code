@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-18T13:58:31.470Z",
+  "generatedAt": "2026-05-19T02:29:47.018Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 269,
+  "changedFileCount": 271,
   "patches": [
     {
       "stage": "branding",
@@ -253,8 +253,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 98,
-      "size": 1137631,
-      "sha256": "129aea81bcebc54f538ce5751b998aaa83a3fbb0a728215a4eaccb131af9a443"
+      "size": 1145118,
+      "sha256": "9bfb7673a881aff6216124583974555d76b46fbde5045d32017dae58f860eeb6"
     },
     {
       "stage": "chat-built-in-mode",
@@ -326,12 +326,14 @@
         "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts",
+        "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts",
         "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts",
+        "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts",
         "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts"
       ],
-      "fileCount": 7,
-      "size": 100188,
-      "sha256": "db17388709d94a760e4a4f2b26c79a55a5e5075a8d2d8ec272e454294ff34701"
+      "fileCount": 9,
+      "size": 105891,
+      "sha256": "b4758ff1581cdde64a507bb5a9be9d44cce5f457db5f094fbbd883efe1a7ae9a"
     },
     {
       "stage": "chat-editing",

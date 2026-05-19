@@ -264,9 +264,11 @@ function isToolLayer(filePath) {
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts',
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/basicExecuteStrategy.ts',
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/noneExecuteStrategy.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts',
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts',
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/basicExecuteStrategy.test.ts',
     'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/noneExecuteStrategy.test.ts',
+    'src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts',
   ].includes(filePath);
 }
 

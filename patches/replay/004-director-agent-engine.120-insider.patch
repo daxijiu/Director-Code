@@ -1277,18 +1277,22 @@ index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..88f01074bd7129beffeeda8b089a4e6f571d090a
+index 0000000000000000000000000000000000000000..95dfef374bbf8dc0ef0cd97192d3f3dc911587f0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,131 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +
 +import assert from 'assert';
++import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { Event } from '../../../../../../base/common/event.js';
++import { URI } from '../../../../../../base/common/uri.js';
 +import { DirectorToolMode, getDirectorToolAllowlist } from '../../../../directorCode/common/agentEngine/directorToolRegistry.js';
-+import { DirectorExecutionSubagentToolData } from '../../../../directorCode/common/agentEngine/executionSubagentTool.js';
++import { directorExecutionSubagentContextService } from '../../../../directorCode/common/agentEngine/executionSubagentContext.js';
++import { DirectorExecutionSubagentTool, DirectorExecutionSubagentToolData } from '../../../../directorCode/common/agentEngine/executionSubagentTool.js';
 +import { getDirectorModeAppendSystemPrompt } from '../../../../directorCode/common/agentEngine/executionSubagentPrompt.js';
 +
 +suite('Director execution_subagent', () => {
@@ -1323,6 +1327,89 @@ index 0000000000000000000000000000000000000000..88f01074bd7129beffeeda8b089a4e6f
 +
 +		const planPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Plan, undefined);
 +		assert.strictEqual(planPrompt, undefined);
++	});
++
++	test('uses streaming provider path for inner loop before invoking runInTerminal', async () => {
++		let createMessageCalls = 0;
++		let createMessageStreamCalls = 0;
++		let invokedTerminalInput: Record<string, any> | undefined;
++		const sessionResource = URI.parse('director-test://execution-subagent/session');
++		const abortController = new AbortController();
++		const provider = {
++			apiType: 'openai-codex',
++			createMessage: async () => {
++				createMessageCalls++;
++				throw new Error('Stream must be set to true');
++			},
++			createMessageStream: async function* () {
++				createMessageStreamCalls++;
++				if (createMessageStreamCalls === 1) {
++					yield { type: 'tool_use_start' as const, id: 'tool-call-1', name: 'runInTerminal', index: 0 };
++					yield { type: 'tool_input_delta' as const, json: JSON.stringify({ command: 'echo streaming-ok', mode: 'sync', timeout: 1000 }), index: 0 };
++					yield { type: 'message_complete' as const, usage: { input_tokens: 1, output_tokens: 1 }, stopReason: 'tool_use' };
++					return;
++				}
++				yield { type: 'text' as const, text: 'streaming subagent completed' };
++				yield { type: 'message_complete' as const, usage: { input_tokens: 1, output_tokens: 1 }, stopReason: 'end_turn' };
++			},
++		};
++		const terminalToolData = {
++			id: 'run_in_terminal',
++			toolReferenceName: 'runInTerminal',
++			displayName: 'Run in Terminal',
++			modelDescription: 'Run a command in the terminal.',
++			inputSchema: {
++				type: 'object',
++				properties: {
++					command: { type: 'string' },
++					mode: { type: 'string' },
++					timeout: { type: 'number' },
++				},
++				required: ['command'],
++			},
++		};
++		const toolsService = {
++			getToolByName: (name: string) => name === 'runInTerminal' ? terminalToolData : undefined,
++			getTool: (id: string) => id === 'run_in_terminal' ? terminalToolData : undefined,
++			onDidChangeDirectorToolInvocationStage: Event.None,
++			invokeTool: async (invocation: any) => {
++				invokedTerminalInput = invocation.parameters;
++				return {
++					toolMetadata: { exitCode: 0 },
++					content: [{ kind: 'text', value: 'streaming-ok' }],
++				};
++			},
++		};
++		const contextDisposable = directorExecutionSubagentContextService.register({
++			provider: provider as any,
++			model: 'codex-test',
++			cwd: 'E:\\Projects\\Director-Code-batch\\Director-Code-112-check',
++			sessionResource,
++			chatRequestId: 'execution-subagent-streaming-test',
++			directorMode: DirectorToolMode.Agent,
++			toolDefinitions: [],
++			abortSignal: abortController.signal,
++			maxTokens: 4096,
++		});
++		try {
++			const tool = new DirectorExecutionSubagentTool(toolsService as any);
++			const result = await tool.invoke({
++				callId: 'parent-tool-call',
++				toolId: 'director_execution_subagent',
++				parameters: { query: 'Run echo streaming-ok', description: 'streaming regression' },
++				context: { sessionResource },
++				chatRequestId: 'execution-subagent-streaming-test',
++			} as any, async () => 0, { report: () => { } }, CancellationToken.None);
++			assert.strictEqual(createMessageCalls, 0);
++			assert.strictEqual(createMessageStreamCalls, 2);
++			assert.deepStrictEqual(invokedTerminalInput, { command: 'echo streaming-ok', mode: 'sync', timeout: 1000, isBackground: false });
++			assert.strictEqual(result.content[0]?.kind, 'text');
++			assert.ok(result.content[0]?.kind === 'text' && result.content[0].value.includes('streaming subagent completed'));
++		} finally {
++			contextDisposable.dispose();
++			directorExecutionSubagentContextService.clear('execution-subagent-streaming-test');
++			abortController.abort();
++		}
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/toolBridge.test.ts
@@ -22062,10 +22149,10 @@ index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2ca6a154b7
+index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d93430623ceefc2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
-@@ -0,0 +1,524 @@
+@@ -0,0 +1,641 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -22078,7 +22165,7 @@ index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2c
 +import { generateUuid } from '../../../../../base/common/uuid.js';
 +import { CountTokensCallback, IDirectorToolInvocationStageEvent, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../../../chat/common/tools/languageModelToolsService.js';
 +import { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
-+import type { NormalizedContentBlock, NormalizedMessageParam, NormalizedResponseBlock, NormalizedTool } from './providers/providerTypes.js';
++import type { CreateMessageParams, CreateMessageResponse, LLMProvider, NormalizedContentBlock, NormalizedMessageParam, NormalizedResponseBlock, NormalizedTool, TokenUsage } from './providers/providerTypes.js';
 +import { DirectorToolMode } from './directorToolRegistry.js';
 +import { directorExecutionSubagentContextService } from './executionSubagentContext.js';
 +import { DIRECTOR_EXECUTION_SUBAGENT_PROMPT } from './executionSubagentPrompt.js';
@@ -22104,6 +22191,13 @@ index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2c
 +	readonly status: string;
 +	readonly output: string;
 +	readonly metadata?: any;
++}
++
++interface PendingStreamingTool {
++	id: string;
++	name: string;
++	input: string;
++	thoughtSignature?: string;
 +}
 +
 +type StructuredToolService = ILanguageModelToolsService & {
@@ -22198,7 +22292,7 @@ index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2c
 +				}
 +
 +				const response = await this.withWatchdog(
-+					parentContext.provider.createMessage({
++					this.createSubagentMessage(parentContext.provider, {
 +						model: parentContext.model,
 +						maxTokens: Math.min(parentContext.maxTokens || 4096, 4096),
 +						system: DIRECTOR_EXECUTION_SUBAGENT_PROMPT,
@@ -22465,6 +22559,116 @@ index 0000000000000000000000000000000000000000..f7994997aaf6037e2d6baf95275eac2c
 +				},
 +			);
 +		});
++	}
++
++	private async createSubagentMessage(provider: LLMProvider, params: CreateMessageParams): Promise<CreateMessageResponse> {
++		if (!provider.createMessageStream) {
++			return provider.createMessage(params);
++		}
++
++		const contentBlocks: NormalizedResponseBlock[] = [];
++		const pendingTools = new Map<number, PendingStreamingTool>();
++		let currentTextBlock: { type: 'text'; text: string } | undefined;
++		let usage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
++		let stopReason = 'end_turn';
++
++		for await (const event of provider.createMessageStream(params)) {
++			if (params.abortSignal?.aborted) {
++				break;
++			}
++
++			switch (event.type) {
++				case 'text':
++					if (!currentTextBlock) {
++						currentTextBlock = { type: 'text', text: '' };
++					}
++					currentTextBlock.text += event.text;
++					break;
++				case 'thinking':
++					contentBlocks.push({ type: 'thinking', thinking: event.thinking });
++					break;
++				case 'tool_use_start': {
++					if (currentTextBlock) {
++						contentBlocks.push(currentTextBlock);
++						currentTextBlock = undefined;
++					}
++					const index = this.resolveStreamingToolIndex(event, pendingTools);
++					pendingTools.set(index, { id: event.id, name: event.name, input: '', thoughtSignature: event.thoughtSignature });
++					break;
++				}
++				case 'tool_input_delta': {
++					const index = this.resolveStreamingToolIndex(event, pendingTools);
++					const tool = pendingTools.get(index);
++					if (tool) {
++						tool.input += event.json;
++					}
++					break;
++				}
++				case 'tool_call_delta': {
++					const index = this.resolveStreamingToolIndex(event, pendingTools);
++					const tool = pendingTools.get(index) ?? { id: '', name: '', input: '' };
++					if (event.id && !tool.id) {
++						tool.id = event.id;
++					}
++					if (event.name && !tool.name) {
++						tool.name = event.name;
++					}
++					if (event.arguments) {
++						tool.input += event.arguments;
++					}
++					pendingTools.set(index, tool);
++					break;
++				}
++				case 'message_complete':
++					usage = event.usage;
++					stopReason = event.stopReason;
++					break;
++			}
++		}
++
++		if (currentTextBlock) {
++			contentBlocks.push(currentTextBlock);
++		}
++		for (const [, tool] of pendingTools) {
++			contentBlocks.push(this.finalizeStreamingToolBlock(tool));
++		}
++
++		return {
++			content: contentBlocks.length > 0 ? contentBlocks : [{ type: 'text', text: '' }],
++			stopReason,
++			usage,
++		};
++	}
++
++	private resolveStreamingToolIndex(event: { readonly index?: number }, pendingTools: Map<number, PendingStreamingTool>): number {
++		if (typeof event.index === 'number') {
++			return event.index;
++		}
++		if (pendingTools.size <= 1) {
++			return pendingTools.size === 0 ? 0 : [...pendingTools.keys()][0];
++		}
++		throw new Error('execution_subagent received a multi-tool streaming event without an index.');
++	}
++
++	private finalizeStreamingToolBlock(tool: PendingStreamingTool): NormalizedResponseBlock {
++		let parsedInput: any = {};
++		try {
++			if (tool.input) {
++				parsedInput = JSON.parse(tool.input);
++			}
++		} catch {
++			parsedInput = {};
++		}
++		const block: any = {
++			type: 'tool_use',
++			id: tool.id,
++			name: tool.name,
++			input: parsedInput,
++		};
++		if (tool.thoughtSignature) {
++			block.thoughtSignature = tool.thoughtSignature;
++		}
++		return block;
 +	}
 +
 +	private toNormalizedInputSchema(schema: any): NormalizedTool['input_schema'] {

@@ -35,6 +35,12 @@ Implemented in the generated tree before replay regeneration:
 - `execution_subagent` is Director-owned, Agent-only, request-scoped by `chatRequestId`, exposes only internal `runInTerminal`, enforces sync + timeout, rejects multi-terminal-call turns before execution, passes `subAgentInvocationId`, and preserves terminal metadata for timeout/background/input-needed decisions.
 - Parent Agent guidance is appended only in Agent mode and prefers `execution_subagent` for most terminal/task execution.
 
+2026-05-19 follow-up after manual smoke:
+
+- `execution_subagent` must use the streaming provider path for its internal loop when `createMessageStream` is available. OpenAI Codex/OAuth backends can reject non-streaming `/responses` calls with `Stream must be set to true`, so a passing implementation cannot call `createMessage(...)` first and retry after that error.
+- Rich shell integration is also in scope. A stale non-empty `promptInputModel.value` at an idle prompt must not cause `Ctrl+C` before the next `runInTerminal` command. The accepted behavior is to clear the stale prompt line with `Ctrl+U`, run the command, and return non-empty output.
+- The replay classifier must keep all terminal execute strategy runtime/test paths used by this fix in `007-director-tool-layer`.
+
 Initial validation already passed before replay closeout:
 
 - `npm run compile-check-ts-native`

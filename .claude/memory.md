@@ -18,6 +18,15 @@ This file is the chronological working memory for the project. Keep durable proj
   - `artifacts/out/insider/win32-x64/system-setup/Director-CodeSetup-x64-1.120.0.exe`, sha256 `65EEA3E1DFE278502BECE976022E4C9218AF9687F85893385C9141800639D31D`
   - `artifacts/out/insider/win32-x64/user-setup/Director-CodeUserSetup-x64-1.120.0.exe`, sha256 `0006FC3EA7A96151501959ABBA90566B34BE5FBEE5F5A855289EB66B2C165B1A`
 
+## 2026-05-19 runInTerminal Follow-Up Fix
+
+- Follow-up manual smoke found two uncovered runtime paths after commit `7fd7caab7f276494df9f404965c8a7e0bd2ad302`: direct `runInTerminal` could still show `^C`, and `execution_subagent` failed with `Stream must be set to true`.
+- `execution_subagent` now uses the provider streaming path (`createMessageStream`) for its internal loop when available, aggregating streamed text/tool-call deltas into the normalized response blocks. This matches the main Agent loop and avoids OpenAI Codex/OAuth backends rejecting non-streaming `/responses` calls.
+- Rich shell integration now handles stale idle prompt input by clearing the line with `Ctrl+U` and sending the command via `sendText`, instead of delegating to `runCommand` and letting it inject `Ctrl+C` at an idle prompt.
+- Added focused regression coverage: `executionSubagent.test.ts` verifies the inner loop does not call non-streaming `createMessage` and still invokes `runInTerminal`; `richExecuteStrategy.test.ts` verifies stale prompt input does not send `Ctrl+C` and still returns command output.
+- Updated `generate-director-patches.mjs` so Rich execute strategy runtime/test paths land in `007-director-tool-layer` instead of broad branding.
+- Validation passed: `compile-check-ts-native`, `gulp compile-client`, browser tests for `executionSubagent.test.ts` and `richExecuteStrategy.test.ts`, plus replay `validate-series`, product override validation, expected contracts, and canonical manifest write+validate.
+
 ## 2026-05-17 Worker D Final Review Fixes
 
 - Worker D fixed the final review items without committing or pushing: `validate-all.mjs --all-profiles` now fails fast when the active profile's generated tree is missing or product/package hashes do not match expected contracts, while non-active canonical profiles may still skip generated-tree deep checks with an explicit skipped summary.

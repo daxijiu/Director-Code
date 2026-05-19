@@ -1552,6 +1552,40 @@ index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08
 +		properties: {},
 +	};
 +}
+diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
+index bac03b64ffd3721262dfdfc339872001edba9e63..86358fc9cb251f5e6f67e8984c892d391303b359 100644
+--- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
++++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
+@@ -13,7 +13,7 @@ import { isCI, isMacintosh } from '../../../../../../base/common/platform.js';
+ import type { ICommandDetectionCapability } from '../../../../../../platform/terminal/common/capabilities/capabilities.js';
+ import { ITerminalLogService, type ITerminalLaunchError } from '../../../../../../platform/terminal/common/terminal.js';
+ import type { ITerminalInstance } from '../../../../terminal/browser/terminal.js';
+-import { trackIdleOnPrompt, type ITerminalExecuteStrategy, type ITerminalExecuteStrategyResult } from './executeStrategy.js';
++import { trackIdleOnPrompt, waitForIdle, type ITerminalExecuteStrategy, type ITerminalExecuteStrategyResult } from './executeStrategy.js';
+ import type { IMarker as IXtermMarker } from '@xterm/xterm';
+ import { createAltBufferPromise, setupRecreatingStartMarker, stripCommandEchoAndPrompt } from './strategyHelpers.js';
+ import { TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
+@@ -176,7 +176,19 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
+ 			this._log(`Executing command line \`${commandLine}\``);
+ 			markerRecreation.dispose();
+ 			const forceBracketedPasteMode = isMacintosh || isMultilineCommand(commandLine);
+-			this._instance.runCommand(commandLine, true, commandId, forceBracketedPasteMode, commandLineForMetadata);
++			if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0 && this._commandDetection.executingCommandObject === undefined) {
++				// `ITerminalInstance#runCommand` sends Ctrl+C whenever prompt input is
++				// non-empty. For agent-owned terminals this can be stale prompt input
++				// from the previous command rather than real user typing, which cancels
++				// the command we're about to run. Clear the prompt line instead and
++				// execute through sendText so no Ctrl+C is injected at an idle prompt.
++				this._log('Prompt input is non-empty but no command is executing; clearing with Ctrl+U before sendText');
++				await this._instance.sendText('\x15', false);
++				await waitForIdle(this._instance.onData, 100);
++				await this._instance.sendText(commandLine, true, forceBracketedPasteMode);
++			} else {
++				this._instance.runCommand(commandLine, true, commandId, forceBracketedPasteMode, commandLineForMetadata);
++			}
+ 
+ 			// Wait for the terminal to idle
+ 			this._log('Waiting for done event');
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
 index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b555234425a4b14bd 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
@@ -1662,6 +1696,75 @@ index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b55523442
  			case ShellIntegrationQuality.Rich:
  				return this._instantiationService.createInstance(RichExecuteStrategy, this._toolTerminal.instance, commandDetection, isSyncMode);
  		}
+diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
+index 8151d3cc1803e53d447b18cc75453f78e9a113ae..b1993eaf75e77db0e7c7677b4b0a0e6747bc5782 100644
+--- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
++++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
+@@ -74,6 +74,64 @@ suite('RichExecuteStrategy', () => {
+ 		strictEqual(actualCommandLineForMetadata, 'echo hello');
+ 	});
+ 
++	test('does not send Ctrl+C when idle prompt input is stale', async () => {
++		const onCommandFinishedEmitter = new Emitter<{ getOutput(): string; exitCode: number }>();
++		const onDataEmitter = new Emitter<string>();
++		const sentTexts: string[] = [];
++		const marker = {
++			line: 0,
++			dispose: () => { },
++			onDispose: Event.None,
++		};
++		const xterm = {
++			raw: {
++				registerMarker: () => marker,
++				buffer: {
++					active: {},
++					alternate: {},
++					onBufferChange: () => toDisposable(() => { }),
++				},
++				getContentsAsText: () => '',
++			}
++		};
++		const instance = {
++			xtermReadyPromise: Promise.resolve(xterm),
++			onData: onDataEmitter.event,
++			onDisposed: Event.None,
++			onExit: Event.None,
++			sendText: async (text: string, shouldExecute: boolean) => {
++				sentTexts.push(text);
++				onDataEmitter.fire(text);
++				if (shouldExecute) {
++					queueMicrotask(() => onCommandFinishedEmitter.fire({ getOutput: () => `${text}\nrich-output\n$ `, exitCode: 0 }));
++				}
++			},
++			runCommand: () => {
++				throw new Error('runCommand should not be called when clearing stale idle prompt input');
++			},
++		} as unknown as ITerminalInstance;
++		const commandDetection = {
++			onCommandFinished: onCommandFinishedEmitter.event,
++			promptInputModel: { value: 'stale prompt input' },
++			executingCommandObject: undefined,
++		} as unknown as ICommandDetectionCapability;
++		const strategy = store.add(new RichExecuteStrategy(
++			instance,
++			commandDetection,
++			true,
++			new TestConfigurationService(),
++			createLogService(),
++		));
++
++		const result = await strategy.execute('echo rich', CancellationToken.None);
++
++		strictEqual(sentTexts.includes('\x03'), false);
++		strictEqual(sentTexts[0], '\x15');
++		strictEqual(sentTexts[1], 'echo rich');
++		strictEqual(result.output?.includes('rich-output'), true);
++		strictEqual(result.exitCode, 0);
++	});
++
+ 	test('completes when terminal process exits without shell integration sequences', async () => {
+ 		const onCommandFinishedEmitter = new Emitter<{ getOutput(): string; exitCode: number }>();
+ 		const onExitEmitter = new Emitter<number | undefined>();
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts
 index 5b9e1feb19b0ee92526303ace649c11b42fd462b..d8191e0db68d2e50d0862dbd2cb04a40012e457f 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts
