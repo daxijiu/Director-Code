@@ -152,6 +152,14 @@ The older 116 entry points remain available only as legacy/stable fallback:
 
 Use `-SkipReplay` only for quick local debugging. Do not use it for release candidate or package acceptance.
 
+### Windows Native Rebuild Locks
+
+`npm ci` during packaging can fail on Windows with `EBUSY` / `EPERM` cleanup errors or MSBuild `MSB3491` `.tlog` write failures under `vscode.generated/layers/director/vscode/node_modules`.
+
+This is a recurring generated-tree dependency lock problem, not a replay patch or Director runtime-code failure when an unchanged retry succeeds. The usual cause is that native addon files in generated `node_modules` are still held by a previous build/test/package process, a launched Director/VS Code instance, node-gyp/MSBuild child processes, antivirus/indexing, or a failed npm cleanup. Common locked modules include `node-pty`, `@vscode/windows-mutex`, `@vscode/spdlog`, `@vscode/sqlite3`, `@parcel/watcher`, `bufferutil`, `kerberos`, and `utf-8-validate`.
+
+Before retrying a package build after this failure, check for and stop processes whose command line points inside this repo or generated tree, especially `node`, `npm`, `node-gyp`, `MSBuild`, `cl`, `link`, `python`, `Code`, and `Director-Code`. If no process remains, wait briefly and retry once; the lock is often released after the failed native rebuild exits. If it repeats, use a conservative clean dependency recovery for the generated tree before rebuilding, rather than changing replay patches or product code.
+
 ## Standing Work Rules
 
 - At the start of each work session, check the current branch and `git status --short`.
