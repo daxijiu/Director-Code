@@ -192,6 +192,99 @@ index a9c3343b1e3422eacf913cd3668942b77dbb41a2..83935a3e26a10f47c59a10f5ea591f10
  						});
  						addedTrustedSeparator = true;
  					}
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts
+index 63c463afe6f5c7ad2312238b237c8928c2fbd754..b9964555da46aed02ba55f0ffc6aaecf151010b0 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts
+@@ -64,6 +64,7 @@ export class AgentHostSessionListController extends Disposable implements IChatS
+ 	private readonly _cachedSummaries = new Map<string, SessionSummary>();
+ 	/** Final-looking resources created locally before the backend session exists. */
+ 	private readonly _pendingNewSessions = new Set<string>();
++	private readonly _pendingNewSessionItems = new Map<string, IChatSessionItem>();
+ 	/**
+ 	 * Once `listSessions()` has succeeded, the in-memory list is kept in
+ 	 * sync by `notify/sessionAdded`, `notify/sessionRemoved`, and
+@@ -91,18 +92,15 @@ export class AgentHostSessionListController extends Disposable implements IChatS
+ 			if (n.type === 'notify/sessionAdded' && n.summary.provider === this._provider) {
+ 				const rawId = AgentSession.id(n.summary.resource);
+ 				this._pendingNewSessions.delete(rawId);
++				this._pendingNewSessionItems.delete(rawId);
+ 				this._cachedSummaries.set(rawId, n.summary);
+ 				const item = this._makeItemFromSummary(rawId, n.summary, n.summary.diffs);
+-				const existingIndex = this._items.findIndex(item => item.resource.path === `/${rawId}`);
+-				if (existingIndex >= 0) {
+-					this._items[existingIndex] = item;
+-				} else {
+-					this._items.push(item);
+-				}
++				this._upsertItem(item);
+ 				this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [item] });
+ 			} else if (n.type === 'notify/sessionRemoved' && AgentSession.provider(n.session) === this._provider) {
+ 				const removedId = AgentSession.id(n.session);
+ 				this._pendingNewSessions.delete(removedId);
++				this._pendingNewSessionItems.delete(removedId);
+ 				const idx = this._items.findIndex(item => item.resource.path === `/${removedId}`);
+ 				if (idx >= 0) {
+ 					const [removed] = this._items.splice(idx, 1);
+@@ -156,11 +154,15 @@ export class AgentHostSessionListController extends Disposable implements IChatS
+ 			createdAt: now,
+ 			modifiedAt: now,
+ 		});
++		this._pendingNewSessionItems.set(rawId, item);
++		this._cacheValid = false;
++		this._upsertItem(item, true);
++		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [item] });
+ 		return item;
+ 	}
+ 
+ 	async refresh(_token: CancellationToken): Promise<void> {
+-		if (this._cacheValid) {
++		if (this._cacheValid && this._pendingNewSessionItems.size === 0) {
+ 			// Cache is kept in sync by notify/sessionAdded,
+ 			// notify/sessionRemoved, and notify/sessionSummaryChanged. No
+ 			// need to round-trip through the agent host on every refresh.
+@@ -174,6 +176,7 @@ export class AgentHostSessionListController extends Disposable implements IChatS
+ 			this._items = filtered.map(s => {
+ 				const rawId = AgentSession.id(s.session);
+ 				this._pendingNewSessions.delete(rawId);
++				this._pendingNewSessionItems.delete(rawId);
+ 				let status = s.status ?? SessionStatus.Idle;
+ 				if (s.isRead) {
+ 					status |= SessionStatus.IsRead;
+@@ -201,14 +204,31 @@ export class AgentHostSessionListController extends Disposable implements IChatS
+ 					diffs: s.diffs,
+ 				});
+ 			});
+-			this._cacheValid = true;
++			for (const item of this._pendingNewSessionItems.values()) {
++				this._upsertItem(item, true);
++			}
++			this._cacheValid = this._pendingNewSessionItems.size === 0;
+ 		} catch {
+ 			this._cachedSummaries.clear();
+-			this._items = [];
++			this._items = Array.from(this._pendingNewSessionItems.values());
++			this._cacheValid = false;
+ 		}
+ 		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: this._items });
+ 	}
+ 
++	private _upsertItem(item: IChatSessionItem, preferFront = false): void {
++		const existingIndex = this._items.findIndex(existing => existing.resource.toString() === item.resource.toString());
++		if (existingIndex >= 0) {
++			this._items[existingIndex] = item;
++			return;
++		}
++		if (preferFront) {
++			this._items.unshift(item);
++		} else {
++			this._items.push(item);
++		}
++	}
++
+ 	private _makeItemFromSummary(rawId: string, summary: SessionSummary, diffs: readonly ISessionFileDiff[] | undefined): IChatSessionItem {
+ 		const workingDir = typeof summary.workingDirectory === 'string' ? URI.parse(summary.workingDirectory) : summary.workingDirectory;
+ 		return this._makeItem(rawId, {
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts
 index b473d3982c9f14c20ea59b1af0f5e193236695ba..bf59b48ae77b372ea899aeaa64dc429949e51a24 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts
@@ -303,6 +396,75 @@ index 6d49a22fefa0b9e82b86bcb00151b43ebc5b8288..6a0072bcc63d5b205602861a1f5d7061
  		default:
  			return '';
  	}
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
+index 498c97651e9aa7654168cf07cf1f798464f1e160..ede3115c1dfc6d1bfe62b42dd8986931895e88c3 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
+@@ -72,12 +72,13 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 				return;
+ 			}
+ 
++			const hadItem = this._items.has(model.sessionResource);
+ 			await this.refresh(CancellationToken.None);
+ 			if (this._isDisposed) {
+ 				return;
+ 			}
+ 
+-			this.tryUpdateLiveSessionItem(model);
++			this.tryUpdateLiveSessionItem(model, !hadItem);
+ 
+ 			const requestChangeListener = model.lastRequestObs.map(last => last?.response && observableSignalFromEvent('chatSessions.modelRequestChangeListener', last.response.onDidChange));
+ 			const modelChangeListener = observableSignalFromEvent('chatSessions.modelChangeListener', model.onDidChange);
+@@ -106,18 +107,22 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 		}));
+ 	}
+ 
+-	private async tryUpdateLiveSessionItem(model: IChatModel): Promise<void> {
++	private async tryUpdateLiveSessionItem(model: IChatModel, forceEmit = false): Promise<void> {
+ 		const existing = this._items.get(model.sessionResource);
+-		if (!existing) {
++		const updated = this.toChatSessionItem(await chatModelToChatDetail(model));
++		if (!updated) {
++			if (existing) {
++				this._items.delete(model.sessionResource);
++				this._onDidChangeChatSessionItems.fire({ removed: [model.sessionResource] });
++			}
+ 			return;
+ 		}
+ 
+-		const updated = new LocalChatSessionItem(await chatModelToChatDetail(model), model);
+-		if (existing.isEqual(updated)) {
++		if (existing?.isEqual(updated) && !forceEmit) {
+ 			return;
+ 		}
+ 
+-		this._items.set(existing.resource, updated);
++		this._items.set(updated.resource, updated);
+ 		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [updated] });
+ 	}
+ 
+@@ -156,11 +161,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 	private toChatSessionItem(chat: IChatDetail): LocalChatSessionItem | undefined {
+ 		const model = this.chatService.getSession(chat.sessionResource);
+ 
+-		if (model) {
+-			if (!model.hasRequests) {
+-				return undefined; // ignore sessions without requests
+-			}
+-		} else if (chat.isActive) {
++		if (!model && chat.isActive) {
+ 			// Sessions that are active but don't have a chat model are ultimately untitled with no requests
+ 			return undefined;
+ 		}
+@@ -184,7 +185,7 @@ class LocalChatSessionItem implements IChatSessionItem {
+ 		this.resource = chatDetail.sessionResource;
+ 		this.label = chatDetail.title;
+ 		this.description = model ? getInProgressSessionDescription(model) : undefined;
+-		this.status = (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState);
++		this.status = model && !model.hasRequests ? undefined : (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState);
+ 		this.timing = convertLegacyChatSessionTiming(chatDetail.timing);
+ 		this.changes = chatDetail.stats ? {
+ 			insertions: chatDetail.stats.added,
 diff --git a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts
 index 08f937f320bcdb7855471f734732bdf9213a9fda..5e7ae23c19afc0dc6eebeafe8cbf00d9ab2226d8 100644
 --- a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts
@@ -1650,6 +1812,80 @@ index b00f28ebfc39317547c784d1478d695757aba8e7..68f29eff5a62300c8144e2549636fd00
  								]
  							});
  						}
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts
+index 091ecacb238416ffa5e88b0b34c4095251a481b7..249d5e3263700644cdb4fa5b0cf8d420f7567ab6 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts
+@@ -800,12 +800,19 @@ suite('AgentHostChatContribution', () => {
+ 		test('newChatSessionItem creates final-looking resource used for requested backend session', () => runWithFakedTimers({ useFakeTimers: true }, async () => {
+ 			const { listController, sessionHandler, agentHostService, chatAgentService } = createContribution(disposables);
+ 
++			const onDidChangeChatSessionItems = Event.toPromise(listController.onDidChangeChatSessionItems);
+ 			const item = await listController.newChatSessionItem({ prompt: 'Hello from controller' }, CancellationToken.None);
++			const event = await onDidChangeChatSessionItems;
+ 			assert.ok(item);
+ 			assert.strictEqual(item.resource.scheme, 'agent-host-copilot');
+ 			assert.ok(!item.resource.path.substring(1).startsWith('untitled-'));
+ 			assert.strictEqual(listController.isNewSession(item.resource), true);
+-			assert.strictEqual(listController.items.some(existing => existing.resource.toString() === item.resource.toString()), false);
++			assert.strictEqual(listController.items.some(existing => existing.resource.toString() === item.resource.toString()), true);
++			assert.strictEqual(event.addedOrUpdated?.[0]?.resource.toString(), item.resource.toString());
++
++			await listController.refresh(CancellationToken.None);
++			assert.strictEqual(listController.isNewSession(item.resource), true);
++			assert.strictEqual(listController.items.some(existing => existing.resource.toString() === item.resource.toString()), true);
+ 
+ 			const { turnPromise, session, turnId, fire } = await startTurn(sessionHandler, agentHostService, chatAgentService, disposables, {
+ 				message: 'Hello from controller',
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
+index f107fdce956662b49f1084b405edc73c1e91a553..dbca083a1d2fa8fbde37a27ce52a9880a94e91fe 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
+@@ -212,6 +212,31 @@ suite('LocalAgentsSessionsController', () => {
+ 		});
+ 	});
+ 
++	test('should surface newly created live session before first request', async () => {
++		return runWithFakedTimers({}, async () => {
++			const controller = createController();
++
++			const sessionResource = LocalChatSessionUri.forSession('new-empty-session');
++			const mockModel = createMockChatModel({
++				sessionResource,
++				hasRequests: false,
++				customTitle: 'New Chat'
++			});
++			mockChatService.setLiveSessionItems([await chatModelToChatDetail(mockModel)]);
++
++			const onDidChangeChatSessionItems = Event.toPromise(controller.onDidChangeChatSessionItems);
++			mockChatService.addSession(mockModel);
++			const event = await onDidChangeChatSessionItems;
++
++			const sessions = controller.items;
++			assert.strictEqual(sessions.length, 1);
++			assert.strictEqual(sessions[0].label, 'New Chat');
++			assert.strictEqual(sessions[0].resource.toString(), sessionResource.toString());
++			assert.strictEqual(sessions[0].status, undefined);
++			assert.strictEqual(event.addedOrUpdated?.[0]?.resource.toString(), sessionResource.toString());
++		});
++	});
++
+ 	test('should provide history session items', async () => {
+ 		return runWithFakedTimers({}, async () => {
+ 			const controller = createController();
+@@ -618,9 +643,10 @@ suite('LocalAgentsSessionsController', () => {
+ 					requestInProgress: false
+ 				});
+ 
+-				// Add the session first
+-				mockChatService.addSession(mockModel);
+ 				mockChatService.setLiveSessionItems([await chatModelToChatDetail(mockModel)]);
++				const creationEvent = Event.toPromise(controller.onDidChangeChatSessionItems);
++				mockChatService.addSession(mockModel);
++				await creationEvent;
+ 
+ 				let changeEventCount = 0;
+ 				disposables.add(controller.onDidChangeChatSessionItems(() => {
 diff --git a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
 index a0a1eabd63e11986195f95921e8eaf702c7c101f..b4d5875fc9ba4569895b33d3f0d1bd58e4ef5803 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts

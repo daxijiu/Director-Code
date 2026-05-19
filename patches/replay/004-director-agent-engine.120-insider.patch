@@ -1277,10 +1277,10 @@ index 0000000000000000000000000000000000000000..3bbbb4551e4299925949694b3b775f80
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..95dfef374bbf8dc0ef0cd97192d3f3dc911587f0
+index 0000000000000000000000000000000000000000..8155c6dc4598c4e101e2abb4f07c7b6bf6ebafe6
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,220 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1320,6 +1320,9 @@ index 0000000000000000000000000000000000000000..95dfef374bbf8dc0ef0cd97192d3f3dc
 +		const agentPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Agent, 'custom instructions');
 +		assert.ok(agentPrompt?.includes('custom instructions'));
 +		assert.ok(agentPrompt?.includes('execution_subagent'));
++		assert.ok(agentPrompt?.includes('Do not use runSubagent for terminal commands'));
++		assert.ok(agentPrompt?.includes('getTerminalOutput'));
++		assert.ok(agentPrompt?.includes('600000'));
 +		assert.ok(agentPrompt?.includes('runInTerminal'));
 +
 +		const askPrompt = getDirectorModeAppendSystemPrompt(DirectorToolMode.Ask, 'custom instructions');
@@ -1345,7 +1348,7 @@ index 0000000000000000000000000000000000000000..95dfef374bbf8dc0ef0cd97192d3f3dc
 +				createMessageStreamCalls++;
 +				if (createMessageStreamCalls === 1) {
 +					yield { type: 'tool_use_start' as const, id: 'tool-call-1', name: 'runInTerminal', index: 0 };
-+					yield { type: 'tool_input_delta' as const, json: JSON.stringify({ command: 'echo streaming-ok', mode: 'sync', timeout: 1000 }), index: 0 };
++					yield { type: 'tool_input_delta' as const, json: JSON.stringify({ command: 'echo streaming-ok', mode: 'sync', timeout: 600000 }), index: 0 };
 +					yield { type: 'message_complete' as const, usage: { input_tokens: 1, output_tokens: 1 }, stopReason: 'tool_use' };
 +					return;
 +				}
@@ -1402,12 +1405,98 @@ index 0000000000000000000000000000000000000000..95dfef374bbf8dc0ef0cd97192d3f3dc
 +			} as any, async () => 0, { report: () => { } }, CancellationToken.None);
 +			assert.strictEqual(createMessageCalls, 0);
 +			assert.strictEqual(createMessageStreamCalls, 2);
-+			assert.deepStrictEqual(invokedTerminalInput, { command: 'echo streaming-ok', mode: 'sync', timeout: 1000, isBackground: false });
++			assert.deepStrictEqual(invokedTerminalInput, { command: 'echo streaming-ok', mode: 'sync', timeout: 600000, isBackground: false });
 +			assert.strictEqual(result.content[0]?.kind, 'text');
 +			assert.ok(result.content[0]?.kind === 'text' && result.content[0].value.includes('streaming subagent completed'));
 +		} finally {
 +			contextDisposable.dispose();
 +			directorExecutionSubagentContextService.clear('execution-subagent-streaming-test');
++			abortController.abort();
++		}
++	});
++
++	test('preserves terminal follow-up guidance when background state needs parent tracking', async () => {
++		const terminalId = '123e4567-e89b-12d3-a456-426614174000';
++		let createMessageStreamCalls = 0;
++		const sessionResource = URI.parse('director-test://execution-subagent/background-session');
++		const abortController = new AbortController();
++		const provider = {
++			apiType: 'openai-codex',
++			createMessage: async () => {
++				throw new Error('Stream must be set to true');
++			},
++			createMessageStream: async function* () {
++				createMessageStreamCalls++;
++				if (createMessageStreamCalls === 1) {
++					yield { type: 'tool_use_start' as const, id: 'tool-call-1', name: 'runInTerminal', index: 0 };
++					yield { type: 'tool_input_delta' as const, json: JSON.stringify({ command: 'Start-Sleep -Seconds 180; Get-Date', mode: 'sync', timeout: 600000 }), index: 0 };
++					yield { type: 'message_complete' as const, usage: { input_tokens: 1, output_tokens: 1 }, stopReason: 'tool_use' };
++					return;
++				}
++				yield { type: 'text' as const, text: 'The command moved to background.' };
++				yield { type: 'message_complete' as const, usage: { input_tokens: 1, output_tokens: 1 }, stopReason: 'end_turn' };
++			},
++		};
++		const terminalToolData = {
++			id: 'run_in_terminal',
++			toolReferenceName: 'runInTerminal',
++			displayName: 'Run in Terminal',
++			modelDescription: 'Run a command in the terminal.',
++			inputSchema: {
++				type: 'object',
++				properties: {
++					command: { type: 'string' },
++					mode: { type: 'string' },
++					timeout: { type: 'number' },
++				},
++				required: ['command'],
++			},
++		};
++		const toolsService = {
++			getToolByName: (name: string) => name === 'runInTerminal' ? terminalToolData : undefined,
++			getTool: (id: string) => id === 'run_in_terminal' ? terminalToolData : undefined,
++			onDidChangeDirectorToolInvocationStage: Event.None,
++			invokeTool: async () => ({
++				toolMetadata: { id: terminalId, timedOut: true, timeoutMs: 600000 },
++				content: [{ kind: 'text', value: 'still running' }],
++			}),
++		};
++		const contextDisposable = directorExecutionSubagentContextService.register({
++			provider: provider as any,
++			model: 'codex-test',
++			cwd: 'E:\\Projects\\Director-Code-batch\\Director-Code-112-check',
++			sessionResource,
++			chatRequestId: 'execution-subagent-background-test',
++			directorMode: DirectorToolMode.Agent,
++			toolDefinitions: [],
++			abortSignal: abortController.signal,
++			maxTokens: 4096,
++		});
++		try {
++			const tool = new DirectorExecutionSubagentTool(toolsService as any);
++			const result = await tool.invoke({
++				callId: 'parent-tool-call',
++				toolId: 'director_execution_subagent',
++				parameters: { query: 'Run long command and track it', description: 'background regression' },
++				context: { sessionResource },
++				chatRequestId: 'execution-subagent-background-test',
++			} as any, async () => 0, { report: () => { } }, CancellationToken.None);
++
++			assert.strictEqual(result.content[0]?.kind, 'text');
++			const text = result.content[0]?.kind === 'text' ? result.content[0].value : '';
++			assert.ok(text.includes('The command moved to background.'));
++			assert.ok(text.includes(terminalId));
++			assert.ok(text.includes('getTerminalOutput'));
++			assert.deepStrictEqual((result.toolMetadata as any).terminalResults[0], {
++				status: 'timed-out after 600000ms',
++				terminalId,
++				timeoutMs: 600000,
++				timedOut: true,
++				inputNeeded: undefined,
++			});
++		} finally {
++			contextDisposable.dispose();
++			directorExecutionSubagentContextService.clear('execution-subagent-background-test');
 +			abortController.abort();
 +		}
 +	});
@@ -18313,7 +18402,7 @@ index 0000000000000000000000000000000000000000..156c83a7301ac41b6b89d5b3465a4c76
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..9197a938cf9be4e57faf7a5974df3a7149b93477
+index 0000000000000000000000000000000000000000..bb8f5c943abd48ce39ba8e1420be6b9a7a53f302
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts
 @@ -0,0 +1,449 @@
@@ -18368,7 +18457,7 @@ index 0000000000000000000000000000000000000000..9197a938cf9be4e57faf7a5974df3a71
 +	readonly toolMetadata?: unknown;
 +}
 +
-+const MAX_SYNC_TERMINAL_TIMEOUT_MS = 120_000;
++const MAX_SYNC_TERMINAL_TIMEOUT_MS = 600_000;
 +
 +// ============================================================================
 +// Tool Discovery: VS Code tools → AgentToolDefinition[]
@@ -18730,10 +18819,10 @@ index 0000000000000000000000000000000000000000..9197a938cf9be4e57faf7a5974df3a71
 +
 +	const timeout = parameters.timeout;
 +	if (typeof timeout !== 'number' || !Number.isFinite(timeout)) {
-+		return `runInTerminal sync calls require a finite numeric timeout in milliseconds from 1 to ${MAX_SYNC_TERMINAL_TIMEOUT_MS}. Received ${describeTimeoutValue(timeout)}. Use 30000 for short commands, ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for builds/tests, or use async/background/task semantics for longer-running work.`;
++		return `runInTerminal sync calls require a finite numeric timeout in milliseconds from 1 to ${MAX_SYNC_TERMINAL_TIMEOUT_MS}. Received ${describeTimeoutValue(timeout)}. Use 30000 for short commands, 120000 for ordinary builds/tests, and ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for package installs, full builds, or long test suites.`;
 +	}
 +	if (timeout < 1) {
-+		return `runInTerminal sync calls require timeout to be at least 1ms. Received ${timeout}. Use 30000 for short commands, ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for builds/tests, or use async/background/task semantics for longer-running work.`;
++		return `runInTerminal sync calls require timeout to be at least 1ms. Received ${timeout}. Use 30000 for short commands, 120000 for ordinary builds/tests, and ${MAX_SYNC_TERMINAL_TIMEOUT_MS} for package installs, full builds, or long test suites.`;
 +	}
 +	if (timeout > MAX_SYNC_TERMINAL_TIMEOUT_MS) {
 +		return `runInTerminal sync timeout must be no more than ${MAX_SYNC_TERMINAL_TIMEOUT_MS}ms. Received ${timeout}. Use async/background semantics, an appropriate task flow, or a narrower command instead of extending a direct sync terminal wait.`;
@@ -22096,10 +22185,10 @@ index 0000000000000000000000000000000000000000..0f58acfbdb40cd39b73e8fc85c63c697
 +export const directorExecutionSubagentContextService = new DirectorExecutionSubagentContextService();
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a85dd3b85
+index 0000000000000000000000000000000000000000..3a46aee6e825b3658494e07d60b307b6f094af81
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,52 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -22114,8 +22203,9 @@ index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a
 +	'- Always use mode="sync".',
 +	'- Always include timeout in milliseconds.',
 +	'- Use timeout=30000 for short commands.',
-+	'- Use timeout=120000 for builds and test suites.',
-+	'- Do not exceed timeout=120000. Commands that run longer should move to terminal timeout/background handling and be summarized with terminal id/status.',
++	'- Use timeout=120000 for ordinary builds and test suites.',
++	'- Use timeout=600000 for package installs, full builds, long test suites, or commands expected to run longer than two minutes.',
++	'- Do not exceed timeout=600000. Commands that run longer should move to terminal timeout/background handling and be summarized with terminal id/status.',
 +	'- Call runInTerminal at most once per turn. Do not call it in parallel.',
 +	'- If a command may prompt for confirmation, use non-interactive flags such as --yes or -y when appropriate.',
 +	'- Prefer focused output.',
@@ -22124,13 +22214,17 @@ index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a
 +	'- List each command that was run.',
 +	'- State whether it succeeded, failed, timed out, moved to background, or needed input.',
 +	'- Include only the relevant output excerpts needed by the parent Agent.',
++	'- If the command timed out, moved to background, or needed input, include the terminal id and say the parent Agent should continue with getTerminalOutput.',
 +	'- If more work is needed, say exactly what remains.',
 +].join('\n');
 +
 +const DIRECTOR_PARENT_AGENT_EXECUTION_GUIDANCE = [
-+	'For most execution tasks and terminal commands, use execution_subagent to run commands and get the relevant portions of the output.',
++	'For terminal commands, shell execution, package installs, builds, tests, and task-like command execution, use execution_subagent instead of runSubagent.',
++	'Do not use runSubagent for terminal commands, builds, tests, package installs, shell execution, or command output collection.',
++	'Use runSubagent only for generic non-terminal research, context-gathering, or delegation tasks.',
 +	'Use runInTerminal only in rare cases when the entire output of a single command is needed without summarization or truncation.',
-+	'When directly calling runInTerminal in sync mode, always include timeout in milliseconds from 1 to 120000. Use 30000 for short commands and 120000 for builds/tests. Do not omit timeout and do not use timeout=0.',
++	'When directly calling runInTerminal in sync mode, always include timeout in milliseconds from 1 to 600000. Use 30000 for short commands, 120000 for ordinary builds/tests, and 600000 for package installs, full builds, or long test suites. Do not omit timeout and do not use timeout=0.',
++	'If execution_subagent reports that a command timed out, moved to background, or needed input and includes a terminal id, immediately continue with getTerminalOutput using that exact id until the command has completed, failed, or clearly needs user input.',
 +	'Use mode="async" only for servers, watchers, dev daemons, or other commands that should keep running while you continue other work.',
 +	'Do not call execution_subagent multiple times in parallel. Invoke one execution subagent and wait for its response before starting another execution task.',
 +	'Do not call runInTerminal multiple times in parallel. Run one command and wait for output before running the next command.',
@@ -22149,10 +22243,10 @@ index 0000000000000000000000000000000000000000..7d64316c44f450dd3d3a041b116d601a
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d93430623ceefc2
+index 0000000000000000000000000000000000000000..60c81038f5217ad2bed88b8f1519dd731b6fa9ad
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts
-@@ -0,0 +1,641 @@
+@@ -0,0 +1,660 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -22176,7 +22270,7 @@ index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d934306
 +const MAX_INNER_TURNS = 5;
 +const MAX_QUERY_LENGTH = 4000;
 +const MAX_DESCRIPTION_LENGTH = 160;
-+const MAX_SYNC_TIMEOUT_MS = 120_000;
++const MAX_SYNC_TIMEOUT_MS = 600_000;
 +const MODEL_ONLY_WATCHDOG_MS = 120_000;
 +const PRE_TERMINAL_WATCHDOG_MS = 120_000;
 +const TERMINAL_TIMEOUT_GRACE_MS = 60_000;
@@ -22209,7 +22303,7 @@ index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d934306
 +	toolReferenceName: DirectorExecutionSubagentToolReferenceName,
 +	displayName: 'Execution Subagent',
 +	userDescription: 'Run a terminal-focused execution task through a constrained Director subagent.',
-+	modelDescription: 'Run an execution-focused task with a terminal-only subagent. Provide a short description and a query. The subagent uses only runInTerminal with sync mode and explicit timeouts, summarizes terminal output, and stops after timeout/background/input-needed terminal state.',
++	modelDescription: 'Run an execution-focused task with a terminal-only subagent. Provide a short description and a query. The subagent uses only runInTerminal with sync mode and explicit timeouts up to 600000ms, summarizes terminal output, and returns terminal id/status when getTerminalOutput follow-up is needed.',
 +	source: ToolDataSource.Internal,
 +	runsInWorkspace: true,
 +	canRequestPreApproval: false,
@@ -22307,7 +22401,7 @@ index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d934306
 +				const responseContent = this.contentForHistory(response.content);
 +				const toolUses = response.content.filter((block): block is Extract<NormalizedResponseBlock, { type: 'tool_use' }> => block.type === 'tool_use');
 +				if (toolUses.length === 0) {
-+					const finalText = this.extractText(response.content) || this.renderSummaries(terminalSummaries) || 'execution_subagent completed with no terminal output.';
++					const finalText = this.composeFinalText(this.extractText(response.content), terminalSummaries) || 'execution_subagent completed with no terminal output.';
 +					return this.result(input.value, subAgentInvocationId, terminalSummaries, finalText);
 +				}
 +
@@ -22409,7 +22503,7 @@ index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d934306
 +			return { ok: false, message: 'execution_subagent only allows runInTerminal with mode="sync".' };
 +		}
 +		if (typeof input.timeout !== 'number' || !Number.isFinite(input.timeout) || input.timeout <= 0 || input.timeout > MAX_SYNC_TIMEOUT_MS) {
-+			return { ok: false, message: 'execution_subagent requires sync runInTerminal timeout as a finite number from 1 to 120000 milliseconds.' };
++			return { ok: false, message: `execution_subagent requires sync runInTerminal timeout as a finite number from 1 to ${MAX_SYNC_TIMEOUT_MS} milliseconds.` };
 +		}
 +		return { ok: true, input: { ...input, mode: 'sync', isBackground: false }, timeoutMs: input.timeout };
 +	}
@@ -22743,17 +22837,36 @@ index 0000000000000000000000000000000000000000..1f3650aedf115bc850b7a2090d934306
 +		return Boolean(metadata?.directorErrorKind || metadata?.timedOut || metadata?.inputNeeded || (metadata?.id && metadata.exitCode === undefined));
 +	}
 +
++	private composeFinalText(modelText: string, summaries: readonly TerminalResultSummary[]): string {
++		const summaryText = this.renderSummaries(summaries);
++		if (!modelText) {
++			return summaryText;
++		}
++		if (!summaryText || !this.needsParentTerminalFollowUp(summaries)) {
++			return modelText;
++		}
++		return `${modelText}\n\n${summaryText}`;
++	}
++
++	private needsParentTerminalFollowUp(summaries: readonly TerminalResultSummary[]): boolean {
++		return summaries.some(summary => Boolean(summary.metadata?.id && (summary.metadata?.timedOut || summary.metadata?.inputNeeded || summary.metadata.exitCode === undefined)));
++	}
++
 +	private renderSummaries(summaries: readonly TerminalResultSummary[]): string {
 +		if (summaries.length === 0) {
 +			return '';
 +		}
 +		return summaries.map((summary, index) => {
 +			const terminalId = summary.metadata?.id ? ` terminal id=${summary.metadata.id}.` : '';
++			const followUp = this.needsParentTerminalFollowUp([summary]) && summary.metadata?.id
++				? `Next: parent Agent should call getTerminalOutput with id ${summary.metadata.id} to continue monitoring this terminal execution.`
++				: '';
 +			return [
 +				`Command ${index + 1}: ${summary.command || '(unknown command)'}`,
 +				`Status: ${summary.status}.${terminalId}`,
++				followUp,
 +				this.truncateOutput(summary.output),
-+			].join('\n');
++			].filter(Boolean).join('\n');
 +		}).join('\n\n');
 +	}
 +
@@ -28877,17 +28990,17 @@ index 0000000000000000000000000000000000000000..0a88d6819b9d68b7803b898bec408be8
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts b/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171cdb5805c1
+index 0000000000000000000000000000000000000000..70c397740d5159afe3c4cfb036d712176ba92671
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts
-@@ -0,0 +1,124 @@
+@@ -0,0 +1,165 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +
 +import assert from 'assert';
-+import { CancellationToken } from '../../../../../../base/common/cancellation.js';
++import { CancellationToken, CancellationTokenSource } from '../../../../../../base/common/cancellation.js';
 +import { Event } from '../../../../../../base/common/event.js';
 +import { URI } from '../../../../../../base/common/uri.js';
 +import { VSCodeToolBridge } from '../../../browser/agentEngine/toolBridge.js';
@@ -28914,7 +29027,28 @@ index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171c
 +		};
 +	}
 +
-+	function createBridge(invoke: (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => Promise<IToolResult>): { bridge: VSCodeToolBridge; invocations: IToolInvocation[] } {
++	function runSubagentToolData(): IToolData {
++		return {
++			id: 'runSubagent',
++			toolReferenceName: 'runSubagent',
++			modelDescription: 'Run a generic subagent',
++			displayName: 'Run Subagent',
++			source: ToolDataSource.Internal,
++			inputSchema: {
++				type: 'object',
++				properties: {
++					prompt: { type: 'string' },
++					description: { type: 'string' },
++				},
++				required: ['prompt', 'description'],
++			},
++		};
++	}
++
++	function createBridge(
++		invoke: (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => Promise<IToolResult>,
++		options: { readonly tools?: readonly IToolData[]; readonly token?: CancellationToken } = {},
++	): { bridge: VSCodeToolBridge; invocations: IToolInvocation[] } {
 +		const invocations: IToolInvocation[] = [];
 +		const service = {
 +			vscodeToolSet: {},
@@ -28926,7 +29060,7 @@ index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171c
 +			onDidPrepareToolCallBecomeUnresponsive: Event.None,
 +			onDidInvokeTool: Event.None,
 +			onDidChangeDirectorToolInvocationStage: Event.None,
-+			getTools: () => [runInTerminalToolData()],
++			getTools: () => options.tools ?? [runInTerminalToolData()],
 +			invokeTool: async (invocation: IToolInvocation, countTokens: CountTokensCallback, token: CancellationToken) => {
 +				invocations.push(invocation);
 +				return invoke(invocation, countTokens, token);
@@ -28935,7 +29069,7 @@ index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171c
 +		} as unknown as ILanguageModelToolsService;
 +
 +		return {
-+			bridge: new VSCodeToolBridge(service, URI.parse('vscode-chat://director-test/session'), 'request-1', CancellationToken.None, undefined, DirectorToolMode.Agent),
++			bridge: new VSCodeToolBridge(service, URI.parse('vscode-chat://director-test/session'), 'request-1', options.token ?? CancellationToken.None, undefined, DirectorToolMode.Agent),
 +			invocations,
 +		};
 +	}
@@ -28967,7 +29101,7 @@ index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171c
 +			'30000',
 +			{},
 +			[],
-+			120001,
++			600001,
 +		];
 +
 +		for (const timeout of cases) {
@@ -29000,9 +29134,29 @@ index 0000000000000000000000000000000000000000..55f6b7bde98558bc7ec3d8bf9581171c
 +		}));
 +
 +		assert.strictEqual(await bridge.invokeTool('runInTerminal', { command: 'echo ok', timeout: 1 }), 'ok');
++		assert.strictEqual(await bridge.invokeTool('runInTerminal', { command: 'echo long', timeout: 600000 }), 'ok');
 +		await bridge.invokeToolStructured('runInTerminal', { command: 'npm start', mode: 'async' });
 +
-+		assert.strictEqual(invocations.length, 2);
++		assert.strictEqual(invocations.length, 3);
++	});
++
++	test('runSubagent is tool-owned and bypasses the generic bridge timeout wrapper', async () => {
++		const tokenSource = new CancellationTokenSource();
++		let observedToken: CancellationToken | undefined;
++		const { bridge, invocations } = createBridge(async (_invocation, _countTokens, token) => {
++			observedToken = token;
++			return {
++				content: [{ kind: 'text', value: 'subagent ok' }],
++			};
++		}, { tools: [runSubagentToolData()], token: tokenSource.token });
++
++		try {
++			assert.strictEqual(await bridge.invokeTool('runSubagent', { prompt: 'research', description: 'research' }), 'subagent ok');
++			assert.strictEqual(invocations.length, 1);
++			assert.strictEqual(observedToken, tokenSource.token);
++		} finally {
++			tokenSource.dispose(true);
++		}
 +	});
 +});
 diff --git a/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts b/src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts

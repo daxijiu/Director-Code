@@ -301,10 +301,10 @@ index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..7942c3f3a71bdb9c56c416973acd8bb4bb230348
+index 0000000000000000000000000000000000000000..75d017723b58f45d662d1792cd784edeab948688
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,222 @@
+@@ -0,0 +1,240 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -357,6 +357,7 @@ index 0000000000000000000000000000000000000000..7942c3f3a71bdb9c56c416973acd8bb4
 +
 +	test('preserves existing terminal and task tools for Agent mode', () => {
 +		const raw = [
++			tool('runSubagent', 'runSubagent'),
 +			tool('run_in_terminal', 'runInTerminal'),
 +			tool('run_task', 'runTask'),
 +			tool('create_and_run_task', 'createAndRunTask'),
@@ -366,13 +367,30 @@ index 0000000000000000000000000000000000000000..7942c3f3a71bdb9c56c416973acd8bb4
 +		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
 +		const names = agentTools.map(item => item.modelName);
 +
-+		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runTask']);
++		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runSubagent', 'runTask']);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runInTerminal')?.entry.timeoutCategory, 'stage-aware-terminal');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runSubagent')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'createAndRunTask')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.entry.timeoutCategory, 'tool-owned');
++	});
++
++	test('clarifies generic subagent and execution subagent responsibilities', () => {
++		const raw = [
++			tool('runSubagent', 'runSubagent'),
++			tool('director_execution_subagent', 'execution_subagent'),
++		];
++
++		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
++		const runSubagent = agentTools.find(item => item.modelName === 'runSubagent');
++		const executionSubagent = agentTools.find(item => item.modelName === 'execution_subagent');
++
++		assert.ok(runSubagent?.definition.description.includes('Do not use runSubagent for terminal commands'));
++		assert.ok(runSubagent?.definition.description.includes('use execution_subagent'));
++		assert.ok(executionSubagent?.definition.description.includes('Run terminal commands'));
++		assert.ok(executionSubagent?.definition.description.includes('Prefer this over runSubagent'));
 +	});
 +
 +	test('exposes read-only facade workspace tools in Ask/Edit/Agent only', () => {
@@ -1260,7 +1278,7 @@ index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08f850a2f6
+index 0000000000000000000000000000000000000000..e9f2d4b3e5decc26a52dd7fe01f4fef9f586a2d9
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 @@ -0,0 +1,288 @@
@@ -1380,7 +1398,7 @@ index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08
 +
 +	entry('todo', ['manage_todo_list'], ['todo'], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task planning visible to the Agent loop.'),
 +	entry('task_complete', ['task_complete'], [], 'coordination', AGENT_ONLY, 'none', 'keep', 'Keep Director task completion signaling available to the Agent loop.'),
-+	entry('runSubagent', ['runSubagent'], ['runSubagent'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Keep subagent orchestration restricted to Agent mode.'),
++	entry('runSubagent', ['runSubagent'], ['runSubagent'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Keep generic subagent orchestration restricted to Agent mode and let the core subagent lifecycle own timeout behavior.', { description: 'Run a generic non-terminal subagent for research, context gathering, or delegation. Do not use runSubagent for terminal commands, builds, tests, package installs, shell execution, or command output collection; use execution_subagent for those execution tasks.', timeoutCategory: 'tool-owned' }),
 +
 +	entry('fetch', ['vscode_fetchWebPage_internal'], ['fetch'], 'read', [DirectorToolMode.Ask, DirectorToolMode.Agent, DirectorToolMode.Plan], 'pre-and-post-approval', 'keep', 'Expose the current VS Code URL/file fetch capability as fetch. The optional query field is accepted only as caller intent text and does not perform Copilot-style web search.', {
 +		inputSchema: {
@@ -1433,7 +1451,7 @@ index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08
 +	entry('multi_replace_string_in_file', ['director_multi_replace_string_in_file'], ['multi_replace_string_in_file'], 'write', REVIEWABLE_EDIT_MODES, 'none', 'keep', 'Director-owned reviewable multi-string replacement through Chat Editing UI.', { backing: 'director', requiredCapabilities: ['chat-editing-textEdit'] }),
 +
 +	entry('runInTerminal', ['run_in_terminal'], ['runInTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal execution for Agent mode only.', { timeoutCategory: 'stage-aware-terminal' }),
-+	entry('execution_subagent', ['director_execution_subagent'], ['execution_subagent'], 'execute', AGENT_ONLY, 'none', 'keep', 'Director-owned execution wrapper exposed only in Agent mode. Runs a terminal-only subagent with sync timeout-bounded runInTerminal calls and compact output summaries.', { backing: 'director', timeoutCategory: 'tool-owned' }),
++	entry('execution_subagent', ['director_execution_subagent'], ['execution_subagent'], 'execute', AGENT_ONLY, 'none', 'keep', 'Director-owned execution wrapper exposed only in Agent mode. Runs a terminal-only subagent with sync timeout-bounded runInTerminal calls and compact output summaries.', { backing: 'director', description: 'Run terminal commands, builds, tests, package installs, and shell execution through a constrained terminal-only subagent. Prefer this over runSubagent for execution tasks. The subagent uses sync runInTerminal calls with explicit timeouts and returns compact output plus terminal id/status when follow-up is needed.', timeoutCategory: 'tool-owned' }),
 +	entry('sendToTerminal', ['send_to_terminal'], ['sendToTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal input routing for Agent mode only.'),
 +	entry('getTerminalOutput', ['get_terminal_output'], ['getTerminalOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve terminal output inspection, but keep terminal context out of Ask v1.'),
 +	entry('killTerminal', ['kill_terminal'], ['killTerminal'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve terminal cleanup for Agent mode only.'),

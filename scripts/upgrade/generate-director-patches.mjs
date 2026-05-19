@@ -316,6 +316,7 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatSetup/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatStatus/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
+  if (filePath.startsWith('src/vs/workbench/contrib/chat/test/browser/agentSessions/')) return true;
   return [
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts',
     'src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts',

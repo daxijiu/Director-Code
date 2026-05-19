@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-19T07:29:20.890Z",
+  "generatedAt": "2026-05-19T13:34:07.171Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 271,
+  "changedFileCount": 275,
   "patches": [
     {
       "stage": "branding",
@@ -253,8 +253,8 @@
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
       "fileCount": 98,
-      "size": 1145118,
-      "sha256": "9bfb7673a881aff6216124583974555d76b46fbde5045d32017dae58f860eeb6"
+      "size": 1152313,
+      "sha256": "2bcaa2274a356c38b794aca3f84a717eb3941a4431b1d7b130417870bbace4f0"
     },
     {
       "stage": "chat-built-in-mode",
@@ -265,8 +265,10 @@
         "src/vs/workbench/contrib/chat/browser/actions/chatActions.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatLanguageModelActions.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts",
         "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts",
         "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationListWidget.ts",
         "src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationManagementEditor.ts",
@@ -295,12 +297,14 @@
         "src/vs/workbench/contrib/chat/browser/widgetHosts/chatQuick.ts",
         "src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts",
         "src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts",
         "src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts"
       ],
-      "fileCount": 37,
-      "size": 107159,
-      "sha256": "aede7bb835b095c752d041f31d08e26ce3a4e1dc81032f8c88a0178ce1617553"
+      "fileCount": 41,
+      "size": 119622,
+      "sha256": "878908282c5c0b272950da0f39d99bf8cf0e309391c7a94cb94932005e312d81"
     },
     {
       "stage": "text-polish",
@@ -332,8 +336,8 @@
         "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts"
       ],
       "fileCount": 9,
-      "size": 111329,
-      "sha256": "46f7206be5cd3856ce1c323f5f17f58b22797328a48419a276f756b66a5b2bef"
+      "size": 113070,
+      "sha256": "4e10a5e6d2a1f5b0bbf97dcbf4e926aeb71cd618ce6242206594ea07fb5e7b43"
     },
     {
       "stage": "chat-editing",

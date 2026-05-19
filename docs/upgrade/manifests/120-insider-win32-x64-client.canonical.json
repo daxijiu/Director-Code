@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-19T07:49:09.269Z",
-  "treeHash": "1aaf6aa5d5f9f9a60859d76f8c65cd12ee5e6a06ba50fe5e62d2a36efd765247",
+  "generatedAt": "2026-05-19T13:34:20.952Z",
+  "treeHash": "a8fe5845eb1e42ccda5d78e1c5859821031b762de4249fa11a0f69dfb41e6e1a",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -9709,6 +9709,24 @@
       "type": "file"
     },
     {
+      "path": "extensions/mermaid-chat-features/chat-webview-out/codicon.css",
+      "sha256": "36b3e52baa002edf1502580acd7a778347ff4b455473d96a64a28bd57e81f641",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "extensions/mermaid-chat-features/chat-webview-out/index-editor.js",
+      "sha256": "a11b9628520e1d87020f8cb9ff5216ac972a82766d4b3506ce1ab3eaf2add6be",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "extensions/mermaid-chat-features/chat-webview-out/index.js",
+      "sha256": "88848ac67031f6898aba5aa268dbb0695c4367bf0f46adfca01756a0f471289a",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "extensions/mermaid-chat-features/chat-webview-src/index-editor.ts",
       "sha256": "6343a43965958318813739fc252ddf790dcab264cf2baa5b804703ff9875e117",
       "mode": 33206,
@@ -10143,6 +10161,12 @@
     {
       "path": "extensions/notebook-renderers/README.md",
       "sha256": "16609f3c15fe0a04a43c712d5fb14b01677c686e36fab616b3a572781cb8d249",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "extensions/notebook-renderers/renderer-out/index.js",
+      "sha256": "02a62960e54a442220504e231dc1c17a22b038513e34d2716a09d0dc8c0cb10b",
       "mode": 33206,
       "type": "file"
     },
@@ -11419,8 +11443,20 @@
       "type": "file"
     },
     {
+      "path": "extensions/simple-browser/media/codicon.css",
+      "sha256": "36b3e52baa002edf1502580acd7a778347ff4b455473d96a64a28bd57e81f641",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
       "path": "extensions/simple-browser/media/icon.png",
       "sha256": "75a34e7344b3673937f29ba19320fba14f88b12c87f6f52d349d826cbf8f9152",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "extensions/simple-browser/media/index.js",
+      "sha256": "c80a05d6e29c3eca509aaa3a2e1d874175daa1ad75b2e1ce5cd6ed7c97f5749f",
       "mode": 33206,
       "type": "file"
     },
@@ -41468,7 +41504,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts",
-      "sha256": "8d085628de76c498acd2b1a8d10290664dcfe57dd6baacc3aa8a27901441f644",
+      "sha256": "46dcdd66e636397fc05b85716ec1e20761fb65fb65f1a18fb8f2974e1c15c1d8",
       "mode": 33206,
       "type": "file"
     },
@@ -41654,7 +41690,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts",
-      "sha256": "e9f7093bda1d1d595470d08eae5af0b37de4d8e1ec581d5831db4f872aa9d34b",
+      "sha256": "8c51765bf111ac06c9898c0a6b1f5951f51226a11b2d95953349debdd221eced",
       "mode": 33206,
       "type": "file"
     },
@@ -44492,7 +44528,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts",
-      "sha256": "7835c07cadf6923648f29c52f5e255231d536d363340f394b62903d2feb1acb6",
+      "sha256": "8a56fff4a58f8e2a3fc357866d6b5068795f69725e54e36179f0d2a827094619",
       "mode": 33206,
       "type": "file"
     },
@@ -44516,7 +44552,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts",
-      "sha256": "50d26334350691e908f8c266fd1020f953cdd884a58ef1a9c949e177867087c1",
+      "sha256": "c06eeae23bd9809b831cf783ce114827500087c24667308fdd2fe67aa33cdb5d",
       "mode": 33206,
       "type": "file"
     },
@@ -44576,7 +44612,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts",
-      "sha256": "69a355c4bd9e334c642dd6dde1d51f4be49545462f52c3a8dc72512460a05a4b",
+      "sha256": "db609c86979d437129c708ea2d2c7e1f314d850193db494ba15d0d83995ea4ca",
       "mode": 33206,
       "type": "file"
     },
@@ -45122,7 +45158,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts",
-      "sha256": "a2dc81d297302e4b44d728bf8a6540c5299b1cb4574ac3e368153a2a1d7da579",
+      "sha256": "c42754af191e79618e501f9501b6437ebccea30c6495545440d27ef9ea84c0c4",
       "mode": 33206,
       "type": "file"
     },
@@ -47228,7 +47264,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/toolBridge.ts",
-      "sha256": "1a68cc87806a0dc5bbb7ca8b8e89202614d63f82c85e8ff66488124d59dce955",
+      "sha256": "427c90506294fe9f4e1f3e6b60308106f1fdff03e18d1b5d5f861cf9bde8280c",
       "mode": 33206,
       "type": "file"
     },
@@ -47294,7 +47330,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts",
-      "sha256": "d279fa9d1631c57063cf4fc863839df68d3a12c9a3847ac2580e31a9d374cc4d",
+      "sha256": "0f7fcfc1031c5994e716f5792def4cb4fa7c49d3fd950e0dc909d994f53fed69",
       "mode": 33206,
       "type": "file"
     },
@@ -47318,13 +47354,13 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts",
-      "sha256": "3f3dd17324479b6c8946de6a7126a385c1f54a839c5607eb6a0a655e2a287afb",
+      "sha256": "339d667b9f42703c5274c4446aba3aeaaacb18ba2aec4c6fba05f1e556b7d2d9",
       "mode": 33206,
       "type": "file"
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts",
-      "sha256": "7e92c1039f96906e76f93b6fdc953167e6f05ab3c3a6898aeefec1ffa2d02398",
+      "sha256": "9b644be09c0cd4822e1e05ad6a5a5f5df7d45e6718d90dd777172c350bd66cd8",
       "mode": 33206,
       "type": "file"
     },
@@ -47444,7 +47480,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/test/browser/agentEngine/toolBridge.test.ts",
-      "sha256": "2197959773f9ef0f54acea12a1d0839e7d5fb6598933e05bba91b844ac884392",
+      "sha256": "8005aae4fcbe7cdea13d7c09d2fe420b77347a089ab2b27e51841dca9a63c5a5",
       "mode": 33206,
       "type": "file"
     },
