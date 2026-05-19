@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-19T02:29:47.018Z",
+  "generatedAt": "2026-05-19T03:27:58.436Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -332,8 +332,8 @@
         "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts"
       ],
       "fileCount": 9,
-      "size": 105891,
-      "sha256": "b4758ff1581cdde64a507bb5a9be9d44cce5f457db5f094fbbd883efe1a7ae9a"
+      "size": 111442,
+      "sha256": "d7effa7d43a65d5c12ea5189d9c9191bfc9a17c0e2f18fa01d59132b6b170847"
     },
     {
       "stage": "chat-editing",

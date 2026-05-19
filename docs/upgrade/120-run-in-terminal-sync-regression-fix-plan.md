@@ -721,6 +721,24 @@ Phase 2 is complete when:
 - task tools have either verified lifecycle semantics or a structured-result follow-up patch;
 - next-upgrade instructions explain whether the core listener patch should be carried or dropped.
 
+## 2026-05-19 Runtime Smoke Follow-Up
+
+Manual smoke after the first 120 package still showed direct `runInTerminal` and `execution_subagent` returning only `^C` for a trivial `Get-Location` command. That means the Basic/None `onDidInputData` fix was necessary but not sufficient.
+
+Additional root cause:
+
+- Rich shell integration can still send `Ctrl+C` from inside `TerminalInstance.runCommand()` after its own prompt-readiness wait, even if `RichExecuteStrategy` pre-checks prompt input before calling it.
+- This is especially visible for short sync commands because the terminal can show the command invocation while the tool result captures only the injected interrupt.
+- `execution_subagent` is affected in the same way because its internal terminal tool is the same `runInTerminal` sync path.
+
+Durable fix direction:
+
+- For Rich sync tool execution, bypass `TerminalInstance.runCommand()` entirely.
+- Wait locally for prompt readiness or terminal idle, set the next command id through shell integration metadata, clear non-empty prompt input with `Ctrl+U`, then execute with guarded `sendText(...)`.
+- Pass the tool-initiated input guard to Rich strategy too, not only Basic/None, so Rich `sendText(...)` does not mark tool-owned command input as manual user input.
+- Keep async Rich calls on the existing `runCommand()` metadata path when the prompt is clean, while still avoiding `runCommand()` if stale idle prompt input is detected.
+- Add a Rich regression where prompt input becomes non-empty only after the readiness wait; assert sync execution does not call `runCommand()`, does not send `Ctrl+C`, and returns non-empty output.
+
 ## Out Of Scope
 
 - Copying Copilot extension source into Director.

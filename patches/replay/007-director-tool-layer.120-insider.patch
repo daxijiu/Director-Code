@@ -1553,11 +1553,14 @@ index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08
 +	};
 +}
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
-index bac03b64ffd3721262dfdfc339872001edba9e63..86358fc9cb251f5e6f67e8984c892d391303b359 100644
+index bac03b64ffd3721262dfdfc339872001edba9e63..7692b51815cbc0dddc5574ddab2a2076edc45398 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
-@@ -13,7 +13,7 @@ import { isCI, isMacintosh } from '../../../../../../base/common/platform.js';
+@@ -11,9 +11,10 @@ import { isNumber } from '../../../../../../base/common/types.js';
+ import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
+ import { isCI, isMacintosh } from '../../../../../../base/common/platform.js';
  import type { ICommandDetectionCapability } from '../../../../../../platform/terminal/common/capabilities/capabilities.js';
++import { PromptInputState } from '../../../../../../platform/terminal/common/capabilities/commandDetection/promptInputModel.js';
  import { ITerminalLogService, type ITerminalLaunchError } from '../../../../../../platform/terminal/common/terminal.js';
  import type { ITerminalInstance } from '../../../../terminal/browser/terminal.js';
 -import { trackIdleOnPrompt, type ITerminalExecuteStrategy, type ITerminalExecuteStrategyResult } from './executeStrategy.js';
@@ -1565,18 +1568,35 @@ index bac03b64ffd3721262dfdfc339872001edba9e63..86358fc9cb251f5e6f67e8984c892d39
  import type { IMarker as IXtermMarker } from '@xterm/xterm';
  import { createAltBufferPromise, setupRecreatingStartMarker, stripCommandEchoAndPrompt } from './strategyHelpers.js';
  import { TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
-@@ -176,7 +176,19 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
+@@ -176,7 +177,36 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
  			this._log(`Executing command line \`${commandLine}\``);
  			markerRecreation.dispose();
  			const forceBracketedPasteMode = isMacintosh || isMultilineCommand(commandLine);
 -			this._instance.runCommand(commandLine, true, commandId, forceBracketedPasteMode, commandLineForMetadata);
-+			if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0 && this._commandDetection.executingCommandObject === undefined) {
-+				// `ITerminalInstance#runCommand` sends Ctrl+C whenever prompt input is
-+				// non-empty. For agent-owned terminals this can be stale prompt input
-+				// from the previous command rather than real user typing, which cancels
-+				// the command we're about to run. Clear the prompt line instead and
-+				// execute through sendText so no Ctrl+C is injected at an idle prompt.
++			if (this._isSyncMode) {
++				// `ITerminalInstance#runCommand` can still inject Ctrl+C after its
++				// own prompt-readiness wait if promptInputModel becomes non-empty
++				// during that wait. In sync tool calls this races with short commands
++				// and can leave the model with only "^C" output. Execute sync commands
++				// via sendText after a local readiness wait so no hidden Ctrl+C path
++				// remains in the tool-owned terminal.
++				await this._waitUntilReadyToSend(store, idlePollInterval);
++				if (commandId) {
++					xterm.shellIntegration.setNextCommandId(commandLineForMetadata ?? commandLine, commandId);
++				}
++				if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0) {
++					this._log('Prompt input is non-empty before sync sendText; clearing with Ctrl+U');
++					await this._instance.sendText('\x15', false);
++					await waitForIdle(this._instance.onData, 100);
++				}
++				await this._instance.sendText(commandLine, true, forceBracketedPasteMode);
++			} else if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0 && this._commandDetection.executingCommandObject === undefined) {
++				// For async calls, preserve runCommand metadata behavior when the
++				// prompt is clean, but avoid its Ctrl+C injection on stale idle input.
 +				this._log('Prompt input is non-empty but no command is executing; clearing with Ctrl+U before sendText');
++				if (commandId) {
++					xterm.shellIntegration.setNextCommandId(commandLineForMetadata ?? commandLine, commandId);
++				}
 +				await this._instance.sendText('\x15', false);
 +				await waitForIdle(this._instance.onData, 100);
 +				await this._instance.sendText(commandLine, true, forceBracketedPasteMode);
@@ -1586,8 +1606,24 @@ index bac03b64ffd3721262dfdfc339872001edba9e63..86358fc9cb251f5e6f67e8984c892d39
  
  			// Wait for the terminal to idle
  			this._log('Waiting for done event');
+@@ -261,4 +291,15 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
+ 			this._logService.debug(msg);
+ 		}
+ 	}
++
++	private async _waitUntilReadyToSend(store: DisposableStore, idlePollInterval: number): Promise<void> {
++		if (this._commandDetection.promptInputModel.state === PromptInputState.Input) {
++			return;
++		}
++		this._log('Waiting for prompt input before sync sendText');
++		await Promise.race([
++			Event.toPromise(this._commandDetection.promptInputModel.onDidStartInput, store).then(() => undefined),
++			waitForIdle(this._instance.onData, idlePollInterval),
++		]);
++	}
+ }
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
-index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b555234425a4b14bd 100644
+index 9a6b69d7a36dfeda5bceb303d612e3d695846078..95dc11104f1855c034bd985ab5bd7955580444a9 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts
 @@ -469,6 +469,7 @@ const telemetryIgnoredSequences = [
@@ -1669,7 +1705,7 @@ index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b55523442
  		@IInstantiationService private readonly _instantiationService: IInstantiationService,
  	) {
  		super();
-@@ -2752,13 +2785,24 @@ class ActiveTerminalExecution extends Disposable implements IActiveTerminalExecu
+@@ -2752,15 +2785,26 @@ class ActiveTerminalExecution extends Disposable implements IActiveTerminalExecu
  		}));
  	}
  
@@ -1694,13 +1730,24 @@ index 9a6b69d7a36dfeda5bceb303d612e3d695846078..3b25e8a1ebfd443c8921cd9b55523442
 -				return this._instantiationService.createInstance(BasicExecuteStrategy, this._toolTerminal.instance, () => this._toolTerminal.receivedUserInput ?? false, commandDetection);
 +				return this._instantiationService.createInstance(BasicExecuteStrategy, this._createToolInitiatedInputGuardedInstance(), () => this._toolTerminal.receivedUserInput ?? false, commandDetection);
  			case ShellIntegrationQuality.Rich:
- 				return this._instantiationService.createInstance(RichExecuteStrategy, this._toolTerminal.instance, commandDetection, isSyncMode);
+-				return this._instantiationService.createInstance(RichExecuteStrategy, this._toolTerminal.instance, commandDetection, isSyncMode);
++				return this._instantiationService.createInstance(RichExecuteStrategy, this._createToolInitiatedInputGuardedInstance(), commandDetection, isSyncMode);
  		}
+ 	}
+ 
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
-index 8151d3cc1803e53d447b18cc75453f78e9a113ae..b1993eaf75e77db0e7c7677b4b0a0e6747bc5782 100644
+index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0a5d45d5f 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
-@@ -74,6 +74,64 @@ suite('RichExecuteStrategy', () => {
+@@ -10,6 +10,7 @@ import { toDisposable } from '../../../../../../base/common/lifecycle.js';
+ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
+ import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
+ import { NullLogService } from '../../../../../../platform/log/common/log.js';
++import { PromptInputState } from '../../../../../../platform/terminal/common/capabilities/commandDetection/promptInputModel.js';
+ import type { ITerminalLogService } from '../../../../../../platform/terminal/common/terminal.js';
+ import { RichExecuteStrategy } from '../../browser/executeStrategy/richExecuteStrategy.js';
+ import type { ITerminalInstance } from '../../../../terminal/browser/terminal.js';
+@@ -74,6 +75,142 @@ suite('RichExecuteStrategy', () => {
  		strictEqual(actualCommandLineForMetadata, 'echo hello');
  	});
  
@@ -1742,7 +1789,7 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..b1993eaf75e77db0e7c7677b4b0a0e67
 +		} as unknown as ITerminalInstance;
 +		const commandDetection = {
 +			onCommandFinished: onCommandFinishedEmitter.event,
-+			promptInputModel: { value: 'stale prompt input' },
++			promptInputModel: { value: 'stale prompt input', state: PromptInputState.Input },
 +			executingCommandObject: undefined,
 +		} as unknown as ICommandDetectionCapability;
 +		const strategy = store.add(new RichExecuteStrategy(
@@ -1759,6 +1806,84 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..b1993eaf75e77db0e7c7677b4b0a0e67
 +		strictEqual(sentTexts[0], '\x15');
 +		strictEqual(sentTexts[1], 'echo rich');
 +		strictEqual(result.output?.includes('rich-output'), true);
++		strictEqual(result.exitCode, 0);
++	});
++
++	test('sync mode avoids runCommand Ctrl+C race when prompt input appears after readiness wait', async () => {
++		const onCommandFinishedEmitter = new Emitter<{ getOutput(): string; exitCode: number }>();
++		const onPromptInputStartEmitter = new Emitter<unknown>();
++		const onDataEmitter = new Emitter<string>();
++		const sentTexts: string[] = [];
++		const metadata: Array<{ command: string; commandId: string }> = [];
++		let promptState = PromptInputState.Unknown;
++		let promptValue = '';
++		const marker = {
++			line: 0,
++			dispose: () => { },
++			onDispose: Event.None,
++		};
++		const xterm = {
++			raw: {
++				registerMarker: () => marker,
++				buffer: {
++					active: {},
++					alternate: {},
++					onBufferChange: () => toDisposable(() => { }),
++				},
++				getContentsAsText: () => '',
++			},
++			shellIntegration: {
++				setNextCommandId: (command: string, commandId: string) => metadata.push({ command, commandId }),
++			}
++		};
++		const instance = {
++			xtermReadyPromise: Promise.resolve(xterm),
++			onData: onDataEmitter.event,
++			onDisposed: Event.None,
++			onExit: Event.None,
++			sendText: async (text: string, shouldExecute: boolean) => {
++				sentTexts.push(text);
++				onDataEmitter.fire(text);
++				if (shouldExecute) {
++					queueMicrotask(() => onCommandFinishedEmitter.fire({ getOutput: () => `${text}\nE:\\Projects\\Director-Code\nPS> `, exitCode: 0 }));
++				}
++			},
++			runCommand: () => {
++				throw new Error('runCommand should not be called for sync execution');
++			},
++		} as unknown as ITerminalInstance;
++		const commandDetection = {
++			onCommandFinished: onCommandFinishedEmitter.event,
++			promptInputModel: {
++				get state() { return promptState; },
++				get value() { return promptValue; },
++				onDidStartInput: onPromptInputStartEmitter.event,
++			},
++			executingCommandObject: undefined,
++		} as unknown as ICommandDetectionCapability;
++		const strategy = store.add(new RichExecuteStrategy(
++			instance,
++			commandDetection,
++			true,
++			new TestConfigurationService(),
++			createLogService(),
++		));
++
++		queueMicrotask(() => {
++			promptState = PromptInputState.Input;
++			promptValue = 'stale after wait';
++			onPromptInputStartEmitter.fire({});
++		});
++
++		const result = await strategy.execute('Get-Location', CancellationToken.None, 'tool-command-id', 'Get-Location');
++
++		strictEqual(sentTexts.includes('\x03'), false);
++		strictEqual(sentTexts[0], '\x15');
++		strictEqual(sentTexts[1], 'Get-Location');
++		strictEqual(metadata.length, 1);
++		strictEqual(metadata[0].command, 'Get-Location');
++		strictEqual(metadata[0].commandId, 'tool-command-id');
++		strictEqual(result.output?.includes('E:\\Projects\\Director-Code'), true);
 +		strictEqual(result.exitCode, 0);
 +	});
 +

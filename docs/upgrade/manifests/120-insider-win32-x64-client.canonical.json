@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-19T02:30:01.004Z",
-  "treeHash": "78ca46a301b5ac32a2484a7fdb3ecc4c24fdc270c13ba1a7c78224f09a20fc6c",
+  "generatedAt": "2026-05-19T03:45:08.230Z",
+  "treeHash": "33530c6d7694879a8a9023f33a579fa39996af7ae9b5e8d81e180587a0aac7ba",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -44492,7 +44492,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentEngine/executionSubagent.test.ts",
-      "sha256": "d26344a1a7aaf40c682d7db7ab6b6ea4094f0cc5399e369eebdb2918667a85d6",
+      "sha256": "7835c07cadf6923648f29c52f5e255231d536d363340f394b62903d2feb1acb6",
       "mode": 33206,
       "type": "file"
     },
@@ -47324,7 +47324,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentTool.ts",
-      "sha256": "212d7c16e8e0e3586850e3477e10a5777b215e81f667ae384024f81b7f9a90e4",
+      "sha256": "7e92c1039f96906e76f93b6fdc953167e6f05ab3c3a6898aeefec1ffa2d02398",
       "mode": 33206,
       "type": "file"
     },
@@ -54266,7 +54266,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts",
-      "sha256": "4a78e0c7c4f3f9c6d1cba0102216e9e358b93869de038d3c7dba2e4a8daa4fca",
+      "sha256": "9584bdb2f2eceb3c1be4572eb9c1fe60376df001a8659d9568b54a069b47ff1e",
       "mode": 33206,
       "type": "file"
     },
@@ -54464,7 +54464,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/tools/runInTerminalTool.ts",
-      "sha256": "6d76121f67abf5a15760e03ca0efbb4e65a3589ba49a2da8d97e7ea44f3c1784",
+      "sha256": "58390d0fea96bac734229360f920e4f32c7a26b04a768ce43584c8a308a542df",
       "mode": 33206,
       "type": "file"
     },
@@ -54656,7 +54656,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts",
-      "sha256": "9c9d9ae8a34c949e550d6acf15c37079a4f98b219e9d8baac77bd82033caf9c8",
+      "sha256": "b6630a35f0476d5d63f4e40208db1f6269bb4c10d0032bb40a4e1fc48252f9cf",
       "mode": 33206,
       "type": "file"
     },
