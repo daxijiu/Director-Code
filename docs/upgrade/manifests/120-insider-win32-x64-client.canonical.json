@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-19T03:45:08.230Z",
-  "treeHash": "33530c6d7694879a8a9023f33a579fa39996af7ae9b5e8d81e180587a0aac7ba",
+  "generatedAt": "2026-05-19T07:49:09.269Z",
+  "treeHash": "1aaf6aa5d5f9f9a60859d76f8c65cd12ee5e6a06ba50fe5e62d2a36efd765247",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -54266,7 +54266,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts",
-      "sha256": "9584bdb2f2eceb3c1be4572eb9c1fe60376df001a8659d9568b54a069b47ff1e",
+      "sha256": "7bb43f028d65c2a7cc992c198da8525cf8f5f3948f04f0ff2de3ecd25f861241",
       "mode": 33206,
       "type": "file"
     },
@@ -54656,7 +54656,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts",
-      "sha256": "b6630a35f0476d5d63f4e40208db1f6269bb4c10d0032bb40a4e1fc48252f9cf",
+      "sha256": "1668ca5b63c0596fb66f5eb276b39c8e995d0633b1c3e2382dcd5f233e03dc82",
       "mode": 33206,
       "type": "file"
     },

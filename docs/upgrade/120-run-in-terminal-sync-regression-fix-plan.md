@@ -734,10 +734,17 @@ Additional root cause:
 Durable fix direction:
 
 - For Rich sync tool execution, bypass `TerminalInstance.runCommand()` entirely.
-- Wait locally for prompt readiness or terminal idle, set the next command id through shell integration metadata, clear non-empty prompt input with `Ctrl+U`, then execute with guarded `sendText(...)`.
+- Wait locally for prompt readiness or terminal idle, set the next command id through shell integration metadata, then execute with guarded `sendText(...)` without sending prompt-clearing control characters.
 - Pass the tool-initiated input guard to Rich strategy too, not only Basic/None, so Rich `sendText(...)` does not mark tool-owned command input as manual user input.
 - Keep async Rich calls on the existing `runCommand()` metadata path when the prompt is clean, while still avoiding `runCommand()` if stale idle prompt input is detected.
 - Add a Rich regression where prompt input becomes non-empty only after the readiness wait; assert sync execution does not call `runCommand()`, does not send `Ctrl+C`, and returns non-empty output.
+
+Follow-up correction:
+
+- Do not use `Ctrl+U` as the Rich stale-prompt clearing mechanism. In the user's PowerShell terminal it can be echoed as literal `^U` and prefixed to the command, making every command fail.
+- The Rich fix must avoid both control characters: no hidden `Ctrl+C` from `runCommand()`, and no explicit `Ctrl+U` from the strategy.
+- If Rich prompt input is non-empty for a tool-owned terminal, treat it as stale metadata for this regression path: bypass `runCommand()` and send the intended command directly with the tool-owned `sendText` guard.
+- Rich regression coverage must assert `sentTexts` contains neither `\x03` nor `\x15`, and the first sent executable text is the requested command itself.
 
 ## Out Of Scope
 

@@ -1553,7 +1553,7 @@ index 0000000000000000000000000000000000000000..7ae3ebabba4f4ec139ca821c169fee08
 +	};
 +}
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
-index bac03b64ffd3721262dfdfc339872001edba9e63..7692b51815cbc0dddc5574ddab2a2076edc45398 100644
+index bac03b64ffd3721262dfdfc339872001edba9e63..f4cf661f6449f23855ce07521916398042164069 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/browser/executeStrategy/richExecuteStrategy.ts
 @@ -11,9 +11,10 @@ import { isNumber } from '../../../../../../base/common/types.js';
@@ -1568,7 +1568,7 @@ index bac03b64ffd3721262dfdfc339872001edba9e63..7692b51815cbc0dddc5574ddab2a2076
  import type { IMarker as IXtermMarker } from '@xterm/xterm';
  import { createAltBufferPromise, setupRecreatingStartMarker, stripCommandEchoAndPrompt } from './strategyHelpers.js';
  import { TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
-@@ -176,7 +177,36 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
+@@ -176,7 +177,32 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
  			this._log(`Executing command line \`${commandLine}\``);
  			markerRecreation.dispose();
  			const forceBracketedPasteMode = isMacintosh || isMultilineCommand(commandLine);
@@ -1585,20 +1585,16 @@ index bac03b64ffd3721262dfdfc339872001edba9e63..7692b51815cbc0dddc5574ddab2a2076
 +					xterm.shellIntegration.setNextCommandId(commandLineForMetadata ?? commandLine, commandId);
 +				}
 +				if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0) {
-+					this._log('Prompt input is non-empty before sync sendText; clearing with Ctrl+U');
-+					await this._instance.sendText('\x15', false);
-+					await waitForIdle(this._instance.onData, 100);
++					this._log('Prompt input is non-empty before sync sendText; bypassing runCommand without sending control characters');
 +				}
 +				await this._instance.sendText(commandLine, true, forceBracketedPasteMode);
 +			} else if ((this._commandDetection.promptInputModel?.value?.length ?? 0) > 0 && this._commandDetection.executingCommandObject === undefined) {
 +				// For async calls, preserve runCommand metadata behavior when the
 +				// prompt is clean, but avoid its Ctrl+C injection on stale idle input.
-+				this._log('Prompt input is non-empty but no command is executing; clearing with Ctrl+U before sendText');
++				this._log('Prompt input is non-empty but no command is executing; bypassing runCommand without sending control characters');
 +				if (commandId) {
 +					xterm.shellIntegration.setNextCommandId(commandLineForMetadata ?? commandLine, commandId);
 +				}
-+				await this._instance.sendText('\x15', false);
-+				await waitForIdle(this._instance.onData, 100);
 +				await this._instance.sendText(commandLine, true, forceBracketedPasteMode);
 +			} else {
 +				this._instance.runCommand(commandLine, true, commandId, forceBracketedPasteMode, commandLineForMetadata);
@@ -1606,7 +1602,7 @@ index bac03b64ffd3721262dfdfc339872001edba9e63..7692b51815cbc0dddc5574ddab2a2076
  
  			// Wait for the terminal to idle
  			this._log('Waiting for done event');
-@@ -261,4 +291,15 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
+@@ -261,4 +287,15 @@ export class RichExecuteStrategy extends Disposable implements ITerminalExecuteS
  			this._logService.debug(msg);
  		}
  	}
@@ -1736,7 +1732,7 @@ index 9a6b69d7a36dfeda5bceb303d612e3d695846078..95dc11104f1855c034bd985ab5bd7955
  	}
  
 diff --git a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
-index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0a5d45d5f 100644
+index 8151d3cc1803e53d447b18cc75453f78e9a113ae..1d915746ce5dff438f13568c0ed111a9b5874a6b 100644
 --- a/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
 +++ b/src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/browser/richExecuteStrategy.test.ts
 @@ -10,6 +10,7 @@ import { toDisposable } from '../../../../../../base/common/lifecycle.js';
@@ -1751,7 +1747,7 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0
  		strictEqual(actualCommandLineForMetadata, 'echo hello');
  	});
  
-+	test('does not send Ctrl+C when idle prompt input is stale', async () => {
++	test('does not send control characters when idle prompt input is stale', async () => {
 +		const onCommandFinishedEmitter = new Emitter<{ getOutput(): string; exitCode: number }>();
 +		const onDataEmitter = new Emitter<string>();
 +		const sentTexts: string[] = [];
@@ -1784,7 +1780,7 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0
 +				}
 +			},
 +			runCommand: () => {
-+				throw new Error('runCommand should not be called when clearing stale idle prompt input');
++				throw new Error('runCommand should not be called when stale idle prompt input is detected');
 +			},
 +		} as unknown as ITerminalInstance;
 +		const commandDetection = {
@@ -1803,8 +1799,8 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0
 +		const result = await strategy.execute('echo rich', CancellationToken.None);
 +
 +		strictEqual(sentTexts.includes('\x03'), false);
-+		strictEqual(sentTexts[0], '\x15');
-+		strictEqual(sentTexts[1], 'echo rich');
++		strictEqual(sentTexts.includes('\x15'), false);
++		strictEqual(sentTexts[0], 'echo rich');
 +		strictEqual(result.output?.includes('rich-output'), true);
 +		strictEqual(result.exitCode, 0);
 +	});
@@ -1878,8 +1874,8 @@ index 8151d3cc1803e53d447b18cc75453f78e9a113ae..e195156a8b681543bf0f9e6d48bcf6c0
 +		const result = await strategy.execute('Get-Location', CancellationToken.None, 'tool-command-id', 'Get-Location');
 +
 +		strictEqual(sentTexts.includes('\x03'), false);
-+		strictEqual(sentTexts[0], '\x15');
-+		strictEqual(sentTexts[1], 'Get-Location');
++		strictEqual(sentTexts.includes('\x15'), false);
++		strictEqual(sentTexts[0], 'Get-Location');
 +		strictEqual(metadata.length, 1);
 +		strictEqual(metadata[0].command, 'Get-Location');
 +		strictEqual(metadata[0].commandId, 'tool-command-id');
