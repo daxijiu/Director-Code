@@ -326,6 +326,8 @@ function isChatBuiltInMode(filePath) {
     'src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts',
     'src/vs/sessions/contrib/agentHost/browser/localAgentHost.contribution.ts',
     'src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts',
+    'src/vs/sessions/contrib/chat/browser/newChatViewPane.ts',
+    'src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts',
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts',
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts',
     'src/vs/sessions/contrib/sessions/browser/aiCustomizationShortcutsWidget.ts',

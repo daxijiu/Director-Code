@@ -1099,6 +1099,148 @@ index f307eb2d35cab52205b604d82a5069a51bdf6d46..b134390f836745e1a45ab27298fe5d7f
  
  		this.label = localize('localAgentHostLabel', "Local Agent Host");
  
+diff --git a/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts b/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
+index a124d3395336e122f0bb3617fcab9e17765b21a1..1bff6086c31bd1a48b4eda44f26d181e91c5d069 100644
+--- a/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
++++ b/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
+@@ -21,6 +21,7 @@ import { IHoverService } from '../../../../platform/hover/browser/hover.js';
+ import { localize } from '../../../../nls.js';
+ import { ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
+ import { ISessionsProvidersService } from '../../../services/sessions/browser/sessionsProvidersService.js';
++import type { ISessionsProvider } from '../../../services/sessions/common/sessionsProvider.js';
+ import { IAquariumService, IMountedToggleHandle } from '../../aquarium/browser/aquariumOverlay.js';
+ import { IViewDescriptorService } from '../../../../workbench/common/views.js';
+ import { IWorkspaceTrustRequestService } from '../../../../platform/workspace/common/workspaceTrust.js';
+@@ -32,6 +33,8 @@ import { NoAgentHostEmptyState } from './noAgentHostEmptyState.js';
+ import { IChatRequestVariableEntry } from '../../../../workbench/contrib/chat/common/attachments/chatVariableEntries.js';
+ import { IAgentHostFilterService } from '../../remoteAgentHost/common/agentHostFilter.js';
+ 
++const DIRECTOR_CHAT_PROVIDER_ID = 'default-copilot';
++
+ // #region --- New Chat Widget ---
+ 
+ class NewChatWidget extends Disposable {
+@@ -170,6 +173,13 @@ class NewChatWidget extends Disposable {
+ 	}
+ 
+ 	private _createNewSession(selection: IWorkspaceSelection, sessionTypeId: string | undefined): void {
++		const selectionWithTypes = this._withSessionTypesOrAlternative(selection);
++		if (selectionWithTypes !== selection) {
++			this._workspacePicker.setSelectedWorkspace(selectionWithTypes, /* fireEvent */ false);
++			selection = selectionWithTypes;
++			sessionTypeId = undefined;
++		}
++
+ 		const provider = this.sessionsProvidersService.getProviders().find(p => p.id === selection.providerId);
+ 		const repoUri = selection.workspace.repositories[0].uri;
+ 
+@@ -208,6 +218,42 @@ class NewChatWidget extends Disposable {
+ 		}
+ 	}
+ 
++	private _withSessionTypesOrAlternative(selection: IWorkspaceSelection): IWorkspaceSelection {
++		const repositoryUri = selection.workspace.repositories[0]?.uri;
++		if (!repositoryUri) {
++			return selection;
++		}
++
++		const provider = this.sessionsProvidersService.getProvider(selection.providerId);
++		if (this._getSessionTypeCount(provider, repositoryUri) > 0) {
++			return selection;
++		}
++
++		const candidates: IWorkspaceSelection[] = [];
++		for (const candidateProvider of this.sessionsProvidersService.getProviders()) {
++			if (candidateProvider.id === selection.providerId) {
++				continue;
++			}
++			const workspace = candidateProvider.resolveWorkspace(repositoryUri);
++			const candidateRepositoryUri = workspace?.repositories[0]?.uri ?? repositoryUri;
++			if (workspace && this._getSessionTypeCount(candidateProvider, candidateRepositoryUri) > 0) {
++				candidates.push({ providerId: candidateProvider.id, workspace });
++			}
++		}
++
++		return candidates.find(candidate => candidate.providerId === DIRECTOR_CHAT_PROVIDER_ID)
++			?? candidates[0]
++			?? selection;
++	}
++
++	private _getSessionTypeCount(provider: ISessionsProvider | undefined, repositoryUri: URI): number {
++		try {
++			return provider?.getSessionTypes(repositoryUri).length ?? 0;
++		} catch {
++			return 0;
++		}
++	}
++
+ 	/**
+ 	 * Returns the workspace URI for the context picker based on the current workspace selection.
+ 	 */
+diff --git a/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts b/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
+index edadd98b3d5ec34772edd54e24d39640fd5769b6..f53aff0ae795a9078a97f58827f82a0a46f08e4f 100644
+--- a/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
++++ b/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
+@@ -17,6 +17,15 @@ import { SessionsView, SessionsViewId as SessionsListViewId } from '../../sessio
+ import { DebugAgentHostInDevToolsAction } from '../../../../workbench/contrib/chat/electron-browser/actions/debugAgentHostAction.js';
+ import { ExportAgentHostDebugLogsAction } from '../../agentHost/electron-browser/exportDebugLogsAction.js';
+ import { ISessionsSetUpService } from '../../../browser/sessionsSetUpService.js';
++import type { ISessionWorkspace } from '../../../services/sessions/common/session.js';
++
++const DIRECTOR_CHAT_PROVIDER_ID = 'default-copilot';
++
++interface IResolvedWorkspaceCandidate {
++	readonly providerId: string;
++	readonly workspace: ISessionWorkspace;
++	readonly sessionTypeCount: number;
++}
+ 
+ registerAction2(DebugAgentHostInDevToolsAction);
+ registerAction2(ExportAgentHostDebugLogsAction);
+@@ -65,16 +74,38 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
+ 	}
+ 
+ 	private tryResolveAndSelect(folderUri: URI): boolean {
++		const candidates = this.resolveWorkspaceCandidates(folderUri);
++		const candidate = candidates.find(candidate => candidate.providerId === DIRECTOR_CHAT_PROVIDER_ID && candidate.sessionTypeCount > 0)
++			?? candidates.find(candidate => candidate.sessionTypeCount > 0)
++			?? candidates.find(candidate => candidate.providerId === DIRECTOR_CHAT_PROVIDER_ID)
++			?? candidates[0];
++
++		if (candidate) {
++			this.viewsService.openView<NewChatViewPane>(SessionsViewId).then(view => {
++				view?.selectWorkspace({ providerId: candidate.providerId, workspace: candidate.workspace });
++			});
++			return true;
++		}
++
++		return false;
++	}
++
++	private resolveWorkspaceCandidates(folderUri: URI): IResolvedWorkspaceCandidate[] {
++		const candidates: IResolvedWorkspaceCandidate[] = [];
+ 		for (const provider of this.sessionsProvidersService.getProviders()) {
+ 			const workspace = provider.resolveWorkspace(folderUri);
+ 			if (workspace) {
+-				this.viewsService.openView<NewChatViewPane>(SessionsViewId).then(view => {
+-					view?.selectWorkspace({ providerId: provider.id, workspace });
+-				});
+-				return true;
++				const repositoryUri = workspace.repositories[0]?.uri ?? folderUri;
++				let sessionTypeCount = 0;
++				try {
++					sessionTypeCount = provider.getSessionTypes(repositoryUri).length;
++				} catch {
++					// Ignore transient provider readiness errors while picking a better candidate.
++				}
++				candidates.push({ providerId: provider.id, workspace, sessionTypeCount });
+ 			}
+ 		}
+-		return false;
++		return candidates;
+ 	}
+ }
+ 
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
 index f028af026ba389332c0e5b842e5ce8d77c88037a..8d12e93ca51ec14f7f7efce4815d8944df17971f 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
