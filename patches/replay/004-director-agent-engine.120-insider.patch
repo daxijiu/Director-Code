@@ -641,12 +641,15 @@ index 0000000000000000000000000000000000000000..8ab07f36b18eab99b469135093691bfa
 +
 +registerWorkbenchContribution2(DirectorPlanToolsContribution.ID, DirectorPlanToolsContribution, WorkbenchPhase.AfterRestored);
 diff --git a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
-index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd3284fa8640f 100644
+index 89e5d008de9f558aeb85176db1f0191b24eb62d8..bc2ab177de7772bbe6e2fbc4f024293d80de4137 100644
 --- a/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
 +++ b/src/vs/workbench/contrib/chat/browser/chat.contribution.ts
-@@ -74,6 +74,7 @@ import { Extensions as JSONExtensions, IJSONContributionRegistry } from '../../.
+@@ -72,8 +72,9 @@ import { hookFileSchema, HOOK_SCHEMA_URI } from '../common/promptSyntax/hookSche
+ import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+ import { Extensions as JSONExtensions, IJSONContributionRegistry } from '../../../../platform/jsonschemas/common/jsonContributionRegistry.js';
  import { IPromptsService } from '../common/promptSyntax/service/promptsService.js';
- import { PromptsService } from '../common/promptSyntax/service/promptsServiceImpl.js';
+-import { PromptsService } from '../common/promptSyntax/service/promptsServiceImpl.js';
++import { AgenticPromptsService } from '../../../../sessions/contrib/chat/browser/promptsService.js';
  import { LanguageModelToolsExtensionPointHandler } from '../common/tools/languageModelToolsContribution.js';
 +import '../../directorCode/browser/agentEngine/agentEngine.contribution.js';
  import './telemetry/chatModelCountTelemetry.js';
@@ -679,7 +682,15 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd328
  				HOOK_DOCUMENTATION_URL,
  			),
  			default: {
-@@ -1422,7 +1423,7 @@ configurationRegistry.registerConfiguration({
+@@ -1396,7 +1397,6 @@ configurationRegistry.registerConfiguration({
+ 					'custom-hooks/hooks.json': true,
+ 				},
+ 			],
+-			agentsWindow: { default: { '.claude/settings.local.json': false, '.claude/settings.json': false, '~/.claude/settings.json': false } },
+ 		},
+ 		[PromptsConfig.USE_CHAT_HOOKS]: {
+ 			type: 'boolean',
+@@ -1422,7 +1422,7 @@ configurationRegistry.registerConfiguration({
  		[PromptsConfig.USE_CLAUDE_HOOKS]: {
  			type: 'boolean',
  			title: nls.localize('chat.useClaudeHooks.title', "Use Claude Hooks",),
@@ -688,7 +699,7 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd328
  			default: false,
  			restricted: true,
  			disallowConfigurationDefault: true,
-@@ -1560,13 +1561,13 @@ configurationRegistry.registerConfiguration({
+@@ -1560,13 +1560,13 @@ configurationRegistry.registerConfiguration({
  		},
  		[ChatConfiguration.AIDisabled]: {
  			type: 'boolean',
@@ -705,7 +716,7 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd328
  			default: true,
  		},
  		'chat.approvedAccountOrganizations': {
-@@ -1598,7 +1599,7 @@ configurationRegistry.registerConfiguration({
+@@ -1598,7 +1598,7 @@ configurationRegistry.registerConfiguration({
  		},
  		[ChatConfiguration.GrowthNotificationEnabled]: {
  			type: 'boolean',
@@ -714,7 +725,7 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd328
  			default: false,
  			tags: ['experimental'],
  			experiment: {
-@@ -1618,7 +1619,7 @@ configurationRegistry.registerConfiguration({
+@@ -1618,7 +1618,7 @@ configurationRegistry.registerConfiguration({
  		},
  		'chat.extensionUnification.enabled': {
  			type: 'boolean',
@@ -723,6 +734,15 @@ index 89e5d008de9f558aeb85176db1f0191b24eb62d8..f66ef8280e9f600b1aaf6841adebd328
  			default: true,
  			tags: ['experimental'],
  			experiment: {
+@@ -2329,7 +2329,7 @@ registerSingleton(IChatEditingService, ChatEditingService, InstantiationType.Del
+ registerSingleton(IChatMarkdownAnchorService, ChatMarkdownAnchorService, InstantiationType.Delayed);
+ registerSingleton(IAgentNetworkFilterService, AgentNetworkFilterService, InstantiationType.Delayed);
+ registerSingleton(ILanguageModelIgnoredFilesService, LanguageModelIgnoredFilesService, InstantiationType.Delayed);
+-registerSingleton(IPromptsService, PromptsService, InstantiationType.Delayed);
++registerSingleton(IPromptsService, AgenticPromptsService, InstantiationType.Delayed);
+ registerSingleton(IChatContextPickService, ChatContextPickService, InstantiationType.Delayed);
+ registerSingleton(IChatModeService, ChatModeService, InstantiationType.Delayed);
+ registerSingleton(IChatAttachmentResolveService, ChatAttachmentResolveService, InstantiationType.Delayed);
 diff --git a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts b/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
 index af82cdf409e0e2e856b742509c97c8bab0d5fe8f..c2139323d2777f27a50bb611bc5b263bd62c9b60 100644
 --- a/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts
@@ -12462,10 +12482,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..4c3734bcb8822a54378d6a49d1ac542ac39296a2
+index 0000000000000000000000000000000000000000..061c4754e89fb971554eda71c8db49d04b0711c0
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,547 @@
+@@ -0,0 +1,553 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12911,6 +12931,7 @@ index 0000000000000000000000000000000000000000..4c3734bcb8822a54378d6a49d1ac542a
 +	constructor(
 +		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
 +		@ILanguageModelsConfigurationService private readonly languageModelsConfigurationService: ILanguageModelsConfigurationService,
++		@ILanguageModelsService private readonly languageModelsService: ILanguageModelsService,
 +		@ILogService private readonly logService: ILogService,
 +	) {
 +		super();
@@ -12924,6 +12945,11 @@ index 0000000000000000000000000000000000000000..4c3734bcb8822a54378d6a49d1ac542a
 +
 +	private async sync(): Promise<void> {
 +		await syncDirectorProviderGroupProjection(this.providerRegistryService, this.languageModelsConfigurationService, this.logService);
++		try {
++			await this.languageModelsService.selectLanguageModels({ vendor: VENDOR });
++		} catch (error) {
++			this.logService.warn('[DirectorProviderGroupProjection] Failed to resolve Director language models after provider sync', error);
++		}
 +	}
 +}
 +

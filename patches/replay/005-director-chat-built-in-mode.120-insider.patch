@@ -1405,15 +1405,16 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  
  	prefillInput(text: string): void {
 diff --git a/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts b/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
-index edadd98b3d5ec34772edd54e24d39640fd5769b6..eccc99afe95d22e50104ed4c952c07e00b449a76 100644
+index edadd98b3d5ec34772edd54e24d39640fd5769b6..ded385f5f02948877405a6fc6d2be80c95917db7 100644
 --- a/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
 +++ b/src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts
-@@ -17,6 +17,16 @@ import { SessionsView, SessionsViewId as SessionsListViewId } from '../../sessio
+@@ -17,6 +17,17 @@ import { SessionsView, SessionsViewId as SessionsListViewId } from '../../sessio
  import { DebugAgentHostInDevToolsAction } from '../../../../workbench/contrib/chat/electron-browser/actions/debugAgentHostAction.js';
  import { ExportAgentHostDebugLogsAction } from '../../agentHost/electron-browser/exportDebugLogsAction.js';
  import { ISessionsSetUpService } from '../../../browser/sessionsSetUpService.js';
 +import type { ISessionWorkspace } from '../../../services/sessions/common/session.js';
 +import { IAICustomizationWorkspaceService } from '../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js';
++import { IWorkspaceEditingService } from '../../../../workbench/services/workspaces/common/workspaceEditing.js';
 +
 +const DIRECTOR_CHAT_PROVIDER_ID = 'default-copilot';
 +
@@ -1425,23 +1426,29 @@ index edadd98b3d5ec34772edd54e24d39640fd5769b6..eccc99afe95d22e50104ed4c952c07e0
  
  registerAction2(DebugAgentHostInDevToolsAction);
  registerAction2(ExportAgentHostDebugLogsAction);
-@@ -31,6 +41,7 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
+@@ -31,6 +42,8 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
  		@IViewsService private readonly viewsService: IViewsService,
  		@ILifecycleService private readonly lifecycleService: ILifecycleService,
  		@ISessionsSetUpService private readonly sessionsSetUpService: ISessionsSetUpService,
 +		@IAICustomizationWorkspaceService private readonly aiCustomizationWorkspaceService: IAICustomizationWorkspaceService,
++		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
  	) {
  		super();
  		ipcRenderer.on('vscode:selectAgentsFolder', (_: unknown, ...args: unknown[]) => {
-@@ -42,6 +53,7 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
+@@ -42,6 +55,12 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
  	private async selectFolder(folderUri: URI): Promise<void> {
  		// Wait for the welcome/setup flow to complete before selecting the folder
  		await this.sessionsSetUpService.whenWelcomeDone();
 +		this.aiCustomizationWorkspaceService.setOverrideProjectRoot(folderUri);
++		try {
++			await this.workspaceEditingService.addFolders([{ uri: folderUri }]);
++		} catch {
++			// Keep opening the session even if the workspace projection is temporarily unavailable.
++		}
  
  		this.sessionsManagementService.openNewSessionView();
  
-@@ -65,16 +77,38 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
+@@ -65,16 +84,38 @@ class SelectAgentsFolderContribution extends Disposable implements IWorkbenchCon
  	}
  
  	private tryResolveAndSelect(folderUri: URI): boolean {
