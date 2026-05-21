@@ -1,46 +1,1038 @@
 diff --git a/src/vs/sessions/browser/accountTitleBarState.ts b/src/vs/sessions/browser/accountTitleBarState.ts
-index 2ba44ecf1143d55c97891f292b79f55c4891f48e..745cdf531e6e3a8d0c4ed5ad6320f7fb6a9d5bb5 100644
+index 2ba44ecf1143d55c97891f292b79f55c4891f48e..edc6af8e552cf9ae4877d97768778a4943fd51ac 100644
 --- a/src/vs/sessions/browser/accountTitleBarState.ts
 +++ b/src/vs/sessions/browser/accountTitleBarState.ts
-@@ -156,10 +156,10 @@ function getCopilotPresentation(
- 			source: 'copilot',
- 			kind: 'warning',
- 			icon: Codicon.account,
+@@ -9,6 +9,7 @@ import { localize } from '../../nls.js';
+ import { ChatEntitlement, IChatSentiment, IQuotaSnapshot } from '../../workbench/services/chat/common/chatEntitlementService.js';
+ import { IDefaultAccountService } from '../../platform/defaultAccount/common/defaultAccount.js';
+ import { IAuthenticationService } from '../../workbench/services/authentication/common/authentication.js';
++import type { IDirectorSessionsPolicySnapshot } from '../services/sessions/common/session.js';
+ 
+ export interface IResolvedAccountInfo {
+ 	readonly accountName: string;
+@@ -17,41 +18,18 @@ export interface IResolvedAccountInfo {
+ }
+ 
+ /**
+- * Resolves the current account info by trying the default account service
+- * first, then falling back to raw GitHub sessions from the authentication
+- * service. The fallback covers the window between session creation and
+- * {@link IDefaultAccountService} initialization.
++ * Resolves the current account info for compatibility with the upstream
++ * title-bar widget. Director presents provider setup state instead.
+  */
+ export async function resolveAccountInfo(
+-	defaultAccountService: IDefaultAccountService,
+-	authenticationService: IAuthenticationService,
++	_defaultAccountService: IDefaultAccountService,
++	_authenticationService: IAuthenticationService,
+ ): Promise<IResolvedAccountInfo | undefined> {
+-	const account = await defaultAccountService.getDefaultAccount();
+-	if (account) {
+-		return {
+-			accountName: account.accountName,
+-			accountProviderId: account.authenticationProvider.id,
+-			accountProviderLabel: account.authenticationProvider.name,
+-		};
+-	}
+-
+-	try {
+-		const sessions = await authenticationService.getSessions('github');
+-		if (sessions.length > 0) {
+-			return {
+-				accountName: sessions[0].account.label,
+-				accountProviderId: 'github',
+-				accountProviderLabel: 'GitHub',
+-			};
+-		}
+-	} catch {
+-		// Provider not available yet
+-	}
+-
++	// Director's Agents Window account surface is provider setup state.
+ 	return undefined;
+ }
+ 
+-export type AccountTitleBarStateSource = 'account' | 'copilot';
++export type AccountTitleBarStateSource = 'account' | 'director';
+ export type AccountTitleBarStateKind = 'default' | 'accent' | 'warning' | 'prominent';
+ 
+ export interface IAccountTitleBarStateContext {
+@@ -64,6 +42,7 @@ export interface IAccountTitleBarStateContext {
+ 		readonly chat?: IQuotaSnapshot;
+ 		readonly completions?: IQuotaSnapshot;
+ 	};
++	readonly directorPolicy?: IDirectorSessionsPolicySnapshot;
+ }
+ 
+ export interface IAccountTitleBarState {
+@@ -78,11 +57,7 @@ export interface IAccountTitleBarState {
+ }
+ 
+ export function getAccountProfileImageUrl(accountProviderId: string | undefined, accountName: string | undefined): string | undefined {
+-	if (accountProviderId !== 'github' || !accountName?.trim()) {
+-		return undefined;
+-	}
+-
+-	return `https://github.com/${encodeURIComponent(accountName.trim())}.png?size=64`;
++	return undefined;
+ }
+ 
+ export function getAccountTitleBarBadgeKey(state: IAccountTitleBarState): string | undefined {
+@@ -96,18 +71,24 @@ export function getAccountTitleBarBadgeKey(state: IAccountTitleBarState): string
+ export function getAccountTitleBarState(context: IAccountTitleBarStateContext): IAccountTitleBarState {
+ 	if (context.isAccountLoading) {
+ 		return {
+-			source: 'account',
++			source: 'director',
+ 			kind: 'default',
+ 			icon: ThemeIcon.modify(Codicon.loading, 'spin'),
+-			label: localize('loadingAccount', "Loading Account..."),
+-			ariaLabel: localize('loadingAccountAria', "Loading account"),
++			label: localize('loadingDirectorSetup', "Loading Director Setup..."),
++			ariaLabel: localize('loadingDirectorSetupAria', "Loading Director setup"),
+ 			revealLabelOnHover: true,
+ 		};
+ 	}
+ 
+-	const copilotState = getCopilotPresentation(context.entitlement, context.sentiment, context.quotas);
+-	if (copilotState) {
+-		return copilotState;
++	if (context.directorPolicy) {
++		return {
++			source: 'director',
++			kind: context.directorPolicy.status === 'setupRequired' ? 'prominent' : 'default',
++			icon: context.directorPolicy.status === 'setupRequired' ? Codicon.settingsGear : Codicon.account,
++			label: context.directorPolicy.label,
++			revealLabelOnHover: true,
++			ariaLabel: context.directorPolicy.ariaLabel,
++		};
+ 	}
+ 
+ 	if (context.accountName) {
+@@ -124,97 +105,11 @@ export function getAccountTitleBarState(context: IAccountTitleBarStateContext):
+ 	}
+ 
+ 	return {
+-		source: 'account',
++		source: 'director',
+ 		kind: 'prominent',
+-		icon: Codicon.account,
+-		label: localize('signInLabel', "Sign In"),
+-		ariaLabel: localize('signInAria', "Sign in to your account"),
++		icon: Codicon.settingsGear,
++		label: localize('directorSetupLabel', "Director Setup"),
++		ariaLabel: localize('directorSetupAria', "Configure Director Code providers"),
+ 	};
+ }
+ 
+-function getCopilotPresentation(
+-	entitlement: ChatEntitlement,
+-	sentiment: IChatSentiment,
+-	quotas: { readonly chat?: IQuotaSnapshot; readonly completions?: IQuotaSnapshot }
+-): IAccountTitleBarState | undefined {
+-	if (sentiment.hidden) {
+-		return undefined;
+-	}
+-
+-	if (entitlement === ChatEntitlement.Unknown) {
+-		return {
+-			source: 'copilot',
+-			kind: 'prominent',
+-			icon: Codicon.account,
+-			label: localize('agentsSignedOut', "Agents Signed Out"),
+-			ariaLabel: localize('agentsSignedOutAria', "Agents is signed out"),
+-		};
+-	}
+-
+-	if (sentiment.disabled || sentiment.untrusted) {
+-		return {
+-			source: 'copilot',
+-			kind: 'warning',
+-			icon: Codicon.account,
 -			label: localize('copilotUnavailable', "Copilot Unavailable"),
-+			label: localize('copilotUnavailable', "AI Unavailable"),
- 			ariaLabel: sentiment.untrusted
+-			ariaLabel: sentiment.untrusted
 -				? localize('copilotUnavailableUntrustedAria', "GitHub Copilot is unavailable in untrusted workspaces")
 -				: localize('copilotUnavailableDisabledAria', "GitHub Copilot is disabled"),
-+				? localize('copilotUnavailableUntrustedAria', "AI features are unavailable in untrusted workspaces")
-+				: localize('copilotUnavailableDisabledAria', "AI features are disabled"),
- 		};
- 	}
- 
-@@ -185,7 +185,7 @@ function getCopilotPresentation(
- 			label: localize('copilotTokensRemaining', "Tokens Remaining"),
- 			badge: `${remainingPercent}%`,
- 			dotBadge: remainingPercent <= 10 ? 'error' : 'warning',
+-		};
+-	}
+-
+-	const chatQuotaExceeded = quotas.chat?.percentRemaining === 0;
+-	const completionsQuotaExceeded = quotas.completions?.percentRemaining === 0;
+-	if (entitlement === ChatEntitlement.Free && (chatQuotaExceeded || completionsQuotaExceeded)) {
+-		return {
+-			source: 'copilot',
+-			kind: 'warning',
+-			icon: Codicon.account,
+-			label: localize('copilotQuotaReached', "Quota Reached"),
+-			dotBadge: 'error',
+-			ariaLabel: getQuotaReachedAriaLabel(chatQuotaExceeded, completionsQuotaExceeded),
+-		};
+-	}
+-
+-	const remainingPercent = getLowestPositivePercent(quotas.chat, quotas.completions);
+-	if (entitlement === ChatEntitlement.Free && typeof remainingPercent === 'number' && remainingPercent <= 25) {
+-		return {
+-			source: 'copilot',
+-			kind: remainingPercent <= 10 ? 'warning' : 'accent',
+-			icon: Codicon.account,
+-			label: localize('copilotTokensRemaining', "Tokens Remaining"),
+-			badge: `${remainingPercent}%`,
+-			dotBadge: remainingPercent <= 10 ? 'error' : 'warning',
 -			ariaLabel: localize('copilotTokensRemainingAria', "{0}% GitHub Copilot tokens remaining", remainingPercent),
-+			ariaLabel: localize('copilotTokensRemainingAria', "{0}% AI tokens remaining", remainingPercent),
- 		};
- 	}
- 
-@@ -209,12 +209,12 @@ function getLowestPositivePercent(...quotas: Array<IQuotaSnapshot | undefined>):
- 
- function getQuotaReachedAriaLabel(chatQuotaExceeded: boolean, completionsQuotaExceeded: boolean): string {
- 	if (chatQuotaExceeded && completionsQuotaExceeded) {
+-		};
+-	}
+-
+-	return undefined;
+-}
+-
+-function getLowestPositivePercent(...quotas: Array<IQuotaSnapshot | undefined>): number | undefined {
+-	let lowest: number | undefined;
+-	for (const quota of quotas) {
+-		if (typeof quota?.percentRemaining !== 'number' || quota.percentRemaining <= 0) {
+-			continue;
+-		}
+-
+-		lowest = typeof lowest === 'number'
+-			? Math.min(lowest, quota.percentRemaining)
+-			: quota.percentRemaining;
+-	}
+-
+-	return lowest;
+-}
+-
+-function getQuotaReachedAriaLabel(chatQuotaExceeded: boolean, completionsQuotaExceeded: boolean): string {
+-	if (chatQuotaExceeded && completionsQuotaExceeded) {
 -		return localize('copilotAllQuotaReachedAria', "GitHub Copilot chat and inline suggestion quota reached");
-+		return localize('copilotAllQuotaReachedAria', "AI chat and inline suggestion quota reached");
- 	}
- 
- 	if (chatQuotaExceeded) {
+-	}
+-
+-	if (chatQuotaExceeded) {
 -		return localize('copilotChatQuotaReachedAria', "GitHub Copilot chat quota reached");
-+		return localize('copilotChatQuotaReachedAria', "AI chat quota reached");
+-	}
+-
+-	return localize('copilotCompletionsQuotaReachedAria', "GitHub Copilot inline suggestion quota reached");
+-}
+diff --git a/src/vs/sessions/browser/sessionsSetUpService.ts b/src/vs/sessions/browser/sessionsSetUpService.ts
+index f4dee563d3c5281444a99b80bc9ee5a3d04eb47d..1e536149318c7b5c0822c33810e9da5b7e55f543 100644
+--- a/src/vs/sessions/browser/sessionsSetUpService.ts
++++ b/src/vs/sessions/browser/sessionsSetUpService.ts
+@@ -4,21 +4,17 @@
+  *--------------------------------------------------------------------------------------------*/
+ 
+ import './media/sessionsSetUp.css';
++import { Event } from '../../base/common/event.js';
+ import { Disposable, DisposableStore, IDisposable, MutableDisposable, toDisposable } from '../../base/common/lifecycle.js';
+ import { DeferredPromise, disposableTimeout } from '../../base/common/async.js';
+ import { createDecorator, IInstantiationService } from '../../platform/instantiation/common/instantiation.js';
+ import { ILogService } from '../../platform/log/common/log.js';
+ import { IStorageService, StorageScope, StorageTarget } from '../../platform/storage/common/storage.js';
+-import { IUserDataProfileStorageService } from '../../platform/userDataProfile/common/userDataProfileStorageService.js';
+-import { IUserDataProfilesService } from '../../platform/userDataProfile/common/userDataProfile.js';
+-import { ServiceCollection } from '../../platform/instantiation/common/serviceCollection.js';
+-import { ChatEntitlementContext, IChatEntitlementService } from '../../workbench/services/chat/common/chatEntitlementService.js';
++import { IChatEntitlementService } from '../../workbench/services/chat/common/chatEntitlementService.js';
+ import { isWeb } from '../../base/common/platform.js';
+-import { IDefaultAccountService } from '../../platform/defaultAccount/common/defaultAccount.js';
+ import { IProductService } from '../../platform/product/common/productService.js';
+ import { IContextKeyService } from '../../platform/contextkey/common/contextkey.js';
+ import { IWorkbenchEnvironmentService } from '../../workbench/services/environment/common/environmentService.js';
+-import { IAuthenticationService } from '../../workbench/services/authentication/common/authentication.js';
+ import { ICommandService } from '../../platform/commands/common/commands.js';
+ import { IWorkbenchLayoutService } from '../../workbench/services/layout/browser/layoutService.js';
+ import { IKeybindingService } from '../../platform/keybinding/common/keybinding.js';
+@@ -34,6 +30,7 @@ import { Dialog, DialogContentsAlignment } from '../../base/browser/ui/dialog/di
+ import { createWorkbenchDialogOptions } from '../../workbench/browser/parts/dialogs/dialog.js';
+ import { MarkdownString } from '../../base/common/htmlContent.js';
+ import { localize } from '../../nls.js';
++import { IDirectorSessionsPolicyService } from '../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ 
+ const AIDisabledConfig = 'chat.disableAIFeatures';
+ 
+@@ -72,12 +69,11 @@ class SessionsSetUpWidget extends Disposable {
+ 		private readonly onCompleted: () => void,
+ 		private readonly serviceWhenSetupDone: () => Promise<boolean>,
+ 		private readonly serviceMarkDone: () => void,
+-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
++		private readonly serviceOnDidSetupStateChange: Event<unknown>,
+ 		@IProductService private readonly productService: IProductService,
+ 		@IStorageService private readonly storageService: IStorageService,
+ 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
+ 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
+-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
+ 		@ILogService private readonly logService: ILogService,
+ 		@ICommandService private readonly commandService: ICommandService,
+ 		@IConfigurationService private readonly configurationService: IConfigurationService,
+@@ -117,45 +113,20 @@ class SessionsSetUpWidget extends Disposable {
  	}
  
--	return localize('copilotCompletionsQuotaReachedAria', "GitHub Copilot inline suggestion quota reached");
-+	return localize('copilotCompletionsQuotaReachedAria', "AI inline suggestion quota reached");
+ 	private async _checkWebAuth(): Promise<void> {
+-		try {
+-			const sessions = await this.authenticationService.getSessions('github');
+-			if (sessions.length > 0) {
+-				this.logService.info('[sessions welcome] GitHub session found on web, skipping welcome');
+-				this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
+-				this.onCompleted();
+-				return;
+-			}
+-		} catch {
+-			// Provider not available yet — show dialog
+-		}
++		this.logService.info('[sessions welcome] Director setup required on web, showing welcome');
+ 		this._showWelcome(false);
+ 	}
+ 
+ 	private _watchWebAuth(): void {
+-		this._register(this.authenticationService.onDidChangeSessions(async e => {
+-			if (e.providerId !== 'github' || !e.event.removed?.length) {
+-				return;
+-			}
+-			try {
+-				const remaining = await this.authenticationService.getSessions('github');
+-				if (remaining.length > 0) {
+-					return;
+-				}
+-			} catch {
+-				// Provider became unavailable — treat as signed out
+-			}
+-			this.logService.info('[sessions welcome] GitHub session removed on web, re-showing welcome');
+-			this.storageService.remove(WELCOME_COMPLETE_KEY, StorageScope.APPLICATION);
+-			this._showWelcome(false);
+-		}));
++		this.watcherRef.value = this._watchActiveState(false);
+ 	}
+ 
+ 	private async _watchSignInState(): Promise<void> {
+-		const initialAccount = await this.defaultAccountService.getDefaultAccount();
++		const setupDone = await this.serviceWhenSetupDone();
+ 		if (this.dialogRef.value) {
+ 			return;
+ 		}
+-		if (!initialAccount) {
++		if (!setupDone) {
+ 			this._showWelcome(false);
+ 			return;
+ 		}
+@@ -164,16 +135,21 @@ class SessionsSetUpWidget extends Disposable {
+ 		this.watcherRef.value = this._watchActiveState(true);
+ 	}
+ 
+-	private _watchActiveState(signedIn: boolean): IDisposable {
++	private _watchActiveState(setupDone: boolean): IDisposable {
+ 		const disposables = new DisposableStore();
+ 
+-		disposables.add(this.defaultAccountService.onDidChangeDefaultAccount(account => {
+-			const nowSignedIn = account !== null;
+-			if (signedIn && !nowSignedIn) {
++		disposables.add(this.serviceOnDidSetupStateChange(async () => {
++			const nowSetupDone = await this.serviceWhenSetupDone();
++			if (setupDone && !nowSetupDone) {
+ 				this.storageService.remove(WELCOME_COMPLETE_KEY, StorageScope.APPLICATION);
+ 				this._showWelcome(false);
+ 			}
+-			signedIn = nowSignedIn;
++			if (!setupDone && nowSetupDone) {
++				this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
++				this.serviceMarkDone();
++				this.onCompleted();
++			}
++			setupDone = nowSetupDone;
+ 		}));
+ 
+ 		disposables.add(this.configurationService.onDidChangeConfiguration(e => {
+@@ -253,7 +229,7 @@ class SessionsSetUpWidget extends Disposable {
+ 			const overlay = this._showLoadingOverlay();
+ 			this.dialogRef.value.add(overlay);
+ 
+-			const account = await this.defaultAccountService.getDefaultAccount();
++			const setupDone = await this.serviceWhenSetupDone();
+ 			if (this._store.isDisposed) {
+ 				return;
+ 			}
+@@ -261,30 +237,27 @@ class SessionsSetUpWidget extends Disposable {
+ 			overlay.element.classList.add('sessions-loading-dismissed');
+ 			this.dialogRef.value.add(disposableTimeout(() => overlay.element.remove(), 200));
+ 
+-			if (account) {
+-				const setupDone = await this.serviceWhenSetupDone();
+-				if (this._store.isDisposed) {
+-					return;
+-				}
+-
+-				if (setupDone) {
+-					this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
+-					this.dialogRef.clear();
+-					this._watchSignInState();
+-					return;
+-				}
+-
+-				await this._showWelcomeDialog();
+-			} else {
+-				await this._showSignInDialog();
++			if (setupDone) {
++				this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
++				this.dialogRef.clear();
++				this._watchSignInState();
++				return;
+ 			}
++
++			await this._showWelcomeDialog();
+ 		} else {
+ 			await this._showSignInDialog();
+ 		}
+ 
+ 		this.dialogRef.clear();
+ 		await this._ensureAIFeaturesEnabled();
+-		this._watchSignInState();
++		const setupDone = await this.serviceWhenSetupDone();
++		if (setupDone) {
++			this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
++			this.serviceMarkDone();
++		}
++		this.onCompleted();
++		this.watcherRef.value = this._watchActiveState(setupDone);
+ 	}
+ 
+ 	private _showLoadingOverlay(): { element: HTMLElement } & IDisposable {
+@@ -297,45 +270,12 @@ class SessionsSetUpWidget extends Disposable {
+ 	}
+ 
+ 	private async _showSignInDialog(): Promise<void> {
+-		this.logService.info('[sessions welcome] Showing sign-in dialog');
+-
+-		const signingInDialogRef = new MutableDisposable<DisposableStore>();
+-
+-		const success = await this.commandService.executeCommand<boolean>('workbench.action.chat.triggerSetup', undefined, {
+-			forceSignInDialog: true,
+-			dialogIcon: Codicon.agent,
+-			dialogTitle: localize('sessions.signIn', "Sign in to use Agents"),
+-			disableCloseButton: true,
+-			onSignInStarted: () => {
+-				const disposables = new DisposableStore();
+-				signingInDialogRef.value = disposables;
+-				const dialog = disposables.add(new Dialog(
+-					this.layoutService.activeContainer,
+-					localize('sessions.signingIn', "Signing in…"),
+-					[],
+-					createWorkbenchDialogOptions({
+-						type: 'none',
+-						extraClasses: ['chat-setup-dialog', 'sessions-welcome-dialog'],
+-						detail: localize('sessions.signingIn.detail', "Please complete sign-in in the browser."),
+-						icon: Codicon.agent,
+-						alignment: DialogContentsAlignment.Vertical,
+-						cancelId: 0,
+-						disableCloseButton: true,
+-						disableDefaultAction: true,
+-					}, this.keybindingService, this.layoutService, this.hostService)
+-				));
+-				dialog.show();
+-			}
+-		});
+-
+-		signingInDialogRef.dispose();
++		this.logService.info('[sessions welcome] Opening Director Code provider setup');
+ 
+-		if (success) {
+-			this.logService.info('[sessions welcome] Sign-in completed successfully');
+-			this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
+-			this.serviceMarkDone();
+-		} else {
+-			this.logService.info('[sessions welcome] Sign-in was canceled or failed');
++		try {
++			await this.commandService.executeCommand('director-code.openSettings');
++		} catch (error) {
++			this.logService.warn('[sessions welcome] Director Code provider setup failed to open', error);
+ 		}
+ 	}
+ 
+@@ -348,11 +288,11 @@ class SessionsSetUpWidget extends Disposable {
+ 		const dialog = disposables.add(new Dialog(
+ 			this.layoutService.activeContainer,
+ 			localize('sessions.welcome.title', "Welcome to {0}", productName),
+-			[localize('sessions.welcome.getStarted', "Get Started")],
++			[localize('sessions.welcome.openDirectorSettings', "Open Director Code Settings")],
+ 			createWorkbenchDialogOptions({
+ 				type: 'none',
+ 				extraClasses: ['chat-setup-dialog', 'sessions-welcome-dialog', 'sessions-main-welcome-dialog'],
+-				detail: localize('sessions.welcome.detail', "Your AI-powered coding experience where agents explore, build, and iterate with you."),
++				detail: localize('sessions.welcome.detail', "Configure Director Code providers and authentication before starting agent sessions."),
+ 				icon: Codicon.agent,
+ 				alignment: DialogContentsAlignment.Vertical,
+ 				cancelId: 1,
+@@ -364,23 +304,14 @@ class SessionsSetUpWidget extends Disposable {
+ 		await dialog.show();
+ 		disposables.dispose();
+ 
+-		this.storageService.store(WELCOME_COMPLETE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
+-		this.serviceMarkDone();
++		await this.commandService.executeCommand('director-code.openSettings');
+ 	}
+ 
+ 	private _createWelcomeFooter(disposables: DisposableStore): HTMLElement {
+ 		const element = $('.chat-setup-dialog-footer');
+-		const defaultChatAgent = this.productService.defaultChatAgent;
+-		const providerName = defaultChatAgent?.provider?.default?.name ?? 'GitHub';
+-		const termsUrl = defaultChatAgent?.termsStatementUrl ?? '';
+-		const privacyUrl = defaultChatAgent?.privacyStatementUrl ?? '';
+-		const publicCodeUrl = defaultChatAgent?.publicCodeMatchesUrl ?? '';
+-		const settingsUrl = defaultChatAgent?.manageSettingsUrl ?? '';
+-
+ 		const footer = localize(
+-			{ key: 'welcomeFooter', comment: ['{Locked="["}', '{Locked="]({1})"}', '{Locked="]({2})"}', '{Locked="]({4})"}', '{Locked="]({5})"}'] },
+-			"By continuing, you agree to {0}'s [Terms]({1}) and [Privacy Statement]({2}). {3} Copilot may show [public code]({4}) suggestions and use your data to improve the product. You can change these [settings]({5}) anytime.",
+-			providerName, termsUrl, privacyUrl, providerName, publicCodeUrl, settingsUrl
++			'welcomeFooterDirector',
++			"Provider, authentication, and model routing are configured in Director Code Settings."
+ 		);
+ 		element.appendChild($('p', undefined, disposables.add(this.markdownRendererService.render(new MarkdownString(footer, { isTrusted: true }))).element));
+ 
+@@ -396,31 +327,26 @@ export class SessionsSetUpService extends Disposable implements ISessionsSetUpSe
+ 
+ 	declare readonly _serviceBrand: undefined;
+ 
+-	private readonly _initPromise: Promise<void>;
+ 	private readonly _welcomeDoneDeferred = new DeferredPromise<void>();
+ 
+ 	constructor(
+ 		@IInstantiationService private readonly instantiationService: IInstantiationService,
+-		@IUserDataProfileStorageService private readonly userDataProfileStorageService: IUserDataProfileStorageService,
+-		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
+ 		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService,
+-		@ILogService private readonly logService: ILogService,
++		@IDirectorSessionsPolicyService private readonly directorSessionsPolicyService: IDirectorSessionsPolicyService,
+ 	) {
+ 		super();
+ 
+-		this._initPromise = this.initialize();
+-
+ 		this._register(this.instantiationService.createInstance(
+ 			SessionsSetUpWidget,
+ 			() => this._welcomeDoneDeferred.complete(),
+ 			() => this.whenSetupDone(),
+-			() => this.markDone()
++			() => this.markDone(),
++			this.directorSessionsPolicyService.onDidChangePolicySnapshot
+ 		));
+ 	}
+ 
+ 	private async whenSetupDone(): Promise<boolean> {
+-		await this._initPromise;
+-		return this.chatEntitlementService.sentiment.completed === true;
++		return (await this.directorSessionsPolicyService.refresh()).status === 'ready';
+ 	}
+ 
+ 	private markDone(): void {
+@@ -430,29 +356,4 @@ export class SessionsSetUpService extends Disposable implements ISessionsSetUpSe
+ 	whenWelcomeDone(): Promise<void> {
+ 		return this._welcomeDoneDeferred.p;
+ 	}
+-
+-	private async initialize(): Promise<void> {
+-		if (this.chatEntitlementService.sentiment.completed) {
+-			return;
+-		}
+-
+-		try {
+-			const defaultProfile = this.userDataProfilesService.defaultProfile;
+-			await this.userDataProfileStorageService.withProfileScopedStorageService(defaultProfile, async storageService => {
+-				const defaultContext = this.instantiationService
+-					.createChild(new ServiceCollection([IStorageService, storageService]))
+-					.createInstance(ChatEntitlementContext);
+-				try {
+-					if (defaultContext.state.completed) {
+-						this.logService.info('[sessions welcome] Setup already completed in default profile, marking done locally');
+-						this.markDone();
+-					}
+-				} finally {
+-					defaultContext.dispose();
+-				}
+-			});
+-		} catch (error) {
+-			this.logService.error('[sessions welcome] Failed to read setup state from default profile:', error);
+-		}
+-	}
  }
+diff --git a/src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts b/src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts
+index 055c72a0a42ade882f5f3bf9e58e1276e1e940c8..aa0f15f36a11c83d2318249a2b8a7d4071316f7d 100644
+--- a/src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts
++++ b/src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts
+@@ -7,10 +7,10 @@ import '../../../browser/media/sidebarActionButton.css';
+ import './media/accountWidget.css';
+ import './media/accountTitleBarWidget.css';
+ import '../../../../workbench/contrib/chat/browser/chatStatus/media/chatStatus.css';
+-import Severity from '../../../../base/common/severity.js';
+ import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
+ import { localize, localize2 } from '../../../../nls.js';
+ import { Action2, MenuRegistry, registerAction2, IMenuService } from '../../../../platform/actions/common/actions.js';
++import { ICommandService } from '../../../../platform/commands/common/commands.js';
+ import { ContextKeyExpr, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
+ import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
+ import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
+@@ -26,17 +26,14 @@ import { IAction, Separator } from '../../../../base/common/actions.js';
+ import { renderLabelWithIcons } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
+ import { Codicon } from '../../../../base/common/codicons.js';
+ import { IHoverService } from '../../../../platform/hover/browser/hover.js';
+-import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
+ import { registerUpdateTitleBarMenuPlacement } from '../../../../workbench/contrib/update/browser/updateTitleBarEntry.js';
+ import { ChatEntitlement, ChatEntitlementService, IChatEntitlementService } from '../../../../workbench/services/chat/common/chatEntitlementService.js';
+-import { ChatStatusDashboard, IChatStatusDashboardOptions } from '../../../../workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.js';
+ import { HoverPosition } from '../../../../base/browser/ui/hover/hoverWidget.js';
+ import { ThemeIcon } from '../../../../base/common/themables.js';
+ import { getAccountProfileImageUrl, getAccountTitleBarBadgeKey, getAccountTitleBarState, resolveAccountInfo } from '../../../browser/accountTitleBarState.js';
++import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ import { IsPhoneLayoutContext, SessionsWelcomeVisibleContext } from '../../../common/contextkeys.js';
+ import { IsAuxiliaryWindowContext } from '../../../../workbench/common/contextkeys.js';
+-import { IAuthenticationAccessService } from '../../../../workbench/services/authentication/browser/authenticationAccessService.js';
+-import { IAuthenticationUsageService } from '../../../../workbench/services/authentication/browser/authenticationUsageService.js';
+ import { IAuthenticationService } from '../../../../workbench/services/authentication/common/authentication.js';
+ import { IChatDashboardService } from '../../../browser/chatDashboardService.js';
+ import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
+@@ -51,7 +48,7 @@ const PERSONALIZE_ACTION_IDS: readonly string[] = [
+ 	'workbench.action.openGlobalKeybindings',
+ 	'workbench.action.selectTheme',
+ ];
+-const SIGN_OUT_ACTION_ID = 'workbench.action.agenticSignOut';
++const LEGACY_SIGN_OUT_ACTION_ID = 'workbench.action.agenticSignOut';
+ const SIGN_IN_ACTION_ID = 'workbench.action.agenticSignIn';
+ 
+ // Register the shared VS Code update title bar entry into the Agents titlebar layout.
+@@ -61,69 +58,23 @@ registerUpdateTitleBarMenuPlacement(Menus.TitleBarRightLayout, {
+ 	order: 99,
+ });
+ 
+-// Sign In (shown when signed out)
++// Configure Director Code provider/auth setup.
+ registerAction2(class extends Action2 {
+ 	constructor() {
+ 		super({
+ 			id: 'workbench.action.agenticSignIn',
+-			title: localize2('signIn', 'Sign In'),
++			title: localize2('configureDirectorCode', 'Configure Director Code'),
+ 			menu: {
+ 				id: AccountMenu,
+-				when: ContextKeyExpr.notEquals('defaultAccountStatus', 'available'),
++				when: ContextKeyExpr.true(),
+ 				group: '1_account',
+ 				order: 1,
+ 			}
+ 		});
+ 	}
+ 	async run(accessor: ServicesAccessor): Promise<void> {
+-		const defaultAccountService = accessor.get(IDefaultAccountService);
+-		await defaultAccountService.signIn();
+-	}
+-});
+-
+-// Sign Out (shown when signed in)
+-registerAction2(class extends Action2 {
+-	constructor() {
+-		super({
+-			id: 'workbench.action.agenticSignOut',
+-			title: localize2('signOut', 'Sign Out'),
+-			menu: {
+-				id: AccountMenu,
+-				when: ContextKeyExpr.equals('defaultAccountStatus', 'available'),
+-				group: '1_account',
+-				order: 1,
+-			}
+-		});
+-	}
+-	async run(accessor: ServicesAccessor): Promise<void> {
+-		const defaultAccountService = accessor.get(IDefaultAccountService);
+-		const dialogService = accessor.get(IDialogService);
+-		const authenticationService = accessor.get(IAuthenticationService);
+-		const authenticationUsageService = accessor.get(IAuthenticationUsageService);
+-		const authenticationAccessService = accessor.get(IAuthenticationAccessService);
+-		const defaultAccount = await defaultAccountService.getDefaultAccount();
+-		if (!defaultAccount) {
+-			return;
+-		}
+-
+-		const providerId = defaultAccount.authenticationProvider.id;
+-		const accountLabel = defaultAccount.accountName;
+-		const { confirmed } = await dialogService.confirm({
+-			type: Severity.Info,
+-			message: localize('agenticSignOutMessage', "Sign out of the Agents window?"),
+-			detail: localize('agenticSignOutDetail', "This will sign out '{0}' from the Agents window.", accountLabel),
+-			primaryButton: localize({ key: 'agenticSignOutButton', comment: ['&& denotes a mnemonic'] }, "&&Sign Out")
+-		});
+-
+-		if (!confirmed) {
+-			return;
+-		}
+-
+-		const allSessions = await authenticationService.getSessions(providerId);
+-		const sessions = allSessions.filter(session => session.account.label === accountLabel);
+-		await Promise.all(sessions.map(session => authenticationService.removeSession(providerId, session.id)));
+-		authenticationUsageService.removeAccountUsage(providerId, accountLabel);
+-		authenticationAccessService.removeAllowedExtensions(providerId, accountLabel);
++		const commandService = accessor.get(ICommandService);
++		await commandService.executeCommand('director-code.openSettings');
+ 	}
+ });
+ 
+@@ -182,7 +133,6 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 	private isMenuVisible = false;
+ 	private lastBadgeKey: string | undefined;
+ 	private dismissedBadgeKey: string | undefined;
+-	private readonly copilotDashboardStore = this._register(new MutableDisposable<DisposableStore>());
+ 	private readonly clickPanelDisposable = this._register(new MutableDisposable<DisposableStore>());
+ 	private readonly avatarLoadDisposable = this._register(new MutableDisposable());
+ 
+@@ -194,8 +144,8 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 		@IMenuService private readonly menuService: IMenuService,
+ 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
+ 		@IHoverService private readonly hoverService: IHoverService,
+-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+ 		@IChatEntitlementService private readonly chatEntitlementService: ChatEntitlementService,
++		@IDirectorSessionsPolicyService private readonly directorSessionsPolicyService: IDirectorSessionsPolicyService,
+ 	) {
+ 		super(undefined, action, options);
+ 		this.lastState = getAccountTitleBarState({
+@@ -203,6 +153,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 			entitlement: this.chatEntitlementService.entitlement,
+ 			sentiment: this.chatEntitlementService.sentiment,
+ 			quotas: this.chatEntitlementService.quotas,
++			directorPolicy: this.directorSessionsPolicyService.getSnapshot(),
+ 		});
+ 
+ 		this._register(this.defaultAccountService.onDidChangeDefaultAccount(() => this.refreshAccount()));
+@@ -211,6 +162,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 		this._register(this.chatEntitlementService.onDidChangeSentiment(() => this.renderState()));
+ 		this._register(this.chatEntitlementService.onDidChangeQuotaExceeded(() => this.renderState()));
+ 		this._register(this.chatEntitlementService.onDidChangeQuotaRemaining(() => this.renderState()));
++		this._register(this.directorSessionsPolicyService.onDidChangePolicySnapshot(() => this.renderState()));
+ 		this.refreshAccount();
+ 	}
+ 
+@@ -227,7 +179,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 		container.setAttribute('role', 'button');
+ 		container.tabIndex = 0;
+ 
+-		this.avatarElement = append(container, $('img.sessions-account-titlebar-widget-avatar', { alt: localize('accountAvatarAltFallback', "Account profile image"), draggable: 'false' })) as HTMLImageElement;
++		this.avatarElement = append(container, $('img.sessions-account-titlebar-widget-avatar', { alt: localize('accountAvatarAltFallback', "Director Code provider status"), draggable: 'false' })) as HTMLImageElement;
+ 		this.avatarElement.decoding = 'async';
+ 		this.avatarElement.referrerPolicy = 'no-referrer';
+ 		this.iconElement = append(container, $('.sessions-account-titlebar-widget-icon'));
+@@ -268,8 +220,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 			return;
+ 		}
+ 
+-		// When we have a session but entitlement hasn't resolved yet,
+-		// treat as Unresolved to avoid showing "Agents Signed Out".
++		// Keep the legacy entitlement object out of the Director-facing state.
+ 		const entitlement = this.accountName && this.chatEntitlementService.entitlement === ChatEntitlement.Unknown
+ 			? ChatEntitlement.Unresolved
+ 			: this.chatEntitlementService.entitlement;
+@@ -281,6 +232,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 			entitlement,
+ 			sentiment: this.chatEntitlementService.sentiment,
+ 			quotas: this.chatEntitlementService.quotas,
++			directorPolicy: this.directorSessionsPolicyService.getSnapshot(),
+ 		});
+ 		this.lastState = state;
+ 
+@@ -321,11 +273,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 	}
+ 
+ 	private getAvatarAltText(hasLoadedAvatar: boolean): string {
+-		if (hasLoadedAvatar && this.accountProviderId === 'github' && this.accountName) {
+-			return localize('accountAvatarAlt', "GitHub profile image for {0}", this.accountName);
+-		}
+-
+-		return localize('accountAvatarAltFallback', "Account profile image");
++		return localize('accountAvatarAltFallback', "Director Code provider status");
+ 	}
+ 
+ 	private refreshAvatar(): void {
+@@ -509,19 +457,9 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 			}
+ 		}
+ 
+-		// Subscription / Copilot dashboard.
++		// Director provider setup summary.
+ 		const contentSection = append(panel, $('.sessions-account-titlebar-panel-content'));
+-		if (this.shouldShowCopilotDashboardHover()) {
+-			const subscriptionId = 'sessions-account-subscription-title';
+-			const subscriptionSection = append(contentSection, $('section.sessions-account-titlebar-panel-section.subscription', { 'aria-labelledby': subscriptionId }));
+-			const subscriptionHeader = append(subscriptionSection, $('.sessions-account-titlebar-panel-section-header'));
+-			const subscriptionHeading = append(subscriptionHeader, $('div.sessions-account-titlebar-panel-section-title', { id: subscriptionId }));
+-			subscriptionHeading.textContent = localize('sessionsAccountMenu.subscription', "Subscription");
+-			// Render the dashboard's title header (plan name + manage / CTA actions)
+-			// directly into our section header row via the dashboard's public API.
+-			const dashboard = this.createCopilotHoverContent({ titleHeaderContainer: subscriptionHeader });
+-			append(subscriptionSection, dashboard);
+-		} else if (!this.isAccountLoading) {
++		if (!this.isAccountLoading) {
+ 			const summary = append(contentSection, $('.sessions-account-titlebar-panel-summary'));
+ 			summary.textContent = this.lastState.ariaLabel;
+ 		}
+@@ -548,7 +486,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 				pushSeparator();
+ 				continue;
+ 			}
+-			if (action.id === SIGN_OUT_ACTION_ID) {
++			if (action.id === LEGACY_SIGN_OUT_ACTION_ID) {
+ 				signOut = action;
+ 				continue;
+ 			}
+@@ -621,10 +559,10 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 		}
+ 
+ 		if (this.isAccountLoading) {
+-			return localize('loadingAccountHeader', "Loading Account...");
++			return localize('loadingDirectorSetupHeader', "Loading Director Setup...");
+ 		}
+ 
+-		return localize('accountMenuHeaderFallback', "Account");
++		return localize('directorCodeHeaderFallback', "Director Code");
+ 	}
+ 
+ 	private getHeaderActionIcon(action: IAction): ThemeIcon {
+@@ -633,7 +571,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 				return Codicon.symbolColor;
+ 			case 'workbench.action.openSettings':
+ 				return Codicon.settingsGear;
+-			case SIGN_OUT_ACTION_ID:
++			case LEGACY_SIGN_OUT_ACTION_ID:
+ 				return Codicon.signOut;
+ 			default:
+ 				return Codicon.circleLargeFilled;
+@@ -653,31 +591,6 @@ class TitleBarAccountWidget extends BaseActionViewItem {
+ 		}
+ 	}
+ 
+-	private shouldShowCopilotDashboardHover(): boolean {
+-		return !this.chatEntitlementService.sentiment.hidden && !!this.accountName;
+-	}
+-
+-	private createCopilotHoverContent(extraOptions?: Partial<IChatStatusDashboardOptions>): HTMLElement {
+-		const store = new DisposableStore();
+-		this.copilotDashboardStore.value = store;
+-		const dashboardElement = ChatStatusDashboard.instantiateInContents(this.instantiationService, store, {
+-			disableInlineSuggestionsSettings: true,
+-			disableModelSelection: true,
+-			disableProviderOptions: true,
+-			disableCompletionsSnooze: true,
+-			disableQuickSettingsCollapsible: true,
+-			disableContributedSectionsCollapsible: true,
+-			...extraOptions,
+-		});
+-
+-		store.add(disposableWindowInterval(mainWindow, () => {
+-			if (!dashboardElement.isConnected) {
+-				store.dispose();
+-			}
+-		}, 2000));
+-
+-		return dashboardElement;
+-	}
+ }
+ 
+ // --- Register custom view item --- //
+@@ -689,7 +602,7 @@ registerAction2(class extends Action2 {
+ 	constructor() {
+ 		super({
+ 			id: SessionsTitleBarAccountWidgetAction,
+-			title: localize2('agentsAccountStatusTitleBar', "Agents Account and Status"),
++			title: localize2('agentsDirectorStatusTitleBar', "Director Code Setup and Status"),
+ 			menu: {
+ 				id: Menus.TitleBarRightLayout,
+ 				group: 'navigation',
+@@ -725,25 +638,8 @@ registerWorkbenchContribution2(AccountWidgetContribution.ID, AccountWidgetContri
+ class ChatDashboardServiceImpl implements IChatDashboardService {
+ 	readonly _serviceBrand: undefined;
+ 
+-	constructor(
+-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+-	) { }
+-
+ 	createDashboardElement(store: DisposableStore): HTMLElement | undefined {
+-		const dashboardElement = ChatStatusDashboard.instantiateInContents(this.instantiationService, store, {
+-			disableInlineSuggestionsSettings: true,
+-			disableModelSelection: true,
+-			disableProviderOptions: true,
+-			disableCompletionsSnooze: true,
+-		});
+-
+-		store.add(disposableWindowInterval(mainWindow, () => {
+-			if (!dashboardElement.isConnected) {
+-				store.dispose();
+-			}
+-		}, 2000));
+-
+-		return dashboardElement;
++		return undefined;
+ 	}
+ }
+ 
+diff --git a/src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts b/src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts
+index 134642056688ca406c7038e294a5687515aa068e..48c33d8e222d1697a550ccdc4795aa6fd414a7e9 100644
+--- a/src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts
++++ b/src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts
+@@ -33,7 +33,7 @@ import { ILanguageModelsService } from '../../../../workbench/contrib/chat/commo
+ import { buildMutableConfigSchema, IAgentHostSessionsProvider, resolvedConfigsEqual } from '../../../common/agentHostSessionsProvider.js';
+ import { agentHostSessionWorkspaceKey } from '../../../common/agentHostSessionWorkspace.js';
+ import { isSessionConfigComplete } from '../../../common/sessionConfig.js';
+-import { CopilotCLISessionType, IChat, IGitHubInfo, ISession, ISessionChangeset, ISessionType, ISessionWorkspace, ISessionWorkspaceBrowseAction, sessionFileChangesEqual, SessionStatus, toSessionId } from '../../../services/sessions/common/session.js';
++import { CopilotCLISessionType, IChat, type IDirectorSessionsPolicySnapshot, IGitHubInfo, ISession, ISessionChangeset, ISessionType, ISessionWorkspace, ISessionWorkspaceBrowseAction, sessionFileChangesEqual, SessionStatus, toSessionId } from '../../../services/sessions/common/session.js';
+ import { ISendRequestOptions, ISessionChangeEvent } from '../../../services/sessions/common/sessionsProvider.js';
+ import { computePullRequestIcon } from '../../github/common/types.js';
+ import { IGitHubService } from '../../github/browser/githubService.js';
+@@ -766,6 +766,8 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 	private readonly _sessionStateIdleTimers = this._register(new DisposableMap<string, IDisposable>());
+ 
+ 	protected _cacheInitialized = false;
++	private _directorSessionsPolicySnapshot: IDirectorSessionsPolicySnapshot | undefined;
++	private _lastRootState: RootState | undefined;
+ 
+ 	constructor(
+ 		@IChatSessionsService protected readonly _chatSessionsService: IChatSessionsService,
+@@ -779,6 +781,20 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 		super();
+ 	}
+ 
++	protected _setDirectorSessionsPolicySnapshot(snapshot: IDirectorSessionsPolicySnapshot, notify = true): void {
++		const changed = JSON.stringify(this._directorSessionsPolicySnapshot) !== JSON.stringify(snapshot);
++		this._directorSessionsPolicySnapshot = snapshot;
++		if (!changed || !notify) {
++			return;
++		}
++		if (this._lastRootState) {
++			this._syncSessionTypesFromRootState(this._lastRootState);
++		} else {
++			this._onDidChangeSessionTypes.fire();
++		}
++		void this._refreshSessions();
++	}
++
+ 	// -- Subclass hooks -------------------------------------------------------
+ 
+ 	/** Current connection (always present for local; may be undefined while disconnected for remote). */
+@@ -830,11 +846,17 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 	 * id/label set actually changed.
+ 	 */
+ 	protected _syncSessionTypesFromRootState(rootState: RootState): void {
+-		const next = rootState.agents.map((agent): ISessionType => ({
+-			id: agent.provider,
+-			label: this._formatSessionTypeLabel(agent.displayName?.trim() || agent.provider),
+-			icon: this.iconForAgentProvider(agent.provider) ?? this.icon,
+-		}));
++		this._lastRootState = rootState;
++		const next = rootState.agents
++			.filter(agent => this._isDirectorVisibleAgentProvider(agent.provider))
++			.map((agent): ISessionType => {
++				const fallbackLabel = this._formatSessionTypeLabel(agent.displayName?.trim() || agent.provider);
++				return {
++					id: agent.provider,
++					label: this._getDirectorVisibleSessionTypeLabel(agent.provider, fallbackLabel),
++					icon: this.iconForAgentProvider(agent.provider) ?? this.icon,
++				};
++			});
+ 
+ 		const prev = this._sessionTypes;
+ 		if (prev.length === next.length && prev.every((t, i) => t.id === next[i].id && t.label === next[i].label)) {
+@@ -864,6 +886,49 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 		return undefined;
+ 	}
+ 
++	protected _isDirectorVisibleAgentProvider(provider: string): boolean {
++		const snapshot = this._directorSessionsPolicySnapshot;
++		if (!snapshot) {
++			return false;
++		}
++		if (this._isRawCopilotSessionType(provider)) {
++			return false;
++		}
++		if (this._isClaudeSessionType(provider)) {
++			return snapshot.canCreateClaudeCode || snapshot.showSetupGatedClaudeCode;
++		}
++		return true;
++	}
++
++	protected _assertDirectorCanCreateSessionType(sessionTypeId: string): void {
++		const snapshot = this._directorSessionsPolicySnapshot;
++		if (!snapshot) {
++			throw new Error(localize('directorPolicyUnavailableBlocksAgentHostSession', "Director policy is not available for AgentHost session type '{0}'.", sessionTypeId));
++		}
++		if (this._isRawCopilotSessionType(sessionTypeId)) {
++			throw new Error(localize('directorPolicyBlocksAgentHostSession', "Director policy blocks AgentHost session type '{0}'.", sessionTypeId));
++		}
++		if (this._isClaudeSessionType(sessionTypeId) && !snapshot.canCreateClaudeCode) {
++			throw new Error(snapshot.setupRequiredMessage);
++		}
++	}
++
++	private _getDirectorVisibleSessionTypeLabel(sessionTypeId: string, fallbackLabel: string): string {
++		if (this._isClaudeSessionType(sessionTypeId) && !this._directorSessionsPolicySnapshot?.canCreateClaudeCode) {
++			return localize('directorAgentHostClaudeSetupRequiredLabel', "{0} (setup required)", fallbackLabel);
++		}
++		return fallbackLabel;
++	}
++
++	private _isRawCopilotSessionType(sessionTypeId: string): boolean {
++		const lowered = sessionTypeId.toLowerCase();
++		return lowered === CopilotCLISessionType.id || lowered.includes('copilot');
++	}
++
++	private _isClaudeSessionType(sessionTypeId: string): boolean {
++		return sessionTypeId.toLowerCase().includes('claude');
++	}
++
+ 	/**
+ 	 * Reconcile {@link _rootConfig} against {@link RootState.config}, firing
+ 	 * {@link onDidChangeRootConfig} only when schema or values actually change.
+@@ -944,6 +1009,7 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 		if (!workspaceUri) {
+ 			throw new Error('Workspace has no repository URI');
+ 		}
++		this._assertDirectorCanCreateSessionType(sessionTypeId);
+ 
+ 		const sessionType = this.sessionTypes.find(t => t.id === sessionTypeId);
+ 		if (!sessionType) {
+@@ -1607,6 +1673,9 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 
+ 			for (const meta of sessions) {
+ 				const rawId = AgentSession.id(meta.session);
++				if (!this._isDirectorVisibleAgentProvider(AgentSession.provider(meta.session) ?? '')) {
++					continue;
++				}
+ 				currentKeys.add(rawId);
+ 
+ 				const existing = this._sessionCache.get(rawId);
+@@ -1704,6 +1773,9 @@ export abstract class BaseAgentHostSessionsProvider extends Disposable implement
+ 	private _handleSessionAdded(summary: SessionSummary): void {
+ 		const sessionUri = URI.parse(summary.resource);
+ 		const rawId = AgentSession.id(sessionUri);
++		if (!this._isDirectorVisibleAgentProvider(AgentSession.provider(sessionUri) ?? '')) {
++			return;
++		}
+ 		if (this._sessionCache.has(rawId)) {
+ 			return;
+ 		}
+diff --git a/src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts b/src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts
+index f307eb2d35cab52205b604d82a5069a51bdf6d46..b134390f836745e1a45ab27298fe5d7f8ebda3ef 100644
+--- a/src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts
++++ b/src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts
+@@ -26,6 +26,7 @@ import { ISessionWorkspace, ISessionWorkspaceBrowseAction, SESSION_WORKSPACE_GRO
+ import { toAgentHostUri } from '../../../../platform/agentHost/common/agentHostUri.js';
+ import { LOCAL_AGENT_HOST_PROVIDER_ID } from '../../../common/agentHostSessionsProvider.js';
+ import { IGitHubService } from '../../github/browser/githubService.js';
++import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ 
+ const LOCAL_RESOURCE_SCHEME_PREFIX = 'agent-host-';
+ 
+@@ -58,8 +59,11 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
+ 		@IConfigurationService private readonly _configurationService: IConfigurationService,
+ 		@ILogService logService: ILogService,
+ 		@IGitHubService gitHubService: IGitHubService,
++		@IDirectorSessionsPolicyService directorSessionsPolicyService: IDirectorSessionsPolicyService,
+ 	) {
+ 		super(chatSessionsService, chatService, chatWidgetService, languageModelsService, _configurationService, logService, gitHubService);
++		this._setDirectorSessionsPolicySnapshot(directorSessionsPolicyService.getSnapshot(), false);
++		this._register(directorSessionsPolicyService.onDidChangePolicySnapshot(snapshot => this._setDirectorSessionsPolicySnapshot(snapshot)));
+ 
+ 		this.label = localize('localAgentHostLabel', "Local Agent Host");
+ 
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
 index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06bd9a8bd1d 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
@@ -54,6 +1046,227 @@ index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06b
  		},
  		[LOCAL_SESSION_ENABLED_SETTING]: {
  			type: 'boolean',
+diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
+index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..c3e02c53b545143bb1bfae6237f3b021939d196d 100644
+--- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
++++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
+@@ -46,6 +46,7 @@ import { IFileService } from '../../../../platform/files/common/files.js';
+ import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+ import { IGitHubService } from '../../github/browser/githubService.js';
+ import { computePullRequestIcon, GitHubPullRequestState } from '../../github/common/types.js';
++import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ 
+ const SESSION_WORKSPACE_GROUP_GITHUB = localize('sessionWorkspaceGroup.github', "GitHub");
+ const STORAGE_KEY_ISOLATION_MODE = 'sessions.isolationPicker.selectedMode';
+@@ -1512,23 +1513,23 @@ class AgentSessionAdapter implements ICopilotChatSession {
+ }
+ 
+ /**
+- * Default sessions provider for Copilot CLI, Cloud, Claude, and Local session types.
++ * Director sessions provider for local chat and setup-gated external agents.
+  * Wraps the existing session infrastructure into the extensible provider model.
+  */
+ export class CopilotChatSessionsProvider extends Disposable implements ISessionsProvider {
+ 
+ 	readonly id = COPILOT_PROVIDER_ID;
+-	readonly label = localize('copilotChatSessionsProvider', "Copilot Chat");
+-	readonly icon = Codicon.copilot;
++	readonly label = localize('directorChatSessionsProvider', "Director Chat");
++	readonly icon = Codicon.robot;
+ 	get sessionTypes(): readonly ISessionType[] {
+-		const types: ISessionType[] = [CopilotCLISessionType, CopilotCloudSessionType];
++		const types: ISessionType[] = [];
+ 		if (this._localSessionEnabled) {
+ 			types.push(LocalSessionType);
+ 		}
+ 		if (this._claudeEnabled) {
+ 			types.push(ClaudeCodeSessionType);
+ 		}
+-		return types;
++		return this._applyDirectorSessionPolicy(types);
+ 	}
+ 
+ 	private readonly _onDidChangeSessionTypes = this._register(new Emitter<void>());
+@@ -1582,6 +1583,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		@ILogService private readonly logService: ILogService,
+ 		@IGitHubService private readonly gitHubService: IGitHubService,
+ 		@ILabelService private readonly labelService: ILabelService,
++		@IDirectorSessionsPolicyService private readonly directorSessionsPolicyService: IDirectorSessionsPolicyService,
+ 	) {
+ 		super();
+ 
+@@ -1607,6 +1609,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 				}
+ 			}
+ 		}));
++		this._register(this.directorSessionsPolicyService.onDidChangePolicySnapshot(() => {
++			this._onDidChangeSessionTypes.fire();
++			this._refreshSessionCache();
++		}));
+ 
+ 		this.browseActions = [
+ 			{
+@@ -1628,23 +1634,25 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 
+ 	getSessionTypes(workspaceUri: URI): ISessionType[] {
+ 		if (workspaceUri.scheme === GITHUB_REMOTE_FILE_SCHEME || workspaceUri.scheme === SessionType.CopilotCloud) {
+-			return [CopilotCloudSessionType];
++			return this._applyDirectorSessionPolicy([CopilotCloudSessionType]);
+ 		}
+-		const types: ISessionType[] = [CopilotCLISessionType];
++		const types: ISessionType[] = [];
+ 		if (this._localSessionEnabled) {
+ 			types.push(LocalSessionType);
+ 		}
+ 		if (this._claudeEnabled) {
+ 			types.push(ClaudeCodeSessionType);
+ 		}
+-		return types;
++		return this._applyDirectorSessionPolicy(types);
+ 	}
+ 
+ 	getSessions(): ISession[] {
+ 		this._ensureSessionCache();
+ 
+ 		if (!this._isMultiChatEnabled()) {
+-			return Array.from(this._sessionCache.values()).map(chat => this._chatToSession(chat));
++			return Array.from(this._sessionCache.values())
++				.filter(chat => this._isDirectorVisibleSessionType(chat.sessionType))
++				.map(chat => this._chatToSession(chat));
+ 		}
+ 
+ 		const allChats = Array.from(this._sessionCache.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+@@ -1654,6 +1662,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		const sessions: ISession[] = [];
+ 
+ 		for (const chat of allChats) {
++			if (!this._isDirectorVisibleSessionType(chat.sessionType)) {
++				continue;
++			}
+ 			const groupId = this._getGroupIdForChat(chat);
+ 			if (!seen.has(groupId)) {
+ 				seen.add(groupId);
+@@ -1679,6 +1690,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 			this._currentNewSession.dispose();
+ 			this._currentNewSession = undefined;
+ 		}
++		this._assertCanCreateDirectorSessionType(sessionTypeId);
+ 
+ 		const workspace = this.resolveWorkspace(workspaceUri);
+ 		if (!workspace) {
+@@ -1717,6 +1729,35 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		return this._chatToSession(session);
+ 	}
+ 
++	private _applyDirectorSessionPolicy(types: readonly ISessionType[]): ISessionType[] {
++		return types
++			.filter(type => this._isDirectorVisibleSessionType(type.id))
++			.map(type => ({
++				...type,
++				label: this.directorSessionsPolicyService.getVisibleSessionTypeLabel(type.id, type.label),
++			}));
++	}
++
++	private _isDirectorVisibleSessionType(sessionTypeId: string): boolean {
++		return this.directorSessionsPolicyService.isSessionTypeVisible(sessionTypeId, {
++			claudeCodeAvailable: this._claudeEnabled,
++		});
++	}
++
++	private _assertCanCreateDirectorSessionType(sessionTypeId: string): void {
++		try {
++			this.directorSessionsPolicyService.assertCanCreateSessionType(sessionTypeId);
++		} catch (error) {
++			if (sessionTypeId.toLowerCase().includes('claude')) {
++				const { setupCommandId } = this.directorSessionsPolicyService.getSnapshot();
++				void this.commandService.executeCommand(setupCommandId).catch(commandError => {
++					this.logService.warn('[DirectorSessionsPolicy] Failed to open setup for blocked Claude session', commandError);
++				});
++			}
++			throw error;
++		}
++	}
++
+ 	setModel(sessionId: string, modelId: string): void {
+ 		if (this._currentNewSession?.id === sessionId) {
+ 			this._currentNewSession.setModelId(modelId);
+diff --git a/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts b/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts
+index e2922f47ceaf0b7b5c02f8669a840c1662a12576..beab636a3308a7ee00139cd93854ac1efff762a7 100644
+--- a/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts
++++ b/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts
+@@ -27,6 +27,7 @@ import { Button } from '../../../../base/browser/ui/button/button.js';
+ import { defaultButtonStyles } from '../../../../platform/theme/browser/defaultStyles.js';
+ import { IEditorService } from '../../../../workbench/services/editor/common/editorService.js';
+ import { AICustomizationManagementSection } from '../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js';
++import { SessionType } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
+ import { ICustomizationHarnessService } from '../../../../workbench/contrib/chat/common/customizationHarnessService.js';
+ import { ISession } from '../../../services/sessions/common/session.js';
+ import { ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
+@@ -325,16 +326,16 @@ registerWorkbenchContribution2(CustomizationsToolbarContribution.ID, Customizati
+  */
+ export function findHarnessIdForSession(session: ISession | undefined, harnessService: ICustomizationHarnessService): string | undefined {
+ 	if (!session) {
+-		return undefined;
++		return harnessService.findHarnessById(SessionType.Local) ? SessionType.Local : undefined;
+ 	}
+ 	const schemeId = session.resource.scheme;
+-	if (harnessService.findHarnessById(schemeId)) {
++	if ((schemeId.startsWith('agent-host-') || schemeId.startsWith('remote-')) && harnessService.findHarnessById(schemeId)) {
+ 		return schemeId;
+ 	}
+ 	if (harnessService.findHarnessById(session.sessionType)) {
+ 		return session.sessionType;
+ 	}
+-	return undefined;
++	return harnessService.findHarnessById(SessionType.Local) ? SessionType.Local : undefined;
+ }
+ 
+ /**
+@@ -360,9 +361,6 @@ export class ActiveSessionHarnessSyncContribution extends Disposable implements
+ 
+ 		this._register(autorun(reader => {
+ 			const session = sessionsManagementService.activeSession.read(reader);
+-			if (!session) {
+-				return;
+-			}
+ 			// Re-read available harnesses so we re-run when an external harness
+ 			// (e.g. agent host, CLI) registers asynchronously after the session
+ 			// has already been selected.
+diff --git a/src/vs/sessions/services/sessions/common/session.ts b/src/vs/sessions/services/sessions/common/session.ts
+index b6dbcb4646e942f38cf9682e5b088d25bf552d7c..0ec3305d7882d4ab317af1ccbdb6e984e1dc3bec 100644
+--- a/src/vs/sessions/services/sessions/common/session.ts
++++ b/src/vs/sessions/services/sessions/common/session.ts
+@@ -22,6 +22,19 @@ export interface ISessionType {
+ 	readonly icon: ThemeIcon;
+ }
+ 
++export interface IDirectorSessionsPolicySnapshot {
++	readonly status: 'ready' | 'setupRequired';
++	readonly label: string;
++	readonly ariaLabel: string;
++	readonly hasDirectorProvider: boolean;
++	readonly hasReadyDirectorProvider: boolean;
++	readonly hasEligibleAnthropicProvider: boolean;
++	readonly canCreateClaudeCode: boolean;
++	readonly showSetupGatedClaudeCode: boolean;
++	readonly setupCommandId: string;
++	readonly setupRequiredMessage: string;
++}
++
+ /** Session type ID for local Copilot CLI sessions. */
+ export const COPILOT_CLI_SESSION_TYPE = 'copilotcli';
+ 
+@@ -58,8 +71,8 @@ export const LOCAL_SESSION_TYPE = 'local';
+ /** Local session type — in-process VS Code chat, no background agent or worktree. */
+ export const LocalSessionType: ISessionType = {
+ 	id: LOCAL_SESSION_TYPE,
+-	label: localize('localSession', "Local"),
+-	icon: Codicon.vm,
++	label: localize('directorAgentSession', "Director Agent"),
++	icon: Codicon.robot,
+ };
+ 
+ /**
 diff --git a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts b/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts
 index 1c1e72015573dadab5c602921c6f4444ade66841..142d44a909d5ed6c20f08c21b2bd7a255ac72dc1 100644
 --- a/src/vs/workbench/contrib/chat/browser/actions/chatActions.ts

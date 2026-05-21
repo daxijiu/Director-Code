@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>120 Agents Window Wave 3 两项调研汇报</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --ink: #17202a;
+      --muted: #5e6a78;
+      --line: #d9dee7;
+      --soft: #edf2f7;
+      --accent: #176b87;
+      --accent-2: #8a5a00;
+      --good: #1f7a4d;
+      --warn: #a15c00;
+      --code: #202938;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.58;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    header {
+      padding: 26px 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+
+    li { margin: 6px 0; }
+
+    code {
+      color: var(--code);
+      background: #eef1f5;
+      border: 1px solid #dfe4eb;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.92em;
+      overflow-wrap: anywhere;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    section, .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #eef7fa;
+      padding: 14px 16px;
+      margin: 14px 0 0;
+      border-radius: 6px;
+    }
+
+    .decision {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 650;
+      color: var(--good);
+      margin-bottom: 8px;
+    }
+
+    .warn {
+      color: var(--warn);
+      font-weight: 650;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 2px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 5px 10px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .flow {
+      margin: 14px 0 2px;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fbfcfe;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 650;
+      background: #fafbfc;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 820px) {
+      main {
+        width: min(100% - 18px, 1120px);
+        padding-top: 14px;
+      }
+
+      header, section, .card {
+        padding: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead { display: none; }
+
+      tr {
+        border-bottom: 1px solid var(--line);
+        padding: 8px 0;
+      }
+
+      td {
+        border: 0;
+        padding: 6px 0;
+      }
+
+      td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>120 Agents Window Wave 3 两项调研汇报</h1>
+      <p class="meta">日期：2026-05-20｜范围：path ownership 与 custom headers / Claude proxy 边界｜性质：只读调研汇总</p>
+      <div class="callout">
+        <p><strong>总判断：</strong>这两个点都不需要继续卡成 open decision。Path ownership 不需要大范围接管上游目录；custom headers 是 Director Provider Registry 既有安全边界问题，Claude Agent v1 只需要确保 secrets 不跨进 AgentHost。</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section>
+        <div class="decision">结论 1：Path Ownership</div>
+        <h2>不要 broad-prefix 大目录</h2>
+        <p>不建议把 replay 分类 broad 到 <code>src/vs/sessions/**</code> 或 <code>src/vs/platform/agentHost/**</code>。当前工作是桥接和适配，不是接管整棵上游 surface。</p>
+        <div class="pill-row">
+          <span class="pill">保留 004 / 005</span>
+          <span class="pill">exact allowlist 为主</span>
+          <span class="pill">narrow adapter island</span>
+        </div>
+      </section>
+
+      <section>
+        <div class="decision">结论 2：Custom Headers</div>
+        <h2>不是 Claude 新问题</h2>
+        <p>Custom headers 已经是 Director Provider Registry 的既有能力，也已经被普通 Director chat 使用。Claude AgentHost 会扩大暴露面，所以 v1 的关键是不要把 raw header/key/token 传进 AgentHost。</p>
+        <div class="pill-row">
+          <span class="pill">既有 Registry 风险</span>
+          <span class="pill">Claude 用 proxy 边界隔离</span>
+          <span class="pill">SecretStorage 迁移后续跟踪</span>
+        </div>
+      </section>
+    </div>
+
+    <section>
+      <h2>一、Path Ownership 调研结果</h2>
+      <p>当前 <code>generate-director-patches.mjs</code> 对 AgentHost 和 Agents Window 的覆盖很窄：已有 <code>005</code> 覆盖 workbench 的 <code>agentSessions/**</code>，但 <code>vs/sessions</code> 只显式覆盖少量文件；<code>004</code> 对 platform AgentHost 也基本没有覆盖生产 Claude runtime。</p>
+
+      <h3>推荐分类策略</h3>
+      <ul>
+        <li>继续使用现有 <code>004-director-agent-engine.120-insider.patch</code> 和 <code>005-director-chat-built-in-mode.120-insider.patch</code>。</li>
+        <li>不要新增 Wave3 专用 patch stage。</li>
+        <li>不要 broad 到 <code>src/vs/sessions/**</code>，因为它混有 account、setup、Copilot provider、AgentHost provider、remote/tunnel、session service、customization 等多个上游面。</li>
+        <li>不要 broad 到 <code>src/vs/platform/agentHost/**</code>，因为它混有 common protocol、node runtime、Electron starter、Claude adapter、shared CAPI、mock/test 等多类内容。</li>
+        <li>允许窄前缀：<code>src/vs/platform/agentHost/node/claude/**</code> 进 <code>004</code>；如果新增 Director bridge，可用 <code>src/vs/platform/agentHost/node/director/**</code>；如果新增 Director sessions facade，可用 <code>src/vs/sessions/contrib/directorSessions/**</code>。</li>
+      </ul>
+
+      <h3>预计路径落点</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Replay stage</th>
+            <th>策略</th>
+            <th>预计路径</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Replay stage"><code>005</code></td>
+            <td data-label="策略">exact allowlist</td>
+            <td data-label="预计路径"><code>copilotChatSessionsProvider.ts</code>、<code>account.contribution.ts</code>、<code>sessionsSetUpService.ts</code>、<code>baseAgentHostSessionsProvider.ts</code>、<code>localAgentHostSessionsProvider.ts</code>、<code>localAgentHost.contribution.ts</code>、必要的 sessions service 文件。</td>
+          </tr>
+          <tr>
+            <td data-label="Replay stage"><code>004</code></td>
+            <td data-label="策略">exact allowlist</td>
+            <td data-label="预计路径"><code>agentHostMain.ts</code>、<code>agentHostServerMain.ts</code>、<code>agentService.ts</code>、<code>agentSideEffects.ts</code>、<code>common/agentService.ts</code>、<code>electronAgentHostStarter.ts</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="Replay stage"><code>004</code></td>
+            <td data-label="策略">narrow prefix</td>
+            <td data-label="预计路径"><code>src/vs/platform/agentHost/node/claude/**</code>。这是 Claude adapter island，边界清楚，适合窄前缀。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <p><strong>执行影响：</strong>Segment 0 仍然要更新 <code>generate-director-patches.mjs</code>，但更新方式应克制。不要为了省事把整个上游 sessions/AgentHost 树变成 Director-owned。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>二、Custom Headers / Claude Proxy 调研结果</h2>
+      <p>VS Code 120 的 Claude AgentHost 形态确实是本地 proxy：Claude SDK / Claude Code 只连本地 Anthropic-compatible proxy；proxy 再连真实后端。上游真实后端是 Copilot/CAPI。Director 应该复用这个壳，把 proxy outbound 换成 Director Provider Registry。</p>
+
+      <div class="flow">VS Code 120:
+Claude SDK / Claude Code
+  -> local Anthropic-compatible proxy on 127.0.0.1
+  -> Copilot/CAPI
+
+Director Wave3 v1:
+Claude SDK / Claude Code
+  -> Director local proxy
+  -> Director Provider Registry selected Anthropic/Anthropic-compatible provider</div>
+
+      <h3>最小实现形态</h3>
+      <ul>
+        <li>复用 Claude SDK path 行为：用户安装/配置 Claude Code 后出现相关选项，保持 VS Code 语义。</li>
+        <li>恢复或重做生产 Claude AgentHost 注册，但注册的是 Director-compatible 后端。</li>
+        <li>保留 <code>ClaudeAgent</code>、<code>ClaudeAgentSdkService</code>、session lifecycle、event rendering、permission UI 等上游行为。</li>
+        <li>替换 <code>ICopilotApiService</code> / CAPI outbound，改成 Director-owned Anthropic Messages transport/proxy。</li>
+        <li>proxy 按 session 绑定 provider snapshot：session id、provider instance、model、base URL、headers、auth 都在 Director proxy 边界内解析。</li>
+        <li>SDK-visible model id 和 Director routing id 分开。不要把 <code>director-code/&lt;instance&gt;/&lt;model&gt;</code> 直接塞给 Claude SDK。</li>
+      </ul>
+
+      <h3>Custom headers 的判断</h3>
+      <p>Custom headers 不是 Claude Agent 新引入的问题。当前 Provider Registry 已有 <code>headers</code> 字段，Provider Settings UI 已支持输入，普通 Director chat/model provider 也会使用这些 headers。</p>
+      <p class="warn">风险在于：这些 headers 现在作为普通 registry state 持久化，并且可能覆盖内建认证头。</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>问题</th>
+            <th>结论</th>
+            <th>Wave3 v1 处理</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="问题">是否要先全量迁 SecretStorage</td>
+            <td data-label="结论">不作为 Claude bridge 的前置条件</td>
+            <td data-label="Wave3 v1 处理">单独跟踪 Provider Registry hardening。</td>
+          </tr>
+          <tr>
+            <td data-label="问题">headers/key/token 是否能进 AgentHost</td>
+            <td data-label="结论">不能</td>
+            <td data-label="Wave3 v1 处理">AgentHost/SDK 只拿 local proxy URL + opaque bearer/nonce。</td>
+          </tr>
+          <tr>
+            <td data-label="问题">真实 provider URL/key/headers 在哪里解析</td>
+            <td data-label="结论">Director proxy 内部</td>
+            <td data-label="Wave3 v1 处理">proxy 内按 session-bound provider snapshot 发请求。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <p><strong>执行影响：</strong>Claude bridge v1 不需要先重构整个 Provider Registry secret 模型，但必须保证不把 raw custom headers、API key、OAuth token、env credential 或 provider baseURL 放进 AgentHost root state、session config、model metadata、session index 或日志。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>对执行计划的最终落点</h2>
+      <ul>
+        <li>两个原 open decisions 已经收敛，不再阻塞第一批实现。</li>
+        <li>Segment 0 先做 replay path classification，但分类策略是 exact allowlist + narrow adapter island。</li>
+        <li>Segment 3/4 维持 VS Code proxy 形态，不做 Director 自己的一套 Claude runtime。</li>
+        <li>Provider Registry custom headers hardening 作为后续安全任务，不混进 Claude AgentHost v1 的主线。</li>
+        <li>Customization 和 Claude history/restore 的方向保持：以 VS Code 等价行为为基线，只在 Provider/Auth/Proxy/UI 接入上 Director 化。</li>
+      </ul>
+    </section>
+
+    <footer>
+      关联文档：agents-window-wave3-open-decisions-research.md；agents-window-wave3-execution-plan.md
+    </footer>
+  </main>
+</body>
+</html>

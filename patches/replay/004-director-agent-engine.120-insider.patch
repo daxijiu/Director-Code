@@ -12462,10 +12462,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..4ba8ee4601e3203b29745fd26b0a18137a0cce49
+index 0000000000000000000000000000000000000000..4c3734bcb8822a54378d6a49d1ac542ac39296a2
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,547 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12519,6 +12519,7 @@ index 0000000000000000000000000000000000000000..4ba8ee4601e3203b29745fd26b0a1813
 +import { IAuthStateService, AuthStateService } from '../../common/agentEngine/authStateService.js';
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
 +import { DIRECTOR_LANGUAGE_MODEL_VENDOR, IDirectorProviderRegistryService, DirectorProviderRegistryService } from '../../common/agentEngine/providerRegistry.js';
++import { DirectorSessionsPolicyService, IDirectorSessionsPolicyService } from '../../common/agentEngine/directorSessionsPolicy.js';
 +import { syncDirectorProviderGroupProjection } from '../../common/agentEngine/providerGroupProjection.js';
 +import {
 +	createApprovedPlanExecutionPrompt,
@@ -12544,6 +12545,7 @@ index 0000000000000000000000000000000000000000..4ba8ee4601e3203b29745fd26b0a1813
 +registerSingleton(IModelResolverService, new SyncDescriptor(ModelResolverService, [], true));
 +registerSingleton(IDirectorPlanModeService, new SyncDescriptor(DirectorPlanModeService, [], true));
 +registerSingleton(IDirectorProviderRegistryService, new SyncDescriptor(DirectorProviderRegistryService, [], true));
++registerSingleton(IDirectorSessionsPolicyService, new SyncDescriptor(DirectorSessionsPolicyService, [], true));
 +
 +// ============================================================================
 +// Configuration Registration
@@ -22121,6 +22123,212 @@ index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea
 +export const DirectorPlanToolData = [
 +	DirectorPresentPlanToolData,
 +] as const;
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f801dd1ebeb92f5cdfdca622d4c4c191fa60e36b
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts
+@@ -0,0 +1,200 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { Emitter, Event } from '../../../../../base/common/event.js';
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
++import { ILogService } from '../../../../../platform/log/common/log.js';
++import { localize } from '../../../../../nls.js';
++import type { IDirectorSessionsPolicySnapshot } from '../../../../../sessions/services/sessions/common/session.js';
++import { providerToApiType } from './apiKeyService.js';
++import { IAuthStateService } from './authStateService.js';
++import { IDirectorProviderRegistryService, type IDirectorProviderInstance } from './providerRegistry.js';
++
++const COPILOT_CLI_SESSION_TYPE = 'copilotcli';
++const COPILOT_CLOUD_SESSION_TYPE = 'copilot-cloud-agent';
++const CLAUDE_CODE_SESSION_TYPE = 'claude-code';
++
++const DIRECTOR_OPEN_SETTINGS_COMMAND_ID = 'director-code.openSettings';
++
++export interface IDirectorSessionsPolicySessionOptions {
++	readonly claudeCodeAvailable?: boolean;
++}
++
++export const IDirectorSessionsPolicyService = createDecorator<IDirectorSessionsPolicyService>('directorSessionsPolicyService');
++
++export interface IDirectorSessionsPolicyService {
++	readonly _serviceBrand: undefined;
++	readonly onDidChangePolicySnapshot: Event<IDirectorSessionsPolicySnapshot>;
++	getSnapshot(): IDirectorSessionsPolicySnapshot;
++	refresh(): Promise<IDirectorSessionsPolicySnapshot>;
++	isSessionTypeVisible(sessionTypeId: string, options?: IDirectorSessionsPolicySessionOptions): boolean;
++	getVisibleSessionTypeLabel(sessionTypeId: string, fallbackLabel: string): string;
++	assertCanCreateSessionType(sessionTypeId: string): void;
++}
++
++function createSnapshot(options: {
++	readonly hasDirectorProvider: boolean;
++	readonly hasReadyDirectorProvider: boolean;
++	readonly hasEligibleAnthropicProvider: boolean;
++}): IDirectorSessionsPolicySnapshot {
++	const setupRequired = !options.hasReadyDirectorProvider;
++	return {
++		status: setupRequired ? 'setupRequired' : 'ready',
++		label: setupRequired
++			? localize('directorSessionsSetupLabel', "Director Setup")
++			: localize('directorSessionsReadyLabel', "Director Code"),
++		ariaLabel: setupRequired
++			? localize('directorSessionsSetupAria', "Configure Director Code providers")
++			: localize('directorSessionsReadyAria', "Director Code providers are configured"),
++		hasDirectorProvider: options.hasDirectorProvider,
++		hasReadyDirectorProvider: options.hasReadyDirectorProvider,
++		hasEligibleAnthropicProvider: options.hasEligibleAnthropicProvider,
++		// Segment 1 is only the safety facade. Claude runtime is enabled by the
++		// later Director AgentHost provider/proxy bridge, so creation stays closed.
++		canCreateClaudeCode: false,
++		showSetupGatedClaudeCode: true,
++		setupCommandId: DIRECTOR_OPEN_SETTINGS_COMMAND_ID,
++		setupRequiredMessage: !options.hasReadyDirectorProvider
++			? localize('directorSessionsSetupRequired', "Configure an enabled Director provider and credential before starting agent sessions.")
++			: !options.hasEligibleAnthropicProvider
++				? localize('directorSessionsClaudeSetupRequired', "Configure an enabled Anthropic or Anthropic-compatible Director provider before starting Claude Agent sessions.")
++				: localize('directorSessionsBridgeRequired', "Claude Agent sessions require the Director AgentHost provider bridge before they can start."),
++	};
++}
++
++function isClaudeSessionType(sessionTypeId: string): boolean {
++	const lowered = sessionTypeId.toLowerCase();
++	return lowered === CLAUDE_CODE_SESSION_TYPE || lowered.includes('claude');
++}
++
++function isRawCopilotSessionType(sessionTypeId: string): boolean {
++	const lowered = sessionTypeId.toLowerCase();
++	return lowered === COPILOT_CLI_SESSION_TYPE
++		|| lowered === COPILOT_CLOUD_SESSION_TYPE
++		|| lowered.includes('copilot');
++}
++
++function visibleModelForInstance(instance: IDirectorProviderInstance): string | undefined {
++	const preferred = instance.defaultModelId
++		? instance.models.find(model => model.id === instance.defaultModelId && model.enabled !== false && model.hidden !== true)
++		: undefined;
++	return preferred?.id ?? instance.models.find(model => model.enabled !== false && model.hidden !== true)?.id;
++}
++
++export class DirectorSessionsPolicyService extends Disposable implements IDirectorSessionsPolicyService {
++	declare readonly _serviceBrand: undefined;
++
++	private readonly _onDidChangePolicySnapshot = this._register(new Emitter<IDirectorSessionsPolicySnapshot>());
++	readonly onDidChangePolicySnapshot: Event<IDirectorSessionsPolicySnapshot> = this._onDidChangePolicySnapshot.event;
++
++	private _snapshot = createSnapshot({ hasDirectorProvider: false, hasReadyDirectorProvider: false, hasEligibleAnthropicProvider: false });
++	private _refreshPromise: Promise<IDirectorSessionsPolicySnapshot> = Promise.resolve(this._snapshot);
++
++	constructor(
++		@IDirectorProviderRegistryService private readonly providerRegistryService: IDirectorProviderRegistryService,
++		@IAuthStateService private readonly authStateService: IAuthStateService,
++		@ILogService private readonly logService: ILogService,
++	) {
++		super();
++
++		this._register(this.providerRegistryService.onDidChangeProviderRegistry(() => this.queueRefresh()));
++		this._register(this.authStateService.onDidChangeAuthState(() => this.queueRefresh()));
++		this.queueRefresh();
++	}
++
++	getSnapshot(): IDirectorSessionsPolicySnapshot {
++		return this._snapshot;
++	}
++
++	refresh(): Promise<IDirectorSessionsPolicySnapshot> {
++		this._refreshPromise = this._refreshPromise
++			.catch(() => this._snapshot)
++			.then(() => this.computeSnapshot());
++		return this._refreshPromise;
++	}
++
++	isSessionTypeVisible(sessionTypeId: string, options: IDirectorSessionsPolicySessionOptions = {}): boolean {
++		if (isRawCopilotSessionType(sessionTypeId)) {
++			return false;
++		}
++		if (isClaudeSessionType(sessionTypeId)) {
++			return options.claudeCodeAvailable === true
++				&& (this._snapshot.canCreateClaudeCode || this._snapshot.showSetupGatedClaudeCode);
++		}
++		return true;
++	}
++
++	getVisibleSessionTypeLabel(sessionTypeId: string, fallbackLabel: string): string {
++		if (isClaudeSessionType(sessionTypeId) && !this._snapshot.canCreateClaudeCode) {
++			return localize('directorClaudeSetupRequiredLabel', "{0} (setup required)", fallbackLabel);
++		}
++		return fallbackLabel;
++	}
++
++	assertCanCreateSessionType(sessionTypeId: string): void {
++		if (isRawCopilotSessionType(sessionTypeId)) {
++			throw new Error(localize('directorRawCopilotBlocked', "Director policy blocks raw Copilot session type '{0}'.", sessionTypeId));
++		}
++		if (isClaudeSessionType(sessionTypeId) && !this._snapshot.canCreateClaudeCode) {
++			throw new Error(this._snapshot.setupRequiredMessage);
++		}
++	}
++
++	private queueRefresh(): void {
++		void this.refresh();
++	}
++
++	private async computeSnapshot(): Promise<IDirectorSessionsPolicySnapshot> {
++		try {
++			const state = await this.providerRegistryService.getState();
++			const enabledInstances = state.instances.filter(instance => instance.enabled);
++			const anthropicInstances = enabledInstances.filter(instance => providerToApiType(instance.kind) === 'anthropic-messages');
++			const hasReadyDirectorProvider = await this.hasUsableDirectorInstance(enabledInstances);
++			const hasEligibleAnthropicProvider = await this.hasUsableAnthropicInstance(anthropicInstances);
++			const next = createSnapshot({
++				hasDirectorProvider: enabledInstances.length > 0,
++				hasReadyDirectorProvider,
++				hasEligibleAnthropicProvider,
++			});
++			if (JSON.stringify(next) !== JSON.stringify(this._snapshot)) {
++				this._snapshot = next;
++				this._onDidChangePolicySnapshot.fire(next);
++			}
++			return this._snapshot;
++		} catch (error) {
++			this.logService.warn('[DirectorSessionsPolicy] Failed to refresh policy snapshot', error);
++			return this._snapshot;
++		}
++	}
++
++	private async hasUsableAnthropicInstance(instances: readonly IDirectorProviderInstance[]): Promise<boolean> {
++		for (const instance of instances) {
++			const modelId = visibleModelForInstance(instance);
++			if (!modelId) {
++				continue;
++			}
++			const auth = await this.authStateService.resolveInstanceAuth(instance, modelId);
++			if (auth.source !== 'missing') {
++				return true;
++			}
++		}
++		return false;
++	}
++
++	private async hasUsableDirectorInstance(instances: readonly IDirectorProviderInstance[]): Promise<boolean> {
++		for (const instance of instances) {
++			const modelId = visibleModelForInstance(instance);
++			if (!modelId) {
++				continue;
++			}
++			const auth = await this.authStateService.resolveInstanceAuth(instance, modelId);
++			if (auth.source !== 'missing') {
++				return true;
++			}
++		}
++		return false;
++	}
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..0f58acfbdb40cd39b73e8fc85c63c69761779738

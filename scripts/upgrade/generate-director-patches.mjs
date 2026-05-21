@@ -318,7 +318,20 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/test/browser/agentSessions/')) return true;
   return [
+    'src/vs/sessions/browser/sessionsSetUpService.ts',
+    'src/vs/sessions/common/agentHostSessionsProvider.ts',
+    'src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts',
+    'src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts',
+    'src/vs/sessions/contrib/agentHost/browser/localAgentHost.contribution.ts',
+    'src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts',
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts',
+    'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts',
+    'src/vs/sessions/contrib/sessions/browser/aiCustomizationShortcutsWidget.ts',
+    'src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts',
+    'src/vs/sessions/services/sessions/browser/sessionsManagementService.ts',
+    'src/vs/sessions/services/sessions/browser/sessionsProvidersService.ts',
+    'src/vs/sessions/services/sessions/common/session.ts',
+    'src/vs/sessions/services/sessions/common/sessionsProvider.ts',
     'src/vs/workbench/contrib/chat/browser/chatManagement/chatModelsWidget.ts',
     'src/vs/workbench/contrib/chat/browser/chatManagement/chatManagement.contribution.ts',
     'src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts',
