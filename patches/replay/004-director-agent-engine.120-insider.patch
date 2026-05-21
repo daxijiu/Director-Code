@@ -12482,10 +12482,10 @@ index 98a8e87fb762c45791fab73f227ca05ecfc8d914..baceadd9f0a1d98b7eed71258a21cc7f
  });
 diff --git a/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..061c4754e89fb971554eda71c8db49d04b0711c0
+index 0000000000000000000000000000000000000000..ff5c3c2038779dc77fd5ae65e5a2f978fc51e742
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts
-@@ -0,0 +1,553 @@
+@@ -0,0 +1,555 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -12540,6 +12540,7 @@ index 0000000000000000000000000000000000000000..061c4754e89fb971554eda71c8db49d0
 +import { IModelResolverService, ModelResolverService } from '../../common/agentEngine/modelResolver.js';
 +import { DIRECTOR_LANGUAGE_MODEL_VENDOR, IDirectorProviderRegistryService, DirectorProviderRegistryService } from '../../common/agentEngine/providerRegistry.js';
 +import { DirectorSessionsPolicyService, IDirectorSessionsPolicyService } from '../../common/agentEngine/directorSessionsPolicy.js';
++import { DirectorSessionIndexService, IDirectorSessionIndexService } from '../../common/agentEngine/directorSessionIndex.js';
 +import { syncDirectorProviderGroupProjection } from '../../common/agentEngine/providerGroupProjection.js';
 +import {
 +	createApprovedPlanExecutionPrompt,
@@ -12566,6 +12567,7 @@ index 0000000000000000000000000000000000000000..061c4754e89fb971554eda71c8db49d0
 +registerSingleton(IDirectorPlanModeService, new SyncDescriptor(DirectorPlanModeService, [], true));
 +registerSingleton(IDirectorProviderRegistryService, new SyncDescriptor(DirectorProviderRegistryService, [], true));
 +registerSingleton(IDirectorSessionsPolicyService, new SyncDescriptor(DirectorSessionsPolicyService, [], true));
++registerSingleton(IDirectorSessionIndexService, new SyncDescriptor(DirectorSessionIndexService, [], true));
 +
 +// ============================================================================
 +// Configuration Registration
@@ -22149,6 +22151,284 @@ index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea
 +export const DirectorPlanToolData = [
 +	DirectorPresentPlanToolData,
 +] as const;
+diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab213763207557219361
+--- /dev/null
++++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts
+@@ -0,0 +1,272 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { Emitter, Event } from '../../../../../base/common/event.js';
++import { Disposable } from '../../../../../base/common/lifecycle.js';
++import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
++import { ILogService } from '../../../../../platform/log/common/log.js';
++import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
++
++const DIRECTOR_SESSION_INDEX_STORAGE_KEY = 'directorCode.sharedSessionIndex.v1';
++const DIRECTOR_SESSION_INDEX_SCHEMA_VERSION = 1;
++const MAX_INDEXED_SESSIONS = 500;
++
++export type DirectorSessionAgentKind = 'director' | 'claude' | 'codex' | 'external' | 'imported';
++export type DirectorSessionSourceSurface = 'ide-chat' | 'agents-window' | 'agent-host' | 'external-import';
++export type DirectorSessionStatus = 'untitled' | 'inProgress' | 'needsInput' | 'completed' | 'error';
++
++export interface IDirectorSessionIndexCapabilities {
++	readonly supportsMultipleChats: boolean;
++	readonly supportsOpen?: boolean;
++	readonly supportsArchive?: boolean;
++	readonly supportsDelete?: boolean;
++	readonly externalTranscriptAvailable?: boolean;
++	readonly transcriptRestorePlanned?: boolean;
++}
++
++export interface IDirectorSessionIndexRecord {
++	readonly schemaVersion: 1;
++	readonly directorSessionId: string;
++	readonly providerId: string;
++	readonly sessionType: string;
++	readonly agentKind: DirectorSessionAgentKind;
++	readonly providerInstanceId?: string;
++	readonly modelId?: string;
++	readonly workspaceUri?: string;
++	readonly workingDirectoryUri?: string;
++	readonly chatResourceUri: string;
++	readonly mainChatResourceUri: string;
++	readonly agentHostSessionUri?: string;
++	readonly agentHostRawSessionId?: string;
++	readonly parentSessionId?: string;
++	readonly groupId?: string;
++	readonly status: DirectorSessionStatus;
++	readonly isArchived: boolean;
++	readonly isRead: boolean;
++	readonly createdAt: number;
++	readonly updatedAt: number;
++	readonly lastTurnEnd?: number;
++	readonly sourceSurface: DirectorSessionSourceSurface;
++	readonly title: string;
++	readonly capabilities: IDirectorSessionIndexCapabilities;
++	readonly deduplicationKey: string;
++	readonly external?: {
++		readonly providerName?: string;
++		readonly transcriptUri?: string;
++		readonly importedAt?: number;
++	};
++}
++
++export interface IDirectorSessionIndexChangeEvent {
++	readonly added: readonly IDirectorSessionIndexRecord[];
++	readonly removed: readonly IDirectorSessionIndexRecord[];
++	readonly changed: readonly IDirectorSessionIndexRecord[];
++}
++
++export const IDirectorSessionIndexService = createDecorator<IDirectorSessionIndexService>('directorSessionIndexService');
++
++export interface IDirectorSessionIndexService {
++	readonly _serviceBrand: undefined;
++	readonly onDidChangeSessionIndex: Event<IDirectorSessionIndexChangeEvent>;
++	list(): readonly IDirectorSessionIndexRecord[];
++	get(directorSessionId: string): IDirectorSessionIndexRecord | undefined;
++	upsert(record: IDirectorSessionIndexRecord): void;
++	delete(directorSessionId: string): void;
++	rename(directorSessionId: string, title: string): void;
++	setArchived(directorSessionId: string, archived: boolean): void;
++	setRead(directorSessionId: string, read: boolean): void;
++}
++
++export function directorSessionIdFromChatResource(chatResourceUri: string): string {
++	return `director:${chatResourceUri}`;
++}
++
++export function directorSessionDeduplicationKeyFromResource(resourceUri: string): string {
++	return `director-session:${resourceUri}`;
++}
++
++export class DirectorSessionIndexService extends Disposable implements IDirectorSessionIndexService {
++	declare readonly _serviceBrand: undefined;
++
++	private readonly _onDidChangeSessionIndex = this._register(new Emitter<IDirectorSessionIndexChangeEvent>());
++	readonly onDidChangeSessionIndex: Event<IDirectorSessionIndexChangeEvent> = this._onDidChangeSessionIndex.event;
++
++	private _records = new Map<string, IDirectorSessionIndexRecord>();
++
++	constructor(
++		@IStorageService private readonly storageService: IStorageService,
++		@ILogService private readonly logService: ILogService,
++	) {
++		super();
++
++		this._records = this.readRecords();
++		this._register(this.storageService.onDidChangeValue(StorageScope.PROFILE, DIRECTOR_SESSION_INDEX_STORAGE_KEY, this._store)(() => {
++			const previous = this._records;
++			this._records = this.readRecords();
++			this.fireDiff(previous, this._records);
++		}));
++	}
++
++	list(): readonly IDirectorSessionIndexRecord[] {
++		return Array.from(this._records.values()).sort((a, b) => b.updatedAt - a.updatedAt);
++	}
++
++	get(directorSessionId: string): IDirectorSessionIndexRecord | undefined {
++		return this._records.get(directorSessionId);
++	}
++
++	upsert(record: IDirectorSessionIndexRecord): void {
++		const normalized = normalizeRecord(record);
++		const previous = this._records;
++		const existing = previous.get(normalized.directorSessionId);
++		if (existing && JSON.stringify(existing) === JSON.stringify(normalized)) {
++			return;
++		}
++		const next = new Map(previous);
++		next.set(normalized.directorSessionId, normalized);
++		this.commit(previous, trimRecords(next));
++	}
++
++	delete(directorSessionId: string): void {
++		if (!this._records.has(directorSessionId)) {
++			return;
++		}
++		const previous = this._records;
++		const next = new Map(previous);
++		next.delete(directorSessionId);
++		this.commit(previous, next);
++	}
++
++	rename(directorSessionId: string, title: string): void {
++		const record = this._records.get(directorSessionId);
++		if (!record || record.title === title) {
++			return;
++		}
++		this.upsert({ ...record, title, updatedAt: Date.now() });
++	}
++
++	setArchived(directorSessionId: string, archived: boolean): void {
++		const record = this._records.get(directorSessionId);
++		if (!record || record.isArchived === archived) {
++			return;
++		}
++		this.upsert({ ...record, isArchived: archived, updatedAt: Date.now() });
++	}
++
++	setRead(directorSessionId: string, read: boolean): void {
++		const record = this._records.get(directorSessionId);
++		if (!record || record.isRead === read) {
++			return;
++		}
++		this.upsert({ ...record, isRead: read, updatedAt: Date.now() });
++	}
++
++	private commit(previous: Map<string, IDirectorSessionIndexRecord>, next: Map<string, IDirectorSessionIndexRecord>): void {
++		this._records = next;
++		this.storageService.store(
++			DIRECTOR_SESSION_INDEX_STORAGE_KEY,
++			JSON.stringify({ schemaVersion: DIRECTOR_SESSION_INDEX_SCHEMA_VERSION, sessions: Array.from(next.values()) }),
++			StorageScope.PROFILE,
++			StorageTarget.MACHINE,
++		);
++		this.fireDiff(previous, next);
++	}
++
++	private readRecords(): Map<string, IDirectorSessionIndexRecord> {
++		const raw = this.storageService.get(DIRECTOR_SESSION_INDEX_STORAGE_KEY, StorageScope.PROFILE);
++		if (!raw) {
++			return new Map();
++		}
++		try {
++			const parsed = JSON.parse(raw) as { readonly schemaVersion?: number; readonly sessions?: unknown[] };
++			if (parsed.schemaVersion !== DIRECTOR_SESSION_INDEX_SCHEMA_VERSION || !Array.isArray(parsed.sessions)) {
++				return new Map();
++			}
++			const records = new Map<string, IDirectorSessionIndexRecord>();
++			for (const candidate of parsed.sessions) {
++				const record = reviveRecord(candidate);
++				if (record) {
++					records.set(record.directorSessionId, record);
++				}
++			}
++			return trimRecords(records);
++		} catch (error) {
++			this.logService.warn('[DirectorSessionIndex] Failed to read stored session index', error);
++			return new Map();
++		}
++	}
++
++	private fireDiff(previous: Map<string, IDirectorSessionIndexRecord>, next: Map<string, IDirectorSessionIndexRecord>): void {
++		const added: IDirectorSessionIndexRecord[] = [];
++		const removed: IDirectorSessionIndexRecord[] = [];
++		const changed: IDirectorSessionIndexRecord[] = [];
++
++		for (const [id, record] of next) {
++			const before = previous.get(id);
++			if (!before) {
++				added.push(record);
++			} else if (JSON.stringify(before) !== JSON.stringify(record)) {
++				changed.push(record);
++			}
++		}
++		for (const [id, record] of previous) {
++			if (!next.has(id)) {
++				removed.push(record);
++			}
++		}
++		if (added.length || removed.length || changed.length) {
++			this._onDidChangeSessionIndex.fire({ added, removed, changed });
++		}
++	}
++}
++
++function trimRecords(records: Map<string, IDirectorSessionIndexRecord>): Map<string, IDirectorSessionIndexRecord> {
++	const sorted = Array.from(records.values()).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_INDEXED_SESSIONS);
++	return new Map(sorted.map(record => [record.directorSessionId, record]));
++}
++
++function reviveRecord(candidate: unknown): IDirectorSessionIndexRecord | undefined {
++	if (!candidate || typeof candidate !== 'object') {
++		return undefined;
++	}
++	const record = candidate as Partial<IDirectorSessionIndexRecord>;
++	if (record.schemaVersion !== DIRECTOR_SESSION_INDEX_SCHEMA_VERSION || typeof record.directorSessionId !== 'string' || typeof record.chatResourceUri !== 'string') {
++		return undefined;
++	}
++	if (typeof record.providerId !== 'string' || typeof record.sessionType !== 'string' || typeof record.title !== 'string') {
++		return undefined;
++	}
++	return normalizeRecord(record as IDirectorSessionIndexRecord);
++}
++
++function normalizeRecord(record: IDirectorSessionIndexRecord): IDirectorSessionIndexRecord {
++	const now = Date.now();
++	const mainChatResourceUri = record.mainChatResourceUri || record.chatResourceUri;
++	return {
++		...record,
++		schemaVersion: DIRECTOR_SESSION_INDEX_SCHEMA_VERSION,
++		mainChatResourceUri,
++		status: record.status ?? 'completed',
++		isArchived: Boolean(record.isArchived),
++		isRead: record.isRead !== false,
++		createdAt: safeTimestamp(record.createdAt, now),
++		updatedAt: safeTimestamp(record.updatedAt, now),
++		lastTurnEnd: record.lastTurnEnd === undefined ? undefined : safeTimestamp(record.lastTurnEnd, now),
++		title: record.title || 'Director Session',
++		capabilities: {
++			supportsMultipleChats: Boolean(record.capabilities?.supportsMultipleChats),
++			supportsOpen: record.capabilities?.supportsOpen !== false,
++			supportsArchive: record.capabilities?.supportsArchive !== false,
++			supportsDelete: record.capabilities?.supportsDelete !== false,
++			externalTranscriptAvailable: record.capabilities?.externalTranscriptAvailable === true,
++			transcriptRestorePlanned: record.capabilities?.transcriptRestorePlanned === true,
++		},
++		deduplicationKey: record.deduplicationKey || directorSessionDeduplicationKeyFromResource(mainChatResourceUri),
++	};
++}
++
++function safeTimestamp(value: number | undefined, fallback: number): number {
++	return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
++}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..f801dd1ebeb92f5cdfdca622d4c4c191fa60e36b

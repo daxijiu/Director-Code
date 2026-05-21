@@ -317,6 +317,7 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatStatus/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/test/browser/agentSessions/')) return true;
+  if (filePath.startsWith('src/vs/sessions/contrib/directorSessions/')) return true;
   return [
     'src/vs/platform/windows/electron-main/windowsMainService.ts',
     'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts',

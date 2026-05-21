@@ -384,6 +384,16 @@ Fallback:
 
 - If full historic import is too risky, v1 can index new sessions first and add migration/import later.
 
+Segment 2 implementation note (2026-05-21):
+
+- Added a Director-owned profile-scoped shared session index service in `src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts`.
+- The V1 schema records the required shared identity fields plus title and a stable `director-session:<resource>` dedupe key. It reserves `external` transcript/import metadata for Segment 4 without storing SecretMaterial.
+- The main IDE local chat lifecycle hook is `LocalAgentsSessionsController.toChatSessionItem(...)`, which already observes live model creation, model changes, and history refresh through `IChatService.getLiveSessionItems()` / `getHistorySessionItems()`. That hook now upserts Director local chat records into the shared index.
+- Agents Window reads the same index through `DirectorSessionIndexSessionsProvider`, registered alongside the existing default sessions provider. It is a projection/provider facade: list, rename, archive, read, and delete update the shared index; send/create remains closed until full cross-window open/resume plumbing is validated.
+- Existing Copilot-shaped sessions now carry the same Director dedupe key, so local AgentHost/default provider sessions win when already present in the same window and indexed projections fill the synthetic workspace gap when they are not.
+- Replay placement: shared index service and registration are in `004-director-agent-engine.120-insider.patch`; Agents Window provider facade, local session write hook, and dedupe projection are in `005-director-chat-built-in-mode.120-insider.patch`; `scripts/upgrade/generate-director-patches.mjs` classifies only the narrow `src/vs/sessions/contrib/directorSessions/**` island.
+- Local validation completed: `generate-director-patches`, `generate-series`, `validate-series`, `validate-product-overrides`, `expected-contracts`, `npm run -s compile-check-ts-native`, `npm run -s compile`, and focused browser test `localAgentSessionsController.test.ts` in the generated Director VS Code tree.
+
 ## Segment 3: Director Provider/Model/Auth Projection For AgentHost
 
 Goal: let AgentHost consume Director provider/model/auth policy without importing workbench-only secret services directly.
