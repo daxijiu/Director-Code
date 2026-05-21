@@ -318,6 +318,8 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/test/browser/agentSessions/')) return true;
   return [
+    'src/vs/platform/windows/electron-main/windowsMainService.ts',
+    'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts',
     'src/vs/sessions/browser/sessionsSetUpService.ts',
     'src/vs/sessions/common/agentHostSessionsProvider.ts',
     'src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts',

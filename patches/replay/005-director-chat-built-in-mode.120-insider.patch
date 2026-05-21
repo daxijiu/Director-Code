@@ -1,3 +1,24 @@
+diff --git a/src/vs/platform/windows/electron-main/windowsMainService.ts b/src/vs/platform/windows/electron-main/windowsMainService.ts
+index 9feeb83ebd981ea3ad0070f22a6837fff2de91d3..aa8665a7cdbb8c2c7d9bbb37d7c9804cb5239ac2 100644
+--- a/src/vs/platform/windows/electron-main/windowsMainService.ts
++++ b/src/vs/platform/windows/electron-main/windowsMainService.ts
+@@ -1721,7 +1721,15 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
+ 		const workspace = configuration.workspace ?? toWorkspaceIdentifier(configuration.backupPath, false);
+ 
+ 		if (configuration.isSessionsWindow) {
+-			configuration.profiles.profile = this.userDataProfilesMainService.profiles.find(p => p.isAgentsWindowProfile) ?? await this.userDataProfilesMainService.createAgentsWindowProfile();
++			const agentsWindowProfile = this.userDataProfilesMainService.profiles.find(p => p.isAgentsWindowProfile) ?? await this.userDataProfilesMainService.createAgentsWindowProfile();
++			// Keep the dedicated Agents Window profile identity while projecting
++			// Director provider and customization storage from the source profile.
++			configuration.profiles.profile = {
++				...agentsWindowProfile,
++				location: defaultProfile.location,
++				promptsHome: defaultProfile.promptsHome,
++				agentPluginsHome: defaultProfile.agentPluginsHome,
++			};
+ 		} else {
+ 			const profilePromise = this.resolveProfileForBrowserWindow(options, workspace, defaultProfile);
+ 			const profile = profilePromise instanceof Promise ? await profilePromise : profilePromise;
 diff --git a/src/vs/sessions/browser/accountTitleBarState.ts b/src/vs/sessions/browser/accountTitleBarState.ts
 index 2ba44ecf1143d55c97891f292b79f55c4891f48e..edc6af8e552cf9ae4877d97768778a4943fd51ac 100644
 --- a/src/vs/sessions/browser/accountTitleBarState.ts
@@ -212,6 +233,51 @@ index 2ba44ecf1143d55c97891f292b79f55c4891f48e..edc6af8e552cf9ae4877d97768778a49
 -
 -	return localize('copilotCompletionsQuotaReachedAria', "GitHub Copilot inline suggestion quota reached");
 -}
+diff --git a/src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts b/src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts
+index b203431bd52d7ee4609d35ce7642ea3436e812bc..611097f0fa14f8c4203b23111134507be0f79679 100644
+--- a/src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts
++++ b/src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts
+@@ -29,6 +29,7 @@ import { ChatEntitlement, ChatEntitlementService, IChatEntitlementService } from
+ import { getAccountTitleBarState, getAccountProfileImageUrl, getAccountTitleBarBadgeKey, resolveAccountInfo } from '../../accountTitleBarState.js';
+ import { IChatDashboardService } from '../../chatDashboardService.js';
+ import { MOBILE_OPEN_CHANGES_VIEW_COMMAND_ID } from './contributions/mobileChangesView.js';
++import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ 
+ /**
+  * Mobile titlebar — prepended above the workbench grid on phone viewports
+@@ -109,6 +110,7 @@ export class MobileTitlebarPart extends Disposable {
+ 		@IMenuService private readonly menuService: IMenuService,
+ 		@IChatDashboardService private readonly chatDashboardService: IChatDashboardService,
+ 		@ICommandService private readonly commandService: ICommandService,
++		@IDirectorSessionsPolicyService private readonly directorSessionsPolicyService: IDirectorSessionsPolicyService,
+ 	) {
+ 		super();
+ 
+@@ -195,6 +197,8 @@ export class MobileTitlebarPart extends Disposable {
+ 		this._register(this.chatEntitlementService.onDidChangeSentiment(() => this.renderAccountState()));
+ 		this._register(this.chatEntitlementService.onDidChangeQuotaExceeded(() => this.renderAccountState()));
+ 		this._register(this.chatEntitlementService.onDidChangeQuotaRemaining(() => this.renderAccountState()));
++		this._register(this.directorSessionsPolicyService.onDidChangePolicySnapshot(() => this.renderAccountState()));
++		void this.directorSessionsPolicyService.refresh().then(() => this.renderAccountState());
+ 		this.refreshAccount();
+ 
+ 		// Keep the title in sync with the active session
+@@ -333,6 +337,7 @@ export class MobileTitlebarPart extends Disposable {
+ 			entitlement,
+ 			sentiment: this.chatEntitlementService.sentiment,
+ 			quotas: this.chatEntitlementService.quotas,
++			directorPolicy: this.directorSessionsPolicyService.getSnapshot(),
+ 		});
+ 
+ 		// Avatar
+@@ -419,6 +424,7 @@ export class MobileTitlebarPart extends Disposable {
+ 			entitlement: this.chatEntitlementService.entitlement,
+ 			sentiment: this.chatEntitlementService.sentiment,
+ 			quotas: this.chatEntitlementService.quotas,
++			directorPolicy: this.directorSessionsPolicyService.getSnapshot(),
+ 		}));
+ 		if (badgeKey) {
+ 			this.dismissedBadgeKey = badgeKey;
 diff --git a/src/vs/sessions/browser/sessionsSetUpService.ts b/src/vs/sessions/browser/sessionsSetUpService.ts
 index f4dee563d3c5281444a99b80bc9ee5a3d04eb47d..1e536149318c7b5c0822c33810e9da5b7e55f543 100644
 --- a/src/vs/sessions/browser/sessionsSetUpService.ts
@@ -1034,10 +1100,10 @@ index f307eb2d35cab52205b604d82a5069a51bdf6d46..b134390f836745e1a45ab27298fe5d7f
  		this.label = localize('localAgentHostLabel', "Local Agent Host");
  
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
-index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06bd9a8bd1d 100644
+index f028af026ba389332c0e5b842e5ce8d77c88037a..8d12e93ca51ec14f7f7efce4815d8944df17971f 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
-@@ -26,7 +26,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
+@@ -26,14 +26,14 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
  			type: 'boolean',
  			default: true,
  			experiment: { mode: 'startup' },
@@ -1046,8 +1112,17 @@ index f028af026ba389332c0e5b842e5ce8d77c88037a..cba1354a236a88ebf24b6a2e9d1fe06b
  		},
  		[LOCAL_SESSION_ENABLED_SETTING]: {
  			type: 'boolean',
+-			default: false,
++			default: true,
+ 			tags: ['experimental'],
+ 			experiment: { mode: 'startup' },
+-			description: localize('sessions.chat.localAgent.enabled', "Enable Local VS Code chat sessions in the Agents Window."),
++			description: localize('sessions.chat.localAgent.enabled', "Enable Director Agent sessions in the Agents Window."),
+ 		},
+ 	},
+ });
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
-index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..c3e02c53b545143bb1bfae6237f3b021939d196d 100644
+index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..48ef92fb6d47f5bc4e1cb5fbd88599678efe6891 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
 @@ -46,6 +46,7 @@ import { IFileService } from '../../../../platform/files/common/files.js';
@@ -1087,7 +1162,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..c3e02c53b545143bb1bfae6237f3b021
  	}
  
  	private readonly _onDidChangeSessionTypes = this._register(new Emitter<void>());
-@@ -1582,6 +1583,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1582,12 +1583,13 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		@ILogService private readonly logService: ILogService,
  		@IGitHubService private readonly gitHubService: IGitHubService,
  		@ILabelService private readonly labelService: ILabelService,
@@ -1095,6 +1170,22 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..c3e02c53b545143bb1bfae6237f3b021
  	) {
  		super();
  
+ 		this._multiChatEnabled = this.configurationService.getValue<boolean>(COPILOT_MULTI_CHAT_SETTING) ?? true;
+ 		this._claudeEnabled = this.configurationService.getValue<boolean>(CLAUDE_CODE_ENABLED_SETTING);
+-		this._localSessionEnabled = this.configurationService.getValue<boolean>(LOCAL_SESSION_ENABLED_SETTING);
++		this._localSessionEnabled = this.configurationService.getValue<boolean>(LOCAL_SESSION_ENABLED_SETTING) !== false;
+ 
+ 		this._register(this.configurationService.onDidChangeConfiguration(e => {
+ 			if (e.affectsConfiguration(CLAUDE_CODE_ENABLED_SETTING)) {
+@@ -1599,7 +1601,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 				}
+ 			}
+ 			if (e.affectsConfiguration(LOCAL_SESSION_ENABLED_SETTING)) {
+-				const localSessionEnabled = this.configurationService.getValue<boolean>(LOCAL_SESSION_ENABLED_SETTING);
++				const localSessionEnabled = this.configurationService.getValue<boolean>(LOCAL_SESSION_ENABLED_SETTING) !== false;
+ 				if (this._localSessionEnabled !== localSessionEnabled) {
+ 					this._localSessionEnabled = localSessionEnabled;
+ 					this._onDidChangeSessionTypes.fire();
 @@ -1607,6 +1609,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  				}
  			}
