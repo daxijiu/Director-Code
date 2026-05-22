@@ -1187,7 +1187,7 @@ index 68e4eda58b8a80f4df9747cbf0a50f177cd3326f..c99a11404ef446c5d0e7e17624566355
  		return this.harnessService.getStorageSourceFilter(type);
  	}
 diff --git a/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts b/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
-index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8ba49cf1a 100644
+index a124d3395336e122f0bb3617fcab9e17765b21a1..69cdd6e020a49d7e069ed508061fd9a5e81baef6 100644
 --- a/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
 +++ b/src/vs/sessions/contrib/chat/browser/newChatViewPane.ts
 @@ -21,6 +21,8 @@ import { IHoverService } from '../../../../platform/hover/browser/hover.js';
@@ -1239,16 +1239,19 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  			this._newChatInput.focus();
  		}));
  	}
-@@ -136,7 +140,7 @@ class NewChatWidget extends Disposable {
+@@ -136,7 +140,10 @@ class NewChatWidget extends Disposable {
  		// from a pending new session when navigating back from another session).
  		const restoredProject = this._workspacePicker.selectedProject;
  		if (!this._syncWorkspacePickerFromActiveSession() && restoredProject) {
 -			this._createNewSession(restoredProject, this._newChatInput.sessionTypePicker.selectedType);
-+			this._createNewSession(restoredProject, this._getAutomaticSessionTypeId(restoredProject), true);
++			const automaticSessionTypeId = this._getAutomaticSessionTypeId(restoredProject);
++			if (!(restoredProject.providerId === DIRECTOR_CHAT_PROVIDER_ID && automaticSessionTypeId === LocalSessionType.id)) {
++				this._createNewSession(restoredProject, automaticSessionTypeId, true);
++			}
  		}
  
  		chatWidgetContainer.classList.add('revealed');
-@@ -169,15 +173,36 @@ class NewChatWidget extends Disposable {
+@@ -169,15 +176,36 @@ class NewChatWidget extends Disposable {
  		return true;
  	}
  
@@ -1287,7 +1290,7 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  			sessionTypeId = undefined;
  		}
  
-@@ -187,14 +212,14 @@ class NewChatWidget extends Disposable {
+@@ -187,14 +215,14 @@ class NewChatWidget extends Disposable {
  		// agent-host-specific UI (model picker etc.) until the user re-picks the workspace.
  		// If the connection fails, the picker fires onDidSelectWorkspace(undefined) which
  		// clears the pending wait via _onWorkspaceSelected.
@@ -1304,7 +1307,7 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  				}
  			}));
  
-@@ -208,6 +233,78 @@ class NewChatWidget extends Disposable {
+@@ -208,6 +236,78 @@ class NewChatWidget extends Disposable {
  		}
  	}
  
@@ -1383,7 +1386,7 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  	/**
  	 * Returns the workspace URI for the context picker based on the current workspace selection.
  	 */
-@@ -369,9 +466,10 @@ class NewChatWidget extends Disposable {
+@@ -369,9 +469,10 @@ class NewChatWidget extends Disposable {
  	 * Handles a workspace selection from the workspace picker.
  	 * Requests folder trust if needed and creates a new session.
  	 */
@@ -1395,7 +1398,7 @@ index a124d3395336e122f0bb3617fcab9e17765b21a1..820b2a78295f3dee70ae912f161209c8
  
  		if (!selection) {
  			this.sessionsManagementService.unsetNewSession();
-@@ -385,7 +483,7 @@ class NewChatWidget extends Disposable {
+@@ -385,7 +486,7 @@ class NewChatWidget extends Disposable {
  			}
  		}
  
@@ -1493,18 +1496,10 @@ index edadd98b3d5ec34772edd54e24d39640fd5769b6..ded385f5f02948877405a6fc6d2be80c
  }
  
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
-index f028af026ba389332c0e5b842e5ce8d77c88037a..410665ff604fe813b41ee985dc87d42bb5f91d2d 100644
+index f028af026ba389332c0e5b842e5ce8d77c88037a..8d12e93ca51ec14f7f7efce4815d8944df17971f 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts
-@@ -8,6 +8,7 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
- import { Disposable } from '../../../../base/common/lifecycle.js';
- import { CopilotChatSessionsProvider, COPILOT_MULTI_CHAT_SETTING, CLAUDE_CODE_ENABLED_SETTING, LOCAL_SESSION_ENABLED_SETTING } from '../../copilotChatSessions/browser/copilotChatSessionsProvider.js';
- import '../../copilotChatSessions/browser/copilotChatSessionsActions.js';
-+import { DirectorSessionIndexSessionsProvider } from '../../directorSessions/browser/directorSessionIndexSessionsProvider.js';
- import { ISessionsProvidersService } from '../../../services/sessions/browser/sessionsProvidersService.js';
- import { Registry } from '../../../../platform/registry/common/platform.js';
- import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from '../../../../platform/configuration/common/configurationRegistry.js';
-@@ -26,14 +27,14 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
+@@ -26,14 +26,14 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
  			type: 'boolean',
  			default: true,
  			experiment: { mode: 'startup' },
@@ -1522,29 +1517,140 @@ index f028af026ba389332c0e5b842e5ce8d77c88037a..410665ff604fe813b41ee985dc87d42b
  		},
  	},
  });
-@@ -59,6 +60,8 @@ class DefaultSessionsProviderContribution extends Disposable implements IWorkben
- 
- 		const provider = this._register(instantiationService.createInstance(CopilotChatSessionsProvider));
- 		this._register(sessionsProvidersService.registerProvider(provider));
-+		const directorIndexProvider = this._register(instantiationService.createInstance(DirectorSessionIndexSessionsProvider));
-+		this._register(sessionsProvidersService.registerProvider(directorIndexProvider));
- 	}
- }
- 
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
-index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700b1fec0b3 100644
+index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4730d7743 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
-@@ -46,6 +46,8 @@ import { IFileService } from '../../../../platform/files/common/files.js';
+@@ -20,7 +20,7 @@ import { IAgentSession } from '../../../../workbench/contrib/chat/browser/agentS
+ import { getRepositoryName } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsViewer.js';
+ import { IAgentSessionsService } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsService.js';
+ import { AgentSessionProviders, AgentSessionTarget } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessions.js';
+-import { IChatService, IChatSendRequestOptions } from '../../../../workbench/contrib/chat/common/chatService/chatService.js';
++import { IChatModelReference, IChatService, IChatSendRequestOptions } from '../../../../workbench/contrib/chat/common/chatService/chatService.js';
+ import { IChatResponseModel } from '../../../../workbench/contrib/chat/common/model/chatModel.js';
+ import { ChatSessionStatus, IChatSessionsService, IChatSessionProviderOptionGroup, IChatSessionProviderOptionItem, SessionType, IChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
+ import { ISession, IChat, ISessionRepository, ISessionWorkspace, SessionStatus, GITHUB_REMOTE_FILE_SCHEME, IGitHubInfo, CopilotCLISessionType, CopilotCloudSessionType, ClaudeCodeSessionType, LocalSessionType, ISessionType, ISessionWorkspaceBrowseAction, ISessionFileChange, sessionFileChangesEqual, toSessionId, SESSION_WORKSPACE_GROUP_LOCAL, ISessionChangeset } from '../../../services/sessions/common/session.js';
+@@ -46,10 +46,15 @@ import { IFileService } from '../../../../platform/files/common/files.js';
  import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
  import { IGitHubService } from '../../github/browser/githubService.js';
  import { computePullRequestIcon, GitHubPullRequestState } from '../../github/common/types.js';
 +import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
-+import { directorSessionDeduplicationKeyFromResource } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.js';
  
  const SESSION_WORKSPACE_GROUP_GITHUB = localize('sessionWorkspaceGroup.github', "GitHub");
  const STORAGE_KEY_ISOLATION_MODE = 'sessions.isolationPicker.selectedMode';
-@@ -1512,23 +1514,23 @@ class AgentSessionAdapter implements ICopilotChatSession {
+ 
++function sessionDeduplicationKeyFromResource(resourceUri: string): string {
++	return `director-session:${resourceUri}`;
++}
++
+ export interface ICopilotChatSession {
+ 	/** Globally unique session ID (`providerId:localId`). */
+ 	readonly id: string;
+@@ -706,8 +711,8 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+ 
+ 	// -- ISessionData fields --
+ 
+-	readonly resource: URI;
+-	readonly id: string;
++	resource: URI;
++	id: string;
+ 	readonly providerId: string;
+ 	readonly sessionType: typeof SessionType.Local;
+ 	readonly icon: ThemeIcon;
+@@ -755,6 +760,7 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+ 
+ 	private _modelId: string | undefined;
+ 	private _mode: IChatMode | undefined;
++	private _modelRef: IChatModelReference | undefined;
+ 
+ 	readonly target = AgentSessionProviders.Local;
+ 	readonly selectedOptions = new Map<string, IChatSessionProviderOptionItem>();
+@@ -766,7 +772,6 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+ 	get disabled(): boolean { return false; }
+ 
+ 	constructor(
+-		// readonly resource: URI,
+ 		readonly sessionWorkspace: ISessionWorkspace,
+ 		providerId: string,
+ 		@IGitService private readonly gitService: IGitService,
+@@ -775,19 +780,7 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+ 	) {
+ 		super();
+ 
+-		// Create a real local chat model upfront so the chat service has
+-		// a model registered for our resource. This avoids the
+-		// contributed-session path (which would require a content
+-		// provider for the 'local' chat session type).
+-		const modelRef = this._register(this.chatService.startNewLocalSession(
+-			ChatAgentLocation.Chat,
+-			{ debugOwner: 'CopilotChatSessionsProvider#createNewSession.local' },
+-		));
+-		if (sessionWorkspace.repositories.length > 0) {
+-			modelRef.object.setWorkingDirectory(sessionWorkspace.repositories[0]?.uri);
+-		}
+-		this.resource = modelRef.object.sessionResource;
+-
++		this.resource = URI.from({ scheme: AgentSessionProviders.Local, path: `/untitled-${generateUuid()}` });
+ 		this.id = toSessionId(providerId, this.resource);
+ 		this.providerId = providerId;
+ 		this.sessionType = AgentSessionProviders.Local;
+@@ -802,6 +795,25 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+ 		this._resolveGitState();
+ 	}
+ 
++	materialize(): URI {
++		if (this._modelRef) {
++			return this.resource;
++		}
++
++		const modelRef = this._register(this.chatService.startNewLocalSession(
++			ChatAgentLocation.Chat,
++			{ debugOwner: 'CopilotChatSessionsProvider#sendAndCreateChat.local' },
++		));
++		const repositoryUri = this.sessionWorkspace.repositories[0]?.uri;
++		if (repositoryUri) {
++			modelRef.object.setWorkingDirectory(repositoryUri);
++		}
++		this._modelRef = modelRef;
++		this.resource = modelRef.object.sessionResource;
++		this.id = toSessionId(this.providerId, this.resource);
++		return this.resource;
++	}
++
+ 	private async _resolveGitState(): Promise<void> {
+ 		const repoUri = this.sessionWorkspace.repositories[0]?.uri;
+ 		if (!repoUri) {
+@@ -1426,9 +1438,14 @@ class AgentSessionAdapter implements ICopilotChatSession {
+ 			hasGitOperationInProgress
+ 		} = this._extractRepositoryFromMetadata(session);
+ 
++		const repositoryUri = repoUri ?? worktreeUri;
++		if (!repositoryUri) {
++			return undefined;
++		}
++
+ 		const repository: ISessionRepository = {
+-			uri: repoUri ?? URI.parse('unknown:///'),
+-			workingDirectory: worktreeUri,
++			uri: repositoryUri,
++			workingDirectory: worktreeUri && !isEqual(worktreeUri, repositoryUri) ? worktreeUri : undefined,
+ 			detail: branchName,
+ 			branchName,
+ 			baseBranchName,
+@@ -1442,9 +1459,9 @@ class AgentSessionAdapter implements ICopilotChatSession {
+ 		};
+ 
+ 		return {
+-			label: getRepositoryName(session) ?? basename(repository.uri),
+-			icon: repoUri?.scheme === GITHUB_REMOTE_FILE_SCHEME ? Codicon.repo : Codicon.folder,
+-			group: repoUri?.scheme === GITHUB_REMOTE_FILE_SCHEME ? SESSION_WORKSPACE_GROUP_GITHUB : SESSION_WORKSPACE_GROUP_LOCAL,
++			label: getRepositoryName(session) ?? basename(repositoryUri),
++			icon: repositoryUri.scheme === GITHUB_REMOTE_FILE_SCHEME ? Codicon.repo : Codicon.folder,
++			group: repositoryUri.scheme === GITHUB_REMOTE_FILE_SCHEME ? SESSION_WORKSPACE_GROUP_GITHUB : SESSION_WORKSPACE_GROUP_LOCAL,
+ 			repositories: [repository],
+ 			requiresWorkspaceTrust: session.providerType !== AgentSessionProviders.Cloud,
+ 		};
+@@ -1512,23 +1529,23 @@ class AgentSessionAdapter implements ICopilotChatSession {
  }
  
  /**
@@ -1573,7 +1679,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  	}
  
  	private readonly _onDidChangeSessionTypes = this._register(new Emitter<void>());
-@@ -1582,12 +1584,13 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1582,12 +1599,13 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		@ILogService private readonly logService: ILogService,
  		@IGitHubService private readonly gitHubService: IGitHubService,
  		@ILabelService private readonly labelService: ILabelService,
@@ -1588,7 +1694,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  
  		this._register(this.configurationService.onDidChangeConfiguration(e => {
  			if (e.affectsConfiguration(CLAUDE_CODE_ENABLED_SETTING)) {
-@@ -1599,7 +1602,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1599,7 +1617,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  				}
  			}
  			if (e.affectsConfiguration(LOCAL_SESSION_ENABLED_SETTING)) {
@@ -1597,7 +1703,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  				if (this._localSessionEnabled !== localSessionEnabled) {
  					this._localSessionEnabled = localSessionEnabled;
  					this._onDidChangeSessionTypes.fire();
-@@ -1607,6 +1610,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1607,6 +1625,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  				}
  			}
  		}));
@@ -1608,7 +1714,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  
  		this.browseActions = [
  			{
-@@ -1628,23 +1635,25 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1628,23 +1650,25 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  
  	getSessionTypes(workspaceUri: URI): ISessionType[] {
  		if (workspaceUri.scheme === GITHUB_REMOTE_FILE_SCHEME || workspaceUri.scheme === SessionType.CopilotCloud) {
@@ -1638,7 +1744,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  		}
  
  		const allChats = Array.from(this._sessionCache.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-@@ -1654,6 +1663,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1654,6 +1678,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		const sessions: ISession[] = [];
  
  		for (const chat of allChats) {
@@ -1648,7 +1754,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  			const groupId = this._getGroupIdForChat(chat);
  			if (!seen.has(groupId)) {
  				seen.add(groupId);
-@@ -1679,6 +1691,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1679,6 +1706,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			this._currentNewSession.dispose();
  			this._currentNewSession = undefined;
  		}
@@ -1656,7 +1762,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  
  		const workspace = this.resolveWorkspace(workspaceUri);
  		if (!workspace) {
-@@ -1717,6 +1730,35 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1717,6 +1745,35 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		return this._chatToSession(session);
  	}
  
@@ -1692,317 +1798,272 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..257872c635e958cc3ca0139b351b6700
  	setModel(sessionId: string, modelId: string): void {
  		if (this._currentNewSession?.id === sessionId) {
  			this._currentNewSession.setModelId(modelId);
-@@ -3036,6 +3078,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -2085,11 +2142,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		sendOptions: IChatSendRequestOptions,
+ 		permissionLevel: ChatPermissionLevel,
+ 	): Promise<ISession> {
+-		// The chat model was already created in createNewSession via
+-		// startNewLocalSession, so we skip getOrCreateChatSession here
+-		// (which would otherwise try to resolve a content provider).
+-		const disposable = await this._applySessionModelState(session.resource, session, permissionLevel);
+-		const chatWidget = await this.chatWidgetService.openSession(session.resource, ChatViewPaneTarget);
++		const resource = session.materialize();
++		const disposable = await this._applySessionModelState(resource, session, permissionLevel);
++		const chatWidget = await this.chatWidgetService.openSession(resource, ChatViewPaneTarget);
+ 		disposable.dispose();
+ 		if (!chatWidget) {
+ 			throw new Error('[CopilotChatSessionsProvider] Failed to open chat widget for local session');
+@@ -2102,7 +2157,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		const { userSelectedTools } = chatWidget.getModeRequestOptions();
+ 
+ 		this.logService.debug(`[CopilotChatSessionsProvider] Sending first chat for local session ${session.id}`);
+-		const result = await this.chatService.sendRequest(session.resource, query, {
++		const result = await this.chatService.sendRequest(resource, query, {
+ 			...sendOptions,
+ 			userSelectedTools,
+ 			instructionContext: {
+@@ -2726,7 +2781,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 	 * commit (e.g. was stopped before the agent created a worktree).
+ 	 */
+ 	private _cleanupTempSession(sessionId: string): void {
+-		const chatSession = this._findChatSession(sessionId);
++		const chatSession = this._currentNewSession?.id === sessionId
++			? this._currentNewSession
++			: this._findChatSession(sessionId);
+ 		if (!chatSession) {
+ 			return;
+ 		}
+@@ -3036,6 +3093,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			chats: chatsObs,
  			mainChat,
  			capabilities: { supportsMultipleChats: primaryChat.sessionType === CopilotCLISessionType.id && this._isMultiChatEnabled() },
-+			deduplicationKey: directorSessionDeduplicationKeyFromResource(primaryChat.resource.toString()),
++			deduplicationKey: sessionDeduplicationKeyFromResource(primaryChat.resource.toString()),
  		};
  		this._sessionGroupCache.set(sessionId, session);
  		return session;
-@@ -3067,6 +3110,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -3067,6 +3125,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			chats: constObservable([mainChat]),
  			mainChat,
  			capabilities: { supportsMultipleChats: false },
-+			deduplicationKey: directorSessionDeduplicationKeyFromResource(chat.resource.toString()),
++			deduplicationKey: sessionDeduplicationKeyFromResource(chat.resource.toString()),
  		};
  	}
  
-diff --git a/src/vs/sessions/contrib/directorSessions/browser/directorSessionIndexSessionsProvider.ts b/src/vs/sessions/contrib/directorSessions/browser/directorSessionIndexSessionsProvider.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..08dc9f0a6cf9d95473693cb34df056e04e07af2c
---- /dev/null
-+++ b/src/vs/sessions/contrib/directorSessions/browser/directorSessionIndexSessionsProvider.ts
-@@ -0,0 +1,289 @@
-+/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Director-Code Contributors. All rights reserved.
-+ *  Licensed under the MIT License. See License.txt in the project root for license information.
-+ *--------------------------------------------------------------------------------------------*/
-+
-+import { Codicon } from '../../../../base/common/codicons.js';
-+import { Emitter, Event } from '../../../../base/common/event.js';
-+import { Disposable } from '../../../../base/common/lifecycle.js';
-+import { Schemas } from '../../../../base/common/network.js';
-+import { basename, dirname } from '../../../../base/common/resources.js';
-+import { constObservable, IObservable, observableValue } from '../../../../base/common/observable.js';
-+import { ThemeIcon } from '../../../../base/common/themables.js';
-+import { URI } from '../../../../base/common/uri.js';
-+import { localize } from '../../../../nls.js';
-+import { ILabelService } from '../../../../platform/label/common/label.js';
-+import { IDirectorSessionIndexService, type IDirectorSessionIndexRecord } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.js';
-+import { IDirectorSessionsPolicyService } from '../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
-+import { IChat, ISession, ISessionChangeset, ISessionFileChange, ISessionType, ISessionWorkspace, ISessionWorkspaceBrowseAction, LocalSessionType, SessionStatus, SESSION_WORKSPACE_GROUP_LOCAL } from '../../../services/sessions/common/session.js';
-+import { ISendRequestOptions, ISessionChangeEvent, ISessionsProvider } from '../../../services/sessions/common/sessionsProvider.js';
-+
-+export const DIRECTOR_SESSION_INDEX_PROVIDER_ID = 'director-session-index';
-+
-+export class DirectorSessionIndexSessionsProvider extends Disposable implements ISessionsProvider {
-+	readonly id = DIRECTOR_SESSION_INDEX_PROVIDER_ID;
-+	readonly label = localize('directorSessionIndexProvider', "Director Sessions");
-+	readonly icon = Codicon.robot;
-+	readonly browseActions: readonly ISessionWorkspaceBrowseAction[] = [];
-+	readonly supportsLocalWorkspaces = false;
-+
-+	private readonly _onDidChangeSessionTypes = this._register(new Emitter<void>());
-+	readonly onDidChangeSessionTypes: Event<void> = this._onDidChangeSessionTypes.event;
-+
-+	private readonly _onDidChangeSessions = this._register(new Emitter<ISessionChangeEvent>());
-+	readonly onDidChangeSessions: Event<ISessionChangeEvent> = this._onDidChangeSessions.event;
-+
-+	private readonly _sessions = new Map<string, DirectorIndexedSession>();
-+
-+	constructor(
-+		@IDirectorSessionIndexService private readonly directorSessionIndexService: IDirectorSessionIndexService,
-+		@IDirectorSessionsPolicyService private readonly directorSessionsPolicyService: IDirectorSessionsPolicyService,
-+		@ILabelService private readonly labelService: ILabelService,
-+	) {
-+		super();
-+
-+		this.refreshSessions(false);
-+		this._register(this.directorSessionIndexService.onDidChangeSessionIndex(() => this.refreshSessions(true)));
-+		this._register(this.directorSessionsPolicyService.onDidChangePolicySnapshot(() => this._onDidChangeSessionTypes.fire()));
-+	}
-+
-+	get sessionTypes(): readonly ISessionType[] {
-+		return this.directorSessionsPolicyService.isSessionTypeVisible(LocalSessionType.id) ? [LocalSessionType] : [];
-+	}
-+
-+	getSessions(): ISession[] {
-+		return Array.from(this._sessions.values());
-+	}
-+
-+	resolveWorkspace(repositoryUri: URI): ISessionWorkspace | undefined {
-+		if (repositoryUri.scheme !== Schemas.file) {
-+			return undefined;
-+		}
-+		return this.toWorkspace(repositoryUri, repositoryUri);
-+	}
-+
-+	createNewSession(_repositoryUri: URI, sessionTypeId: string): ISession {
-+		this.directorSessionsPolicyService.assertCanCreateSessionType(sessionTypeId);
-+		throw new Error(localize('directorSessionIndexReadOnlyCreate', "Start new Director sessions from the main Chat view. The Agents Window lists and manages shared Director sessions."));
-+	}
-+
-+	getSessionTypes(repositoryUri: URI): ISessionType[] {
-+		if (repositoryUri.scheme !== Schemas.file) {
-+			return [];
-+		}
-+		return [...this.sessionTypes];
-+	}
-+
-+	async renameChat(sessionId: string, _chatUri: URI, title: string): Promise<void> {
-+		this.directorSessionIndexService.rename(sessionId, title);
-+	}
-+
-+	setModel(_sessionId: string, _modelId: string): void {
-+		// The shared index is a projection; model changes are owned by the live chat surface.
-+	}
-+
-+	async archiveSession(sessionId: string): Promise<void> {
-+		this.directorSessionIndexService.setArchived(sessionId, true);
-+	}
-+
-+	async unarchiveSession(sessionId: string): Promise<void> {
-+		this.directorSessionIndexService.setArchived(sessionId, false);
-+	}
-+
-+	async deleteSession(sessionId: string): Promise<void> {
-+		this.directorSessionIndexService.delete(sessionId);
-+	}
-+
-+	async deleteChat(sessionId: string, _chatUri: URI): Promise<void> {
-+		this.directorSessionIndexService.delete(sessionId);
-+	}
-+
-+	async sendAndCreateChat(_sessionId: string, _options: ISendRequestOptions): Promise<ISession> {
-+		throw new Error(localize('directorSessionIndexReadOnlySend', "Shared Director session index entries cannot send requests directly yet."));
-+	}
-+
-+	addChat(_sessionId: string): IChat {
-+		throw new Error(localize('directorSessionIndexReadOnlyAddChat', "Shared Director session index entries cannot create chats directly yet."));
-+	}
-+
-+	async sendRequest(_sessionId: string, _chatResource: URI, _options: ISendRequestOptions): Promise<ISession> {
-+		throw new Error(localize('directorSessionIndexReadOnlySendExisting', "Shared Director session index entries cannot send requests directly yet."));
-+	}
-+
-+	private refreshSessions(fireEvent: boolean): void {
-+		const previous = new Map(this._sessions);
-+		const nextIds = new Set<string>();
-+		const added: ISession[] = [];
-+		const changed: ISession[] = [];
-+
-+		for (const record of this.directorSessionIndexService.list()) {
-+			nextIds.add(record.directorSessionId);
-+			const existing = this._sessions.get(record.directorSessionId);
-+			if (existing) {
-+				if (existing.update(record)) {
-+					changed.push(existing);
-+				}
-+			} else {
-+				const session = new DirectorIndexedSession(record, (workspaceUri, workingDirectoryUri) => this.toWorkspace(workspaceUri, workingDirectoryUri));
-+				this._sessions.set(record.directorSessionId, session);
-+				added.push(session);
-+			}
-+		}
-+
-+		const removed: ISession[] = [];
-+		for (const [id, session] of previous) {
-+			if (!nextIds.has(id)) {
-+				this._sessions.delete(id);
-+				removed.push(session);
-+			}
-+		}
-+
-+		if (fireEvent && (added.length || removed.length || changed.length)) {
-+			this._onDidChangeSessions.fire({ added, removed, changed });
-+		}
-+	}
-+
-+	private toWorkspace(workspaceUri: URI | undefined, workingDirectoryUri: URI | undefined): ISessionWorkspace | undefined {
-+		const uri = workspaceUri ?? workingDirectoryUri;
-+		if (!uri) {
-+			return undefined;
-+		}
-+		const workingDirectory = workingDirectoryUri ?? uri;
-+		return {
-+			label: basename(uri),
-+			description: this.labelService.getUriLabel(dirname(uri), { relative: false }),
-+			group: SESSION_WORKSPACE_GROUP_LOCAL,
-+			icon: Codicon.folder,
-+			repositories: [{ uri, workingDirectory, detail: undefined, baseBranchName: undefined }],
-+			requiresWorkspaceTrust: true,
-+		};
-+	}
+diff --git a/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts b/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
+index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a324895cb 100644
+--- a/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
++++ b/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
+@@ -27,10 +27,12 @@ import { IChatWidget, IChatWidgetService } from '../../../../../workbench/contri
+ import { ILanguageModelsService } from '../../../../../workbench/contrib/chat/common/languageModels.js';
+ import { ILanguageModelToolsService } from '../../../../../workbench/contrib/chat/common/tools/languageModelToolsService.js';
+ import { IChatResponseModel } from '../../../../../workbench/contrib/chat/common/model/chatModel.js';
++import { LocalChatSessionUri } from '../../../../../workbench/contrib/chat/common/model/chatUri.js';
+ import { IChatAgentData } from '../../../../../workbench/contrib/chat/common/participants/chatAgents.js';
+ import { IGitService } from '../../../../../workbench/contrib/git/common/gitService.js';
++import { IDirectorSessionsPolicyService } from '../../../../../workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.js';
+ import { ISessionChangeEvent } from '../../../../services/sessions/common/sessionsProvider.js';
+-import { ClaudeCodeSessionType, CopilotCLISessionType, GITHUB_REMOTE_FILE_SCHEME, SessionStatus } from '../../../../services/sessions/common/session.js';
++import { ClaudeCodeSessionType, CopilotCLISessionType, GITHUB_REMOTE_FILE_SCHEME, LocalSessionType, SessionStatus } from '../../../../services/sessions/common/session.js';
+ import { CLAUDE_CODE_ENABLED_SETTING, CopilotChatSessionsProvider, COPILOT_PROVIDER_ID } from '../../browser/copilotChatSessionsProvider.js';
+ import { ILogService, NullLogService } from '../../../../../platform/log/common/log.js';
+ import { ILabelService } from '../../../../../platform/label/common/label.js';
+@@ -69,6 +71,29 @@ function createMockAgentSession(resource: URI, opts?: {
+ 
+ // ---- Mock Agent Sessions Service --------------------------------------------
+ 
++function createMockDirectorSessionsPolicyService(): Partial<IDirectorSessionsPolicyService> {
++	const snapshot = {
++		status: 'ready' as const,
++		label: 'Director Code',
++		ariaLabel: 'Director Code providers are configured',
++		hasDirectorProvider: true,
++		hasReadyDirectorProvider: true,
++		hasEligibleAnthropicProvider: true,
++		canCreateClaudeCode: true,
++		showSetupGatedClaudeCode: true,
++		setupCommandId: 'directorCode.openSettings',
++		setupRequiredMessage: '',
++	};
++	return {
++		onDidChangePolicySnapshot: Event.None,
++		getSnapshot: () => snapshot,
++		refresh: async () => snapshot,
++		isSessionTypeVisible: () => true,
++		getVisibleSessionTypeLabel: (_sessionTypeId: string, label: string) => label,
++		assertCanCreateSessionType: () => { },
++	};
 +}
 +
-+class DirectorIndexedSession implements ISession {
-+	readonly providerId = DIRECTOR_SESSION_INDEX_PROVIDER_ID;
-+	readonly icon: ThemeIcon = Codicon.robot;
-+	readonly changesets: IObservable<readonly ISessionChangeset[]> = constObservable([]);
-+	readonly changes: IObservable<readonly ISessionFileChange[]> = constObservable([]);
-+	readonly loading: IObservable<boolean> = constObservable(false);
-+	readonly description = constObservable(undefined);
-+	readonly gitHubInfo = constObservable(undefined);
+ class MockAgentSessionsModel {
+ 	private readonly _sessions: IAgentSession[] = [];
+ 	private readonly _onDidChangeSessions = new Emitter<void>();
+@@ -178,6 +203,7 @@ function createProviderWithConfig(
+ 	instantiationService.stub(ILanguageModelToolsService, {
+ 		toToolReferences: () => [],
+ 	});
++	instantiationService.stub(IDirectorSessionsPolicyService, createMockDirectorSessionsPolicyService());
+ 	// Stub IInstantiationService so provider can use createInstance for CopilotCLISession
+ 	instantiationService.stub(IInstantiationService, instantiationService);
+ 	instantiationService.stub(ILabelService, {
+@@ -202,7 +228,12 @@ function createProviderForSendTests(
+ 	disposables: DisposableStore,
+ 	model: MockAgentSessionsModel,
+ 	sendRequest: () => Promise<ChatSendResult>,
+-	opts?: { onDidCommitSession?: Event<{ original: URI; committed: URI }>; claudeEnabled?: boolean; createNewChatSessionItem?: IChatSessionsService['createNewChatSessionItem'] },
++	opts?: {
++		onDidCommitSession?: Event<{ original: URI; committed: URI }>;
++		claudeEnabled?: boolean;
++		createNewChatSessionItem?: IChatSessionsService['createNewChatSessionItem'];
++		onStartNewLocalSession?: (resource: URI) => void;
++	},
+ ): CopilotChatSessionsProvider {
+ 	const instantiationService = disposables.add(new TestInstantiationService());
+ 
+@@ -238,18 +269,31 @@ function createProviderForSendTests(
+ 		sendRequest: sendRequest,
+ 		removeHistoryEntry: async (resource: URI) => { model.removeSession(resource); },
+ 		setChatSessionTitle: () => { },
++		startNewLocalSession: () => {
++			const resource = LocalChatSessionUri.forSession(`local-${Date.now()}-${Math.random()}`);
++			opts?.onStartNewLocalSession?.(resource);
++			return {
++				object: {
++					sessionResource: resource,
++					setWorkingDirectory: () => { },
++				},
++				dispose: () => { },
++			} as any;
++		},
+ 	});
+ 	instantiationService.stub(IChatWidgetService, {
+ 		openSession: async () => new class extends mock<IChatWidget>() {
+ 			override input = new class extends mock<IChatWidget['input']>() {
+ 				override setPermissionLevel = () => { };
+ 			}();
++			override getModeRequestOptions = () => ({});
+ 		}(),
+ 		lastFocusedWidget: undefined,
+ 		onDidChangeFocusedSession: Event.None,
+ 	});
+ 	instantiationService.stub(ILanguageModelsService, { lookupLanguageModel: () => undefined });
+ 	instantiationService.stub(ILanguageModelToolsService, { toToolReferences: () => [] });
++	instantiationService.stub(IDirectorSessionsPolicyService, createMockDirectorSessionsPolicyService());
+ 	instantiationService.stub(IGitService, { openRepository: async () => undefined });
+ 	instantiationService.stub(IInstantiationService, instantiationService);
+ 	instantiationService.stub(ILabelService, {
+@@ -279,18 +323,18 @@ suite('CopilotChatSessionsProvider', () => {
+ 	test('has correct id and label', () => {
+ 		const provider = createProvider(disposables, model);
+ 		assert.strictEqual(provider.id, COPILOT_PROVIDER_ID);
+-		assert.strictEqual(provider.sessionTypes.length, 3);
++		assert.strictEqual(provider.sessionTypes.length, 2);
+ 	});
+ 
+ 	test('sessionTypes excludes Claude when setting is disabled', () => {
+ 		const provider = createProvider(disposables, model, { claudeEnabled: false });
+-		assert.strictEqual(provider.sessionTypes.length, 2);
++		assert.strictEqual(provider.sessionTypes.length, 1);
+ 		assert.ok(!provider.sessionTypes.some(t => t.id === ClaudeCodeSessionType.id));
+ 	});
+ 
+ 	test('onDidChangeSessionTypes fires when claude setting changes', () => {
+ 		const { provider, configService } = createProviderWithConfig(disposables, model);
+-		assert.strictEqual(provider.sessionTypes.length, 3);
++		assert.strictEqual(provider.sessionTypes.length, 2);
+ 
+ 		let fired = false;
+ 		disposables.add(provider.onDidChangeSessionTypes(() => { fired = true; }));
+@@ -305,7 +349,7 @@ suite('CopilotChatSessionsProvider', () => {
+ 		});
+ 
+ 		assert.ok(fired, 'onDidChangeSessionTypes should have fired');
+-		assert.strictEqual(provider.sessionTypes.length, 2);
++		assert.strictEqual(provider.sessionTypes.length, 1);
+ 	});
+ 
+ 	test('toggling claude setting refreshes sessions list', () => {
+@@ -869,22 +913,73 @@ suite('CopilotChatSessionsProvider', () => {
+ 		assert.strictEqual(workspace.requiresWorkspaceTrust, true);
+ 	});
+ 
+-	test('builds an unknown workspace fallback when repository metadata is missing', () => {
+-		const resource = URI.from({ scheme: AgentSessionProviders.Background, path: '/unknown-workspace-session' });
++	test('leaves workspace undefined when repository metadata is missing', () => {
++		const resource = URI.from({ scheme: AgentSessionProviders.Background, path: '/missing-workspace-session' });
+ 		model.addSession(createMockAgentSession(resource, { metadata: {} }));
+ 
+ 		const provider = createProvider(disposables, model);
+ 		const sessions = provider.getSessions();
+ 		const workspace = sessions[0].workspace.get();
+ 
++		assert.strictEqual(workspace, undefined);
++	});
 +
-+	sessionId: string;
-+	resource: URI;
-+	sessionType: string;
-+	createdAt: Date;
-+	capabilities: ISession['capabilities'];
-+	deduplicationKey: string;
-+	mainChat: IChat;
++	test('uses real workspace metadata when repository metadata is present', () => {
++		const resource = URI.from({ scheme: AgentSessionProviders.Background, path: '/real-workspace-session' });
++		const repositoryPath = '/test/real-repo';
++		model.addSession(createMockAgentSession(resource, { metadata: { repositoryPath } }));
 +
-+	private _recordJson: string;
-+	private readonly _workspace = observableValue<ISessionWorkspace | undefined>(this, undefined);
-+	readonly workspace: IObservable<ISessionWorkspace | undefined> = this._workspace;
-+	private readonly _title = observableValue(this, '');
-+	readonly title: IObservable<string> = this._title;
-+	private readonly _updatedAt = observableValue(this, new Date());
-+	readonly updatedAt: IObservable<Date> = this._updatedAt;
-+	private readonly _status = observableValue(this, SessionStatus.Completed);
-+	readonly status: IObservable<SessionStatus> = this._status;
-+	private readonly _modelId = observableValue<string | undefined>(this, undefined);
-+	readonly modelId: IObservable<string | undefined> = this._modelId;
-+	private readonly _mode = observableValue<{ readonly id: string; readonly kind: string } | undefined>(this, undefined);
-+	readonly mode: IObservable<{ readonly id: string; readonly kind: string } | undefined> = this._mode;
-+	private readonly _isArchived = observableValue(this, false);
-+	readonly isArchived: IObservable<boolean> = this._isArchived;
-+	private readonly _isRead = observableValue(this, true);
-+	readonly isRead: IObservable<boolean> = this._isRead;
-+	private readonly _lastTurnEnd = observableValue<Date | undefined>(this, undefined);
-+	readonly lastTurnEnd: IObservable<Date | undefined> = this._lastTurnEnd;
-+	private readonly _chats = observableValue<readonly IChat[]>(this, []);
-+	readonly chats: IObservable<readonly IChat[]> = this._chats;
++		const provider = createProvider(disposables, model);
++		const sessions = provider.getSessions();
++		const workspace = sessions[0].workspace.get();
 +
-+	constructor(
-+		record: IDirectorSessionIndexRecord,
-+		private readonly _workspaceFactory: (workspaceUri: URI | undefined, workingDirectoryUri: URI | undefined) => ISessionWorkspace | undefined,
-+	) {
-+		this.sessionId = record.directorSessionId;
-+		this.resource = parseUri(record.mainChatResourceUri);
-+		this.sessionType = record.sessionType;
-+		this.createdAt = new Date(record.createdAt);
-+		this.capabilities = { supportsMultipleChats: record.capabilities.supportsMultipleChats };
-+		this.deduplicationKey = record.deduplicationKey;
-+		this.mainChat = this.createChat(record);
-+		this._recordJson = '';
-+		this.update(record);
-+	}
+ 		assert.ok(workspace);
+-		assert.strictEqual(workspace.repositories.length, 1);
+-		assert.strictEqual(workspace.repositories[0].uri.toString(), URI.parse('unknown:///').toString());
+-		assert.strictEqual(workspace.requiresWorkspaceTrust, true);
++		assert.strictEqual(workspace.label, 'real-repo');
++		assert.strictEqual(workspace.repositories[0].uri.toString(), URI.file(repositoryPath).toString());
++	});
 +
-+	update(record: IDirectorSessionIndexRecord): boolean {
-+		const nextJson = JSON.stringify(record);
-+		if (this._recordJson === nextJson) {
-+			return false;
-+		}
-+		this._recordJson = nextJson;
-+		this.sessionId = record.directorSessionId;
-+		this.resource = parseUri(record.mainChatResourceUri);
-+		this.sessionType = record.sessionType;
-+		this.createdAt = new Date(record.createdAt);
-+		this.capabilities = { supportsMultipleChats: record.capabilities.supportsMultipleChats };
-+		this.deduplicationKey = record.deduplicationKey;
-+		this._workspace.set(this._workspaceFactory(parseOptionalUri(record.workspaceUri), parseOptionalUri(record.workingDirectoryUri)), undefined);
-+		this._title.set(record.title, undefined);
-+		this._updatedAt.set(new Date(record.updatedAt), undefined);
-+		this._status.set(toSessionStatus(record.status), undefined);
-+		this._modelId.set(record.modelId, undefined);
-+		this._isArchived.set(record.isArchived, undefined);
-+		this._isRead.set(record.isRead, undefined);
-+		this._lastTurnEnd.set(record.lastTurnEnd ? new Date(record.lastTurnEnd) : undefined, undefined);
-+		this.mainChat = this.createChat(record);
-+		this._chats.set([this.mainChat], undefined);
-+		return true;
-+	}
++	test('createNewSession for local session does not materialize chat history before send', async () => {
++		let startCount = 0;
++		const provider = createProviderForSendTests(disposables, model, async () => ({
++			kind: 'sent' as const,
++			data: {
++				responseCompletePromise: Promise.resolve(),
++				responseCreatedPromise: Promise.resolve({} as IChatResponseModel),
++				agent: new class extends mock<IChatAgentData>() { }(),
++			} as IChatSendRequestData,
++		}), { onStartNewLocalSession: () => startCount++ });
 +
-+	private createChat(record: IDirectorSessionIndexRecord): IChat {
-+		return {
-+			resource: parseUri(record.chatResourceUri),
-+			createdAt: new Date(record.createdAt),
-+			title: this.title,
-+			updatedAt: this.updatedAt,
-+			status: this.status,
-+			changes: this.changes,
-+			changesets: this.changesets,
-+			modelId: this.modelId,
-+			mode: this.mode,
-+			isArchived: this.isArchived,
-+			isRead: this.isRead,
-+			description: this.description,
-+			lastTurnEnd: this.lastTurnEnd,
-+		};
-+	}
-+}
++		const first = provider.createNewSession(URI.file('/test/project'), LocalSessionType.id);
++		const second = provider.createNewSession(URI.file('/test/project'), LocalSessionType.id);
 +
-+function parseOptionalUri(value: string | undefined): URI | undefined {
-+	if (!value) {
-+		return undefined;
-+	}
-+	try {
-+		return URI.parse(value);
-+	} catch {
-+		return undefined;
-+	}
-+}
++		assert.strictEqual(startCount, 0);
++		assert.strictEqual(provider.getSessions().length, 0);
++		assert.notStrictEqual(first.sessionId, second.sessionId);
++		await provider.deleteSession(second.sessionId);
++	});
 +
-+function parseUri(value: string): URI {
-+	return parseOptionalUri(value) ?? URI.from({ scheme: 'director-session-index', path: '/invalid' });
-+}
++	test('sendAndCreateChat for local session materializes exactly one real session', async () => {
++		let startCount = 0;
++		const sentResources: URI[] = [];
++		const provider = createProviderForSendTests(disposables, model, async () => ({
++			kind: 'sent' as const,
++			data: {
++				responseCompletePromise: Promise.resolve(),
++				responseCreatedPromise: Promise.resolve({} as IChatResponseModel),
++				agent: new class extends mock<IChatAgentData>() { }(),
++			} as IChatSendRequestData,
++		}), { onStartNewLocalSession: resource => { startCount++; sentResources.push(resource); } });
 +
-+function toSessionStatus(status: IDirectorSessionIndexRecord['status']): SessionStatus {
-+	switch (status) {
-+		case 'untitled':
-+			return SessionStatus.Untitled;
-+		case 'inProgress':
-+			return SessionStatus.InProgress;
-+		case 'needsInput':
-+			return SessionStatus.NeedsInput;
-+		case 'error':
-+			return SessionStatus.Error;
-+		case 'completed':
-+			return SessionStatus.Completed;
-+	}
-+}
++		const session = provider.createNewSession(URI.file('/test/project'), LocalSessionType.id);
++		assert.strictEqual(provider.getSessions().length, 0);
++
++		const created = await provider.sendAndCreateChat(session.sessionId, { query: 'hello local' });
+ 
+-		// The core symptom of #310777: any of these calls must not throw.
+-		assert.doesNotThrow(() => URI.joinPath(workspace.repositories[0].uri, '.vscode', 'settings.json'));
+-		assert.doesNotThrow(() => URI.joinPath(workspace.repositories[0].uri, '.vscode/extensions.json'));
++		assert.strictEqual(startCount, 1);
++		assert.strictEqual(provider.getSessions().length, 1);
++		assert.strictEqual(created.resource.toString(), sentResources[0].toString());
++		assert.strictEqual(provider.getSessions()[0].resource.toString(), sentResources[0].toString());
++		await provider.deleteSession(created.sessionId);
+ 	});
+ 
+ 	// ---- Claude session creation -------
 diff --git a/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts b/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts
 index e2922f47ceaf0b7b5c02f8669a840c1662a12576..beab636a3308a7ee00139cd93854ac1efff762a7 100644
 --- a/src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts
@@ -2423,35 +2484,10 @@ index 6d49a22fefa0b9e82b86bcb00151b43ebc5b8288..6a0072bcc63d5b205602861a1f5d7061
  			return '';
  	}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
-index 498c97651e9aa7654168cf07cf1f798464f1e160..119e2d455edb14fa8aa4f6a4ddc1a9bb17827dd2 100644
+index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac677bf48ba 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
 +++ b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
-@@ -14,7 +14,7 @@ import { autorun, observableSignalFromEvent } from '../../../../../base/common/o
- import { isEqual } from '../../../../../base/common/resources.js';
- import { URI } from '../../../../../base/common/uri.js';
- import { IWorkbenchContribution } from '../../../../common/contributions.js';
--import { convertLegacyChatSessionTiming, IChatDetail, IChatService, IChatSessionTiming } from '../../common/chatService/chatService.js';
-+import { convertLegacyChatSessionTiming, IChatDetail, IChatService, IChatSessionTiming, ResponseModelState } from '../../common/chatService/chatService.js';
- import { chatModelToChatDetail } from '../../common/chatService/chatServiceImpl.js';
- import { ChatSessionStatus, IChatSessionItem, IChatSessionItemController, IChatSessionItemMetadata, IChatSessionItemsDelta, IChatSessionsService, localChatSessionType } from '../../common/chatSessionsService.js';
- import { IChatModel } from '../../common/model/chatModel.js';
-@@ -22,6 +22,7 @@ import { getChatSessionType } from '../../common/model/chatUri.js';
- import { getInProgressSessionDescription } from '../chatSessions/chatSessionDescription.js';
- import { chatResponseStateToSessionStatus, getSessionStatusForModel } from '../chatSessions/chatSessions.contribution.js';
- import { Schemas } from '../../../../../base/common/network.js';
-+import { directorSessionDeduplicationKeyFromResource, directorSessionIdFromChatResource, IDirectorSessionIndexService, type DirectorSessionStatus } from '../../../directorCode/common/agentEngine/directorSessionIndex.js';
- 
- export class LocalAgentsSessionsController extends Disposable implements IChatSessionItemController, IWorkbenchContribution {
- 
-@@ -39,6 +40,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
- 	constructor(
- 		@IChatService private readonly chatService: IChatService,
- 		@IChatSessionsService private readonly chatSessionsService: IChatSessionsService,
-+		@IDirectorSessionIndexService private readonly directorSessionIndexService: IDirectorSessionIndexService,
- 	) {
- 		super();
- 
-@@ -72,12 +74,13 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -72,12 +72,13 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  				return;
  			}
  
@@ -2466,7 +2502,7 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..119e2d455edb14fa8aa4f6a4ddc1a9bb
  
  			const requestChangeListener = model.lastRequestObs.map(last => last?.response && observableSignalFromEvent('chatSessions.modelRequestChangeListener', last.response.onDidChange));
  			const modelChangeListener = observableSignalFromEvent('chatSessions.modelChangeListener', model.onDidChange);
-@@ -106,18 +109,22 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -106,18 +107,22 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  		}));
  	}
  
@@ -2494,7 +2530,17 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..119e2d455edb14fa8aa4f6a4ddc1a9bb
  		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [updated] });
  	}
  
-@@ -156,16 +163,68 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -138,6 +143,9 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 		if (!token.isCancellationRequested) {
+ 			const history = await this.getHistoryItems();
+ 			sessions.push(...history.filter(historyItem => !sessionsByResource.has(historyItem.resource)));
++			for (const historyItem of history) {
++				sessionsByResource.add(historyItem.resource);
++			}
+ 		}
+ 
+ 		return sessions;
+@@ -156,11 +164,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  	private toChatSessionItem(chat: IChatDetail): LocalChatSessionItem | undefined {
  		const model = this.chatService.getSession(chat.sessionResource);
  
@@ -2507,77 +2553,29 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..119e2d455edb14fa8aa4f6a4ddc1a9bb
  			// Sessions that are active but don't have a chat model are ultimately untitled with no requests
  			return undefined;
  		}
+@@ -180,11 +184,11 @@ class LocalChatSessionItem implements IChatSessionItem {
+ 	readonly changes: IChatSessionItem['changes'];
+ 	readonly metadata: IChatSessionItemMetadata | undefined;
  
--		return new LocalChatSessionItem(chat, model);
-+		const item = new LocalChatSessionItem(chat, model);
-+		this.upsertDirectorSessionIndex(chat, item, model);
-+		return item;
-+	}
-+
-+	private upsertDirectorSessionIndex(chat: IChatDetail, item: LocalChatSessionItem, model: IChatModel | undefined): void {
-+		const timing = convertLegacyChatSessionTiming(chat.timing);
-+		const chatResourceUri = chat.sessionResource.toString();
-+		const inputState = model?.inputModel?.state.get();
-+		const modelId = inputState?.selectedModel?.identifier;
-+
-+		this.directorSessionIndexService.upsert({
-+			schemaVersion: 1,
-+			directorSessionId: directorSessionIdFromChatResource(chatResourceUri),
-+			providerId: 'director-chat',
-+			sessionType: localChatSessionType,
-+			agentKind: 'director',
-+			modelId,
-+			workspaceUri: chat.workingDirectory?.toString(),
-+			workingDirectoryUri: chat.workingDirectory?.toString(),
-+			chatResourceUri,
-+			mainChatResourceUri: chatResourceUri,
-+			status: toDirectorSessionStatus(chat.lastResponseState, model),
-+			isArchived: false,
-+			isRead: true,
-+			createdAt: timing.created,
-+			updatedAt: chat.lastMessageDate || timing.lastRequestEnded || timing.lastRequestStarted || timing.created,
-+			lastTurnEnd: timing.lastRequestEnded,
-+			sourceSurface: 'ide-chat',
-+			title: item.label,
-+			capabilities: {
-+				supportsMultipleChats: false,
-+				supportsOpen: true,
-+				supportsArchive: true,
-+				supportsDelete: true,
-+				transcriptRestorePlanned: false,
-+			},
-+			deduplicationKey: directorSessionDeduplicationKeyFromResource(chatResourceUri),
-+			groupId: chatResourceUri,
-+		});
-+	}
-+}
-+
-+function toDirectorSessionStatus(state: ResponseModelState, model: IChatModel | undefined): DirectorSessionStatus {
-+	if (model && !model.hasRequests) {
-+		return 'untitled';
-+	}
-+	switch (state) {
-+		case ResponseModelState.Pending:
-+			return 'inProgress';
-+		case ResponseModelState.NeedsInput:
-+			return 'needsInput';
-+		case ResponseModelState.Failed:
-+			return 'error';
-+		case ResponseModelState.Complete:
-+		case ResponseModelState.Cancelled:
-+			return 'completed';
- 	}
- }
- 
-@@ -184,7 +243,7 @@ class LocalChatSessionItem implements IChatSessionItem {
+-	constructor(chatDetail: IChatDetail, model: IChatModel | undefined) {
++	constructor(chatDetail: IChatDetail, model: IChatModel | undefined, options?: { status?: ChatSessionStatus; metadata?: IChatSessionItemMetadata }) {
  		this.resource = chatDetail.sessionResource;
  		this.label = chatDetail.title;
  		this.description = model ? getInProgressSessionDescription(model) : undefined;
 -		this.status = (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState);
-+		this.status = model && !model.hasRequests ? undefined : (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState);
++		this.status = options?.status ?? (model && !model.hasRequests ? undefined : (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState));
  		this.timing = convertLegacyChatSessionTiming(chatDetail.timing);
  		this.changes = chatDetail.stats ? {
  			insertions: chatDetail.stats.added,
+@@ -192,7 +196,7 @@ class LocalChatSessionItem implements IChatSessionItem {
+ 			files: chatDetail.stats.fileCount,
+ 		} : undefined;
+ 		const workingDirectoryPath = chatDetail.workingDirectory?.scheme === Schemas.file ? chatDetail.workingDirectory.fsPath : undefined;
+-		this.metadata = workingDirectoryPath ? { workingDirectoryPath: workingDirectoryPath } : undefined;
++		this.metadata = options?.metadata ?? (workingDirectoryPath ? { workingDirectoryPath: workingDirectoryPath } : undefined);
+ 	}
+ 
+ 	isEqual(other: LocalChatSessionItem): boolean {
 diff --git a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts b/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts
 index 08f937f320bcdb7855471f734732bdf9213a9fda..5e7ae23c19afc0dc6eebeafe8cbf00d9ab2226d8 100644
 --- a/src/vs/workbench/contrib/chat/browser/aiCustomization/aiCustomizationDebugPanel.ts
@@ -3910,32 +3908,10 @@ index 715d629ab08d11c1978164d0fb91cd207c093ce8..b301d4f22a115031cf622964398dfe67
  } as const;
  
 diff --git a/src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts b/src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts
-index b00f28ebfc39317547c784d1478d695757aba8e7..605a153f900114b70f9affa2625212578aea6b4e 100644
+index b00f28ebfc39317547c784d1478d695757aba8e7..5fd721ac2256354b3c9616c0fd39c2960a1ca435 100644
 --- a/src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts
 +++ b/src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts
-@@ -24,9 +24,12 @@ import { IUserDataProfilesService } from '../../../../../platform/userDataProfil
- import { IAnyWorkspaceIdentifier, isEmptyWorkspaceIdentifier, IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
- import { Dto } from '../../../../services/extensions/common/proxyIdentifier.js';
- import { ILifecycleService } from '../../../../services/lifecycle/common/lifecycle.js';
-+import { IUserDataProfileService } from '../../../../services/userDataProfile/common/userDataProfile.js';
- import { IWorkspaceEditingService } from '../../../../services/workspaces/common/workspaceEditing.js';
-+import { directorSessionDeduplicationKeyFromResource, directorSessionIdFromChatResource, IDirectorSessionIndexService, type DirectorSessionStatus } from '../../../directorCode/common/agentEngine/directorSessionIndex.js';
- import { awaitStatsForSession } from '../chat.js';
- import { IChatSessionStats, IChatSessionTiming, ResponseModelState } from '../chatService/chatService.js';
-+import { localChatSessionType } from '../chatSessionsService.js';
- import { ChatAgentLocation, ChatPermissionLevel } from '../constants.js';
- import { ModifiedFileEntryState } from '../editing/chatEditingService.js';
- import { ChatModel, ISerializableChatData, ISerializableChatDataIn, ISerializableChatModelInputState, ISerializableChatsData, ISerializedChatDataReference, normalizeSerializableChatData } from './chatModel.js';
-@@ -57,6 +60,8 @@ export class ChatSessionStore extends Disposable {
- 		@IStorageService private readonly storageService: IStorageService,
- 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
- 		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
-+		@IUserDataProfileService private readonly userDataProfileService: IUserDataProfileService,
-+		@IDirectorSessionIndexService private readonly directorSessionIndexService: IDirectorSessionIndexService,
- 		@IConfigurationService private readonly configurationService: IConfigurationService,
- 		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
- 		@IDialogService private readonly dialogService: IDialogService,
-@@ -371,9 +376,9 @@ export class ChatSessionStore extends Disposable {
+@@ -371,9 +371,9 @@ export class ChatSessionStore extends Disposable {
  							this.dialogService.prompt({
  								custom: true, // so text is copyable
  								title: localize('chatSessionStore.serializationError', 'Error saving chat session'),
@@ -3947,116 +3923,16 @@ index b00f28ebfc39317547c784d1478d695757aba8e7..605a153f900114b70f9affa262521257
  								]
  							});
  						}
-@@ -396,6 +401,9 @@ export class ChatSessionStore extends Disposable {
- 			// Write succeeded, update index
- 			const newMetadata = await getSessionMetadata(session);
- 			index.entries[session.sessionId] = newMetadata;
-+			if ('sessionResource' in session) {
-+				this.upsertDirectorSessionIndex(session, newMetadata);
-+			}
- 		} catch (e) {
- 			this.reportError('sessionWrite', 'Error writing chat session', e);
- 		}
-@@ -471,6 +479,7 @@ export class ChatSessionStore extends Disposable {
- 
- 			delete index.entries[sessionId];
- 		}
-+		this.directorSessionIndexService.delete(directorSessionIdFromChatResource(LocalChatSessionUri.forSession(sessionId).toString()));
- 	}
- 
- 	hasSessions(): boolean {
-@@ -504,6 +513,7 @@ export class ChatSessionStore extends Disposable {
- 			const index = this.internalGetIndex();
- 			if (index.entries[sessionId]) {
- 				index.entries[sessionId].title = title;
-+				this.directorSessionIndexService.rename(directorSessionIdFromChatResource(LocalChatSessionUri.forSession(sessionId).toString()), title);
- 			}
- 		});
- 	}
-@@ -737,7 +747,9 @@ export class ChatSessionStore extends Disposable {
+@@ -737,7 +737,8 @@ export class ChatSessionStore extends Disposable {
  	updateAndFlushIndexSync(localSessions: ChatModel[], externalSessions: ChatModel[]): void {
  		const index = this.internalGetIndex();
  		for (const session of localSessions) {
 -			index.entries[session.sessionId] = getSessionMetadataSync(session);
 +			const metadata = getSessionMetadataSync(session);
 +			index.entries[session.sessionId] = metadata;
-+			this.upsertDirectorSessionIndex(session, metadata);
  		}
  		for (const session of externalSessions) {
  			const externalSessionId = session.sessionResource.toString();
-@@ -750,6 +762,48 @@ export class ChatSessionStore extends Disposable {
- 		}
- 	}
- 
-+	private upsertDirectorSessionIndex(session: ChatModel, metadata: IChatSessionEntryMetadata): void {
-+		if (!LocalChatSessionUri.parseLocalSessionId(session.sessionResource)) {
-+			return;
-+		}
-+
-+		const chatResourceUri = session.sessionResource.toString();
-+		const inputState = session.inputModel.state.get();
-+		const profile = this.userDataProfileService.currentProfile;
-+		this.directorSessionIndexService.upsert({
-+			schemaVersion: 1,
-+			directorSessionId: directorSessionIdFromChatResource(chatResourceUri),
-+			providerId: 'director-chat',
-+			sessionType: localChatSessionType,
-+			agentKind: 'director',
-+			modelId: inputState?.selectedModel?.identifier,
-+			sourceProfileId: profile.id,
-+			sourceProfileName: profile.name,
-+			sourceProfileIsAgentsWindow: profile.isAgentsWindowProfile === true,
-+			workspaceUri: session.workingDirectory?.toString(),
-+			workingDirectoryUri: session.workingDirectory?.toString(),
-+			chatResourceUri,
-+			mainChatResourceUri: chatResourceUri,
-+			status: toDirectorSessionStatus(metadata.lastResponseState, metadata.isEmpty),
-+			isArchived: false,
-+			isRead: true,
-+			createdAt: metadata.timing.created,
-+			updatedAt: metadata.lastMessageDate || metadata.timing.lastRequestEnded || metadata.timing.lastRequestStarted || metadata.timing.created,
-+			lastTurnEnd: metadata.timing.lastRequestEnded,
-+			sourceSurface: 'ide-chat',
-+			title: metadata.title,
-+			capabilities: {
-+				supportsMultipleChats: false,
-+				supportsOpen: true,
-+				supportsArchive: true,
-+				supportsDelete: true,
-+				transcriptRestorePlanned: false,
-+			},
-+			deduplicationKey: directorSessionDeduplicationKeyFromResource(chatResourceUri),
-+			groupId: chatResourceUri,
-+		});
-+	}
-+
- 	public getChatStorageFolder(): URI {
- 		return this.storageRoot;
- 	}
-@@ -898,6 +952,23 @@ async function getSessionMetadata(session: ChatModel | ISerializableChatData): P
- 	};
- }
- 
-+function toDirectorSessionStatus(state: ResponseModelState, isEmpty: boolean | undefined): DirectorSessionStatus {
-+	if (isEmpty) {
-+		return 'untitled';
-+	}
-+	switch (state) {
-+		case ResponseModelState.Pending:
-+			return 'inProgress';
-+		case ResponseModelState.NeedsInput:
-+			return 'needsInput';
-+		case ResponseModelState.Failed:
-+			return 'error';
-+		case ResponseModelState.Complete:
-+		case ResponseModelState.Cancelled:
-+			return 'completed';
-+	}
-+}
-+
- export interface IChatTransfer {
- 	toWorkspace: URI;
- 	sessionResource: URI;
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts
 index 091ecacb238416ffa5e88b0b34c4095251a481b7..249d5e3263700644cdb4fa5b0cf8d420f7567ab6 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts
@@ -4083,75 +3959,10 @@ index 091ecacb238416ffa5e88b0b34c4095251a481b7..249d5e3263700644cdb4fa5b0cf8d420
  			const { turnPromise, session, turnId, fire } = await startTurn(sessionHandler, agentHostService, chatAgentService, disposables, {
  				message: 'Hello from controller',
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
-index f107fdce956662b49f1084b405edc73c1e91a553..291f3570acdaf24ddcc133a8675faf4aaab838fa 100644
+index f107fdce956662b49f1084b405edc73c1e91a553..d53ee01785eaccee470b30debd4fa1e595f58413 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
-@@ -20,6 +20,7 @@ import { ChatSessionStatus, IChatSessionItem, IChatSessionsService, localChatSes
- import { ChatEditingSessionState, ModifiedFileEntryState } from '../../../common/editing/chatEditingService.js';
- import { IChatChangedRequestEvent, IChatChangeEvent, IChatModel, IChatRequestModel, IChatResponseModel } from '../../../common/model/chatModel.js';
- import { LocalChatSessionUri } from '../../../common/model/chatUri.js';
-+import { IDirectorSessionIndexService, type IDirectorSessionIndexChangeEvent, type IDirectorSessionIndexRecord } from '../../../../directorCode/common/agentEngine/directorSessionIndex.js';
- import { MockChatService } from '../../common/chatService/mockChatService.js';
- import { MockChatSessionsService } from '../../common/mockChatSessionsService.js';
- 
-@@ -41,6 +42,48 @@ interface MockChatModel extends IChatModel {
- 	setRequestInProgress(inProgress: boolean): void;
- }
- 
-+function createMockDirectorSessionIndexService(): IDirectorSessionIndexService {
-+	const records = new Map<string, IDirectorSessionIndexRecord>();
-+	const onDidChangeSessionIndex = new Emitter<IDirectorSessionIndexChangeEvent>();
-+	const update = (record: IDirectorSessionIndexRecord): void => {
-+		const existing = records.get(record.directorSessionId);
-+		records.set(record.directorSessionId, record);
-+		onDidChangeSessionIndex.fire(existing ? { added: [], removed: [], changed: [record] } : { added: [record], removed: [], changed: [] });
-+	};
-+	return {
-+		_serviceBrand: undefined,
-+		onDidChangeSessionIndex: onDidChangeSessionIndex.event,
-+		list: () => Array.from(records.values()),
-+		get: directorSessionId => records.get(directorSessionId),
-+		upsert: update,
-+		delete: directorSessionId => {
-+			const existing = records.get(directorSessionId);
-+			if (existing) {
-+				records.delete(directorSessionId);
-+				onDidChangeSessionIndex.fire({ added: [], removed: [existing], changed: [] });
-+			}
-+		},
-+		rename: (directorSessionId, title) => {
-+			const existing = records.get(directorSessionId);
-+			if (existing) {
-+				update({ ...existing, title });
-+			}
-+		},
-+		setArchived: (directorSessionId, isArchived) => {
-+			const existing = records.get(directorSessionId);
-+			if (existing) {
-+				update({ ...existing, isArchived });
-+			}
-+		},
-+		setRead: (directorSessionId, isRead) => {
-+			const existing = records.get(directorSessionId);
-+			if (existing) {
-+				update({ ...existing, isRead });
-+			}
-+		},
-+	};
-+}
-+
- function createMockChatModel(options: {
- 	sessionResource: URI;
- 	hasRequests?: boolean;
-@@ -142,6 +185,7 @@ suite('LocalAgentsSessionsController', () => {
- 		instantiationService = disposables.add(workbenchInstantiationService(undefined, disposables));
- 		instantiationService.stub(IChatService, mockChatService);
- 		instantiationService.stub(IChatSessionsService, mockChatSessionsService);
-+		instantiationService.stub(IDirectorSessionIndexService, createMockDirectorSessionIndexService());
- 	});
- 
- 	teardown(() => {
-@@ -212,6 +256,31 @@ suite('LocalAgentsSessionsController', () => {
+@@ -212,6 +212,31 @@ suite('LocalAgentsSessionsController', () => {
  		});
  	});
  
@@ -4183,7 +3994,39 @@ index f107fdce956662b49f1084b405edc73c1e91a553..291f3570acdaf24ddcc133a8675faf4a
  	test('should provide history session items', async () => {
  		return runWithFakedTimers({}, async () => {
  			const controller = createController();
-@@ -618,9 +687,10 @@ suite('LocalAgentsSessionsController', () => {
+@@ -235,6 +260,31 @@ suite('LocalAgentsSessionsController', () => {
+ 		});
+ 	});
+ 
++	test('should only project native live and history items', async () => {
++		return runWithFakedTimers({}, async () => {
++			const controller = createController();
++			const sessionResource = LocalChatSessionUri.forSession('history-session');
++
++			mockChatService.setLiveSessionItems([]);
++			mockChatService.setHistorySessionItems([{
++				sessionResource,
++				title: 'History Session',
++				lastMessageDate: Date.now(),
++				isActive: false,
++				lastResponseState: ResponseModelState.Complete,
++				timing: createTestTiming(),
++				workingDirectory: URI.file('/test/workspace'),
++			}]);
++
++			await controller.refresh(CancellationToken.None);
++
++			const sessions = controller.items;
++			assert.strictEqual(sessions.length, 1);
++			assert.strictEqual(sessions[0].label, 'History Session');
++			assert.strictEqual(sessions[0].metadata?.workingDirectoryPath, URI.file('/test/workspace').fsPath);
++		});
++	});
++
+ 	test('should not duplicate sessions in history and live', async () => {
+ 		return runWithFakedTimers({}, async () => {
+ 			const controller = createController();
+@@ -618,9 +668,10 @@ suite('LocalAgentsSessionsController', () => {
  					requestInProgress: false
  				});
  
@@ -4244,18 +4087,10 @@ index a0a1eabd63e11986195f95921e8eaf702c7c101f..b4d5875fc9ba4569895b33d3f0d1bd58
  		const auto = createAutoModel();
  		const modelA = createModel('gpt-4o', 'GPT-4o');
 diff --git a/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts b/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts
-index 081a235b906ac10a54b578b72126e9c11fa31721..d3d225fe00d4ec40e3b4ded7206fb5c042e1c377 100644
+index 081a235b906ac10a54b578b72126e9c11fa31721..093a1f54130af881ccfa5f619aa388a9b06e2a40 100644
 --- a/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts
-@@ -13,15 +13,17 @@ import { IFileService } from '../../../../../../platform/files/common/files.js';
- import { ServiceCollection } from '../../../../../../platform/instantiation/common/serviceCollection.js';
- import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
- import { ILogService, NullLogService } from '../../../../../../platform/log/common/log.js';
--import { IStorageService } from '../../../../../../platform/storage/common/storage.js';
-+import { IStorageService, StorageScope } from '../../../../../../platform/storage/common/storage.js';
- import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
- import { NullTelemetryService } from '../../../../../../platform/telemetry/common/telemetryUtils.js';
- import { IUserDataProfilesService, toUserDataProfile } from '../../../../../../platform/userDataProfile/common/userDataProfile.js';
+@@ -20,8 +20,9 @@ import { IUserDataProfilesService, toUserDataProfile } from '../../../../../../p
  import { IAnyWorkspaceIdentifier, IWorkspaceContextService, WorkspaceFolder } from '../../../../../../platform/workspace/common/workspace.js';
  import { TestWorkspace, Workspace } from '../../../../../../platform/workspace/test/common/testWorkspace.js';
  import { ILifecycleService } from '../../../../../services/lifecycle/common/lifecycle.js';
@@ -4263,20 +4098,18 @@ index 081a235b906ac10a54b578b72126e9c11fa31721..d3d225fe00d4ec40e3b4ded7206fb5c0
  import { IDidEnterWorkspaceEvent, IWorkspaceEditingService } from '../../../../../services/workspaces/common/workspaceEditing.js';
 -import { InMemoryTestFileService, TestContextService, TestLifecycleService, TestStorageService } from '../../../../../test/common/workbenchTestServices.js';
 +import { InMemoryTestFileService, TestContextService, TestLifecycleService, TestStorageService, TestUserDataProfileService } from '../../../../../test/common/workbenchTestServices.js';
-+import { DirectorSessionIndexService, IDirectorSessionIndexService } from '../../../../directorCode/common/agentEngine/directorSessionIndex.js';
  import { ChatModel, ISerializableChatData3 } from '../../../common/model/chatModel.js';
  import { ChatSessionStore, IChatTransfer } from '../../../common/model/chatSessionStore.js';
  import { LocalChatSessionUri } from '../../../common/model/chatUri.js';
-@@ -64,6 +66,8 @@ suite('ChatSessionStore', () => {
+@@ -64,6 +65,7 @@ suite('ChatSessionStore', () => {
  
  	let instantiationService: TestInstantiationService;
  	let mockWorkspaceEditingService: MockWorkspaceEditingService;
 +	let storageService: TestStorageService;
-+	let directorSessionIndexService: DirectorSessionIndexService;
  
  	function createChatSessionStore(isEmptyWindow: boolean = false): ChatSessionStore {
  		const workspace = isEmptyWindow ? new Workspace('empty-window-id', []) : TestWorkspace;
-@@ -73,13 +77,17 @@ suite('ChatSessionStore', () => {
+@@ -73,13 +75,15 @@ suite('ChatSessionStore', () => {
  
  	setup(() => {
  		instantiationService = testDisposables.add(new TestInstantiationService(new ServiceCollection()));
@@ -4290,47 +4123,9 @@ index 081a235b906ac10a54b578b72126e9c11fa31721..d3d225fe00d4ec40e3b4ded7206fb5c0
  		instantiationService.stub(ILifecycleService, testDisposables.add(new TestLifecycleService()));
  		instantiationService.stub(IUserDataProfilesService, { defaultProfile: toUserDataProfile('default', 'Default', URI.file('/test/userdata'), URI.file('/test/cache')) });
 +		instantiationService.stub(IUserDataProfileService, new TestUserDataProfileService());
-+		directorSessionIndexService = testDisposables.add(instantiationService.createInstance(DirectorSessionIndexService));
-+		instantiationService.stub(IDirectorSessionIndexService, directorSessionIndexService);
  		instantiationService.stub(IConfigurationService, new TestConfigurationService());
  		mockWorkspaceEditingService = testDisposables.add(new MockWorkspaceEditingService());
  		instantiationService.stub(IWorkspaceEditingService, mockWorkspaceEditingService as unknown as IWorkspaceEditingService);
-@@ -147,6 +155,35 @@ suite('ChatSessionStore', () => {
- 		assert.strictEqual(index['session-1'].sessionId, 'session-1');
- 	});
- 
-+	test('storeSessions writes Director shared session index without agents controller activation', async () => {
-+		const store = createChatSessionStore();
-+		const model = testDisposables.add(createMockChatModel(LocalChatSessionUri.forSession('session-1'), { customTitle: 'Shared Title' }));
-+		model.setWorkingDirectory(URI.file('/test/workspace'));
-+
-+		await store.storeSessions([model]);
-+
-+		const records = directorSessionIndexService.list();
-+		assert.strictEqual(records.length, 1);
-+		assert.strictEqual(records[0].title, 'Shared Title');
-+		assert.strictEqual(records[0].sessionType, 'local');
-+		assert.strictEqual(records[0].sourceSurface, 'ide-chat');
-+		assert.strictEqual(records[0].workingDirectoryUri, URI.file('/test/workspace').toString());
-+		assert.ok(storageService.get('directorCode.sharedSessionIndex.v1', StorageScope.APPLICATION));
-+		assert.strictEqual(storageService.get('directorCode.sharedSessionIndex.v1', StorageScope.PROFILE), undefined);
-+	});
-+
-+	test('updateAndFlushIndexSync writes Director shared session index before async store completes', () => {
-+		const store = createChatSessionStore();
-+		const model = testDisposables.add(createMockChatModel(LocalChatSessionUri.forSession('session-sync'), { customTitle: 'Sync Shared Title' }));
-+
-+		store.updateAndFlushIndexSync([model], []);
-+
-+		const record = directorSessionIndexService.get(`director:${LocalChatSessionUri.forSession('session-sync').toString()}`);
-+		assert.ok(record);
-+		assert.strictEqual(record.title, 'Sync Shared Title');
-+		assert.ok(storageService.get('directorCode.sharedSessionIndex.v1', StorageScope.APPLICATION));
-+	});
-+
- 	test('storeSessions persists custom title', async () => {
- 		const store = createChatSessionStore();
- 		const model = testDisposables.add(createMockChatModel(LocalChatSessionUri.forSession('session-1'), { customTitle: 'My Custom Title' }));
 diff --git a/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts b/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts
 index 914f6479f4614d2ba066ea00fd5d415d17de1556..eecf3780c9931f6431b5c0aae89dde307160bd95 100644
 --- a/src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts

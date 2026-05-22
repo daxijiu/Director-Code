@@ -4,17 +4,18 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-22T03:07:28.047Z",
+  "generatedAt": "2026-05-22T09:17:18.766Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/120-insider-win32-x64-client.json",
     "--target",
-    "vscode.generated",
+    "artifacts/generated",
     "--up-to-layer",
     "director",
-    "--force"
+    "--force",
+    "--allow-nondefault-target-force"
   ],
-  "target": "vscode.generated",
+  "target": "artifacts/generated",
   "upToLayer": "director",
   "upstreams": {
     "vscode": {
@@ -74,15 +75,15 @@
     {
       "layer": "director",
       "patch": "patches/replay/004-director-agent-engine.120-insider.patch",
-      "size": 1176146,
-      "sha256": "e0db21828edd67ea6b2ebe2ac5aaa8250313623d38a67ffb6fc1c21b53857d78",
+      "size": 1163946,
+      "sha256": "1fbe8fb0e846e66ceecf58b8353fc9eb4a8e10ee892603c7c139421fdbbf9ff0",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "size": 236773,
-      "sha256": "7ffb7644f0c3c1d71f076b9df7e0cc9a2f3987f2bc006e5d07e6558ed5eb551a",
+      "size": 227658,
+      "sha256": "ebfbb3957503f3928a74ca3fc0f74e465f14b09056aad907186d5a04f790ee6a",
       "status": "passed"
     },
     {
@@ -124,18 +125,18 @@
   "checkpoints": [
     {
       "name": "vscode",
-      "path": "vscode.generated/layers/vscode/vscode",
+      "path": "artifacts/generated/layers/vscode/vscode",
       "fileManifestHash": "9eae17ea2fd6ec79f1a5604ae7684cb6ab37b5e81da787e14d1411023e16d756"
     },
     {
       "name": "vscodium",
-      "path": "vscode.generated/layers/vscodium/vscode",
+      "path": "artifacts/generated/layers/vscodium/vscode",
       "fileManifestHash": "244cdffb46bc791c205532db75b5f026ea999762eddfb0a437a4f420356531cd"
     },
     {
       "name": "director",
-      "path": "vscode.generated/layers/director/vscode",
-      "fileManifestHash": "b81d9c2a521bd2e74ef3012074d09112fff04c95024f895407b714fd7245ac3b"
+      "path": "artifacts/generated/layers/director/vscode",
+      "fileManifestHash": "dc59be2e6eb029948665bbef2168e6b3f9af245efcc19b6b0d51d460bd0d8aef"
     }
   ],
   "checks": {

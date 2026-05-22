@@ -24,13 +24,19 @@ Changes made after multi-angle review:
 - Segment 0 is now a blocking replay-control gate, not just discovery.
 - Segment 1 now requires an explicit `IDirectorSessionsPolicyService` and named choke points.
 - Segment 1 must not hide or degrade customization. Customization must remain visible and be aligned with the main IDE / VS Code behavior.
-- Segment 2 now requires exact Director session lifecycle write hooks before storage implementation.
-- Segment 2 schema now includes the fields needed for multi-chat, resources, read/archive state, grouping, and AgentHost dedupe.
+- Segment 2 shared Director session index direction is superseded. VS Code 120 does not make IDE Chat history and Agents Window agree through a bidirectional shared index; it uses native session providers/controllers and AgentHost session providers.
+- Segment 2 is now narrowed to native catalog integration for Director local sessions, workspace metadata, and New Chat pending lifecycle. It must reuse upstream provider/controller surfaces rather than expanding Director-owned session storage.
 - Segment 3 now separates SDK-visible model ids from Director routing ids.
 - Segment 3 now has a concrete auth/proxy boundary and a strict SecretMaterial invariant.
 - Segment 4 now treats Claude production provider registration as missing work, not as already wired.
 - Segment 4 now explicitly replaces GitHub/Copilot protected resources, `ICopilotApiService`, and the process-global `ClaudeProxyService.start(githubToken)` token slot.
 - The validation ladder now includes replay patch generation, series hash refresh, clean materialization, canonical manifest refresh, and final `validate-all`.
+
+Current recovery state:
+
+- HEAD `e327731d` already contains the wrong-direction Segment 2 shared-index implementation.
+- The current working tree also has uncommitted shared-index extension changes in replay patch/report files. Keep the plan document, but the shared-index extension dirty work must be recovered or discarded by a later implementation worker.
+- This plan update is documentation-only. It does not approve or complete the existing shared-index implementation.
 
 ## Non-Goals For Wave 3 V1
 
@@ -53,20 +59,21 @@ Changes made after multi-angle review:
 - Director-owned logic should live in Director-owned modules or a bounded AgentHost adapter island.
 - Upstream provider/session IDs should be wrapped or filtered before being renamed.
 - Segment 1 is a safety facade only. It may filter, hide, or redirect broken provider/account surfaces, but it must preserve customization visibility and must not introduce the shared cross-window index.
-- Segment 2 owns index persistence and list projection.
-- AgentHost native sessions stay owned by AgentHost. Director Session Index projects and dedupes them; it does not copy AgentHost DB state.
+- Segment 2 must not add or expand a Director shared session index. It owns native catalog correctness for Director local sessions: provider/resource/session identity, workspace metadata, and New Chat pending lifecycle.
+- Segment 2 consistency means two native UI projections over the same provider/session identity. It does not mean full bidirectional IDE Chat history and Agents Window synchronization through a single shared index.
+- AgentHost native sessions stay owned by AgentHost and are handled through upstream AgentHost provider/controller paths. Claude transcript restore, provider auth proxy, and SDK backend bridge are Segment 3/4 work.
 - Director Claude must not publish or trigger GitHub/Copilot protected resources.
 - Auth bridge default is a short-lived proxy handle. Scoped resolved auth config is out of v1 unless a separate security review explicitly accepts it.
-- Auth boundary invariant: API keys, OAuth access/refresh tokens, env-var credential values, sensitive custom auth headers, proxy nonces, and SDK bearer tokens are SecretMaterial. Wave 3 must not introduce any new copy of SecretMaterial into AgentHost root state, `AgentInfo.models._meta`, `IAgentCreateSessionConfig.config`, `SessionConfigChanged`, session index records, session `configValues`, output channels, JSONL logs, or reports. Existing Provider Registry custom-header storage is a separate hardening item; Claude bridge v1 must keep those values inside the Director proxy boundary rather than expanding their exposure.
+- Auth boundary invariant: API keys, OAuth access/refresh tokens, env-var credential values, sensitive custom auth headers, proxy nonces, and SDK bearer tokens are SecretMaterial. Wave 3 must not introduce any new copy of SecretMaterial into AgentHost root state, `AgentInfo.models._meta`, `IAgentCreateSessionConfig.config`, `SessionConfigChanged`, native session/catalog persistence, session `configValues`, output channels, JSONL logs, or reports. Existing Provider Registry custom-header storage is a separate hardening item; Claude bridge v1 must keep those values inside the Director proxy boundary rather than expanding their exposure.
 
 ## Architecture Target
 
 ```mermaid
 flowchart LR
-    IDE["Main IDE Chat / Agent"] --> Bridge["Director Sessions Bridge"]
-    Agents["Agents Window vs/sessions"] --> Bridge
+    IDE["Main IDE Chat / Agent Projection"] --> Native["Native Provider / Resource / Session Identity"]
+    Agents["Agents Window vs/sessions Projection"] --> Native
+    Native --> Bridge["Director Policy / Provider Projection"]
     Bridge --> Registry["Director Provider Registry"]
-    Bridge --> SessionIndex["Director Session Index"]
     Bridge --> Auth["Director Auth / OAuth / Secrets"]
     Bridge --> Policy["Director Agent / Tool / Customization Policy"]
     Bridge --> AgentHost["Director AgentHost Provider Adapter"]
@@ -110,7 +117,7 @@ Known path-classification decisions:
 - Use exact allowlist for most existing upstream files.
 - Use a narrow `004` prefix for the Claude adapter island: `src/vs/platform/agentHost/node/claude/**`.
 - If a new Director AgentHost bridge island is added, use a narrow `004` prefix such as `src/vs/platform/agentHost/node/director/**`.
-- If a new Director Sessions provider/facade island is added, use a narrow `005` prefix such as `src/vs/sessions/contrib/directorSessions/**`.
+- Do not add a Director Sessions provider/facade island for Segment 2. The earlier `src/vs/sessions/contrib/directorSessions/**` allowlist belongs to the superseded shared-index direction and should be removed during implementation cleanup.
 
 Path ownership size estimate:
 
@@ -128,7 +135,7 @@ Why these upstream files are covered:
 | --- | --- | --- |
 | Agents Window account/setup facade | 2-3 files | Remove or replace dead account/sign-in remnants and ensure setup state reflects Director auth instead of GitHub/Copilot assumptions. |
 | Sessions provider exposure | 4-5 files | Make Agents Window list the same Director-visible session/provider set as the IDE surface while preserving VS Code's provider aggregation shape. |
-| Session facade/index bridge | 0-3 files | Only needed if the shared Director Session Index cannot be exposed through existing provider contributions alone. |
+| Native local-session catalog correction | 0-3 files | Keep `CopilotChatSessionsProvider` and `LocalAgentsSessionsController` aligned on provider/resource/session identity without adding a Director shared-index provider island. |
 | AgentHost production registration | 5-6 files | Restore/register Claude AgentHost in Director and route it through Director-owned provider/auth/proxy policy. |
 | Claude adapter island | 12 TypeScript files classified, fewer actually edited | Keep VS Code's Claude Code behavior while swapping the backend from Copilot/CAPI to Director Provider Registry and implementing history restore. |
 
@@ -254,7 +261,7 @@ Fallback:
 
 ## Segment 1.1: Agents Window Parity Correction
 
-Goal: close the immediate gaps found after Segment 1 packaging, before moving into the full shared session index.
+Goal: close the immediate gaps found after Segment 1 packaging, before moving into native session catalog correction.
 
 This is a corrective slice, not a new architecture layer. It keeps the Segment 1 safety facade but makes the Agents Window visibly reuse the same Director state as the main IDE.
 
@@ -270,7 +277,7 @@ Belongs in Segment 1.1:
    - Do not add a separate Agents Window-only customization store.
 3. Default Director agent visibility:
    - The default Director agent must appear in the Agents Window agent/session-type choices.
-   - This can be a setup-safe facade entry before the full Segment 2 session index lands.
+   - This can be a setup-safe facade entry before the full Segment 2 native session catalog correction lands.
    - It must use Director labels/icons/default-agent policy, not upstream Copilot branding.
 4. Direct-create safety remains:
    - Hidden raw Copilot/GitHub types remain blocked.
@@ -311,88 +318,99 @@ Acceptance checks:
 - Claude remains setup-gated unless Claude Code availability and Director `anthropic-messages` provider/auth eligibility both pass.
 - Direct create for hidden/setup-gated types fails; direct create for the default Director agent either opens/routes to the existing Director agent flow or fails closed with a clear policy error until Segment 2.
 
-## Segment 2: Shared Director Session Index V1
+## Segment 2: Native Session Catalog Integration
 
-Goal: make the main IDE and Agents Window agree on Director-approved sessions.
+Goal: make Director local sessions participate correctly in the VS Code 120 native session catalog without maintaining a Director shared session index.
 
-This fixes the empty/divergent session list independently from Claude runtime.
+The previous "Shared Director Session Index V1" direction is superseded. It was an over-customized route that tried to make IDE Chat history and Agents Window agree through bidirectional synchronization. VS Code 120's native shape is different:
+
+- Agents Window uses `ISessionsProvider`, `ISessionsManagementService`, and `ISession`.
+- IDE session lists are projected through `IChatSessionsService`, `IChatSessionItemController`, and `AgentSessionsModel`.
+- Claude/AgentHost session flow uses `IAgent`, `AgentHostSessionListController`, `AgentHostSessionHandler`, `BaseAgentHostSessionsProvider`, `LocalAgentHostSessionsProvider`, and `buildAgentHostSessionWorkspace`.
+- There is no single shared index that fully synchronizes IDE Chat and Agents Window in both directions. Correctness means the native surfaces project the same provider/session identity, with each UI owning its native lifecycle.
+
+Segment 2 now fixes only the Director local-session native catalog path: provider/resource/session identity, workspace metadata, and New Chat pending lifecycle. It does not build cross-window durable history, Claude transcript restore, provider auth proxy, or SDK backend bridge.
 
 Tasks:
 
-1. Before implementing storage, name the exact Director-owned chat/agent/plan lifecycle hooks that write index records.
-2. If no stable hook exists, add one Director-owned index writer and keep `vs/sessions` as a read-only consumer facade.
-3. Define a Director session identity schema.
-4. Persist enough metadata for cross-window listing without coupling to one window's `IChatService`.
-5. Record main IDE Director chat/agent/plan sessions into the shared index.
-6. Record AgentHost external sessions into the same index as projections when available.
-7. Add a `vs/sessions` provider facade that lists Director-approved index entries.
-8. Dedupe against AgentHost native sessions with stable keys.
-9. Keep compatibility with existing AgentHost `AgentSession.uri(provider, id)` resources.
-10. Add direct tests for session listing, type listing, provider registration, change events, and hidden type create rejection.
+1. Revert the shared-index implementation direction before adding more behavior.
+2. Keep `LocalAgentsSessionsController` as the upstream native `IChatSessionItemController` projection hook. It may adapt Director branding/policy/resource metadata, but it must not write to or read from a shared Director index and must not perform cross-window storage synchronization.
+3. Use `CopilotChatSessionsProvider` as the only native `ISessionsProvider` surface for Director local sessions in the Agents Window, with Director branding/policy/setup gating retained from Segment 1/1.1.
+4. Ensure Director local chat/session items expose stable native provider/resource/session identity that agrees across `IChatSessionItemController`, `IChatSessionsService`, and `ISessionsManagementService`.
+5. Fix workspace metadata through the upstream workspace mapping semantics. `ISession.workspace` should be populated only when the provider has a real folder/project. No-workspace cases should use `undefined` or upstream fallback behavior, not synthetic `unknown:///` resources or `UNKNOWN` labels.
+6. Fix New Chat pending lifecycle. `createNewSession` may return a pending skeleton, but the skeleton must not enter the durable session list, cache, history, or real provider catalog until the first request materializes a real session.
+7. Keep AgentHost/Claude native-session work as reference material for Segment 3/4 rather than implementing transcript restore in Segment 2.
+8. Add direct tests or manual checks for provider catalog identity, resource identity, workspace label behavior, and New Chat pending lifecycle.
 
-Required v1 fields:
+Do not do in Segment 2:
 
-- `schemaVersion`
-- `directorSessionId`
-- `providerId`
-- `sessionType`
-- `agentKind`
-- `providerInstanceId`
-- `modelId`
-- `workspaceUri`
-- `workingDirectoryUri`
-- `chatResourceUri`
-- `mainChatResourceUri`
-- `agentHostSessionUri`
-- `agentHostRawSessionId`
-- `parentSessionId` or `groupId`
-- `status`
-- `isArchived`
-- `isRead`
-- `createdAt`
-- `updatedAt`
-- `lastTurnEnd`
-- `sourceSurface`
-- `capabilities`
+- Do not extend the shared Director session index.
+- Do not treat `ChatSessionStore` as a cross-window synchronization source.
+- Do not make `LocalAgentsSessionsController` read from or write to a shared Director index.
+- Do not create `DirectorSessionIndexSessionsProvider`.
+- Do not keep or add a `src/vs/sessions/contrib/directorSessions/**` provider island.
+- Do not invent `unknown:///` or `UNKNOWN` workspace identities.
+- Do not do Claude transcript restore.
+- Do not do the provider auth proxy.
+- Do not do the SDK backend bridge.
+
+## Superseded Shared-Index Recovery Checklist
+
+The following items must be removed or retired by the Segment 2 implementation worker before native integration is accepted:
+
+- Remove or retire `DirectorSessionIndexService`.
+- Remove or retire `directorSessionIndex.ts`.
+- Remove or retire `DirectorSessionIndexSessionsProvider` and the `src/vs/sessions/contrib/directorSessions/**` provider island.
+- Remove the `DirectorSessionIndex` provider registration.
+- Remove `ChatSessionStore` writes to the shared index.
+- Remove `LocalAgentsSessionsController` shared-index reads/writes and reverse-merge behavior.
+- Remove any current uncommitted workspace identity, double-merge, and `NewChatViewPane` shared-index workaround direction.
+- Update `scripts/upgrade/generate-director-patches.mjs` classification to remove the `directorSessions` provider-island allowlist when the implementation work is done.
+- Ensure replay patches, generated runtime code, and control-plane reports contain no surviving `DirectorSessionIndex*` or `director-session-index` implementation artifacts.
+
+Retain from Segment 1/1.1:
+
+- `DirectorSessionsPolicyService`.
+- Provider list/status synchronization with the existing Director Provider Registry.
+- Director Agent choice/default behavior.
+- Customization alignment with VS Code/main IDE behavior.
+- `CopilotChatSessionsProvider` Director branding, policy, and setup gating.
+- `BaseAgentHostSessionsProvider` / `LocalAgentHostSessionsProvider` policy filtering.
+- Claude setup-gated behavior when Claude Code is detected but Director provider/auth eligibility is missing.
+
+Reuse/reference VS Code native paths:
+
+- `LocalAgentsSessionsController` as local chat item projection only, not as a shared-index writer.
+- `CopilotChatSessionsProvider` and `ISessionsProvider` as the Agents Window native provider surface.
+- `AgentHostSessionListController`, `AgentHostSessionHandler`, and `BaseAgentHostSessionsProvider` as Segment 3/4 references for Claude/Director AgentHost bridge work.
+- `buildAgentHostSessionWorkspace` for workspace/project mapping semantics.
+- New Chat provider contract: a pending skeleton is allowed from `createNewSession`, but it becomes a real listed/durable session only after the first request.
 
 Candidate files:
 
-- `src/vs/workbench/contrib/directorCode/common/**`
-- `src/vs/workbench/contrib/directorCode/browser/**`
 - `src/vs/workbench/contrib/chat/browser/agentSessions/**`
 - `src/vs/sessions/services/sessions/**`
-- `src/vs/sessions/contrib/**`
-- `src/vs/platform/agentHost/node/agentService.ts`
+- `src/vs/sessions/contrib/chat/browser/**`
+- `src/vs/sessions/contrib/agentHost/browser/**` for reference only unless a narrow policy filter correction is required
 
 Replay stages:
 
-- `004-director-agent-engine.120-insider.patch` for shared session identity/storage/backend integration.
-- `005-director-chat-built-in-mode.120-insider.patch` for Sessions Window provider facade and list behavior.
+- `005-director-chat-built-in-mode.120-insider.patch` for Agents Window provider/catalog/list behavior and local chat projection fixes.
+- `004-director-agent-engine.120-insider.patch` only if a retained Director policy/service contract needs adjustment.
+- `scripts/upgrade/generate-director-patches.mjs` must drop the superseded `src/vs/sessions/contrib/directorSessions/**` classification when implementation removes that island.
+
+## Native Integration Acceptance
 
 Acceptance checks:
 
-- A normal Director IDE chat/agent session appears in Agents Window after being created.
-- Agents Window no longer appears empty just because it runs in `agent-sessions.code-workspace`.
-- Archived/deleted/read state remains coherent across surfaces.
-- Opening a session from Agents Window resolves the correct workspace/session resource.
-- Duplicate AgentHost sessions are not listed twice.
-- `SessionsManagementService.getSessions()` and `getAllSessionTypes()` return Director-policy-compliant results.
-- `provider.onDidChangeSessions` fires when Director index state changes.
-- Direct hidden-type `createNewSession()` attempts fail.
-
-Fallback:
-
-- If full historic import is too risky, v1 can index new sessions first and add migration/import later.
-
-Segment 2 implementation note (2026-05-21):
-
-- Added a Director-owned profile-scoped shared session index service in `src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts`.
-- The V1 schema records the required shared identity fields plus title and a stable `director-session:<resource>` dedupe key. It reserves `external` transcript/import metadata for Segment 4 without storing SecretMaterial.
-- The main IDE local chat lifecycle hook is `LocalAgentsSessionsController.toChatSessionItem(...)`, which already observes live model creation, model changes, and history refresh through `IChatService.getLiveSessionItems()` / `getHistorySessionItems()`. That hook now upserts Director local chat records into the shared index.
-- Agents Window reads the same index through `DirectorSessionIndexSessionsProvider`, registered alongside the existing default sessions provider. It is a projection/provider facade: list, rename, archive, read, and delete update the shared index; send/create remains closed until full cross-window open/resume plumbing is validated.
-- Existing Copilot-shaped sessions now carry the same Director dedupe key, so local AgentHost/default provider sessions win when already present in the same window and indexed projections fill the synthetic workspace gap when they are not.
-- Replay placement: shared index service and registration are in `004-director-agent-engine.120-insider.patch`; Agents Window provider facade, local session write hook, and dedupe projection are in `005-director-chat-built-in-mode.120-insider.patch`; `scripts/upgrade/generate-director-patches.mjs` classifies only the narrow `src/vs/sessions/contrib/directorSessions/**` island.
-- Local validation completed: `generate-director-patches`, `generate-series`, `validate-series`, `validate-product-overrides`, `expected-contracts`, `npm run -s compile-check-ts-native`, `npm run -s compile`, and focused browser test `localAgentSessionsController.test.ts` in the generated Director VS Code tree.
+- Clicking Agents Window New Chat repeatedly without sending does not create real sessions in the list, provider catalog, or history.
+- Sending the first request after New Chat creates exactly one real session.
+- Workspace labels are not `UNKNOWN`; no-workspace cases use upstream semantics such as `Other` or `undefined`.
+- Completion is judged by provider catalog, resource identity, and session identity consistency, not merely by a row appearing in the list.
+- Runtime code, replay patches, and replay control-plane files do not retain `DirectorSessionIndex*`, `directorSessionIndex`, or `director-session-index` artifacts.
+- A normal Director local session appears through the native catalog with Director policy/branding intact.
+- Segment 1/1.1 provider/status/customization/default-agent behavior remains intact.
+- Claude remains setup-gated when Director provider/auth eligibility is missing, and Claude/AgentHost full transcript restore remains deferred to Segment 3/4.
 
 ## Segment 3: Director Provider/Model/Auth Projection For AgentHost
 
@@ -426,7 +444,7 @@ Tasks:
 14. Add refresh/event propagation when Provider Registry or auth state changes.
 15. Scrub AgentHost/SDK child-process environment from Director credential material.
 16. Treat custom headers as an existing Director Provider Registry feature, not a Claude-specific new storage model.
-17. Do not pass raw `providerInstance.headers`, API keys, OAuth tokens, env credential values, or upstream provider `baseURL` into AgentHost root state, session config, session index, model `_meta`, or logs.
+17. Do not pass raw `providerInstance.headers`, API keys, OAuth tokens, env credential values, or upstream provider `baseURL` into AgentHost root state, session config, native session/catalog persistence, model `_meta`, or logs.
 18. The Director-owned proxy may resolve Provider Registry headers/auth/baseURL inside the Director boundary and forward requests to the configured provider.
 19. Provider Registry hardening for sensitive custom header storage is separate from the Claude bridge. Wave 3 v1 must not make the existing cleartext-header issue worse by copying those values across the AgentHost boundary.
 20. Proxy handles must be session-bound and revocable. Define expiration, cleanup on session close, cleanup on provider/auth changes, and behavior when the originating workbench window closes.
@@ -456,7 +474,7 @@ Acceptance checks:
 - Changing the default/visible model propagates to new AgentHost sessions.
 - SDK-visible model id remains valid for Claude SDK/proxy routing.
 - Director routing id is preserved separately.
-- No raw API key, OAuth token, custom auth header, env credential, or proxy nonce appears in persisted AgentHost state, session index, logs, reports, root state, or model `_meta`.
+- No raw API key, OAuth token, custom auth header, env credential, or proxy nonce appears in persisted AgentHost state, native session/catalog persistence, logs, reports, root state, or model `_meta`.
 - Claude eligibility is limited to Director-approved `anthropic-messages` providers/models.
 - Claude SDK receives only the local proxy URL and session-scoped opaque bearer/nonce, matching the VS Code proxy shape.
 - The Director proxy, not the AgentHost session config, owns outbound provider URL/key/header resolution.
@@ -548,7 +566,7 @@ Tasks:
 6. Add targeted tests. These are required unless explicitly waived:
    - provider filtering
    - account/status behavior
-   - session index dedupe
+   - native provider/resource/session identity consistency
    - direct create rejection for hidden session types
    - model eligibility
    - auth redaction
@@ -590,7 +608,7 @@ Acceptance checks:
 1. Segment 0: Blocking baseline and ownership gate.
 2. Segment 1: Safe Agents Window facade.
 3. Segment 1.1: Agents Window parity correction.
-4. Segment 2: Shared Director Session Index V1.
+4. Segment 2: Native Session Catalog Integration.
 5. Segment 3: Director Provider/Model/Auth Projection for AgentHost.
 6. Segment 4: Claude AgentHost Runtime through Director.
 7. Segment 5: Customization alignment, tool policy, validation, and packaging smoke.
@@ -674,8 +692,9 @@ Manual runtime smoke checklist:
 | P0 | Align basic customization source visibility across main IDE and Agents Window | 1.1 | `004` / `005` |
 | P0 | Surface the default Director agent in Agents Window choices | 1.1 | `004` / `005` |
 | P0 | Preserve and align customization entry points with main IDE / VS Code behavior | 1 / 5 | `005` |
-| P0 | Add shared Director session index schema and new-session recording | 2 | `004` |
-| P0 | Add Agents Window provider facade over Director session index | 2 | `005` |
+| P0 | Remove superseded shared-index service/provider-island work | 2 | `004` / `005` |
+| P0 | Fix Director local-session native provider/resource/session identity | 2 | `005` |
+| P0 | Fix Agents Window New Chat pending lifecycle | 2 | `005` |
 | P0 | Add Director-to-AgentHost provider/model projection descriptor | 3 | `004` |
 | P0 | Add short-lived proxy-handle auth boundary | 3 | `004` |
 | P0 | Separate SDK-visible model id from Director routing id | 3 | `004` |
@@ -686,7 +705,7 @@ Manual runtime smoke checklist:
 | P1 | Validate customization parity, including VS Code-exposed internal skills | 5 | `005` |
 | P1 | Add required tests and redaction checks | 5 | `004` / `005` / `007` |
 | P2 | Route AgentHost client-tool visibility through Director policy if needed | 5 | `007` |
-| P2 | Add historical session import/migration if new-session index is insufficient | 2 | `004` / `005` |
+| P2 | Validate native provider catalog/resource/session identity for Director local sessions | 2 | `005` |
 
 ## Decisions And Defaults
 
@@ -694,14 +713,15 @@ These defaults are used by the plan unless explicitly overridden:
 
 | Topic | Default |
 | --- | --- |
-| Path classification | Exact allowlist for existing upstream files; narrow prefixes only for bounded adapter islands such as `node/claude/**`, `node/director/**`, or `contrib/directorSessions/**`. No broad `src/vs/sessions/**` or `src/vs/platform/agentHost/**`. |
+| Path classification | Exact allowlist for existing upstream files; narrow prefixes only for bounded adapter islands such as `node/claude/**` or `node/director/**`. The superseded `contrib/directorSessions/**` island should be removed from implementation and patch classification. No broad `src/vs/sessions/**` or `src/vs/platform/agentHost/**`. |
 | Provider state | Reuse the existing Director Provider Registry. Agents Window and AgentHost must not create a separate provider store or independent provider setup state. |
 | Policy placement | New Director-owned `IDirectorSessionsPolicyService` in the workbench/browser layer, plus serializable AgentHost policy snapshots/descriptors. Thin hooks into upstream providers; no direct AgentHost import of workbench Director services. |
 | Segment 1 empty state | Hide raw Copilot/upstream providers/types and show Director setup CTA. If Claude Code is detected but Director provider/auth is missing, a setup-gated Director Claude entry may be shown only if it routes to Director setup and cannot start a session. |
-| Segment 1.1 parity | Provider setup/status, basic customization visibility, and default Director agent options must match the main IDE before full Segment 2 session index work. |
+| Segment 1.1 parity | Provider setup/status, basic customization visibility, and default Director agent options must match the main IDE before full Segment 2 native session catalog work. |
 | Customization behavior | Keep visible and align with main IDE / VS Code behavior; do not hide internal skills merely because they are internal. |
-| Session index initial scope | Index new Director sessions first. Claude Code history catalog follows SDK `listSessions()` in Segment 4 rather than waiting for a separate Director history import. |
-| AgentHost session source | AgentHost remains source for native AgentHost sessions; Director index projects/dedupes. |
+| Segment 2 session scope | Reuse native session provider/controller catalog. `CopilotChatSessionsProvider` is the only native `ISessionsProvider` surface for Director local sessions, and `LocalAgentsSessionsController` remains the native IDE session-list projection. Do not create or expand a Director shared session index. Claude Code history catalog follows SDK `listSessions()` in Segment 4. |
+| Segment 2 consistency model | Same provider/session identity projected through two native UI surfaces. Do not define completion as full IDE Chat / Agents Window bidirectional storage synchronization. |
+| AgentHost session source | AgentHost remains source for native AgentHost sessions through upstream AgentHost providers/controllers. Segment 2 only references those paths for catalog/workspace semantics. |
 | Auth bridge | Short-lived proxy handle only. |
 | Proxy owner | Stable Director-owned proxy host, preferably shared-process/main-process service. Workbench may configure/request handles; AgentHost/SDK receive only local proxy URL and opaque session bearer/nonce. |
 | AgentHost model bridge | Projection only: expose Director-approved provider/model/session descriptors and routing metadata to AgentHost, while keeping Provider Registry state and SecretMaterial in Director-owned services. |
@@ -727,6 +747,8 @@ The first implementation slice can start with the defaults above. The following 
 7. Claude Code detection may produce a setup-gated Director Claude entry before full runtime support, but only eligible Director provider/auth state may produce a runnable Claude session.
 8. Agents Window provider setup/status must reuse the existing Director Provider Registry, not a sessions-local provider state.
 9. The AgentHost provider/model bridge is projection-only and exists to adapt Director Registry state to AgentHost descriptors and proxy routing, not to duplicate provider ownership.
+10. The shared Director session index plan is superseded. Segment 2 must use native session provider/controller catalog paths and must remove the shared-index provider island rather than hardening it.
+11. Existing shared-index dirty work is not the new baseline. Keep this plan, but recover or discard the dirty shared-index extension files during implementation cleanup.
 
 Follow-up hardening to track separately:
 
@@ -749,7 +771,7 @@ Definition of done:
 - Replay patch ownership is correct.
 - Profile-scoped validation passes.
 
-This gives the product a safe visible surface before the heavier session index, Provider Registry bridge, and Claude runtime work begins.
+This gives the product a safe visible surface before the native session catalog correction, Provider Registry bridge, and Claude runtime work begins.
 
 ## Next Corrective Slice
 

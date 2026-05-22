@@ -317,7 +317,6 @@ function isChatBuiltInMode(filePath) {
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/chatStatus/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/browser/agentSessions/')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/chat/test/browser/agentSessions/')) return true;
-  if (filePath.startsWith('src/vs/sessions/contrib/directorSessions/')) return true;
   return [
     'src/vs/platform/windows/electron-main/windowsMainService.ts',
     'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts',
@@ -332,6 +331,7 @@ function isChatBuiltInMode(filePath) {
     'src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts',
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts',
     'src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts',
+    'src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts',
     'src/vs/sessions/contrib/sessions/browser/aiCustomizationShortcutsWidget.ts',
     'src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts',
     'src/vs/sessions/services/sessions/browser/sessionsManagementService.ts',

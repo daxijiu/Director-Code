@@ -4,7 +4,7 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-22T03:01:24.921Z",
+  "generatedAt": "2026-05-22T08:56:25.534Z",
   "sources": {
     "vscodium": "vscode.generated/layers/vscodium/vscode",
     "director": "vscode.generated/layers/director/vscode"
@@ -13,7 +13,7 @@
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 291,
+  "changedFileCount": 290,
   "patches": [
     {
       "stage": "branding",
@@ -219,7 +219,6 @@
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorChatModeRouting.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanMode.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorPlanTools.ts",
-        "src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentContext.ts",
         "src/vs/workbench/contrib/directorCode/common/agentEngine/executionSubagentPrompt.ts",
@@ -254,9 +253,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 100,
-      "size": 1176146,
-      "sha256": "e0db21828edd67ea6b2ebe2ac5aaa8250313623d38a67ffb6fc1c21b53857d78"
+      "fileCount": 99,
+      "size": 1163946,
+      "sha256": "1fbe8fb0e846e66ceecf58b8353fc9eb4a8e10ee892603c7c139421fdbbf9ff0"
     },
     {
       "stage": "chat-built-in-mode",
@@ -274,7 +273,7 @@
         "src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts",
         "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts",
         "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts",
-        "src/vs/sessions/contrib/directorSessions/browser/directorSessionIndexSessionsProvider.ts",
+        "src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts",
         "src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts",
         "src/vs/sessions/services/sessions/common/session.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatActions.ts",
@@ -319,8 +318,8 @@
         "src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts"
       ],
       "fileCount": 55,
-      "size": 236773,
-      "sha256": "7ffb7644f0c3c1d71f076b9df7e0cc9a2f3987f2bc006e5d07e6558ed5eb551a"
+      "size": 227658,
+      "sha256": "ebfbb3957503f3928a74ca3fc0f74e465f14b09056aad907186d5a04f790ee6a"
     },
     {
       "stage": "text-polish",

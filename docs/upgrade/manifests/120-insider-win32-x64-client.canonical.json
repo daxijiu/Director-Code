@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-19T13:34:20.952Z",
-  "treeHash": "a8fe5845eb1e42ccda5d78e1c5859821031b762de4249fa11a0f69dfb41e6e1a",
+  "generatedAt": "2026-05-22T08:50:37.586Z",
+  "treeHash": "1e51a0ec6341772c21464cb2f0afc1a3c051ad1ece2bdcd903bb1e5545d91778",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -35276,7 +35276,7 @@
     },
     {
       "path": "src/vs/platform/windows/electron-main/windowsMainService.ts",
-      "sha256": "43461955579abe585c729874a627f2ddaf19afd907a023be1a93c0070d298057",
+      "sha256": "ccd690a63f9a3a4947315d7fbc572f952794f2cda9e83e9fb48cd868a32c486b",
       "mode": 33206,
       "type": "file"
     },
@@ -35546,7 +35546,7 @@
     },
     {
       "path": "src/vs/sessions/browser/accountTitleBarState.ts",
-      "sha256": "df4707a5edf21bb1fcaa02aef958d245f2c722a611db33eafc00a20dcae247f4",
+      "sha256": "bb63ec0eefe280cdb74170579d10461cd76b5ae5a520d4540b72d1954d060ae2",
       "mode": 33206,
       "type": "file"
     },
@@ -35834,7 +35834,7 @@
     },
     {
       "path": "src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts",
-      "sha256": "e076ffc20bb8ac817e4938df5b5a92ddbae2530bba9e0794217aa1067f4c8a31",
+      "sha256": "005bf7da22199ddebd54758742608beac6833dfbd970eabd572958d5817cd9aa",
       "mode": 33206,
       "type": "file"
     },
@@ -35876,7 +35876,7 @@
     },
     {
       "path": "src/vs/sessions/browser/sessionsSetUpService.ts",
-      "sha256": "239f54af81e617dbb472706d5f7a0d40a67316f8ced31a9218edaa8da881f28e",
+      "sha256": "6ab01cbc3bb0766a0f7fb456fcb4b07319f0fbcb1565dcc71b6b508f22a27e7c",
       "mode": 33206,
       "type": "file"
     },
@@ -35960,7 +35960,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts",
-      "sha256": "df0f84deda668a4a6c91b460e9e8b41bc125c6e2d3b8af8b374c5f8d9a4d8744",
+      "sha256": "0deced64e9343927cbcb96fc55cb248f531a8607ecb941bc8c635d2d97fb478c",
       "mode": 33206,
       "type": "file"
     },
@@ -36164,7 +36164,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/agentHost/browser/baseAgentHostSessionsProvider.ts",
-      "sha256": "0aee66838692760bdeb72fcb04dd500b06a884049284fe0adfdb99abf62b422d",
+      "sha256": "bee013611b2335cc8c73dee7b3e32656f5dc438dd87113b5b1a057f68a11dfd0",
       "mode": 33206,
       "type": "file"
     },
@@ -36176,7 +36176,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/agentHost/browser/localAgentHostSessionsProvider.ts",
-      "sha256": "61574eeba59b87ad39c9380cb83df0a67d4013a751b7e98817b253a32396340d",
+      "sha256": "5285cb9e2a58e9ea6f112500538f40a98c781c2f6e98f1aa79e07cf6d96108a6",
       "mode": 33206,
       "type": "file"
     },
@@ -36422,7 +36422,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/chat/browser/aiCustomizationWorkspaceService.ts",
-      "sha256": "f50b15dc9c262edfd7ba1aabb066c3ed8269162fa6b86d9f95813333cf38b5f6",
+      "sha256": "0f5469aba32452040edc06517aa07798fe2a151c7fd48f4878ade9f75cd25280",
       "mode": 33206,
       "type": "file"
     },
@@ -36560,7 +36560,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/chat/browser/newChatViewPane.ts",
-      "sha256": "d3c5d908fc2abd596167b7616a2893cc4ce78e3853d81915f74a9102a77f0185",
+      "sha256": "926baa9d5a2a8b9d9da2d319ca604b32d112a9f27000533179dc48ea325503ec",
       "mode": 33206,
       "type": "file"
     },
@@ -36674,7 +36674,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/chat/electron-browser/chat.contribution.ts",
-      "sha256": "9c34fe6995ff72e9be655e06608d0391693c8931ce2939db2530efdc8d740585",
+      "sha256": "976b8d1d355cb7821b7fb87dd68465d722be8ff4c1ad23981de41c9c970b424e",
       "mode": 33206,
       "type": "file"
     },
@@ -36758,7 +36758,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts",
-      "sha256": "406593f5fb51c9537ea060a9aaf29522f73fc2e1f7b55bc0f12f09592eb83921",
+      "sha256": "eb50275d16eb42c39ffd9fb71139bd5e028ad2ae96b1bd1031888af772cf240e",
       "mode": 33206,
       "type": "file"
     },
@@ -36770,7 +36770,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts",
-      "sha256": "f70e0bc3e347aff5fc4386159399ba34ba73684e4e69b41e966aed07f2c13c73",
+      "sha256": "c22b6dc48741e1ea474476180a553f68d756e252125a45c3db7860dee1b1f76f",
       "mode": 33206,
       "type": "file"
     },
@@ -36824,7 +36824,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts",
-      "sha256": "ec2936df50d2b7c3f293e2bdb0a5583e72fa7e0b06b9e73f040f3969c0f4f528",
+      "sha256": "3502cce07cffb33343ca13932ce9c998b36b8aba1efd4b5815b6a2efcc2020a5",
       "mode": 33206,
       "type": "file"
     },
@@ -37226,7 +37226,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/sessions/browser/customizationsToolbar.contribution.ts",
-      "sha256": "13e7e10f6d27f1b62bb9daa5cabafe961c0ec16f05a2478f61a6d979b96dd73c",
+      "sha256": "f3cae2cca6b462e38fce9d799972e3f51d3f0c1df3c6bd34de525efb3f7934f3",
       "mode": 33206,
       "type": "file"
     },
@@ -37484,7 +37484,7 @@
     },
     {
       "path": "src/vs/sessions/services/sessions/common/session.ts",
-      "sha256": "e9edded048cbf4ce8fd8aa7535e43981c5b72bf8e63973e74c0523f4652cf15d",
+      "sha256": "3ed27f5cf78f203412cb74b9aa2fbf5e7abfeee43b2f197d07e8ff99e061f6e3",
       "mode": 33206,
       "type": "file"
     },
@@ -41504,7 +41504,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts",
-      "sha256": "46dcdd66e636397fc05b85716ec1e20761fb65fb65f1a18fb8f2974e1c15c1d8",
+      "sha256": "37b7a84d56ac7830804f7410dff2e229d59c38de3dfa08f0decf68a34d37b42a",
       "mode": 33206,
       "type": "file"
     },
@@ -41690,7 +41690,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts",
-      "sha256": "8c51765bf111ac06c9898c0a6b1f5951f51226a11b2d95953349debdd221eced",
+      "sha256": "3cb058465f133d938cc972657723e1a4b0b5c595bc4a03ed4bb8f80615ee0979",
       "mode": 33206,
       "type": "file"
     },
@@ -41906,7 +41906,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/chat.contribution.ts",
-      "sha256": "a04387180ec0bfbe3ab05ce2911c6185458f119e7aa08b77202b9a97bd6c11b0",
+      "sha256": "f2a7cf20f5feab62b0aa572dfcdb5a62b708d4f038ae1604eb61df24c0ef0051",
       "mode": 33206,
       "type": "file"
     },
@@ -43940,7 +43940,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts",
-      "sha256": "772d438de246b1ada0bf5bef9b362adee024ee467fbbee602cd5cf1365d5d66b",
+      "sha256": "204041fa407b011d27c4ae2993e2d4b484f7951bd3aed33d93984b346e2d89ce",
       "mode": 33206,
       "type": "file"
     },
@@ -44552,7 +44552,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts",
-      "sha256": "c06eeae23bd9809b831cf783ce114827500087c24667308fdd2fe67aa33cdb5d",
+      "sha256": "dd1864ae75d3f0116f6540a22d29ef8a48a2e0ce77b48b7e46779a3df7d68320",
       "mode": 33206,
       "type": "file"
     },
@@ -44612,7 +44612,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts",
-      "sha256": "db609c86979d437129c708ea2d2c7e1f314d850193db494ba15d0d83995ea4ca",
+      "sha256": "26c7e95471434cc09417b6aabe0a624be0b3138c7b926e11c2b5e6aeb6f940a7",
       "mode": 33206,
       "type": "file"
     },
@@ -45422,7 +45422,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts",
-      "sha256": "833415a550896d53c36d336afcbbdc0ef280f81b10be114821f315232fdc48f5",
+      "sha256": "5f64e99c59ac06dabca9d553e4d76929d8c6695f239ee06474dbefefca19b7dd",
       "mode": 33206,
       "type": "file"
     },
@@ -47198,7 +47198,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "d87e921feacb1c9665220d0204b83a2aa502a8c548c3a2999ce78d78be6e1f94",
+      "sha256": "b796557c4e5aa4766d55a360d5633d72136d8dad4189781c60b815c765a23730",
       "mode": 33206,
       "type": "file"
     },
@@ -47325,6 +47325,12 @@
     {
       "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorReadOnlyTools.ts",
       "sha256": "6c99bf1c6807dec6ad9b7864d21dd0bcf8ac80927b9e6d4821aa1dd697a3705d",
+      "mode": 33206,
+      "type": "file"
+    },
+    {
+      "path": "src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts",
+      "sha256": "d4911d8c3a010dcfda6a259e317af90f90cd437ca9d9c633e880e99e0b654120",
       "mode": 33206,
       "type": "file"
     },
