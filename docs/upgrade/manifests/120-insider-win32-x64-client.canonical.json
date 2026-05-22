@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "profile": "120-insider-win32-x64-client",
   "sourceRoot": "vscode.generated/layers/director/vscode",
-  "generatedAt": "2026-05-22T08:50:37.586Z",
-  "treeHash": "1e51a0ec6341772c21464cb2f0afc1a3c051ad1ece2bdcd903bb1e5545d91778",
+  "generatedAt": "2026-05-22T13:25:42.704Z",
+  "treeHash": "bfdf646bf862e53d642b16c07dc549542b434c945671c7782436a7c0613196c1",
   "caseInsensitivePathCollisions": [],
   "files": [
     {
@@ -36560,7 +36560,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/chat/browser/newChatViewPane.ts",
-      "sha256": "926baa9d5a2a8b9d9da2d319ca604b32d112a9f27000533179dc48ea325503ec",
+      "sha256": "cff40c64ba4221ed8a1b32d7cec637b2af9cccd555ac2d2e59bf1423230bf9d9",
       "mode": 33206,
       "type": "file"
     },
@@ -36758,7 +36758,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessions.contribution.ts",
-      "sha256": "eb50275d16eb42c39ffd9fb71139bd5e028ad2ae96b1bd1031888af772cf240e",
+      "sha256": "363d550460ca2b89028a383a86b932122e646eccb618266babc69fb4ad8ecbff",
       "mode": 33206,
       "type": "file"
     },
@@ -36770,7 +36770,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts",
-      "sha256": "c22b6dc48741e1ea474476180a553f68d756e252125a45c3db7860dee1b1f76f",
+      "sha256": "6ec374dbce7ef983e3ced4ab6dac904e968c3ea722151ebebee483eb1c00a43b",
       "mode": 33206,
       "type": "file"
     },
@@ -36824,7 +36824,7 @@
     },
     {
       "path": "src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts",
-      "sha256": "3502cce07cffb33343ca13932ce9c998b36b8aba1efd4b5815b6a2efcc2020a5",
+      "sha256": "36d6a0dc9bfe131ec6f3a21a9e68c8e093868a6acfc7399fc13bd38c784b42b3",
       "mode": 33206,
       "type": "file"
     },
@@ -41690,7 +41690,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts",
-      "sha256": "3cb058465f133d938cc972657723e1a4b0b5c595bc4a03ed4bb8f80615ee0979",
+      "sha256": "db1556fea0b147422fa9c64212fdeca9d5795f42ac12485bb3c4775aac796413",
       "mode": 33206,
       "type": "file"
     },
@@ -43940,7 +43940,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts",
-      "sha256": "204041fa407b011d27c4ae2993e2d4b484f7951bd3aed33d93984b346e2d89ce",
+      "sha256": "136fd87c65d6481cc04a360dc230631353050bacfe45222606bdf55aea22a334",
       "mode": 33206,
       "type": "file"
     },
@@ -44612,7 +44612,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts",
-      "sha256": "26c7e95471434cc09417b6aabe0a624be0b3138c7b926e11c2b5e6aeb6f940a7",
+      "sha256": "7624f03eb14d87eac90f28e53ddc6746099b149f7e9745d9ef937bb6032739aa",
       "mode": 33206,
       "type": "file"
     },
@@ -45422,7 +45422,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts",
-      "sha256": "5f64e99c59ac06dabca9d553e4d76929d8c6695f239ee06474dbefefca19b7dd",
+      "sha256": "71ad2040e4bf005077e8edb2e4696b8101e0bb4f7644b8e6aeac8f5b3d91508f",
       "mode": 33206,
       "type": "file"
     },
@@ -47198,7 +47198,7 @@
     },
     {
       "path": "src/vs/workbench/contrib/directorCode/browser/agentEngine/agentEngine.contribution.ts",
-      "sha256": "b796557c4e5aa4766d55a360d5633d72136d8dad4189781c60b815c765a23730",
+      "sha256": "b13dcfc0e1f3efe2f515177315bf2c4b59e1d376315674ebc5889fdbb6a9d47d",
       "mode": 33206,
       "type": "file"
     },

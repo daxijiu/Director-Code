@@ -1518,18 +1518,18 @@ index f028af026ba389332c0e5b842e5ce8d77c88037a..8d12e93ca51ec14f7f7efce4815d8944
  	},
  });
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
-index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4730d7743 100644
+index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..4d229501968078094e1ee66ff9cebbdd01309da8 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/browser/copilotChatSessionsProvider.ts
-@@ -20,7 +20,7 @@ import { IAgentSession } from '../../../../workbench/contrib/chat/browser/agentS
- import { getRepositoryName } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsViewer.js';
- import { IAgentSessionsService } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsService.js';
+@@ -22,7 +22,7 @@ import { IAgentSessionsService } from '../../../../workbench/contrib/chat/browse
  import { AgentSessionProviders, AgentSessionTarget } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessions.js';
--import { IChatService, IChatSendRequestOptions } from '../../../../workbench/contrib/chat/common/chatService/chatService.js';
-+import { IChatModelReference, IChatService, IChatSendRequestOptions } from '../../../../workbench/contrib/chat/common/chatService/chatService.js';
+ import { IChatService, IChatSendRequestOptions } from '../../../../workbench/contrib/chat/common/chatService/chatService.js';
  import { IChatResponseModel } from '../../../../workbench/contrib/chat/common/model/chatModel.js';
- import { ChatSessionStatus, IChatSessionsService, IChatSessionProviderOptionGroup, IChatSessionProviderOptionItem, SessionType, IChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
+-import { ChatSessionStatus, IChatSessionsService, IChatSessionProviderOptionGroup, IChatSessionProviderOptionItem, SessionType, IChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
++import { ChatSessionStatus, IChatSessionItem, IChatSessionItemMetadata, IChatSessionsService, IChatSessionProviderOptionGroup, IChatSessionProviderOptionItem, SessionType, IChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
  import { ISession, IChat, ISessionRepository, ISessionWorkspace, SessionStatus, GITHUB_REMOTE_FILE_SCHEME, IGitHubInfo, CopilotCLISessionType, CopilotCloudSessionType, ClaudeCodeSessionType, LocalSessionType, ISessionType, ISessionWorkspaceBrowseAction, ISessionFileChange, sessionFileChangesEqual, toSessionId, SESSION_WORKSPACE_GROUP_LOCAL, ISessionChangeset } from '../../../services/sessions/common/session.js';
+ import { ChatAgentLocation, ChatConfiguration, ChatModeKind, ChatPermissionLevel, isChatPermissionLevel } from '../../../../workbench/contrib/chat/common/constants.js';
+ import { basename, dirname, isEqual } from '../../../../base/common/resources.js';
 @@ -46,10 +46,15 @@ import { IFileService } from '../../../../platform/files/common/files.js';
  import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
  import { IGitHubService } from '../../github/browser/githubService.js';
@@ -1546,7 +1546,17 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  export interface ICopilotChatSession {
  	/** Globally unique session ID (`providerId:localId`). */
  	readonly id: string;
-@@ -706,8 +711,8 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+@@ -698,16 +703,15 @@ export class RemoteNewSession extends Disposable implements ICopilotChatSession
+  * New session for local (in-process VS Code chat) sessions.
+  * Implements {@link ICopilotChatSession} (session facade) for local sessions
+  * that run in-process without worktrees or remote agents.
+- * Keeps the underlying chat model alive by retaining the
+- * {@link IChatModelReference} returned from `startNewLocalSession` for the
+- * lifetime of this object.
++ * This object only holds pre-send choices. Materialization is delegated to the
++ * native local chat session item controller.
+  */
+ class LocalNewSession extends Disposable implements ICopilotChatSession {
  
  	// -- ISessionData fields --
  
@@ -1557,15 +1567,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  	readonly providerId: string;
  	readonly sessionType: typeof SessionType.Local;
  	readonly icon: ThemeIcon;
-@@ -755,6 +760,7 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
- 
- 	private _modelId: string | undefined;
- 	private _mode: IChatMode | undefined;
-+	private _modelRef: IChatModelReference | undefined;
- 
- 	readonly target = AgentSessionProviders.Local;
- 	readonly selectedOptions = new Map<string, IChatSessionProviderOptionItem>();
-@@ -766,7 +772,6 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+@@ -766,28 +770,14 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
  	get disabled(): boolean { return false; }
  
  	constructor(
@@ -1573,7 +1575,8 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  		readonly sessionWorkspace: ISessionWorkspace,
  		providerId: string,
  		@IGitService private readonly gitService: IGitService,
-@@ -775,19 +780,7 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
+-		@IChatService private readonly chatService: IChatService,
+ 		@IFileService private readonly fileService: IFileService,
  	) {
  		super();
  
@@ -1594,33 +1597,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  		this.id = toSessionId(providerId, this.resource);
  		this.providerId = providerId;
  		this.sessionType = AgentSessionProviders.Local;
-@@ -802,6 +795,25 @@ class LocalNewSession extends Disposable implements ICopilotChatSession {
- 		this._resolveGitState();
- 	}
- 
-+	materialize(): URI {
-+		if (this._modelRef) {
-+			return this.resource;
-+		}
-+
-+		const modelRef = this._register(this.chatService.startNewLocalSession(
-+			ChatAgentLocation.Chat,
-+			{ debugOwner: 'CopilotChatSessionsProvider#sendAndCreateChat.local' },
-+		));
-+		const repositoryUri = this.sessionWorkspace.repositories[0]?.uri;
-+		if (repositoryUri) {
-+			modelRef.object.setWorkingDirectory(repositoryUri);
-+		}
-+		this._modelRef = modelRef;
-+		this.resource = modelRef.object.sessionResource;
-+		this.id = toSessionId(this.providerId, this.resource);
-+		return this.resource;
-+	}
-+
- 	private async _resolveGitState(): Promise<void> {
- 		const repoUri = this.sessionWorkspace.repositories[0]?.uri;
- 		if (!repoUri) {
-@@ -1426,9 +1438,14 @@ class AgentSessionAdapter implements ICopilotChatSession {
+@@ -1426,9 +1416,14 @@ class AgentSessionAdapter implements ICopilotChatSession {
  			hasGitOperationInProgress
  		} = this._extractRepositoryFromMetadata(session);
  
@@ -1637,7 +1614,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  			detail: branchName,
  			branchName,
  			baseBranchName,
-@@ -1442,9 +1459,9 @@ class AgentSessionAdapter implements ICopilotChatSession {
+@@ -1442,9 +1437,9 @@ class AgentSessionAdapter implements ICopilotChatSession {
  		};
  
  		return {
@@ -1650,11 +1627,167 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  			repositories: [repository],
  			requiresWorkspaceTrust: session.providerType !== AgentSessionProviders.Cloud,
  		};
-@@ -1512,23 +1529,23 @@ class AgentSessionAdapter implements ICopilotChatSession {
+@@ -1512,23 +1507,179 @@ class AgentSessionAdapter implements ICopilotChatSession {
  }
  
  /**
 - * Default sessions provider for Copilot CLI, Cloud, Claude, and Local session types.
++ * Adapts the native local chat session catalog into the Sessions provider
++ * surface. This is a projection over IChatSessionItemController data, not a
++ * second session store.
++ */
++class NativeLocalChatSessionAdapter implements ICopilotChatSession {
++
++	readonly resource: URI;
++	readonly id: string;
++	readonly providerId: string;
++	readonly sessionType: typeof SessionType.Local = AgentSessionProviders.Local;
++	readonly icon: ThemeIcon;
++	readonly createdAt: Date;
++
++	private readonly _workspace: ReturnType<typeof observableValue<ISessionWorkspace | undefined>>;
++	readonly workspace: IObservable<ISessionWorkspace | undefined>;
++
++	private readonly _title: ReturnType<typeof observableValue<string>>;
++	readonly title: IObservable<string>;
++
++	private readonly _updatedAt: ReturnType<typeof observableValue<Date>>;
++	readonly updatedAt: IObservable<Date>;
++
++	private readonly _status: ReturnType<typeof observableValue<SessionStatus>>;
++	readonly status: IObservable<SessionStatus>;
++
++	private readonly _changes: ReturnType<typeof observableValue<readonly ISessionFileChange[]>>;
++	readonly changes: IObservable<readonly ISessionFileChange[]>;
++
++	readonly changesets: IObservable<readonly ISessionChangeset[]> = constObservable([]);
++	readonly modelId: IObservable<string | undefined> = constObservable(undefined);
++	readonly mode: IObservable<{ readonly id: string; readonly kind: string } | undefined> = constObservable(undefined);
++	readonly loading: IObservable<boolean> = constObservable(false);
++	readonly isArchived: IObservable<boolean>;
++	readonly isRead: IObservable<boolean> = constObservable(true);
++	readonly description: IObservable<IMarkdownString | undefined>;
++	readonly lastTurnEnd: IObservable<Date | undefined>;
++	readonly gitHubInfo: IObservable<IGitHubInfo | undefined> = constObservable(undefined);
++	readonly permissionLevel: IObservable<ChatPermissionLevel> = constObservable(ChatPermissionLevel.Default);
++	readonly branch: IObservable<string | undefined> = constObservable(undefined);
++	readonly isolationMode: IObservable<IsolationMode | undefined> = constObservable(undefined);
++	readonly gitRepository?: IGitRepository | undefined;
++	readonly branches: IObservable<readonly string[]> = constObservable([]);
++
++	constructor(
++		item: IChatSessionItem,
++		providerId: string,
++	) {
++		this.resource = item.resource;
++		this.id = toSessionId(providerId, item.resource);
++		this.providerId = providerId;
++		this.icon = item.iconPath ?? LocalSessionType.icon;
++		this.createdAt = new Date(item.timing.created);
++
++		this._workspace = observableValue(this, this._buildWorkspace(item));
++		this.workspace = this._workspace;
++		this._title = observableValue(this, item.label);
++		this.title = this._title;
++		this._updatedAt = observableValue(this, this._updatedAtFromItem(item));
++		this.updatedAt = this._updatedAt;
++		this._status = observableValue(this, this._statusFromItem(item));
++		this.status = this._status;
++		this._changes = observableValueOpts<readonly ISessionFileChange[]>({ owner: this, equalsFn: sessionFileChangesEqual }, this._extractChanges(item));
++		this.changes = this._changes;
++		this.isArchived = observableValue(this, item.archived === true);
++		this.description = observableValue(this, this._descriptionFromItem(item));
++		this.lastTurnEnd = observableValue(this, item.timing.lastRequestEnded ? new Date(item.timing.lastRequestEnded) : undefined);
++	}
++
++	setPermissionLevel(_level: ChatPermissionLevel): void { }
++	setBranch(_branch: string | undefined): void { }
++	setIsolationMode(_mode: IsolationMode): void { }
++	setModelId(_modelId: string): void { }
++	setMode(_chatMode: IChatMode | undefined): void { }
++
++	update(item: IChatSessionItem): void {
++		transaction(tx => {
++			this._workspace.set(this._buildWorkspace(item), tx);
++			this._title.set(item.label, tx);
++			this._updatedAt.set(this._updatedAtFromItem(item), tx);
++			this._status.set(this._statusFromItem(item), tx);
++			this._changes.set(this._extractChanges(item), tx);
++		});
++	}
++
++	private _updatedAtFromItem(item: IChatSessionItem): Date {
++		return new Date(item.timing.lastRequestEnded ?? item.timing.lastRequestStarted ?? item.timing.created);
++	}
++
++	private _statusFromItem(item: IChatSessionItem): SessionStatus {
++		return item.status === undefined ? SessionStatus.Completed : toSessionStatus(item.status);
++	}
++
++	private _descriptionFromItem(item: IChatSessionItem): IMarkdownString | undefined {
++		if (!item.description) {
++			return undefined;
++		}
++		return typeof item.description === 'string' ? new MarkdownString(item.description) : item.description;
++	}
++
++	private _buildWorkspace(item: IChatSessionItem): ISessionWorkspace | undefined {
++		const uri = this._workspaceUriFromMetadata(item.metadata);
++		if (!uri) {
++			return undefined;
++		}
++		return {
++			label: basename(uri),
++			description: this._descriptionFromUri(uri),
++			group: SESSION_WORKSPACE_GROUP_LOCAL,
++			icon: Codicon.folder,
++			repositories: [{ uri, workingDirectory: undefined, detail: undefined, baseBranchName: undefined }],
++			requiresWorkspaceTrust: true,
++		};
++	}
++
++	private _workspaceUriFromMetadata(metadata: IChatSessionItemMetadata | undefined): URI | undefined {
++		const pathValue = metadata?.repositoryPath ?? metadata?.workingDirectoryPath;
++		return typeof pathValue === 'string' && pathValue.length > 0 ? URI.file(pathValue) : undefined;
++	}
++
++	private _descriptionFromUri(uri: URI): string | undefined {
++		const parent = dirname(uri);
++		return parent.toString() === uri.toString() ? undefined : parent.fsPath;
++	}
++
++	private _extractChanges(item: IChatSessionItem): readonly ISessionFileChange[] {
++		const changes = item.changes;
++		if (!changes) {
++			return [];
++		}
++		if (!Array.isArray(changes)) {
++			const summary = changes as { readonly files: number; readonly insertions: number; readonly deletions: number };
++			if (summary.insertions > 0 || summary.deletions > 0) {
++				return [{
++					modifiedUri: URI.parse('summary://changes'),
++					insertions: summary.insertions,
++					deletions: summary.deletions,
++				}];
++			}
++			return [];
++		}
++		return changes.map(change => {
++			if ('uri' in change) {
++				const typed = change as IChatSessionFileChange2;
++				return {
++					modifiedUri: typed.modifiedUri ?? typed.uri,
++					originalUri: typed.originalUri,
++					insertions: typed.insertions,
++					deletions: typed.deletions,
++				};
++			}
++			return change as ISessionFileChange;
++		});
++	}
++}
++
++/**
 + * Director sessions provider for local chat and setup-gated external agents.
   * Wraps the existing session infrastructure into the extensible provider model.
   */
@@ -1679,7 +1812,24 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  	}
  
  	private readonly _onDidChangeSessionTypes = this._register(new Emitter<void>());
-@@ -1582,12 +1599,13 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1541,7 +1692,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 	readonly onDidReplaceSession: Event<{ readonly from: ISession; readonly to: ISession }> = this._onDidReplaceSession.event;
+ 
+ 	/** Cache of adapted sessions, keyed by resource URI string. */
+-	private readonly _sessionCache = new Map<string, AgentSessionAdapter | CopilotCLISession | RemoteNewSession | ClaudeCodeNewSession | LocalNewSession>();
++	private readonly _sessionCache = new Map<string, AgentSessionAdapter | NativeLocalChatSessionAdapter | CopilotCLISession | RemoteNewSession | ClaudeCodeNewSession | LocalNewSession>();
+ 
+ 	/** Cache of ISession wrappers, keyed by session group ID. */
+ 	private readonly _sessionGroupCache = new Map<string, ISession>();
+@@ -1564,6 +1715,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 	private readonly _multiChatEnabled: boolean;
+ 	private _claudeEnabled: boolean;
+ 	private _localSessionEnabled: boolean;
++	private _nativeLocalSessionRefresh: Promise<void> | undefined;
+ 
+ 	readonly browseActions: readonly ISessionWorkspaceBrowseAction[];
+ 	readonly supportsLocalWorkspaces = true;
+@@ -1582,12 +1734,13 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		@ILogService private readonly logService: ILogService,
  		@IGitHubService private readonly gitHubService: IGitHubService,
  		@ILabelService private readonly labelService: ILabelService,
@@ -1694,7 +1844,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  
  		this._register(this.configurationService.onDidChangeConfiguration(e => {
  			if (e.affectsConfiguration(CLAUDE_CODE_ENABLED_SETTING)) {
-@@ -1599,7 +1617,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1599,7 +1752,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  				}
  			}
  			if (e.affectsConfiguration(LOCAL_SESSION_ENABLED_SETTING)) {
@@ -1703,7 +1853,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  				if (this._localSessionEnabled !== localSessionEnabled) {
  					this._localSessionEnabled = localSessionEnabled;
  					this._onDidChangeSessionTypes.fire();
-@@ -1607,6 +1625,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1607,6 +1760,10 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  				}
  			}
  		}));
@@ -1714,7 +1864,27 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  
  		this.browseActions = [
  			{
-@@ -1628,23 +1650,25 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1622,29 +1779,45 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		this._register(this.agentSessionsService.model.onDidChangeSessions(() => {
+ 			this._refreshSessionCache();
+ 		}));
++		this._register(this.chatSessionsService.onDidChangeItemsProviders(e => {
++			if (e.chatSessionType === AgentSessionProviders.Local) {
++				this._refreshNativeLocalSessionCache();
++			}
++		}));
++		this._register(this.chatSessionsService.onDidChangeSessionItems(e => {
++			if (
++				e.addedOrUpdated?.some(item => item.resource.scheme === AgentSessionProviders.Local || item.resource.authority === AgentSessionProviders.Local)
++				|| e.removed?.some(resource => resource.scheme === AgentSessionProviders.Local || resource.authority === AgentSessionProviders.Local)
++			) {
++				this._refreshNativeLocalSessionCache();
++			}
++		}));
++		this._refreshNativeLocalSessionCache();
+ 	}
+ 
+ 	// -- Sessions --
  
  	getSessionTypes(workspaceUri: URI): ISessionType[] {
  		if (workspaceUri.scheme === GITHUB_REMOTE_FILE_SCHEME || workspaceUri.scheme === SessionType.CopilotCloud) {
@@ -1744,7 +1914,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  		}
  
  		const allChats = Array.from(this._sessionCache.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-@@ -1654,6 +1678,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1654,6 +1827,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		const sessions: ISession[] = [];
  
  		for (const chat of allChats) {
@@ -1754,7 +1924,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  			const groupId = this._getGroupIdForChat(chat);
  			if (!seen.has(groupId)) {
  				seen.add(groupId);
-@@ -1679,6 +1706,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1679,6 +1855,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			this._currentNewSession.dispose();
  			this._currentNewSession = undefined;
  		}
@@ -1762,7 +1932,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  
  		const workspace = this.resolveWorkspace(workspaceUri);
  		if (!workspace) {
-@@ -1717,6 +1745,35 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1717,6 +1894,35 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		return this._chatToSession(session);
  	}
  
@@ -1798,7 +1968,31 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  	setModel(sessionId: string, modelId: string): void {
  		if (this._currentNewSession?.id === sessionId) {
  			this._currentNewSession.setModelId(modelId);
-@@ -2085,11 +2142,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -1771,6 +1977,23 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 		}
+ 
+ 		if (agentSessions.length === 0) {
++			const chatSession = this._findChatSession(sessionId);
++			if (chatSession instanceof NativeLocalChatSessionAdapter) {
++				const confirmed = await this.dialogService.confirm({
++					message: localize('deleteSession.confirm', "Are you sure you want to delete this session?"),
++					detail: localize('deleteSession.detail', "This action cannot be undone."),
++					primaryButton: localize('deleteSession.delete', "Delete")
++				});
++				if (!confirmed.confirmed) {
++					return;
++				}
++				await this.chatService.removeHistoryEntry(chatSession.resource);
++				this._sessionCache.delete(chatSession.resource.toString());
++				this._invalidateGroupingCaches();
++				this._sessionGroupCache.delete(sessionId);
++				this._onDidChangeSessions.fire({ added: [], removed: [this._chatToSession(chatSession)], changed: [] });
++				return;
++			}
+ 			// Temp session that hasn't been committed — remove it directly
+ 			this._cleanupTempSession(sessionId);
+ 			return;
+@@ -2085,11 +2308,18 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		sendOptions: IChatSendRequestOptions,
  		permissionLevel: ChatPermissionLevel,
  	): Promise<ISession> {
@@ -1807,13 +2001,22 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
 -		// (which would otherwise try to resolve a content provider).
 -		const disposable = await this._applySessionModelState(session.resource, session, permissionLevel);
 -		const chatWidget = await this.chatWidgetService.openSession(session.resource, ChatViewPaneTarget);
-+		const resource = session.materialize();
++		const newItem = await this.chatSessionsService.createNewChatSessionItem(
++			session.target,
++			{ prompt: query, initialSessionOptions: this._createLocalInitialSessionOptions(session) },
++			CancellationToken.None,
++		);
++		if (!newItem) {
++			throw new Error('[CopilotChatSessionsProvider] Failed to create native local session item');
++		}
++
++		const resource = newItem.resource;
 +		const disposable = await this._applySessionModelState(resource, session, permissionLevel);
 +		const chatWidget = await this.chatWidgetService.openSession(resource, ChatViewPaneTarget);
  		disposable.dispose();
  		if (!chatWidget) {
  			throw new Error('[CopilotChatSessionsProvider] Failed to open chat widget for local session');
-@@ -2102,7 +2157,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -2102,7 +2332,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  		const { userSelectedTools } = chatWidget.getModeRequestOptions();
  
  		this.logService.debug(`[CopilotChatSessionsProvider] Sending first chat for local session ${session.id}`);
@@ -1822,7 +2025,132 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  			...sendOptions,
  			userSelectedTools,
  			instructionContext: {
-@@ -2726,7 +2781,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -2114,28 +2344,48 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 			throw new Error(`[CopilotChatSessionsProvider] Local sendRequest rejected: ${result.reason}`);
+ 		}
+ 
+-		// Local sessions stay on their original URI — no commit swap needed.
+-		session.setTitle(query.split('\n')[0].substring(0, 100) || localize('new session', "New Session"));
+-		session.setStatus(SessionStatus.InProgress);
+-		const key = session.resource.toString();
+-		this._sessionCache.set(key, session);
+-		this._invalidateGroupingCaches();
++		// Local sessions are represented by the native local chat item
++		// controller, so both the editor list and Agents Window catalog point
++		// at the same resource identity.
++		const localAdapter = this._upsertNativeLocalSessionItem({ ...newItem, status: ChatSessionStatus.InProgress });
+ 		this._currentNewSession = undefined;
+-		const newSession = this._chatToSession(session);
++		session.dispose();
++		const newSession = this._chatToSession(localAdapter);
+ 		this._onDidChangeSessions.fire({ added: [newSession], removed: [], changed: [] });
+ 
+ 		// Listen for the response to complete so we can flip the status
+ 		// from InProgress → Completed and unblock the input box.
+ 		if (result.kind === 'sent') {
+ 			result.data.responseCompletePromise.then(() => {
+-				session.setStatus(SessionStatus.Completed);
+-				this._onDidChangeSessions.fire({ added: [], removed: [], changed: [newSession] });
++				const updated = this._upsertNativeLocalSessionItem({ ...newItem, status: ChatSessionStatus.Completed });
++				this._onDidChangeSessions.fire({ added: [], removed: [], changed: [this._chatToSession(updated)] });
+ 			});
+ 		}
+ 
+ 		return newSession;
+ 	}
+ 
++	private _createLocalInitialSessionOptions(session: LocalNewSession): Map<string, IChatSessionProviderOptionItem> | undefined {
++		const repositoryUri = session.sessionWorkspace.repositories[0]?.uri;
++		if (!repositoryUri) {
++			return undefined;
++		}
++		return new Map([[REPOSITORY_OPTION_ID, { id: repositoryUri.toString(), name: repositoryUri.fsPath || repositoryUri.toString() }]]);
++	}
++
++	private _upsertNativeLocalSessionItem(item: IChatSessionItem): NativeLocalChatSessionAdapter {
++		const key = item.resource.toString();
++		const existing = this._sessionCache.get(key);
++		if (existing instanceof NativeLocalChatSessionAdapter) {
++			existing.update(item);
++			return existing;
++		}
++		const adapter = new NativeLocalChatSessionAdapter(item, this.id);
++		this._sessionCache.set(key, adapter);
++		this._invalidateGroupingCaches();
++		return adapter;
++	}
++
+ 	/**
+ 	 * Sends the first chat for a Claude session using the controller API.
+ 	 *
+@@ -2627,6 +2877,66 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+ 			return;
+ 		}
+ 		this._refreshSessionCache();
++		this._refreshNativeLocalSessionCache();
++	}
++
++	private _refreshNativeLocalSessionCache(): void {
++		if (!this._localSessionEnabled || this._nativeLocalSessionRefresh) {
++			return;
++		}
++		this._nativeLocalSessionRefresh = this._doRefreshNativeLocalSessionCache().finally(() => {
++			this._nativeLocalSessionRefresh = undefined;
++		});
++	}
++
++	private async _doRefreshNativeLocalSessionCache(): Promise<void> {
++		const currentKeys = new Set<string>();
++		const addedData: NativeLocalChatSessionAdapter[] = [];
++		const changedData: NativeLocalChatSessionAdapter[] = [];
++		const removedData: NativeLocalChatSessionAdapter[] = [];
++		let cacheChanged = false;
++
++		try {
++			for await (const group of this.chatSessionsService.getChatSessionItems([AgentSessionProviders.Local], CancellationToken.None)) {
++				for (const item of group.items) {
++					const key = item.resource.toString();
++					currentKeys.add(key);
++					const existing = this._sessionCache.get(key);
++					if (existing instanceof NativeLocalChatSessionAdapter) {
++						existing.update(item);
++						changedData.push(existing);
++					} else {
++						const adapter = new NativeLocalChatSessionAdapter(item, this.id);
++						this._sessionCache.set(key, adapter);
++						addedData.push(adapter);
++						cacheChanged = true;
++					}
++				}
++			}
++		} catch (error) {
++			this.logService.debug('[CopilotChatSessionsProvider] Failed to refresh native local sessions', error);
++			return;
++		}
++
++		for (const [key, adapter] of this._sessionCache) {
++			if (adapter instanceof NativeLocalChatSessionAdapter && !currentKeys.has(key)) {
++				this._sessionCache.delete(key);
++				removedData.push(adapter);
++				cacheChanged = true;
++			}
++		}
++
++		if (cacheChanged) {
++			this._invalidateGroupingCaches();
++		}
++
++		if (addedData.length > 0 || removedData.length > 0 || changedData.length > 0) {
++			this._onDidChangeSessions.fire({
++				added: addedData.map(d => this._chatToSession(d)),
++				removed: removedData.map(d => this._chatToSession(d)),
++				changed: changedData.map(d => this._chatToSession(d)),
++			});
++		}
+ 	}
+ 
+ 	private _invalidateGroupingCaches(): void {
+@@ -2726,7 +3036,9 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  	 * commit (e.g. was stopped before the agent created a worktree).
  	 */
  	private _cleanupTempSession(sessionId: string): void {
@@ -1833,7 +2161,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  		if (!chatSession) {
  			return;
  		}
-@@ -3036,6 +3093,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -3036,6 +3348,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			chats: chatsObs,
  			mainChat,
  			capabilities: { supportsMultipleChats: primaryChat.sessionType === CopilotCLISessionType.id && this._isMultiChatEnabled() },
@@ -1841,7 +2169,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  		};
  		this._sessionGroupCache.set(sessionId, session);
  		return session;
-@@ -3067,6 +3125,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
+@@ -3067,6 +3380,7 @@ export class CopilotChatSessionsProvider extends Disposable implements ISessions
  			chats: constObservable([mainChat]),
  			mainChat,
  			capabilities: { supportsMultipleChats: false },
@@ -1850,7 +2178,7 @@ index 0d8aa2f01f7e98ddb7aa20d407f75d6aad55a38d..d4fde6cf9bd1dba7498d7408dfb975a4
  	}
  
 diff --git a/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts b/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
-index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a324895cb 100644
+index 03442780362524e3b96154c834485fb5714d01d2..9941525f8efd750fc569ed65bee0bfdf09a07e37 100644
 --- a/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
 +++ b/src/vs/sessions/contrib/copilotChatSessions/test/browser/copilotChatSessionsProvider.test.ts
 @@ -27,10 +27,12 @@ import { IChatWidget, IChatWidgetService } from '../../../../../workbench/contri
@@ -1897,7 +2225,51 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  class MockAgentSessionsModel {
  	private readonly _sessions: IAgentSession[] = [];
  	private readonly _onDidChangeSessions = new Emitter<void>();
-@@ -178,6 +203,7 @@ function createProviderWithConfig(
+@@ -109,7 +134,7 @@ class MockAgentSessionsModel {
+ function createProvider(
+ 	disposables: DisposableStore,
+ 	model: MockAgentSessionsModel,
+-	opts?: { multiChatEnabled?: boolean; claudeEnabled?: boolean },
++	opts?: { multiChatEnabled?: boolean; claudeEnabled?: boolean; nativeLocalItems?: IChatSessionItem[] },
+ ): CopilotChatSessionsProvider {
+ 	return createProviderWithConfig(disposables, model, opts).provider;
+ }
+@@ -117,7 +142,7 @@ function createProvider(
+ function createProviderWithConfig(
+ 	disposables: DisposableStore,
+ 	model: MockAgentSessionsModel,
+-	opts?: { multiChatEnabled?: boolean; claudeEnabled?: boolean },
++	opts?: { multiChatEnabled?: boolean; claudeEnabled?: boolean; nativeLocalItems?: IChatSessionItem[] },
+ ): { provider: CopilotChatSessionsProvider; configService: TestConfigurationService } {
+ 	const instantiationService = disposables.add(new TestInstantiationService());
+ 
+@@ -126,6 +151,7 @@ function createProviderWithConfig(
+ 	configService.setUserConfiguration(CLAUDE_CODE_ENABLED_SETTING, opts?.claudeEnabled ?? true);
+ 
+ 	instantiationService.stub(IConfigurationService, configService);
++	instantiationService.stub(ILogService, NullLogService);
+ 	instantiationService.stub(IStorageService, disposables.add(new TestStorageService()));
+ 	instantiationService.stub(IFileDialogService, {});
+ 	instantiationService.stub(IDialogService, {
+@@ -156,10 +182,17 @@ function createProviderWithConfig(
+ 		getChatSessionContribution: () => ({ type: 'test-copilot', name: 'test', displayName: 'Test', description: 'test', icon: undefined }),
+ 		getOrCreateChatSession: async () => ({ onWillDispose: () => ({ dispose() { } }), sessionResource: URI.from({ scheme: 'test' }), history: [], dispose() { } }),
+ 		onDidCommitSession: Event.None,
++		onDidChangeItemsProviders: Event.None,
++		onDidChangeSessionItems: Event.None,
+ 		updateSessionOptions: () => true,
+ 		setSessionOption: () => true,
+ 		getSessionOption: () => undefined,
+ 		onDidChangeOptionGroups: Event.None,
++		getChatSessionItems: async function* (providers?: readonly string[]) {
++			if (!providers || providers.includes(AgentSessionProviders.Local)) {
++				yield { chatSessionType: AgentSessionProviders.Local, items: opts?.nativeLocalItems ?? [] };
++			}
++		},
+ 	});
+ 	instantiationService.stub(IChatService, {
+ 		acquireOrLoadSession: async () => undefined,
+@@ -178,6 +211,7 @@ function createProviderWithConfig(
  	instantiationService.stub(ILanguageModelToolsService, {
  		toToolReferences: () => [],
  	});
@@ -1905,7 +2277,7 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  	// Stub IInstantiationService so provider can use createInstance for CopilotCLISession
  	instantiationService.stub(IInstantiationService, instantiationService);
  	instantiationService.stub(ILabelService, {
-@@ -202,7 +228,12 @@ function createProviderForSendTests(
+@@ -202,7 +236,12 @@ function createProviderForSendTests(
  	disposables: DisposableStore,
  	model: MockAgentSessionsModel,
  	sendRequest: () => Promise<ChatSendResult>,
@@ -1919,7 +2291,31 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  ): CopilotChatSessionsProvider {
  	const instantiationService = disposables.add(new TestInstantiationService());
  
-@@ -238,18 +269,31 @@ function createProviderForSendTests(
+@@ -227,29 +266,54 @@ function createProviderForSendTests(
+ 		getChatSessionContribution: () => ({ type: 'test-copilot', name: 'test', displayName: 'Test', description: 'test', icon: undefined }),
+ 		getOrCreateChatSession: async () => ({ onWillDispose: () => ({ dispose() { } }), sessionResource: URI.from({ scheme: 'test' }), history: [], dispose() { } }),
+ 		onDidCommitSession: opts?.onDidCommitSession ?? Event.None,
++		onDidChangeItemsProviders: Event.None,
++		onDidChangeSessionItems: Event.None,
+ 		updateSessionOptions: () => true,
+ 		setSessionOption: () => true,
+ 		getSessionOption: () => undefined,
+ 		onDidChangeOptionGroups: Event.None,
+-		createNewChatSessionItem: opts?.createNewChatSessionItem ?? (async () => undefined),
++		getChatSessionItems: async function* () { },
++		createNewChatSessionItem: opts?.createNewChatSessionItem ?? (async (_type, request): Promise<IChatSessionItem> => {
++			const resource = LocalChatSessionUri.forSession(`local-${Date.now()}-${Math.random()}`);
++			opts?.onStartNewLocalSession?.(resource);
++			return {
++				resource,
++				label: request.prompt,
++				timing: { created: Date.now(), lastRequestStarted: undefined, lastRequestEnded: undefined },
++				metadata: { workingDirectoryPath: '/test/project' },
++			};
++		}),
+ 	});
+ 	instantiationService.stub(IChatService, {
+ 		acquireOrLoadSession: async () => undefined,
  		sendRequest: sendRequest,
  		removeHistoryEntry: async (resource: URI) => { model.removeSession(resource); },
  		setChatSessionTitle: () => { },
@@ -1951,7 +2347,7 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  	instantiationService.stub(IGitService, { openRepository: async () => undefined });
  	instantiationService.stub(IInstantiationService, instantiationService);
  	instantiationService.stub(ILabelService, {
-@@ -279,18 +323,18 @@ suite('CopilotChatSessionsProvider', () => {
+@@ -279,18 +343,18 @@ suite('CopilotChatSessionsProvider', () => {
  	test('has correct id and label', () => {
  		const provider = createProvider(disposables, model);
  		assert.strictEqual(provider.id, COPILOT_PROVIDER_ID);
@@ -1973,7 +2369,7 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  
  		let fired = false;
  		disposables.add(provider.onDidChangeSessionTypes(() => { fired = true; }));
-@@ -305,7 +349,7 @@ suite('CopilotChatSessionsProvider', () => {
+@@ -305,7 +369,7 @@ suite('CopilotChatSessionsProvider', () => {
  		});
  
  		assert.ok(fired, 'onDidChangeSessionTypes should have fired');
@@ -1982,7 +2378,34 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
  	});
  
  	test('toggling claude setting refreshes sessions list', () => {
-@@ -869,22 +913,73 @@ suite('CopilotChatSessionsProvider', () => {
+@@ -366,6 +430,26 @@ suite('CopilotChatSessionsProvider', () => {
+ 		assert.strictEqual(provider.getSessions().length, 0);
+ 	});
+ 
++	test('getSessions projects native local chat items with workspace metadata', async () => {
++		const resource = LocalChatSessionUri.forSession('native-local-session');
++		const provider = createProvider(disposables, model, {
++			nativeLocalItems: [{
++				resource,
++				label: 'Native Local Session',
++				timing: { created: Date.now(), lastRequestStarted: undefined, lastRequestEnded: undefined },
++				metadata: { workingDirectoryPath: '/test/native-project' },
++			}],
++		});
++
++		await new Promise(resolve => setTimeout(resolve, 0));
++
++		const sessions = provider.getSessions();
++		assert.strictEqual(sessions.length, 1);
++		assert.strictEqual(sessions[0].resource.toString(), resource.toString());
++		assert.strictEqual(sessions[0].workspace.get()?.label, 'native-project');
++		assert.strictEqual(sessions[0].workspace.get()?.repositories[0].uri.toString(), URI.file('/test/native-project').toString());
++	});
++
+ 	test('getSessions returns adapted sessions from agent model', () => {
+ 		const resource1 = URI.from({ scheme: AgentSessionProviders.Background, path: '/session-1' });
+ 		const resource2 = URI.from({ scheme: AgentSessionProviders.Background, path: '/session-2' });
+@@ -869,22 +953,74 @@ suite('CopilotChatSessionsProvider', () => {
  		assert.strictEqual(workspace.requiresWorkspaceTrust, true);
  	});
  
@@ -2060,6 +2483,7 @@ index 03442780362524e3b96154c834485fb5714d01d2..ef78a24e331ff77804f66acb44eeaf4a
 +		assert.strictEqual(provider.getSessions().length, 1);
 +		assert.strictEqual(created.resource.toString(), sentResources[0].toString());
 +		assert.strictEqual(provider.getSessions()[0].resource.toString(), sentResources[0].toString());
++		assert.strictEqual(provider.getSessions()[0].workspace.get()?.label, 'project');
 +		await provider.deleteSession(created.sessionId);
  	});
  
@@ -2484,10 +2908,39 @@ index 6d49a22fefa0b9e82b86bcb00151b43ebc5b8288..6a0072bcc63d5b205602861a1f5d7061
  			return '';
  	}
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
-index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac677bf48ba 100644
+index 498c97651e9aa7654168cf07cf1f798464f1e160..09ccce3f99f647c22c437aceae330aac4872b3e5 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
 +++ b/src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts
-@@ -72,12 +72,13 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -14,15 +14,18 @@ import { autorun, observableSignalFromEvent } from '../../../../../base/common/o
+ import { isEqual } from '../../../../../base/common/resources.js';
+ import { URI } from '../../../../../base/common/uri.js';
+ import { IWorkbenchContribution } from '../../../../common/contributions.js';
+-import { convertLegacyChatSessionTiming, IChatDetail, IChatService, IChatSessionTiming } from '../../common/chatService/chatService.js';
++import { convertLegacyChatSessionTiming, IChatDetail, IChatModelReference, IChatService, IChatSessionTiming } from '../../common/chatService/chatService.js';
+ import { chatModelToChatDetail } from '../../common/chatService/chatServiceImpl.js';
+-import { ChatSessionStatus, IChatSessionItem, IChatSessionItemController, IChatSessionItemMetadata, IChatSessionItemsDelta, IChatSessionsService, localChatSessionType } from '../../common/chatSessionsService.js';
++import { ChatSessionStatus, IChatNewSessionRequest, IChatSessionItem, IChatSessionItemController, IChatSessionItemMetadata, IChatSessionItemsDelta, IChatSessionProviderOptionItem, IChatSessionsService, localChatSessionType } from '../../common/chatSessionsService.js';
++import { ChatAgentLocation } from '../../common/constants.js';
+ import { IChatModel } from '../../common/model/chatModel.js';
+ import { getChatSessionType } from '../../common/model/chatUri.js';
+ import { getInProgressSessionDescription } from '../chatSessions/chatSessionDescription.js';
+ import { chatResponseStateToSessionStatus, getSessionStatusForModel } from '../chatSessions/chatSessions.contribution.js';
+ import { Schemas } from '../../../../../base/common/network.js';
+ 
++const REPOSITORY_OPTION_ID = 'repository';
++
+ export class LocalAgentsSessionsController extends Disposable implements IChatSessionItemController, IWorkbenchContribution {
+ 
+ 	static readonly ID = 'workbench.contrib.localAgentsSessionsController';
+@@ -33,6 +36,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 	readonly onDidChangeChatSessionItems = this._onDidChangeChatSessionItems.event;
+ 
+ 	private readonly _modelListeners = this._register(new DisposableResourceMap());
++	private readonly _localModelRefs = this._register(new DisposableResourceMap<IChatModelReference>());
+ 
+ 	private _isDisposed = false;
+ 
+@@ -72,12 +76,13 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  				return;
  			}
  
@@ -2502,11 +2955,67 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac6
  
  			const requestChangeListener = model.lastRequestObs.map(last => last?.response && observableSignalFromEvent('chatSessions.modelRequestChangeListener', last.response.onDidChange));
  			const modelChangeListener = observableSignalFromEvent('chatSessions.modelChangeListener', model.onDidChange);
-@@ -106,18 +107,22 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -97,6 +102,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+ 		this._register(this.chatService.onDidDisposeSession(e => {
+ 			for (const sessionResource of e.sessionResources) {
+ 				this._modelListeners.deleteAndDispose(sessionResource);
++				this._localModelRefs.deleteAndDispose(sessionResource);
+ 			}
+ 
+ 			const removedSessionResources = e.sessionResources.filter(resource => getChatSessionType(resource) === this.chatSessionType);
+@@ -106,18 +112,70 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  		}));
  	}
  
 -	private async tryUpdateLiveSessionItem(model: IChatModel): Promise<void> {
++	async newChatSessionItem(request: IChatNewSessionRequest, token: CancellationToken): Promise<IChatSessionItem | undefined> {
++		if (token.isCancellationRequested) {
++			return undefined;
++		}
++
++		const modelRef = this.chatService.startNewLocalSession(
++			ChatAgentLocation.Chat,
++			{ debugOwner: 'LocalAgentsSessionsController#newChatSessionItem' },
++		);
++		const resource = modelRef.object.sessionResource;
++		this._localModelRefs.set(resource, modelRef);
++
++		const workingDirectory = this.getInitialWorkingDirectory(request);
++		if (workingDirectory) {
++			modelRef.object.setWorkingDirectory(workingDirectory);
++		}
++
++		const title = request.prompt.trim();
++		if (title) {
++			this.chatService.setSessionTitle(resource, title.split('\n')[0]);
++		}
++
++		const item = this.toChatSessionItem(await chatModelToChatDetail(modelRef.object));
++		if (item) {
++			this._items.set(item.resource, item);
++			this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [item] });
++		}
++		return item;
++	}
++
++	private getInitialWorkingDirectory(request: IChatNewSessionRequest): URI | undefined {
++		const raw = request.initialSessionOptions?.get(REPOSITORY_OPTION_ID);
++		const value = typeof raw === 'string'
++			? raw
++			: (raw as IChatSessionProviderOptionItem | undefined)?.id;
++		if (!value) {
++			return undefined;
++		}
++		if (value.startsWith(`${Schemas.file}:`)) {
++			try {
++				return URI.parse(value);
++			} catch {
++				return undefined;
++			}
++		}
++		return URI.file(value);
++	}
++
 +	private async tryUpdateLiveSessionItem(model: IChatModel, forceEmit = false): Promise<void> {
  		const existing = this._items.get(model.sessionResource);
 -		if (!existing) {
@@ -2530,7 +3039,7 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac6
  		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [updated] });
  	}
  
-@@ -138,6 +143,9 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -138,6 +196,9 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  		if (!token.isCancellationRequested) {
  			const history = await this.getHistoryItems();
  			sessions.push(...history.filter(historyItem => !sessionsByResource.has(historyItem.resource)));
@@ -2540,7 +3049,7 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac6
  		}
  
  		return sessions;
-@@ -156,11 +164,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
+@@ -156,11 +217,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
  	private toChatSessionItem(chat: IChatDetail): LocalChatSessionItem | undefined {
  		const model = this.chatService.getSession(chat.sessionResource);
  
@@ -2553,7 +3062,7 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac6
  			// Sessions that are active but don't have a chat model are ultimately untitled with no requests
  			return undefined;
  		}
-@@ -180,11 +184,11 @@ class LocalChatSessionItem implements IChatSessionItem {
+@@ -180,11 +237,11 @@ class LocalChatSessionItem implements IChatSessionItem {
  	readonly changes: IChatSessionItem['changes'];
  	readonly metadata: IChatSessionItemMetadata | undefined;
  
@@ -2567,7 +3076,7 @@ index 498c97651e9aa7654168cf07cf1f798464f1e160..84eb14214a7887bd56adb5800c8b8ac6
  		this.timing = convertLegacyChatSessionTiming(chatDetail.timing);
  		this.changes = chatDetail.stats ? {
  			insertions: chatDetail.stats.added,
-@@ -192,7 +196,7 @@ class LocalChatSessionItem implements IChatSessionItem {
+@@ -192,7 +249,7 @@ class LocalChatSessionItem implements IChatSessionItem {
  			files: chatDetail.stats.fileCount,
  		} : undefined;
  		const workingDirectoryPath = chatDetail.workingDirectory?.scheme === Schemas.file ? chatDetail.workingDirectory.fsPath : undefined;
@@ -3959,10 +4468,80 @@ index 091ecacb238416ffa5e88b0b34c4095251a481b7..249d5e3263700644cdb4fa5b0cf8d420
  			const { turnPromise, session, turnId, fire } = await startTurn(sessionHandler, agentHostService, chatAgentService, disposables, {
  				message: 'Hello from controller',
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
-index f107fdce956662b49f1084b405edc73c1e91a553..d53ee01785eaccee470b30debd4fa1e595f58413 100644
+index f107fdce956662b49f1084b405edc73c1e91a553..f01144725baf78c4a8c9d18c6fef07fe70033788 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
-@@ -212,6 +212,31 @@ suite('LocalAgentsSessionsController', () => {
+@@ -14,7 +14,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
+ import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
+ import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+ import { LocalAgentsSessionsController } from '../../../browser/agentSessions/localAgentSessionsController.js';
+-import { IChatService, ResponseModelState } from '../../../common/chatService/chatService.js';
++import { IChatModelReference, IChatService, ResponseModelState } from '../../../common/chatService/chatService.js';
+ import { chatModelToChatDetail } from '../../../common/chatService/chatServiceImpl.js';
+ import { ChatSessionStatus, IChatSessionItem, IChatSessionsService, localChatSessionType } from '../../../common/chatSessionsService.js';
+ import { ChatEditingSessionState, ModifiedFileEntryState } from '../../../common/editing/chatEditingService.js';
+@@ -100,12 +100,19 @@ function createMockChatModel(options: {
+ 	const _onDidChange = new Emitter<IChatChangeEvent>();
+ 
+ 	let title = options.customTitle ?? 'Test Chat Title';
++	let workingDirectory: URI | undefined;
+ 	const requestInProgress = observableValue('requestInProgress', options.requestInProgress ?? false);
+ 	return {
+ 		get title() {
+ 			return title;
+ 		},
+ 		sessionResource: options.sessionResource,
++		get workingDirectory() {
++			return workingDirectory;
++		},
++		setWorkingDirectory: (uri: URI | undefined) => {
++			workingDirectory = uri;
++		},
+ 		hasRequests: options.hasRequests !== false,
+ 		timestamp: options.timestamp ?? Date.now(),
+ 		timing: createTestTiming({ created: options.timestamp }),
+@@ -170,6 +177,40 @@ suite('LocalAgentsSessionsController', () => {
+ 		assert.strictEqual(controllerResults[0].chatSessionType, controller.chatSessionType);
+ 	});
+ 
++	test('newChatSessionItem creates native local model with working directory metadata', async () => {
++		const controller = createController();
++		const sessionResource = LocalChatSessionUri.forSession('native-created-session');
++		const model = createMockChatModel({
++			sessionResource,
++			hasRequests: false,
++			customTitle: 'New Chat',
++		});
++		mockChatService.startNewLocalSession = () => {
++			mockChatService.addSession(model);
++			return {
++				object: model,
++				dispose: () => { },
++			} as IChatModelReference;
++		};
++		mockChatService.setSessionTitle = (resource, title) => {
++			if (resource.toString() === sessionResource.toString()) {
++				model.setCustomTitle(title);
++			}
++		};
++
++		const workingDirectory = URI.file('/test/native-project');
++		const item = await controller.newChatSessionItem({
++			prompt: 'Investigate native bridge',
++			initialSessionOptions: new Map([['repository', { id: workingDirectory.toString(), name: 'native-project' }]]),
++		}, CancellationToken.None);
++
++		assert.ok(item);
++		assert.strictEqual(item.resource.toString(), sessionResource.toString());
++		assert.strictEqual(item.label, 'Investigate native bridge');
++		assert.strictEqual(item.metadata?.workingDirectoryPath, workingDirectory.fsPath);
++		assert.strictEqual(model.workingDirectory?.toString(), workingDirectory.toString());
++	});
++
+ 	test('should provide empty sessions when no live or history sessions', async () => {
+ 		return runWithFakedTimers({}, async () => {
+ 			const controller = createController();
+@@ -212,6 +253,31 @@ suite('LocalAgentsSessionsController', () => {
  		});
  	});
  
@@ -3994,7 +4573,7 @@ index f107fdce956662b49f1084b405edc73c1e91a553..d53ee01785eaccee470b30debd4fa1e5
  	test('should provide history session items', async () => {
  		return runWithFakedTimers({}, async () => {
  			const controller = createController();
-@@ -235,6 +260,31 @@ suite('LocalAgentsSessionsController', () => {
+@@ -235,6 +301,31 @@ suite('LocalAgentsSessionsController', () => {
  		});
  	});
  
@@ -4026,7 +4605,7 @@ index f107fdce956662b49f1084b405edc73c1e91a553..d53ee01785eaccee470b30debd4fa1e5
  	test('should not duplicate sessions in history and live', async () => {
  		return runWithFakedTimers({}, async () => {
  			const controller = createController();
-@@ -618,9 +668,10 @@ suite('LocalAgentsSessionsController', () => {
+@@ -618,9 +709,10 @@ suite('LocalAgentsSessionsController', () => {
  					requestInProgress: false
  				});
  

@@ -4,10 +4,10 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-22T08:56:25.534Z",
+  "generatedAt": "2026-05-22T13:29:09.107Z",
   "sources": {
-    "vscodium": "vscode.generated/layers/vscodium/vscode",
-    "director": "vscode.generated/layers/director/vscode"
+    "vscodium": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/vscodium/vscode",
+    "director": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/director/vscode"
   },
   "checks": {
     "changedFilesClassified": "passed",
@@ -318,8 +318,8 @@
         "src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts"
       ],
       "fileCount": 55,
-      "size": 227658,
-      "sha256": "ebfbb3957503f3928a74ca3fc0f74e465f14b09056aad907186d5a04f790ee6a"
+      "size": 254822,
+      "sha256": "3f2f715f658efc95d35770824e3f0bd905407bc7dd0283a3edc785b44067323a"
     },
     {
       "stage": "text-polish",
