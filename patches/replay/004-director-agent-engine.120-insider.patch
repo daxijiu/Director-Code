@@ -22153,10 +22153,10 @@ index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea
 +] as const;
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab213763207557219361
+index 0000000000000000000000000000000000000000..bd4909a7f82ff400979ac545a91c08864344a2e5
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionIndex.ts
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,282 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -22169,6 +22169,7 @@ index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab2137632075
 +import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 +
 +const DIRECTOR_SESSION_INDEX_STORAGE_KEY = 'directorCode.sharedSessionIndex.v1';
++const DIRECTOR_SESSION_INDEX_STORAGE_SCOPE = StorageScope.APPLICATION;
 +const DIRECTOR_SESSION_INDEX_SCHEMA_VERSION = 1;
 +const MAX_INDEXED_SESSIONS = 500;
 +
@@ -22193,6 +22194,9 @@ index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab2137632075
 +	readonly agentKind: DirectorSessionAgentKind;
 +	readonly providerInstanceId?: string;
 +	readonly modelId?: string;
++	readonly sourceProfileId?: string;
++	readonly sourceProfileName?: string;
++	readonly sourceProfileIsAgentsWindow?: boolean;
 +	readonly workspaceUri?: string;
 +	readonly workingDirectoryUri?: string;
 +	readonly chatResourceUri: string;
@@ -22260,10 +22264,16 @@ index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab2137632075
 +	) {
 +		super();
 +
-+		this._records = this.readRecords();
-+		this._register(this.storageService.onDidChangeValue(StorageScope.PROFILE, DIRECTOR_SESSION_INDEX_STORAGE_KEY, this._store)(() => {
++		this._records = this.readRecords(DIRECTOR_SESSION_INDEX_STORAGE_SCOPE);
++		if (this._records.size === 0) {
++			const profileRecords = this.readRecords(StorageScope.PROFILE);
++			if (profileRecords.size > 0) {
++				this.commit(new Map(), profileRecords);
++			}
++		}
++		this._register(this.storageService.onDidChangeValue(DIRECTOR_SESSION_INDEX_STORAGE_SCOPE, DIRECTOR_SESSION_INDEX_STORAGE_KEY, this._store)(() => {
 +			const previous = this._records;
-+			this._records = this.readRecords();
++			this._records = this.readRecords(DIRECTOR_SESSION_INDEX_STORAGE_SCOPE);
 +			this.fireDiff(previous, this._records);
 +		}));
 +	}
@@ -22327,14 +22337,14 @@ index 0000000000000000000000000000000000000000..a549c4f1a0e0bd01dd1cab2137632075
 +		this.storageService.store(
 +			DIRECTOR_SESSION_INDEX_STORAGE_KEY,
 +			JSON.stringify({ schemaVersion: DIRECTOR_SESSION_INDEX_SCHEMA_VERSION, sessions: Array.from(next.values()) }),
-+			StorageScope.PROFILE,
++			DIRECTOR_SESSION_INDEX_STORAGE_SCOPE,
 +			StorageTarget.MACHINE,
 +		);
 +		this.fireDiff(previous, next);
 +	}
 +
-+	private readRecords(): Map<string, IDirectorSessionIndexRecord> {
-+		const raw = this.storageService.get(DIRECTOR_SESSION_INDEX_STORAGE_KEY, StorageScope.PROFILE);
++	private readRecords(scope: StorageScope): Map<string, IDirectorSessionIndexRecord> {
++		const raw = this.storageService.get(DIRECTOR_SESSION_INDEX_STORAGE_KEY, scope);
 +		if (!raw) {
 +			return new Map();
 +		}

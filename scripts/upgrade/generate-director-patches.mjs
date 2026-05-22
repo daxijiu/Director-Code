@@ -359,6 +359,7 @@ function isChatBuiltInMode(filePath) {
     'src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts',
     'src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts',
     'src/vs/sessions/browser/accountTitleBarState.ts',
+    'src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts',
     'src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts',
   ].includes(filePath);
 }
