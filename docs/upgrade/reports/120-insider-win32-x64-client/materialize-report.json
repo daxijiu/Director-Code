@@ -4,18 +4,18 @@
   "phase": "P2",
   "batch": "layer",
   "status": "passed",
-  "generatedAt": "2026-05-22T13:27:35.183Z",
+  "generatedAt": "2026-05-22T17:17:43.920Z",
   "command": [
     "--profile",
     "docs/upgrade/profiles/120-insider-win32-x64-client.json",
     "--target",
-    "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify",
+    "artifacts/generated/120-insider-win32-x64-client/final-replay-verify",
     "--up-to-layer",
     "director",
     "--force",
     "--allow-nondefault-target-force"
   ],
-  "target": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify",
+  "target": "artifacts/generated/120-insider-win32-x64-client/final-replay-verify",
   "upToLayer": "director",
   "upstreams": {
     "vscode": {
@@ -75,15 +75,15 @@
     {
       "layer": "director",
       "patch": "patches/replay/004-director-agent-engine.120-insider.patch",
-      "size": 1163946,
-      "sha256": "1fbe8fb0e846e66ceecf58b8353fc9eb4a8e10ee892603c7c139421fdbbf9ff0",
+      "size": 1271904,
+      "sha256": "60fa77378beda001f84f22c925dc76a8c8fa153cd8222b8363efc0b92ae88479",
       "status": "passed"
     },
     {
       "layer": "director",
       "patch": "patches/replay/005-director-chat-built-in-mode.120-insider.patch",
-      "size": 254822,
-      "sha256": "3f2f715f658efc95d35770824e3f0bd905407bc7dd0283a3edc785b44067323a",
+      "size": 288374,
+      "sha256": "e452649fb156f6f1715c23de60f3fa2d747164d071ffa5c7705a61dade004301",
       "status": "passed"
     },
     {
@@ -96,8 +96,8 @@
     {
       "layer": "director",
       "patch": "patches/replay/007-director-tool-layer.120-insider.patch",
-      "size": 113070,
-      "sha256": "4e10a5e6d2a1f5b0bbf97dcbf4e926aeb71cd618ce6242206594ea07fb5e7b43",
+      "size": 113606,
+      "sha256": "80a6c022f3c66c34f1d9a08c31efa571aea3fb7b6ccb94ea4c1db8c3948a23e3",
       "status": "passed"
     },
     {
@@ -125,18 +125,18 @@
   "checkpoints": [
     {
       "name": "vscode",
-      "path": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/vscode/vscode",
+      "path": "artifacts/generated/120-insider-win32-x64-client/final-replay-verify/layers/vscode/vscode",
       "fileManifestHash": "9eae17ea2fd6ec79f1a5604ae7684cb6ab37b5e81da787e14d1411023e16d756"
     },
     {
       "name": "vscodium",
-      "path": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/vscodium/vscode",
+      "path": "artifacts/generated/120-insider-win32-x64-client/final-replay-verify/layers/vscodium/vscode",
       "fileManifestHash": "244cdffb46bc791c205532db75b5f026ea999762eddfb0a437a4f420356531cd"
     },
     {
       "name": "director",
-      "path": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/director/vscode",
-      "fileManifestHash": "e4eee025b57e3564494d54fbf0b45ace98134043d036241b696f1fa15964a35c"
+      "path": "artifacts/generated/120-insider-win32-x64-client/final-replay-verify/layers/director/vscode",
+      "fileManifestHash": "b3c2173a77e33a3f9eff27f09a8e051d52542409e51ee37c0da33bd0200f8f18"
     }
   ],
   "checks": {

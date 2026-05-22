@@ -2703,6 +2703,272 @@ index a9c3343b1e3422eacf913cd3668942b77dbb41a2..83935a3e26a10f47c59a10f5ea591f10
  						});
  						addedTrustedSeparator = true;
  					}
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostChatContribution.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostChatContribution.ts
+index 009d27099fe89338d3bf57bf3c3ae2429bec97fa..bf0e0cbfe7ba377c65db3d20edb26b0e6a1fc0ca 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostChatContribution.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostChatContribution.ts
+@@ -10,6 +10,7 @@ import { observableValue } from '../../../../../../base/common/observable.js';
+ import { ThemeIcon } from '../../../../../../base/common/themables.js';
+ import { localize } from '../../../../../../nls.js';
+ import { AgentHostEnabledSettingId, IAgentHostService, type AgentProvider } from '../../../../../../platform/agentHost/common/agentService.js';
++import { DIRECTOR_AGENT_HOST_RESOURCE, DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE, serializeDirectorAgentHostAuthentication, type DirectorAgentHostApiType, type IDirectorAgentHostAuthenticationPayload } from '../../../../../../platform/agentHost/common/directorAgentHostBridge.js';
+ import { type ProtectedResourceMetadata } from '../../../../../../platform/agentHost/common/state/protocol/state.js';
+ import { type AgentInfo, type CustomizationRef, type RootState } from '../../../../../../platform/agentHost/common/state/sessionState.js';
+ import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
+@@ -25,15 +26,18 @@ import { IChatSessionsService } from '../../../common/chatSessionsService.js';
+ import { ICustomizationHarnessService } from '../../../common/customizationHarnessService.js';
+ import { ILanguageModelsService } from '../../../common/languageModels.js';
+ import { IAgentPluginService } from '../../../common/plugins/agentPluginService.js';
+-import { IPromptsService, PromptsStorage } from '../../../common/promptSyntax/service/promptsService.js';
++import { IPromptsService } from '../../../common/promptSyntax/service/promptsService.js';
+ import { AgentCustomizationSyncProvider } from './agentCustomizationSyncProvider.js';
+-import { LocalAgentHostCustomizationItemProvider, resolveCustomizationRefs } from './agentHostLocalCustomizations.js';
++import { AGENT_HOST_CUSTOMIZATION_STORAGE_SOURCE_FILTER, LocalAgentHostCustomizationItemProvider, resolveCustomizationRefs } from './agentHostLocalCustomizations.js';
+ import { authenticateProtectedResources, AgentHostAuthTokenCache, resolveAuthenticationInteractively } from './agentHostAuth.js';
+ import { AgentHostLanguageModelProvider } from './agentHostLanguageModelProvider.js';
+ import { AgentHostSessionHandler } from './agentHostSessionHandler.js';
+ import { AgentHostSessionListController } from './agentHostSessionListController.js';
+ import { LoggingAgentConnection } from './loggingAgentConnection.js';
+ import { SyncedCustomizationBundler } from './syncedCustomizationBundler.js';
++import { IAuthStateService } from '../../../../directorCode/common/agentEngine/authStateService.js';
++import { providerToApiType } from '../../../../directorCode/common/agentEngine/apiKeyService.js';
++import { IDirectorProviderRegistryService } from '../../../../directorCode/common/agentEngine/providerRegistry.js';
+ 
+ export { AgentHostSessionHandler } from './agentHostSessionHandler.js';
+ export { AgentHostSessionListController } from './agentHostSessionListController.js';
+@@ -71,18 +75,20 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
+ 		@ILanguageModelsService private readonly _languageModelsService: ILanguageModelsService,
+ 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+ 		@IAgentHostFileSystemService _agentHostFileSystemService: IAgentHostFileSystemService,
+-		@IConfigurationService configurationService: IConfigurationService,
++		@IConfigurationService private readonly _configurationService: IConfigurationService,
+ 		@ICustomizationHarnessService private readonly _customizationHarnessService: ICustomizationHarnessService,
+ 		@IStorageService private readonly _storageService: IStorageService,
+ 		@IAgentPluginService private readonly _agentPluginService: IAgentPluginService,
+ 		@IPromptsService private readonly _promptsService: IPromptsService,
+ 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
++		@IDirectorProviderRegistryService private readonly _directorProviderRegistryService: IDirectorProviderRegistryService,
++		@IAuthStateService private readonly _authStateService: IAuthStateService,
+ 	) {
+ 		super();
+ 
+ 		this._isSessionsWindow = environmentService.isSessionsWindow;
+ 
+-		if (!configurationService.getValue<boolean>(AgentHostEnabledSettingId)) {
++		if (!this._configurationService.getValue<boolean>(AgentHostEnabledSettingId)) {
+ 			return;
+ 		}
+ 
+@@ -201,7 +207,7 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
+ 			icon: ThemeIcon.fromId(Codicon.server.id),
+ 			hiddenSections: [],
+ 			hideGenerateButton: true,
+-			getStorageSourceFilter: () => ({ sources: [PromptsStorage.local, PromptsStorage.user, PromptsStorage.plugin] }),
++			getStorageSourceFilter: () => AGENT_HOST_CUSTOMIZATION_STORAGE_SOURCE_FILTER,
+ 			syncProvider,
+ 			itemProvider,
+ 		}));
+@@ -270,7 +276,9 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
+ 	private async _authenticateWithServer(agents: readonly AgentInfo[]): Promise<void> {
+ 		this._agentHostService.setAuthenticationPending(true);
+ 		try {
+-			await authenticateProtectedResources(agents, {
++			await this._authenticateDirectorAgentHost(agents);
++			await this._authenticateDirectorClaudeAgentHost(agents);
++			await authenticateProtectedResources(this._withoutDirectorProtectedResources(agents), {
+ 				authTokenCache: this._authTokenCache,
+ 				authenticationService: this._authenticationService,
+ 				logPrefix: '[AgentHost]',
+@@ -293,6 +301,12 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
+ 	 */
+ 	private async _resolveAuthenticationInteractively(protectedResources: ProtectedResourceMetadata[]): Promise<boolean> {
+ 		try {
++			if (protectedResources.some(resource => resource.resource === DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE)) {
++				return await this._authenticateDirectorClaudeAgentHost(this._getRootAgents());
++			}
++			if (protectedResources.some(resource => resource.resource === DIRECTOR_AGENT_HOST_RESOURCE)) {
++				return await this._authenticateDirectorAgentHost(this._getRootAgents());
++			}
+ 			return await resolveAuthenticationInteractively(protectedResources, {
+ 				authTokenCache: this._authTokenCache,
+ 				authenticationService: this._authenticationService,
+@@ -306,4 +320,91 @@ export class AgentHostContribution extends Disposable implements IWorkbenchContr
+ 		}
+ 		return false;
+ 	}
++
++	private async _authenticateDirectorAgentHost(agents: readonly AgentInfo[]): Promise<boolean> {
++		if (!agents.some(agent => agent.protectedResources?.some(resource => resource.resource === DIRECTOR_AGENT_HOST_RESOURCE))) {
++			return false;
++		}
++		const payload = await this._resolveDirectorAgentHostAuthentication();
++		if (!payload) {
++			this._logService.info('[AgentHost] No Director provider/auth resolved for Director AgentHost bridge');
++			return false;
++		}
++		const token = serializeDirectorAgentHostAuthentication(payload);
++		// Director payloads include a short-lived capability handle and one-hop
++		// secret material for AgentHost. Do not retain them in the generic auth
++		// token cache; re-push the current handle on each auth pass instead.
++		await this._loggedConnection!.authenticate({ resource: DIRECTOR_AGENT_HOST_RESOURCE, token });
++		return true;
++	}
++
++	private async _authenticateDirectorClaudeAgentHost(agents: readonly AgentInfo[]): Promise<boolean> {
++		if (!agents.some(agent => agent.protectedResources?.some(resource => resource.resource === DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE))) {
++			return false;
++		}
++		const payload = await this._resolveDirectorAgentHostAuthentication('anthropic-messages');
++		if (!payload) {
++			this._logService.info('[AgentHost] No Anthropic Director provider/auth resolved for Claude AgentHost bridge');
++			return false;
++		}
++		const token = serializeDirectorAgentHostAuthentication(payload);
++		await this._loggedConnection!.authenticate({ resource: DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE, token });
++		return true;
++	}
++
++	private async _resolveDirectorAgentHostAuthentication(requiredApiType?: DirectorAgentHostApiType): Promise<IDirectorAgentHostAuthenticationPayload | undefined> {
++		let selection = await this._directorProviderRegistryService.getDefaultSelection();
++		if (requiredApiType && (!selection || providerToApiType(selection.instance.kind) !== requiredApiType)) {
++			const state = await this._directorProviderRegistryService.getState();
++			const instance = state.instances.find(candidate =>
++				candidate.enabled
++				&& providerToApiType(candidate.kind) === requiredApiType
++				&& candidate.models.some(model => model.enabled !== false && model.hidden !== true));
++			const modelId = instance?.defaultModelId && instance.models.some(model => model.id === instance!.defaultModelId && model.enabled !== false && model.hidden !== true)
++				? instance.defaultModelId
++				: instance?.models.find(model => model.enabled !== false && model.hidden !== true)?.id;
++			selection = instance && modelId ? { instance, modelId } : undefined;
++		}
++		if (!selection || !selection.instance.enabled) {
++			return undefined;
++		}
++		if (requiredApiType && providerToApiType(selection.instance.kind) !== requiredApiType) {
++			return undefined;
++		}
++		const modelEntry = selection.instance.models.find(model => model.id === selection.modelId && model.enabled !== false && model.hidden !== true)
++			?? selection.instance.models.find(model => model.enabled !== false && model.hidden !== true);
++		if (!modelEntry) {
++			return undefined;
++		}
++		const auth = await this._authStateService.resolveInstanceAuth(selection.instance, modelEntry.id);
++		if (!auth.auth || auth.source === 'missing') {
++			return undefined;
++		}
++		return {
++			version: 1,
++			instanceId: selection.instance.id,
++			providerKind: selection.instance.kind,
++			providerDisplayName: selection.instance.displayName,
++			apiType: providerToApiType(selection.instance.kind),
++			authVariant: selection.instance.authVariant,
++			auth: auth.auth,
++			modelId: modelEntry.id,
++			modelDisplayName: modelEntry.displayName,
++			baseURL: auth.baseURL ?? selection.instance.baseURL,
++			geminiKeyInUrl: this._configurationService.getValue<boolean>('directorCode.ai.geminiKeyInUrl'),
++			capabilities: modelEntry.capabilities ?? auth.capabilities,
++			maxTurns: this._configurationService.getValue<number>('directorCode.ai.maxTurns'),
++			maxTokens: this._configurationService.getValue<number>('directorCode.ai.maxTokens'),
++			maxInputTokens: this._configurationService.getValue<number>('directorCode.ai.maxInputTokens'),
++		};
++	}
++
++	private _withoutDirectorProtectedResources(agents: readonly AgentInfo[]): readonly AgentInfo[] {
++		return agents.map(agent => {
++			const protectedResources = agent.protectedResources?.filter(resource =>
++				resource.resource !== DIRECTOR_AGENT_HOST_RESOURCE
++				&& resource.resource !== DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE);
++			return { ...agent, protectedResources };
++		});
++	}
+ }
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostLocalCustomizations.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostLocalCustomizations.ts
+index 39461a4ce69df54abc90459871990b076886c4f6..ed7d509931a8bd8cf4a1f92a061033e1c1a027c5 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostLocalCustomizations.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostLocalCustomizations.ts
+@@ -45,6 +45,16 @@ export const SYNCABLE_STORAGE_SOURCES: readonly PromptsStorage[] = [
+ 	PromptsStorage.extension,
+ ];
+ 
++export const AGENT_HOST_CUSTOMIZATION_STORAGE_SOURCE_FILTER = {
++	sources: [
++		PromptsStorage.local,
++		PromptsStorage.user,
++		PromptsStorage.plugin,
++		PromptsStorage.extension,
++		BUILTIN_STORAGE,
++	],
++};
++
+ export interface ILocalCustomizationFile {
+ 	readonly uri: URI;
+ 	readonly type: PromptsType;
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionHandler.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionHandler.ts
+index b7fdc65e593137f438d1e54441449abc98900618..6a6c2fcf7a01b364f0049247ac367e07a1eaff65 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionHandler.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionHandler.ts
+@@ -54,6 +54,7 @@ import { IAgentHostSessionWorkingDirectoryResolver } from './agentHostSessionWor
+ import { activeTurnToProgress, completedToolCallToEditParts, completedToolCallToSerialized, finalizeToolInvocation, getTerminalContentUri, isSubagentTool, makeAhpTerminalToolSessionId, parseAhpTerminalToolSessionId, rawMarkdownToString, stringOrMarkdownToString, toolCallStateToInvocation, turnsToHistory, updateRunningToolSpecificData, userMessageToVariableData, type IToolCallFileEdit, type TurnModelLookup } from './stateToProgressAdapter.js';
+ import { IWorkbenchEnvironmentService } from '../../../../../services/environment/common/environmentService.js';
+ import { SessionConfigKey } from '../../../../../../platform/agentHost/common/sessionConfigKeys.js';
++import { DirectorToolMode, getDirectorToolRegistryEntry } from '../../../../directorCode/common/agentEngine/directorToolRegistry.js';
+ 
+ // =============================================================================
+ // AgentHostSessionHandler - renderer-side handler for a single agent host
+@@ -374,7 +375,7 @@ export class AgentHostSessionHandler extends Disposable implements IChatSessionC
+ 	/** Active session subscriptions, keyed by backend session URI string. */
+ 	private readonly _sessionSubscriptions = new Map<string, IReference<IAgentSubscription<SessionState>>>();
+ 
+-	/** Observable of client-provided tools filtered by the allowlist and `when` clauses. */
++	/** Observable of client-provided tools filtered by Director policy, config, and `when` clauses. */
+ 	private readonly _clientToolsObs: IObservable<readonly IToolData[]>;
+ 
+ 	constructor(
+@@ -398,17 +399,16 @@ export class AgentHostSessionHandler extends Disposable implements IChatSessionC
+ 		super();
+ 		this._config = config;
+ 
+-		// Build an observable of client tools: all tools matching the
+-		// allowlist setting, filtered by `when` clauses via observeTools.
++		// Build an observable of client tools. The setting is only a candidate
++		// list; Director's registry/policy is the final authority for what an
++		// AgentHost client may advertise to the agent.
+ 		// We pass `undefined` for the model since agent host sessions use
+ 		// server-side model selection and client tools should be available
+ 		// regardless of which model is active.
+ 		const allToolsObs = this._toolsService.observeTools(undefined);
+ 		const allowlistObs = observableConfigValue<string[]>(ChatConfiguration.AgentHostClientTools, [], this._configurationService);
+ 		this._clientToolsObs = derived(reader => {
+-			const allowlist = new Set(allowlistObs.read(reader));
+-			const allTools = allToolsObs.read(reader);
+-			return allTools.filter(t => t.toolReferenceName !== undefined && allowlist.has(t.toolReferenceName));
++			return filterAgentHostClientTools(allToolsObs.read(reader), allowlistObs.read(reader));
+ 		});
+ 
+ 		// When the client tools set changes, dispatch
+@@ -2767,6 +2767,20 @@ export function toolDataToDefinition(tool: IToolData): ToolDefinition {
+ 	};
+ }
+ 
++export function filterAgentHostClientTools(rawTools: readonly IToolData[], configuredReferenceNames: readonly string[]): readonly IToolData[] {
++	const configured = new Set(configuredReferenceNames);
++	return rawTools.filter(tool => {
++		if (!tool.toolReferenceName || !configured.has(tool.toolReferenceName)) {
++			return false;
++		}
++		const entry = getDirectorToolRegistryEntry(tool);
++		return !!entry
++			&& entry.disposition !== 'hide'
++			&& entry.disposition !== 'defer'
++			&& entry.allowedModes.includes(DirectorToolMode.Agent);
++	});
++}
++
+ /**
+  * Converts an internal {@link IToolResult} to a protocol
+  * {@link import('../../../../../../platform/agentHost/common/state/protocol/state.js').ToolCallResult}.
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts
 index 63c463afe6f5c7ad2312238b237c8928c2fbd754..b9964555da46aed02ba55f0ffc6aaecf151010b0 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts
@@ -2796,6 +3062,36 @@ index 63c463afe6f5c7ad2312238b237c8928c2fbd754..b9964555da46aed02ba55f0ffc6aaecf
  	private _makeItemFromSummary(rawId: string, summary: SessionSummary, diffs: readonly ISessionFileDiff[] | undefined): IChatSessionItem {
  		const workingDir = typeof summary.workingDirectory === 'string' ? URI.parse(summary.workingDirectory) : summary.workingDirectory;
  		return this._makeItem(rawId, {
+diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.ts
+index 1d53184f2477d1a0a8c12c2fb72daa7bfb3c5851..1eed25ddb5a14cedaf44a5e416954266054b694e 100644
+--- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.ts
++++ b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.ts
+@@ -8,6 +8,7 @@ import { Disposable, DisposableStore, IDisposable, IReference, toDisposable } fr
+ import { URI, UriComponents } from '../../../../../../base/common/uri.js';
+ import { Registry } from '../../../../../../platform/registry/common/platform.js';
+ import { IAgentConnection, IAgentCreateSessionConfig, IAgentResolveSessionConfigParams, IAgentSessionConfigCompletionsParams, IAgentSessionMetadata, AuthenticateParams, AuthenticateResult, AgentHostIpcLoggingSettingId } from '../../../../../../platform/agentHost/common/agentService.js';
++import { redactAgentHostLogValue } from '../../../../../../platform/agentHost/common/agentHostLogRedaction.js';
+ import type { IAgentSubscription } from '../../../../../../platform/agentHost/common/state/agentSubscription.js';
+ import { StateComponents, type ComponentToState, type RootState } from '../../../../../../platform/agentHost/common/state/sessionState.js';
+ import type { ActionEnvelope, IRootConfigChangedAction, SessionAction, TerminalAction, INotification } from '../../../../../../platform/agentHost/common/state/sessionActions.js';
+@@ -27,14 +28,14 @@ function uriReplacer(_key: string, value: unknown): unknown {
+ 	return value;
+ }
+ 
+-function formatPayload(data: unknown): string {
++export function formatPayload(data: unknown): string {
+ 	if (data === undefined) {
+ 		return '';
+ 	}
+ 	try {
+-		return JSON.stringify(data, uriReplacer, 2);
++		return JSON.stringify(redactAgentHostLogValue(data), uriReplacer, 2);
+ 	} catch {
+-		return String(data);
++		return String(redactAgentHostLogValue(data));
+ 	}
+ }
+ 
 diff --git a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts b/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts
 index b473d3982c9f14c20ea59b1af0f5e193236695ba..bf59b48ae77b372ea899aeaa64dc429949e51a24 100644
 --- a/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts
@@ -4467,6 +4763,183 @@ index 091ecacb238416ffa5e88b0b34c4095251a481b7..249d5e3263700644cdb4fa5b0cf8d420
  
  			const { turnPromise, session, turnId, fire } = await startTurn(sessionHandler, agentHostService, chatAgentService, disposables, {
  				message: 'Hello from controller',
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostClientTools.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostClientTools.test.ts
+index d3540dd8ba5209b3495046359a1275c974c0d40a..8cb17fb9e9e2e61cf9e7ab6c83da7331d7870b2b 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostClientTools.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostClientTools.test.ts
+@@ -29,7 +29,7 @@ import { ChatToolInvocation } from '../../../common/model/chatProgressTypes/chat
+ import { IProductService } from '../../../../../../platform/product/common/productService.js';
+ import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
+ import { IWorkspaceContextService } from '../../../../../../platform/workspace/common/workspace.js';
+-import { AgentHostSessionHandler, toolDataToDefinition, toolResultToProtocol } from '../../../browser/agentSessions/agentHost/agentHostSessionHandler.js';
++import { AgentHostSessionHandler, filterAgentHostClientTools, toolDataToDefinition, toolResultToProtocol } from '../../../browser/agentSessions/agentHost/agentHostSessionHandler.js';
+ import { IFileService } from '../../../../../../platform/files/common/files.js';
+ import { TestFileService } from '../../../../../test/common/workbenchTestServices.js';
+ import { ILabelService } from '../../../../../../platform/label/common/label.js';
+@@ -479,7 +479,7 @@ suite('AgentHostClientTools', () => {
+ 		};
+ 
+ 		const testRunTaskTool: IToolData = {
+-			id: 'vscode.runTask',
++			id: 'run_task',
+ 			toolReferenceName: 'runTask',
+ 			displayName: 'Run Task',
+ 			modelDescription: 'Runs a VS Code task',
+@@ -495,6 +495,14 @@ suite('AgentHostClientTools', () => {
+ 			source: ToolDataSource.Internal,
+ 		};
+ 
++		const testWebSearchTool: IToolData = {
++			id: 'claude.WebSearch',
++			toolReferenceName: 'WebSearch',
++			displayName: 'Web Search',
++			modelDescription: 'Searches the web',
++			source: ToolDataSource.Internal,
++		};
++
+ 		test('maps allowlisted tool data to protocol definitions', async () => {
+ 			const { connection } = createHandlerWithMocks(disposables, [testRunTestsTool, testRunTaskTool, testUnlistedTool]);
+ 
+@@ -510,16 +518,52 @@ suite('AgentHostClientTools', () => {
+ 			assert.strictEqual(runTestsDef.description, 'Runs unit tests');
+ 		});
+ 
+-		test('filters tool data to entries in configured allowlist', () => {
++		test('filters configured client tools through Director policy', () => {
+ 			createHandlerWithMocks(disposables, [testRunTestsTool, testRunTaskTool, testUnlistedTool], {
+ 				clientTools: ['runTests'],
+ 			});
+ 
+-			// Validate the filtering logic: only 'runTests' should match the allowlist.
+-			const filteredTools = [testRunTestsTool, testRunTaskTool, testUnlistedTool]
+-				.filter(t => t.toolReferenceName !== undefined && ['runTests'].includes(t.toolReferenceName));
+-			assert.strictEqual(filteredTools.length, 1);
+-			assert.strictEqual(filteredTools[0].toolReferenceName, 'runTests');
++			const filteredTools = filterAgentHostClientTools(
++				[testRunTestsTool, testRunTaskTool, testUnlistedTool, testWebSearchTool],
++				['runTests', 'readFile', 'WebSearch'],
++			);
++			assert.deepStrictEqual(filteredTools.map(tool => tool.toolReferenceName), ['runTests', 'readFile']);
++		});
++
++		test('allows task, problem, browser, and test client tools only when the Director registry allows Agent mode', () => {
++			const problemTool: IToolData = {
++				id: 'director_get_errors',
++				toolReferenceName: 'problems',
++				displayName: 'Problems',
++				modelDescription: 'Reads diagnostics',
++				source: ToolDataSource.Internal,
++			};
++			const browserTool: IToolData = {
++				id: 'open_browser_page',
++				toolReferenceName: 'openBrowserPage',
++				displayName: 'Open Browser Page',
++				modelDescription: 'Opens a browser page',
++				source: ToolDataSource.Internal,
++			};
++			const hiddenEditTool: IToolData = {
++				id: 'vscode_editFile_internal',
++				toolReferenceName: 'vscode_editFile',
++				displayName: 'Edit File',
++				modelDescription: 'Mutates files directly',
++				source: ToolDataSource.Internal,
++			};
++
++			const filteredTools = filterAgentHostClientTools(
++				[testRunTestsTool, testRunTaskTool, problemTool, browserTool, hiddenEditTool, testWebSearchTool],
++				['runTests', 'runTask', 'problems', 'openBrowserPage', 'vscode_editFile', 'WebSearch'],
++			);
++
++			assert.deepStrictEqual(filteredTools.map(tool => tool.toolReferenceName), [
++				'runTests',
++				'runTask',
++				'problems',
++				'openBrowserPage',
++			]);
+ 		});
+ 
+ 		test('dispatches activeClientToolsChanged when config changes', () => {
+@@ -594,7 +638,7 @@ suite('AgentHostClientTools', () => {
+ 				chatStreamToolCallId: call.chatStreamToolCallId,
+ 			})), [{
+ 				callId: 'tool-call-1',
+-				toolId: 'vscode.runTask',
++				toolId: 'run_task',
+ 				parameters: { task: 'build' },
+ 				chatStreamToolCallId: 'tool-call-1',
+ 			}]);
+@@ -731,7 +775,7 @@ suite('AgentHostClientTools', () => {
+ 			// `invokedToolCalls` would be empty for the inner call.
+ 			const innerInvocation = toolsService.invokedToolCalls.find(call => call.callId === 'inner-tool-call-1');
+ 			assert.ok(innerInvocation, 'inner client tool inside the subagent should be invoked locally');
+-			assert.strictEqual(innerInvocation!.toolId, 'vscode.runTask');
++			assert.strictEqual(innerInvocation!.toolId, 'run_task');
+ 			assert.deepStrictEqual(innerInvocation!.parameters, { task: 'build' });
+ 
+ 			// The completion must be dispatched against the subagent session
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/enumerateLocalCustomizationsForHarness.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/enumerateLocalCustomizationsForHarness.test.ts
+index 49a7ecb0c56ec7a9f10e200a5d994754fd4c7518..624219ce74be0cd1dc27b9f6e5a254cec4f12797 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/enumerateLocalCustomizationsForHarness.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/enumerateLocalCustomizationsForHarness.test.ts
+@@ -8,7 +8,7 @@ import { CancellationToken } from '../../../../../../base/common/cancellation.js
+ import { Emitter, Event } from '../../../../../../base/common/event.js';
+ import { URI } from '../../../../../../base/common/uri.js';
+ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
+-import { enumerateLocalCustomizationsForHarness } from '../../../browser/agentSessions/agentHost/agentHostLocalCustomizations.js';
++import { AGENT_HOST_CUSTOMIZATION_STORAGE_SOURCE_FILTER, enumerateLocalCustomizationsForHarness, SYNCABLE_PROMPT_TYPES } from '../../../browser/agentSessions/agentHost/agentHostLocalCustomizations.js';
+ import { BUILTIN_STORAGE } from '../../../common/aiCustomizationWorkspaceService.js';
+ import { type ICustomizationSyncProvider } from '../../../common/customizationHarnessService.js';
+ import { PromptsType } from '../../../common/promptSyntax/promptTypes.js';
+@@ -73,6 +73,49 @@ suite('enumerateLocalCustomizationsForHarness', () => {
+ 		]);
+ 	});
+ 
++	test('enumerates visible IDE customization sources for syncable types only', async () => {
++		const rows: [PromptsType, PromptsStorage, URI][] = [
++			[PromptsType.agent, PromptsStorage.local, URI.file('/workspace/.github/agents/local.agent.md')],
++			[PromptsType.skill, PromptsStorage.user, URI.file('/user/skills/review/SKILL.md')],
++			[PromptsType.instructions, PromptsStorage.plugin, URI.file('/plugins/acme/rules/main.md')],
++			[PromptsType.prompt, PromptsStorage.extension, URI.file('/extension/commands/fix.prompt.md')],
++			[PromptsType.hook, PromptsStorage.user, URI.file('/user/hooks/hooks.json')],
++		];
++		const files = new Map<string, readonly IPromptPath[]>();
++		for (const [type, storage, uri] of rows) {
++			files.set(`${type}/${storage}`, [makePromptPath(uri, type, storage)]);
++		}
++		const builtin = URI.file('/builtin/internal/SKILL.md');
++		files.set(`${PromptsType.skill}/${BUILTIN_STORAGE}`, [makePromptPath(builtin, PromptsType.skill, BUILTIN_STORAGE as unknown as PromptsStorage)]);
++
++		const result = await enumerateLocalCustomizationsForHarness(makePromptsService(files), new FakeSyncProvider(), SessionType.CopilotCLI, CancellationToken.None);
++
++		assert.deepStrictEqual(SYNCABLE_PROMPT_TYPES, [
++			PromptsType.agent,
++			PromptsType.skill,
++			PromptsType.instructions,
++			PromptsType.prompt,
++		]);
++		assert.deepStrictEqual(result.map(entry => ({ type: entry.type, storage: entry.storage, uri: entry.uri.toString() })), [
++			{ type: PromptsType.agent, storage: PromptsStorage.local, uri: rows[0][2].toString() },
++			{ type: PromptsType.skill, storage: PromptsStorage.user, uri: rows[1][2].toString() },
++			{ type: PromptsType.instructions, storage: PromptsStorage.plugin, uri: rows[2][2].toString() },
++			{ type: PromptsType.prompt, storage: PromptsStorage.extension, uri: rows[3][2].toString() },
++			{ type: PromptsType.skill, storage: BUILTIN_STORAGE, uri: builtin.toString() },
++		]);
++		assert.ok(!result.some(entry => entry.type === PromptsType.hook), 'hooks are visible in the customization UI but are not auto-synced until hook JSON merging is implemented');
++	});
++
++	test('AgentHost customization source filter keeps extension and built-in sources visible', () => {
++		assert.deepStrictEqual(AGENT_HOST_CUSTOMIZATION_STORAGE_SOURCE_FILTER.sources, [
++			PromptsStorage.local,
++			PromptsStorage.user,
++			PromptsStorage.plugin,
++			PromptsStorage.extension,
++			BUILTIN_STORAGE,
++		]);
++	});
++
+ 	test('marks built-in skills disabled when the sync provider says so', async () => {
+ 		const builtin = URI.file('/builtin/create-pr/SKILL.md');
+ 		const promptsService = makePromptsService(new Map([
 diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
 index f107fdce956662b49f1084b405edc73c1e91a553..f01144725baf78c4a8c9d18c6fef07fe70033788 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts
@@ -4618,8 +5091,69 @@ index f107fdce956662b49f1084b405edc73c1e91a553..f01144725baf78c4a8c9d18c6fef07fe
  
  				let changeEventCount = 0;
  				disposables.add(controller.onDidChangeChatSessionItems(() => {
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/loggingAgentConnection.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/loggingAgentConnection.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..1354ad4ee329210d02b0cad3f64138c97c53741e
+--- /dev/null
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/loggingAgentConnection.test.ts
+@@ -0,0 +1,33 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
++import { formatPayload } from '../../../browser/agentSessions/agentHost/loggingAgentConnection.js';
++
++suite('LoggingAgentConnection', () => {
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('redacts authenticate params and Director auth payloads before output logging', () => {
++		const payload = formatPayload({
++			resource: 'https://director-code.local/agenthost',
++			token: JSON.stringify({
++				auth: { kind: 'api-key', value: 'sk-output-secret' },
++				secretMaterial: { kind: 'bearer', accessToken: 'access-output-secret', refreshToken: 'refresh-output-secret' },
++				headers: {
++					Authorization: 'Bearer auth-output-secret',
++					'x-api-key': 'header-output-secret',
++				},
++			}),
++		});
++
++		assert.ok(!payload.includes('sk-output-secret'));
++		assert.ok(!payload.includes('access-output-secret'));
++		assert.ok(!payload.includes('refresh-output-secret'));
++		assert.ok(!payload.includes('auth-output-secret'));
++		assert.ok(!payload.includes('header-output-secret'));
++		assert.ok(payload.includes('<redacted>'));
++	});
++});
+diff --git a/src/vs/workbench/contrib/chat/test/browser/agentSessions/syncedCustomizationBundler.test.ts b/src/vs/workbench/contrib/chat/test/browser/agentSessions/syncedCustomizationBundler.test.ts
+index 41dd9b526bcb817ee894b220c1179148271f70cd..1710ca489786180711443d35af93ad4d43ee1f92 100644
+--- a/src/vs/workbench/contrib/chat/test/browser/agentSessions/syncedCustomizationBundler.test.ts
++++ b/src/vs/workbench/contrib/chat/test/browser/agentSessions/syncedCustomizationBundler.test.ts
+@@ -75,7 +75,7 @@ suite('SyncedCustomizationBundler', () => {
+ 		const result = await bundler.bundle([{ uri, type: PromptsType.instructions }]);
+ 		assert.ok(result, 'should return a result');
+ 		assert.ok(result.ref.uri, 'should have a URI');
+-		assert.strictEqual(result.ref.displayName, 'VS Code Synced Data');
++		assert.strictEqual(result.ref.displayName, 'Director-Code Synced Data');
+ 		assert.ok(result.ref.nonce, 'should have a nonce');
+ 
+ 		// Verify the file was written to the in-memory FS
+@@ -147,7 +147,7 @@ suite('SyncedCustomizationBundler', () => {
+ 		const manifestUri = URI.from({ scheme: SYNCED_CUSTOMIZATION_SCHEME, path: '/test-agent/.plugin/plugin.json' });
+ 		const manifest = await fileService.readFile(manifestUri);
+ 		const parsed = JSON.parse(manifest.value.toString());
+-		assert.strictEqual(parsed.name, 'VS Code Synced Data');
++		assert.strictEqual(parsed.name, 'Director-Code Synced Data');
+ 	});
+ 
+ 	test('nonce is stable for same content', async () => {
 diff --git a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
-index a0a1eabd63e11986195f95921e8eaf702c7c101f..b4d5875fc9ba4569895b33d3f0d1bd58e4ef5803 100644
+index a0a1eabd63e11986195f95921e8eaf702c7c101f..b71b26d55f32d17c2445d11aa4ad772fd92926ff 100644
 --- a/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
 +++ b/src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts
 @@ -110,6 +110,7 @@ function callBuild(
@@ -4638,10 +5172,42 @@ index a0a1eabd63e11986195f95921e8eaf702c7c101f..b4d5875fc9ba4569895b33d3f0d1bd58
  	);
  }
  
-@@ -753,6 +755,26 @@ suite('buildModelPickerItems', () => {
- 		assert.ok(disabledItems[1].description.value.includes('Upgrade'));
+@@ -714,7 +716,7 @@ suite('buildModelPickerItems', () => {
+ 		assert.strictEqual(unavailable.group?.icon?.id, Codicon.blank.id);
  	});
  
+-	test('anonymous user sees upgrade description on each unavailable model', () => {
++	test('anonymous user sees Director configure description on each unavailable model', () => {
+ 		const auto = createAutoModel();
+ 		const items = callBuild([auto], {
+ 			recentModelIds: ['model-a', 'model-b'],
+@@ -729,12 +731,12 @@ suite('buildModelPickerItems', () => {
+ 		const disabledItems = actions.filter(a => a.disabled);
+ 		assert.strictEqual(disabledItems.length, 2);
+ 		assert.ok(disabledItems[0].description instanceof MarkdownString);
+-		assert.ok(disabledItems[0].description.value.includes('Upgrade'));
++		assert.ok(disabledItems[0].description.value.includes('Configure'));
+ 		assert.ok(disabledItems[1].description instanceof MarkdownString);
+-		assert.ok(disabledItems[1].description.value.includes('Upgrade'));
++		assert.ok(disabledItems[1].description.value.includes('Configure'));
+ 	});
+ 
+-	test('free user sees upgrade description on each unavailable model', () => {
++	test('free user sees Director configure description on each unavailable model', () => {
+ 		const auto = createAutoModel();
+ 		const items = callBuild([auto], {
+ 			recentModelIds: ['model-a', 'model-b'],
+@@ -748,9 +750,29 @@ suite('buildModelPickerItems', () => {
+ 		const disabledItems = actions.filter(a => a.disabled);
+ 		assert.strictEqual(disabledItems.length, 2);
+ 		assert.ok(disabledItems[0].description instanceof MarkdownString);
+-		assert.ok(disabledItems[0].description.value.includes('Upgrade'));
++		assert.ok(disabledItems[0].description.value.includes('Configure'));
+ 		assert.ok(disabledItems[1].description instanceof MarkdownString);
+-		assert.ok(disabledItems[1].description.value.includes('Upgrade'));
++		assert.ok(disabledItems[1].description.value.includes('Configure'));
++	});
++
 +	test('neutral unavailable models show configure description instead of upgrade', () => {
 +		const auto = createAutoModel();
 +		const items = callBuild([auto], {
@@ -4660,11 +5226,9 @@ index a0a1eabd63e11986195f95921e8eaf702c7c101f..b4d5875fc9ba4569895b33d3f0d1bd58
 +		assert.ok(!disabledItem.description.value.includes('Upgrade'));
 +		assert.ok(disabledItem.hover?.content instanceof MarkdownString);
 +		assert.ok(disabledItem.hover.content.value.includes('Configure Director Code'));
-+	});
-+
+ 	});
+ 
  	test('anonymous user model selection triggers onSelect normally', () => {
- 		const auto = createAutoModel();
- 		const modelA = createModel('gpt-4o', 'GPT-4o');
 diff --git a/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts b/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts
 index 081a235b906ac10a54b578b72126e9c11fa31721..093a1f54130af881ccfa5f619aa388a9b06e2a40 100644
 --- a/src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts

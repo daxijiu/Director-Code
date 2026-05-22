@@ -301,10 +301,10 @@ index 0000000000000000000000000000000000000000..ff97a742297f2fc098203da1bd9efde0
 +});
 diff --git a/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..75d017723b58f45d662d1792cd784edeab948688
+index 0000000000000000000000000000000000000000..bd092e0219b8d3b0b8f9caf72e5f4950ee15f22d
 --- /dev/null
 +++ b/src/vs/workbench/contrib/chat/test/common/agentEngine/directorToolRegistry.test.ts
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,243 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -362,19 +362,22 @@ index 0000000000000000000000000000000000000000..75d017723b58f45d662d1792cd784ede
 +			tool('run_task', 'runTask'),
 +			tool('create_and_run_task', 'createAndRunTask'),
 +			tool('get_task_output', 'getTaskOutput'),
++			tool('runTests', 'runTests'),
 +		];
 +
 +		const agentTools = getDirectorToolAllowlist(raw, DirectorToolMode.Agent);
 +		const names = agentTools.map(item => item.modelName);
 +
-+		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runSubagent', 'runTask']);
++		assert.deepStrictEqual(names, ['createAndRunTask', 'getTaskOutput', 'runInTerminal', 'runSubagent', 'runTask', 'runTests']);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.definition.isReadOnly, true);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.definition.isReadOnly, false);
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runTests')?.definition.isReadOnly, false);
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runInTerminal')?.entry.timeoutCategory, 'stage-aware-terminal');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runSubagent')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'runTask')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'createAndRunTask')?.entry.timeoutCategory, 'tool-owned');
 +		assert.strictEqual(agentTools.find(item => item.modelName === 'getTaskOutput')?.entry.timeoutCategory, 'tool-owned');
++		assert.strictEqual(agentTools.find(item => item.modelName === 'runTests')?.entry.timeoutCategory, 'tool-owned');
 +	});
 +
 +	test('clarifies generic subagent and execution subagent responsibilities', () => {
@@ -1278,10 +1281,10 @@ index 0000000000000000000000000000000000000000..f76d7aa6c32df7558deaee46c546c83b
 +}
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e9f2d4b3e5decc26a52dd7fe01f4fef9f586a2d9
+index 0000000000000000000000000000000000000000..dacad6b996b655233d953e0d4950b6d5fd2768b3
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorToolRegistry.ts
-@@ -0,0 +1,288 @@
+@@ -0,0 +1,289 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -1461,6 +1464,7 @@ index 0000000000000000000000000000000000000000..e9f2d4b3e5decc26a52dd7fe01f4fef9
 +	entry('runTask', ['run_task'], ['runTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task execution for Agent mode only.', { timeoutCategory: 'tool-owned' }),
 +	entry('createAndRunTask', ['create_and_run_task'], ['createAndRunTask'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve task creation/execution for Agent mode only.', { timeoutCategory: 'tool-owned' }),
 +	entry('getTaskOutput', ['get_task_output'], ['getTaskOutput'], 'read', AGENT_ONLY, 'none', 'keep', 'Preserve task output inspection for Agent mode only.', { timeoutCategory: 'tool-owned' }),
++	entry('runTests', ['runTests', 'vscode.runTests'], ['runTests'], 'execute', AGENT_ONLY, 'pre-approval', 'keep', 'Preserve VS Code test execution as an Agent-only client tool subject to Director/AgentHost confirmation policy.', { timeoutCategory: 'tool-owned' }),
 +
 +	entry('openBrowserPage', ['open_browser_page'], ['openBrowserPage'], 'execute', AGENT_ONLY, 'director-pre-approval', 'keep', 'Reuse VS Code core integrated-browser open tool with a Director pre-approval gate that global auto-approve cannot bypass.', { directorPreApprovalReason: DIRECTOR_BROWSER_MUTATION_PRE_APPROVAL }),
 +	entry('readPage', ['read_page'], ['readPage'], 'read', AGENT_ONLY, 'director-session-approval', 'keep', 'Reuse VS Code core browser page reader. Director conservatively requires page/session approval in Phase 3.', { directorPreApprovalReason: DIRECTOR_BROWSER_SESSION_PRE_APPROVAL }),

@@ -292,8 +292,22 @@ function isEditTools(filePath) {
 
 function isAgentEngine(filePath) {
   if (filePath.includes('/agentEngine/')) return true;
+  if (filePath.startsWith('src/vs/platform/agentHost/node/claude/')) return true;
+  if (filePath.startsWith('src/vs/platform/agentHost/node/director/')) return true;
+  if (filePath.startsWith('src/vs/platform/agentHost/test/node/claudeAgent')) return true;
+  if (filePath.startsWith('src/vs/platform/agentHost/test/node/directorAgent')) return true;
   if (filePath.startsWith('src/vs/workbench/contrib/mcp/')) return true;
   return [
+    'src/vs/platform/agentHost/common/agentHostLogRedaction.ts',
+    'src/vs/platform/agentHost/common/ahpJsonlLogger.ts',
+    'src/vs/platform/agentHost/common/directorAgentHostBridge.ts',
+    'src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts',
+    'src/vs/platform/agentHost/node/agentHostMain.ts',
+    'src/vs/platform/agentHost/node/agentHostServerMain.ts',
+    'src/vs/platform/agentHost/node/webSocketTransport.ts',
+    'src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts',
+    'src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts',
+    'src/vs/platform/agentHost/test/node/webSocketTransport.test.ts',
     'src/vs/workbench/api/common/extHostLanguageModelTools.ts',
     'src/vs/workbench/api/common/extHostLanguageModels.ts',
     'src/vs/workbench/api/test/common/extHostLanguageModelRuntime.test.ts',

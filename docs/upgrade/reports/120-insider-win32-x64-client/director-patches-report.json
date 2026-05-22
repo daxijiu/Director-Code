@@ -4,16 +4,16 @@
   "phase": "P2",
   "batch": "director-patches",
   "status": "passed",
-  "generatedAt": "2026-05-22T13:29:09.107Z",
+  "generatedAt": "2026-05-22T16:38:56.795Z",
   "sources": {
-    "vscodium": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/vscodium/vscode",
-    "director": "artifacts/generated/120-insider-win32-x64-client/segment21-replay-verify/layers/director/vscode"
+    "vscodium": "vscode.generated/layers/vscodium/vscode",
+    "director": "vscode.generated/layers/director/vscode"
   },
   "checks": {
     "changedFilesClassified": "passed",
     "patchesGenerated": "passed"
   },
-  "changedFileCount": 290,
+  "changedFileCount": 315,
   "patches": [
     {
       "stage": "branding",
@@ -154,7 +154,24 @@
       "path": "patches/replay/004-director-agent-engine.120-insider.patch",
       "files": [
         "src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts",
+        "src/vs/platform/agentHost/common/agentHostLogRedaction.ts",
+        "src/vs/platform/agentHost/common/ahpJsonlLogger.ts",
+        "src/vs/platform/agentHost/common/directorAgentHostBridge.ts",
+        "src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts",
+        "src/vs/platform/agentHost/node/agentHostMain.ts",
+        "src/vs/platform/agentHost/node/agentHostServerMain.ts",
+        "src/vs/platform/agentHost/node/claude/anthropicBetas.ts",
+        "src/vs/platform/agentHost/node/claude/claudeAgent.ts",
+        "src/vs/platform/agentHost/node/claude/claudeAgentSdkService.ts",
+        "src/vs/platform/agentHost/node/claude/claudeProxyService.ts",
+        "src/vs/platform/agentHost/node/director/directorAgent.ts",
+        "src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts",
+        "src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts",
+        "src/vs/platform/agentHost/test/node/claudeAgent.integrationTest.ts",
+        "src/vs/platform/agentHost/test/node/claudeAgent.test.ts",
+        "src/vs/platform/agentHost/test/node/directorAgent.test.ts",
         "src/vs/platform/agentHost/test/node/mockAgent.ts",
+        "src/vs/platform/agentHost/test/node/webSocketTransport.test.ts",
         "src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts",
         "src/vs/workbench/api/common/extHostLanguageModelTools.ts",
         "src/vs/workbench/api/common/extHostLanguageModels.ts",
@@ -253,9 +270,9 @@
         "src/vs/workbench/contrib/mcp/test/common/mcpSamplingService.test.ts",
         "src/vs/workbench/services/extensions/common/extensions.ts"
       ],
-      "fileCount": 99,
-      "size": 1163946,
-      "sha256": "1fbe8fb0e846e66ceecf58b8353fc9eb4a8e10ee892603c7c139421fdbbf9ff0"
+      "fileCount": 116,
+      "size": 1271904,
+      "sha256": "60fa77378beda001f84f22c925dc76a8c8fa153cd8222b8363efc0b92ae88479"
     },
     {
       "stage": "chat-built-in-mode",
@@ -279,7 +296,11 @@
         "src/vs/workbench/contrib/chat/browser/actions/chatActions.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatGettingStarted.ts",
         "src/vs/workbench/contrib/chat/browser/actions/chatLanguageModelActions.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostChatContribution.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostLocalCustomizations.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionHandler.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostSessionListController.ts",
+        "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/syncedCustomizationBundler.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/agentSessions.ts",
         "src/vs/workbench/contrib/chat/browser/agentSessions/localAgentSessionsController.ts",
@@ -312,14 +333,18 @@
         "src/vs/workbench/contrib/chat/common/aiCustomizationWorkspaceService.ts",
         "src/vs/workbench/contrib/chat/common/model/chatSessionStore.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostChatContribution.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/agentHostClientTools.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/enumerateLocalCustomizationsForHarness.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/agentSessions/localAgentSessionsController.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/loggingAgentConnection.test.ts",
+        "src/vs/workbench/contrib/chat/test/browser/agentSessions/syncedCustomizationBundler.test.ts",
         "src/vs/workbench/contrib/chat/test/browser/widget/input/chatModelPicker.test.ts",
         "src/vs/workbench/contrib/chat/test/common/model/chatSessionStore.test.ts",
         "src/vs/workbench/contrib/inlineChat/browser/inlineChatWidget.ts"
       ],
-      "fileCount": 55,
-      "size": 254822,
-      "sha256": "3f2f715f658efc95d35770824e3f0bd905407bc7dd0283a3edc785b44067323a"
+      "fileCount": 63,
+      "size": 288374,
+      "sha256": "e452649fb156f6f1715c23de60f3fa2d747164d071ffa5c7705a61dade004301"
     },
     {
       "stage": "text-polish",
@@ -351,8 +376,8 @@
         "src/vs/workbench/contrib/terminalContrib/chatAgentTools/test/electron-browser/runInTerminalTool.test.ts"
       ],
       "fileCount": 9,
-      "size": 113070,
-      "sha256": "4e10a5e6d2a1f5b0bbf97dcbf4e926aeb71cd618ce6242206594ea07fb5e7b43"
+      "size": 113606,
+      "sha256": "80a6c022f3c66c34f1d9a08c31efa571aea3fb7b6ccb94ea4c1db8c3948a23e3"
     },
     {
       "stage": "chat-editing",

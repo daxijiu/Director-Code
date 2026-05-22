@@ -192,6 +192,2482 @@ index 3d52370163fdf7ce01867d2c6e865d45724fbf5b..26a0fd46672e3b2312b4bad346e66220
  
  		// Checksum
  		services.set(IChecksumService, new SyncDescriptor(ChecksumService, undefined, false /* proxied to other processes */));
+diff --git a/src/vs/platform/agentHost/common/agentHostLogRedaction.ts b/src/vs/platform/agentHost/common/agentHostLogRedaction.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..cfbeca4b55121746682b2b743d23a28d519bd083
+--- /dev/null
++++ b/src/vs/platform/agentHost/common/agentHostLogRedaction.ts
+@@ -0,0 +1,109 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++export const AGENT_HOST_REDACTED_VALUE = '<redacted>';
++
++const SECRET_KEY_PATTERN = /^(authorization|proxy-authorization|x-api-key|api-key|apikey|access_token|refresh_token|accessToken|refreshToken|token|secret|secretMaterial|password|nonce|baseURL|baseUrl)$/i;
++const SECRET_KEY_FRAGMENT_PATTERN = /(authorization|x-api-key|api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|token|secret|password|nonce|baseURL|baseUrl)/i;
++const HEADER_CONTAINER_PATTERN = /^(headers|requestHeaders|customHeaders)$/i;
++
++export function redactAgentHostLogValue(value: unknown): unknown {
++	return redactValue(value, undefined, false, new WeakSet<object>());
++}
++
++function redactValue(value: unknown, key: string | undefined, insideHeaders: boolean, seen: WeakSet<object>): unknown {
++	if (value === undefined || value === null) {
++		return value;
++	}
++	if (typeof value === 'string') {
++		if (shouldRedactKey(key) || insideHeaders) {
++			return AGENT_HOST_REDACTED_VALUE;
++		}
++		return redactString(value);
++	}
++	if (typeof value !== 'object') {
++		return value;
++	}
++	if (seen.has(value)) {
++		return '[Circular]';
++	}
++	seen.add(value);
++	if (Array.isArray(value)) {
++		return value.map(item => redactValue(item, undefined, insideHeaders, seen));
++	}
++
++	const record = value as Record<string, unknown>;
++	const method = typeof record.method === 'string' ? record.method : undefined;
++	const redactAuthenticateParams = method === 'authenticate';
++	const childInsideHeaders = insideHeaders || (!!key && HEADER_CONTAINER_PATTERN.test(key));
++	const result: Record<string, unknown> = {};
++	for (const [childKey, childValue] of Object.entries(record)) {
++		if (redactAuthenticateParams && childKey === 'params') {
++			result[childKey] = redactAuthenticateLogParams(childValue, seen);
++			continue;
++		}
++		result[childKey] = redactValue(childValue, childKey, childInsideHeaders, seen);
++	}
++	return result;
++}
++
++function redactAuthenticateLogParams(params: unknown, seen: WeakSet<object>): unknown {
++	if (Array.isArray(params)) {
++		return params.map(param => redactAuthenticateLogParams(param, seen));
++	}
++	if (!params || typeof params !== 'object') {
++		return params;
++	}
++	const record = params as Record<string, unknown>;
++	if ('resource' in record && 'token' in record) {
++		return {
++			...redactValue(record, undefined, false, seen) as Record<string, unknown>,
++			token: AGENT_HOST_REDACTED_VALUE,
++		};
++	}
++	return redactValue(params, undefined, false, seen);
++}
++
++function shouldRedactKey(key: string | undefined): boolean {
++	return !!key && (SECRET_KEY_PATTERN.test(key) || SECRET_KEY_FRAGMENT_PATTERN.test(key));
++}
++
++function redactString(value: string): string {
++	const parsed = tryParseJson(value);
++	if (parsed && containsSecretShape(parsed)) {
++		return JSON.stringify(redactAgentHostLogValue(parsed));
++	}
++	return value
++		.replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, `Bearer ${AGENT_HOST_REDACTED_VALUE}`)
++		.replace(/((?:ANTHROPIC_AUTH_TOKEN|baseURL|baseUrl|nonce)\s*[:=]\s*)([^\s,;]+)/gi, `$1${AGENT_HOST_REDACTED_VALUE}`)
++		.replace(/((?:Authorization|Proxy-Authorization)\s*[:=]\s*)([^\s,;]+)/gi, `$1${AGENT_HOST_REDACTED_VALUE}`)
++		.replace(/((?:x-api-key|api-key)\s*[:=]\s*)([^\s,;]+)/gi, `$1${AGENT_HOST_REDACTED_VALUE}`);
++}
++
++function tryParseJson(value: string): unknown | undefined {
++	if (!value || (value[0] !== '{' && value[0] !== '[')) {
++		return undefined;
++	}
++	try {
++		return JSON.parse(value);
++	} catch {
++		return undefined;
++	}
++}
++
++function containsSecretShape(value: unknown): boolean {
++	if (!value || typeof value !== 'object') {
++		return false;
++	}
++	if (Array.isArray(value)) {
++		return value.some(containsSecretShape);
++	}
++	for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
++		if (shouldRedactKey(key) || containsSecretShape(child)) {
++			return true;
++		}
++	}
++	return false;
++}
+diff --git a/src/vs/platform/agentHost/common/ahpJsonlLogger.ts b/src/vs/platform/agentHost/common/ahpJsonlLogger.ts
+index 631017cd884070c3f457ee3e2b99ec300d830556..20f086448c1c94e986cf8a439410cca8c1a25454 100644
+--- a/src/vs/platform/agentHost/common/ahpJsonlLogger.ts
++++ b/src/vs/platform/agentHost/common/ahpJsonlLogger.ts
+@@ -9,6 +9,7 @@ import { joinPath } from '../../../base/common/resources.js';
+ import { URI } from '../../../base/common/uri.js';
+ import { IFileService, IFileStatWithMetadata } from '../../files/common/files.js';
+ import { ILogService } from '../../log/common/log.js';
++import { redactAgentHostLogValue } from './agentHostLogRedaction.js';
+ 
+ export type AhpLogDirection = 'c2s' | 's2c';
+ 
+@@ -56,8 +57,9 @@ export class AhpJsonlLogger extends Disposable {
+ 	}
+ 
+ 	log(message: object, dir: AhpLogDirection, byteLength?: number): void {
++		const redactedMessage = redactAgentHostLogValue(message) as object;
+ 		const entry = {
+-			...message,
++			...redactedMessage,
+ 			_ahpLog: {
+ 				ts: new Date().toISOString(),
+ 				dir,
+diff --git a/src/vs/platform/agentHost/common/directorAgentHostBridge.ts b/src/vs/platform/agentHost/common/directorAgentHostBridge.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..a162a12290c6603c7fcf86a0bffc3e339d384a11
+--- /dev/null
++++ b/src/vs/platform/agentHost/common/directorAgentHostBridge.ts
+@@ -0,0 +1,122 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { generateUuid } from '../../../base/common/uuid.js';
++import { AGENT_HOST_REDACTED_VALUE } from './agentHostLogRedaction.js';
++
++export const DIRECTOR_AGENT_HOST_PROVIDER = 'director';
++export const DIRECTOR_AGENT_HOST_RESOURCE = 'https://director-code.local/agenthost';
++export const DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE = 'https://director-code.local/agenthost/claude';
++export const DIRECTOR_AGENT_HOST_AUTH_HANDLE_TTL_MS = 5 * 60 * 1000;
++
++export type DirectorAgentHostApiType = 'anthropic-messages' | 'openai-completions' | 'openai-codex' | 'gemini-generative';
++export type DirectorAgentHostAuthVariant = 'default' | 'openai-codex';
++export type DirectorAgentHostProviderName = 'anthropic' | 'openai' | 'gemini' | 'openai-compatible' | 'anthropic-compatible';
++
++export type DirectorAgentHostProviderAuth =
++	| { readonly kind: 'api-key'; readonly value: string }
++	| { readonly kind: 'bearer'; readonly accessToken: string; readonly refreshToken?: string; readonly clientId?: string };
++
++export type DirectorAgentHostRedactedProviderAuth =
++	| { readonly kind: 'api-key'; readonly value: typeof AGENT_HOST_REDACTED_VALUE }
++	| { readonly kind: 'bearer'; readonly accessToken: typeof AGENT_HOST_REDACTED_VALUE; readonly refreshToken?: typeof AGENT_HOST_REDACTED_VALUE; readonly clientId?: string };
++
++export interface IDirectorAgentHostSecretHandle {
++	readonly id: string;
++	readonly kind: DirectorAgentHostProviderAuth['kind'];
++	readonly createdAt: number;
++	readonly expiresAt: number;
++}
++
++export interface IDirectorAgentHostProviderCapabilities {
++	readonly vision?: boolean;
++	readonly toolCalling?: boolean;
++	readonly streaming?: boolean;
++	readonly thinking?: boolean;
++	readonly agentMode?: boolean;
++	readonly reasoningEcho?: false | { readonly field: 'reasoning_content'; readonly includeEmpty?: boolean };
++}
++
++export interface IDirectorAgentHostAuthenticationPayload {
++	readonly version: 1;
++	readonly instanceId: string;
++	readonly providerKind: DirectorAgentHostProviderName;
++	readonly providerDisplayName: string;
++	readonly apiType: DirectorAgentHostApiType;
++	readonly authVariant: DirectorAgentHostAuthVariant;
++	readonly auth: DirectorAgentHostProviderAuth;
++	readonly modelId: string;
++	readonly modelDisplayName?: string;
++	readonly baseURL?: string;
++	readonly geminiKeyInUrl?: boolean;
++	readonly capabilities?: IDirectorAgentHostProviderCapabilities;
++	readonly maxTurns?: number;
++	readonly maxTokens?: number;
++	readonly maxInputTokens?: number;
++}
++
++export type IDirectorAgentHostAuthenticationPublicPayload =
++	Omit<IDirectorAgentHostAuthenticationPayload, 'auth'> & {
++		readonly auth: DirectorAgentHostRedactedProviderAuth;
++		readonly authHandle: IDirectorAgentHostSecretHandle;
++	};
++
++export interface IDirectorAgentHostAuthenticationEnvelope extends IDirectorAgentHostAuthenticationPublicPayload {
++	/**
++	 * Minimum viable Segment 4A bridge: the raw material still crosses the
++	 * existing authenticate IPC once, but it is not part of the public payload
++	 * and is immediately moved behind the short-lived authHandle in AgentHost.
++	 */
++	readonly secretMaterial: DirectorAgentHostProviderAuth;
++}
++
++export interface IDirectorAgentHostAuthenticationResult {
++	readonly publicPayload: IDirectorAgentHostAuthenticationPublicPayload;
++	readonly secretMaterial: DirectorAgentHostProviderAuth;
++}
++
++export function serializeDirectorAgentHostAuthentication(payload: IDirectorAgentHostAuthenticationPayload, now = Date.now()): string {
++	const authHandle: IDirectorAgentHostSecretHandle = {
++		id: generateUuid(),
++		kind: payload.auth.kind,
++		createdAt: now,
++		expiresAt: now + DIRECTOR_AGENT_HOST_AUTH_HANDLE_TTL_MS,
++	};
++	const envelope: IDirectorAgentHostAuthenticationEnvelope = {
++		...payload,
++		auth: redactDirectorAgentHostProviderAuth(payload.auth),
++		authHandle,
++		secretMaterial: payload.auth,
++	};
++	return JSON.stringify(envelope);
++}
++
++export function parseDirectorAgentHostAuthentication(value: string, now = Date.now()): IDirectorAgentHostAuthenticationResult | undefined {
++	try {
++		const raw = JSON.parse(value) as Partial<IDirectorAgentHostAuthenticationEnvelope>;
++		if (raw.version !== 1 || !raw.instanceId || !raw.providerKind || !raw.apiType || !raw.authHandle || !raw.secretMaterial || !raw.modelId) {
++			return undefined;
++		}
++		if (raw.authHandle.expiresAt <= now || raw.authHandle.kind !== raw.secretMaterial.kind) {
++			return undefined;
++		}
++		const { secretMaterial, ...publicPayload } = raw as IDirectorAgentHostAuthenticationEnvelope;
++		return { publicPayload, secretMaterial };
++	} catch {
++		return undefined;
++	}
++}
++
++export function redactDirectorAgentHostProviderAuth(auth: DirectorAgentHostProviderAuth): DirectorAgentHostRedactedProviderAuth {
++	if (auth.kind === 'api-key') {
++		return { kind: 'api-key', value: AGENT_HOST_REDACTED_VALUE };
++	}
++	return {
++		kind: 'bearer',
++		accessToken: AGENT_HOST_REDACTED_VALUE,
++		...(auth.refreshToken ? { refreshToken: AGENT_HOST_REDACTED_VALUE } : {}),
++		...(auth.clientId ? { clientId: auth.clientId } : {}),
++	};
++}
+diff --git a/src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts b/src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts
+index a7367701886ad69ea07abc1c459213b7f5790e8f..1e8273ad0cb9192dc7d6dedd8054b70a456dfe8b 100644
+--- a/src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts
++++ b/src/vs/platform/agentHost/electron-browser/localAhpJsonlLogging.ts
+@@ -4,10 +4,9 @@
+  *--------------------------------------------------------------------------------------------*/
+ 
+ import { AhpJsonlLogger, getAhpLogByteLength } from '../common/ahpJsonlLogger.js';
++import { AGENT_HOST_REDACTED_VALUE } from '../common/agentHostLogRedaction.js';
+ import type { AuthenticateParams, IAgentService } from '../common/agentService.js';
+ 
+-const REDACTED_VALUE = '<redacted>';
+-
+ /**
+  * IAgentService methods that semantically correspond to JSON-RPC requests
+  * (return a Promise of a result). Calls are logged as `c2s` request frames
+@@ -118,7 +117,7 @@ function redactParams(method: string, args: readonly unknown[]): readonly unknow
+ 	if (!isAuthenticateParams(params)) {
+ 		return args;
+ 	}
+-	return [{ ...params, token: REDACTED_VALUE }, ...rest];
++	return [{ ...params, token: AGENT_HOST_REDACTED_VALUE }, ...rest];
+ }
+ 
+ function isAuthenticateParams(value: unknown): value is AuthenticateParams {
+diff --git a/src/vs/platform/agentHost/node/agentHostMain.ts b/src/vs/platform/agentHost/node/agentHostMain.ts
+index e6758b6b9ab6e0033f50748397e997eea2e80275..bc4f2b3b28d2f58ce98f4411b4b5bcf57f801e29 100644
+--- a/src/vs/platform/agentHost/node/agentHostMain.ts
++++ b/src/vs/platform/agentHost/node/agentHostMain.ts
+@@ -15,7 +15,7 @@ import { URI } from '../../../base/common/uri.js';
+ import { generateUuid } from '../../../base/common/uuid.js';
+ import * as os from 'os';
+ import * as inspector from 'inspector';
+-import { AgentHostIpcChannels, IAgentHostInspectInfo, IAgentHostSocketInfo, IConnectionTrackerService } from '../common/agentService.js';
++import { AgentHostClaudeSdkPathEnvVar, AgentHostIpcChannels, IAgentHostInspectInfo, IAgentHostSocketInfo, IConnectionTrackerService } from '../common/agentService.js';
+ import { AgentService } from './agentService.js';
+ import { IAgentConfigurationService } from './agentConfigurationService.js';
+ import { IAgentHostTerminalManager } from './agentHostTerminalManager.js';
+@@ -51,6 +51,10 @@ import { AgentPluginManager } from './agentPluginManager.js';
+ import { AgentHostGitService, IAgentHostGitService } from './agentHostGitService.js';
+ import { registerPendingEditContentProvider } from './copilot/pendingEditContentStore.js';
+ import { join } from '../../../base/common/path.js';
++import { DirectorAgent } from './director/directorAgent.js';
++import { ClaudeAgent } from './claude/claudeAgent.js';
++import { ClaudeAgentSdkService, IClaudeAgentSdkService } from './claude/claudeAgentSdkService.js';
++import { ClaudeProxyService, IClaudeProxyService } from './claude/claudeProxyService.js';
+ 
+ // Entry point for the agent host utility process.
+ // Sets up IPC, logging, and registers agent providers (Copilot).
+@@ -116,6 +120,17 @@ function startAgentHost(): void {
+ 
+ 		diServices.set(IAgentHostTerminalManager, agentService.terminalManager);
+ 		diServices.set(IAgentConfigurationService, agentService.configurationService);
++
++		const directorAgent = disposables.add(instantiationService.createInstance(DirectorAgent));
++		agentService.registerProvider(directorAgent);
++		if (process.env[AgentHostClaudeSdkPathEnvVar]) {
++			const claudeProxyService = disposables.add(new ClaudeProxyService(logService));
++			const claudeAgentSdkService = new ClaudeAgentSdkService(logService);
++			diServices.set(IClaudeProxyService, claudeProxyService);
++			diServices.set(IClaudeAgentSdkService, claudeAgentSdkService);
++			const claudeAgent = disposables.add(instantiationService.createInstance(ClaudeAgent));
++			agentService.registerProvider(claudeAgent);
++		}
+ 	} catch (err) {
+ 		logService.error('Failed to create AgentService', err);
+ 		throw err;
+diff --git a/src/vs/platform/agentHost/node/agentHostServerMain.ts b/src/vs/platform/agentHost/node/agentHostServerMain.ts
+index bd83ddf33520c7bdabcb2818e67621c5ed1870c6..53bb6e2f047fad1a6338230f69cc24b8f4a7e245 100644
+--- a/src/vs/platform/agentHost/node/agentHostServerMain.ts
++++ b/src/vs/platform/agentHost/node/agentHostServerMain.ts
+@@ -52,6 +52,10 @@ import { AgentPluginManager } from './agentPluginManager.js';
+ import { IAgentPluginManager } from '../common/agentPluginManager.js';
+ import { registerPendingEditContentProvider } from './copilot/pendingEditContentStore.js';
+ import { AgentHostGitService, IAgentHostGitService } from './agentHostGitService.js';
++import { DirectorAgent } from './director/directorAgent.js';
++import { ClaudeAgent } from './claude/claudeAgent.js';
++import { ClaudeAgentSdkService, IClaudeAgentSdkService } from './claude/claudeAgentSdkService.js';
++import { ClaudeProxyService, IClaudeProxyService } from './claude/claudeProxyService.js';
+ 
+ /** Log to stderr so messages appear in the terminal alongside the process. */
+ function log(msg: string): void {
+@@ -200,6 +204,18 @@ async function main(): Promise<void> {
+ 		diServices.set(IAgentHostTerminalManager, agentService.terminalManager);
+ 		diServices.set(IAgentConfigurationService, agentService.configurationService);
+ 		diServices.set(IAgentHostGitService, gitService);
++
++		const directorAgent = disposables.add(instantiationService.createInstance(DirectorAgent));
++		agentService.registerProvider(directorAgent);
++		if (options.claudeSdkPath) {
++			process.env[AgentHostClaudeSdkPathEnvVar] = options.claudeSdkPath;
++			const claudeProxyService = disposables.add(new ClaudeProxyService(logService));
++			const claudeAgentSdkService = new ClaudeAgentSdkService(logService);
++			diServices.set(IClaudeProxyService, claudeProxyService);
++			diServices.set(IClaudeAgentSdkService, claudeAgentSdkService);
++			const claudeAgent = disposables.add(instantiationService.createInstance(ClaudeAgent));
++			agentService.registerProvider(claudeAgent);
++		}
+ 	}
+ 
+ 	if (options.enableMockAgent) {
+diff --git a/src/vs/platform/agentHost/node/claude/anthropicBetas.ts b/src/vs/platform/agentHost/node/claude/anthropicBetas.ts
+index be6ed951360ef07f354585767f2d18a8dd35b973..0e2fd83d4d0d277a5fb9c3974ec83b9aa1813f11 100644
+--- a/src/vs/platform/agentHost/node/claude/anthropicBetas.ts
++++ b/src/vs/platform/agentHost/node/claude/anthropicBetas.ts
+@@ -9,10 +9,10 @@
+  * `extensions/copilot/.../claudeLanguageModelServer.ts`}'s `filterSupportedBetas`
+  * + `SUPPORTED_ANTHROPIC_BETAS` allowlist.
+  *
+- * **Keep in sync with the extension copy.** When CAPI gains support for
+- * a new Anthropic beta, add it here. The filter is applied at the
+- * inbound `POST /v1/messages` boundary on the `anthropic-beta` header
+- * before forwarding to {@link ICopilotApiService.messages}.
++ * **Keep in sync with the extension copy.** When the Claude-compatible
++ * upstream transport gains support for a new Anthropic beta, add it here.
++ * The filter is applied at the inbound `POST /v1/messages` boundary on the
++ * `anthropic-beta` header before forwarding through the Director Claude proxy.
+  */
+ 
+ /**
+diff --git a/src/vs/platform/agentHost/node/claude/claudeAgent.ts b/src/vs/platform/agentHost/node/claude/claudeAgent.ts
+index 67c048666890c68b0dcad0bbeb6b60040684d388..d6a7351b260232670c66198889a86dcefae92559 100644
+--- a/src/vs/platform/agentHost/node/claude/claudeAgent.ts
++++ b/src/vs/platform/agentHost/node/claude/claudeAgent.ts
+@@ -3,8 +3,7 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+ 
+-import type { CCAModel } from '@vscode/copilot-api';
+-import type { Options, PermissionMode, PermissionResult, PermissionUpdate, SDKSessionInfo, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
++import type { Options, PermissionMode, PermissionResult, PermissionUpdate, SDKSessionInfo, SDKUserMessage, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
+ import { rgPath } from '@vscode/ripgrep';
+ import { SequencerByKey } from '../../../../base/common/async.js';
+ import { CancellationError } from '../../../../base/common/errors.js';
+@@ -21,79 +20,44 @@ import { createSchema, platformSessionSchema, schemaProperty } from '../../commo
+ import { ClaudePermissionMode, ClaudeSessionConfigKey } from '../../common/claudeSessionConfigKeys.js';
+ import { createClaudeThinkingLevelSchema, isClaudeEffortLevel, resolveClaudeEffort } from '../../common/claudeModelConfig.js';
+ import { SessionConfigKey } from '../../common/sessionConfigKeys.js';
+-import { AgentProvider, AgentSession, AgentSignal, GITHUB_COPILOT_PROTECTED_RESOURCE, IAgent, IAgentCreateSessionConfig, IAgentCreateSessionResult, IAgentDescriptor, IAgentMaterializeSessionEvent, IAgentModelInfo, IAgentResolveSessionConfigParams, IAgentSessionConfigCompletionsParams, IAgentSessionMetadata, IAgentSessionProjectInfo } from '../../common/agentService.js';
++import { AgentProvider, AgentSession, AgentSignal, IAgent, IAgentCreateSessionConfig, IAgentCreateSessionResult, IAgentDescriptor, IAgentMaterializeSessionEvent, IAgentModelInfo, IAgentResolveSessionConfigParams, IAgentSessionConfigCompletionsParams, IAgentSessionMetadata, IAgentSessionProjectInfo } from '../../common/agentService.js';
++import { DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE, parseDirectorAgentHostAuthentication, type DirectorAgentHostProviderAuth, type IDirectorAgentHostAuthenticationPublicPayload } from '../../common/directorAgentHostBridge.js';
+ import { ISessionDataService } from '../../common/sessionDataService.js';
+ import type { ResolveSessionConfigResult, SessionConfigCompletionsResult } from '../../common/state/protocol/commands.js';
+ import { AHP_AUTH_REQUIRED, ProtocolError } from '../../common/state/sessionProtocol.js';
+ import { PolicyState, ProtectedResourceMetadata, ToolCallStatus, type ModelSelection, type ToolCallPendingConfirmationState, type ToolDefinition } from '../../common/state/protocol/state.js';
+-import { CustomizationRef, SessionInputResponseKind, type MessageAttachment, type SessionInputAnswer, type ToolCallResult, type Turn } from '../../common/state/sessionState.js';
++import { CustomizationRef, ResponsePartKind, SessionInputResponseKind, TurnState, type MessageAttachment, type SessionInputAnswer, type ToolCallResult, type Turn, type UsageInfo } from '../../common/state/sessionState.js';
+ import { IAgentConfigurationService } from '../agentConfigurationService.js';
+ import { IAgentHostGitService } from '../agentHostGitService.js';
+ import { projectFromCopilotContext } from '../copilot/copilotGitProject.js';
+-import { ICopilotApiService } from '../shared/copilotApiService.js';
+ import { IClaudeAgentSdkService } from './claudeAgentSdkService.js';
+ import { ClaudeAgentSession } from './claudeAgentSession.js';
+-import { tryParseClaudeModelId } from './claudeModelId.js';
+ import { resolvePromptToContentBlocks } from './claudePromptResolver.js';
+ import { IClaudeProxyHandle, IClaudeProxyService } from './claudeProxyService.js';
+ import { extractPermissionPath, getClaudeConfirmationTitle, getClaudePermissionKind, getClaudeToolDisplayName, INTERACTIVE_CLAUDE_TOOLS } from './claudeToolDisplay.js';
+ import { buildAskUserSessionInputQuestions, buildExitPlanModeConfirmationState, flattenAskUserAnswers, parseAskUserQuestionInput } from './claudeInteractiveTools.js';
+ 
+ /**
+- * Returns true if `m` is a Claude-family model that should be advertised
+- * to clients picking a model for the Claude provider.
+- *
+- * Combines the same surface checks the extension uses (vendor, picker
+- * eligibility, tool-call support, `/v1/messages` endpoint) with a parse
+- * of the model id via {@link tryParseClaudeModelId}, which excludes
+- * synthetic ids like `auto` that aren't real Claude endpoints.
+- */
+-function isClaudeModel(m: CCAModel): boolean {
+-	return (
+-		m.vendor === 'Anthropic' &&
+-		!!m.supported_endpoints?.includes('/v1/messages') &&
+-		!!m.model_picker_enabled &&
+-		!!m.capabilities?.supports?.tool_calls &&
+-		tryParseClaudeModelId(m.id) !== undefined
+-	);
+-}
+-
+-/**
+- * Augments the published `@vscode/copilot-api` `CCAModelSupports` with the
+- * per-model `adaptive_thinking` / `reasoning_effort` fields the runtime
+- * CAPI `/models` payload already carries but the SDK type doesn't yet
+- * declare. Tracked at microsoft/vscode-capi#85; remove this when the SDK
+- * catches up. Mirror of the same pattern at
+- * `extensions/copilot/src/platform/endpoint/common/endpointProvider.ts`
+- * (its locally-declared `IChatModelCapabilities`).
+- */
+-interface IClaudeModelSupports {
+-	readonly adaptive_thinking?: boolean;
+-	readonly reasoning_effort?: readonly string[];
+-}
+-
+-/**
+- * Project a {@link CCAModel} into the agent host's
+- * {@link IAgentModelInfo} surface. The returned `provider` is the
+- * agent's id (`'claude'`) — clients filter the root state's model list
+- * by provider, so this must match {@link ClaudeAgent.id}, NOT the
+- * upstream `vendor: 'Anthropic'` field.
++ * Project the Director-selected Anthropic model into the agent host model
++ * surface. Claude AgentHost intentionally publishes only the current Director
++ * route; model/provider selection remains Director-owned.
+  */
+-function toAgentModelInfo(m: CCAModel, provider: AgentProvider): IAgentModelInfo {
+-	const supports = m.capabilities?.supports;
+-	const supportedEfforts = ((supports as IClaudeModelSupports | undefined)?.reasoning_effort ?? []).filter(isClaudeEffortLevel);
++function toAgentModelInfo(auth: IDirectorAgentHostAuthenticationPublicPayload, provider: AgentProvider): IAgentModelInfo {
++	const supportedEfforts = auth.capabilities?.thinking ? (['low', 'medium', 'high'] as const).filter(isClaudeEffortLevel) : [];
+ 	const configSchema = createClaudeThinkingLevelSchema(supportedEfforts);
+-	const policyState = m.policy?.state as PolicyState | undefined;
+-	const multiplier = m.billing?.multiplier;
+ 	return {
+ 		provider,
+-		id: m.id,
+-		name: m.name,
+-		maxContextWindow: m.capabilities?.limits?.max_context_window_tokens,
+-		supportsVision: !!supports?.vision,
++		id: auth.modelId,
++		name: auth.modelDisplayName ?? auth.modelId,
++		maxContextWindow: auth.maxInputTokens,
++		supportsVision: !!auth.capabilities?.vision,
+ 		...(configSchema ? { configSchema } : {}),
+-		...(policyState ? { policyState } : {}),
+-		...(typeof multiplier === 'number' ? { _meta: { multiplierNumeric: multiplier } } : {}),
++		policyState: PolicyState.Enabled,
++		_meta: {
++			directorProviderInstanceId: auth.instanceId,
++			directorProviderKind: auth.providerKind,
++			directorAuthVariant: auth.authVariant,
++		},
+ 	};
+ }
+ 
+@@ -114,6 +78,114 @@ function narrowClaudePermissionMode(raw: unknown): ClaudePermissionMode | undefi
+ 	}
+ }
+ 
++function transcriptMessagesToTurns(messages: readonly SessionMessage[]): readonly Turn[] {
++	const turns: Turn[] = [];
++	let current: { id: string; userText: string; responseText: string; usage?: UsageInfo } | undefined;
++
++	const flush = () => {
++		if (!current) {
++			return;
++		}
++		const responseParts: Turn['responseParts'] = current.responseText
++			? [{
++				kind: ResponsePartKind.Markdown,
++				id: `${current.id}#transcript#0`,
++				content: current.responseText,
++			}]
++			: [];
++		turns.push({
++			id: current.id,
++			userMessage: { text: current.userText },
++			responseParts,
++			usage: current.usage,
++			state: TurnState.Complete,
++		});
++		current = undefined;
++	};
++
++	for (const message of messages) {
++		if (message.type === 'user') {
++			flush();
++			current = {
++				id: message.uuid,
++				userText: extractMessageText(message.message),
++				responseText: '',
++			};
++			continue;
++		}
++		if (message.type === 'assistant') {
++			if (!current) {
++				current = {
++					id: message.uuid,
++					userText: '',
++					responseText: '',
++				};
++			}
++			const text = extractMessageText(message.message);
++			if (text) {
++				current.responseText += text;
++			}
++			current.usage = extractUsageInfo(message.message, current.usage);
++		}
++	}
++	flush();
++	return turns;
++}
++
++function extractMessageText(message: unknown): string {
++	if (typeof message === 'string') {
++		return message;
++	}
++	if (!message || typeof message !== 'object') {
++		return '';
++	}
++	const candidate = message as { content?: unknown; text?: unknown };
++	if (typeof candidate.text === 'string') {
++		return candidate.text;
++	}
++	return extractContentText(candidate.content);
++}
++
++function extractContentText(content: unknown): string {
++	if (typeof content === 'string') {
++		return content;
++	}
++	if (!Array.isArray(content)) {
++		return '';
++	}
++	let out = '';
++	for (const block of content) {
++		if (!block || typeof block !== 'object') {
++			continue;
++		}
++		const candidate = block as { type?: unknown; text?: unknown; thinking?: unknown; content?: unknown };
++		if (candidate.type === 'text' && typeof candidate.text === 'string') {
++			out += candidate.text;
++		} else if (candidate.type === 'thinking' && typeof candidate.thinking === 'string') {
++			out += candidate.thinking;
++		} else if (typeof candidate.content === 'string') {
++			out += candidate.content;
++		}
++	}
++	return out;
++}
++
++function extractUsageInfo(message: unknown, fallback: UsageInfo | undefined): UsageInfo | undefined {
++	if (!message || typeof message !== 'object') {
++		return fallback;
++	}
++	const usage = (message as { usage?: unknown }).usage;
++	if (!usage || typeof usage !== 'object') {
++		return fallback;
++	}
++	const raw = usage as { input_tokens?: unknown; output_tokens?: unknown; cache_read_input_tokens?: unknown };
++	return {
++		inputTokens: typeof raw.input_tokens === 'number' ? raw.input_tokens : fallback?.inputTokens,
++		outputTokens: typeof raw.output_tokens === 'number' ? raw.output_tokens : fallback?.outputTokens,
++		cacheReadTokens: typeof raw.cache_read_input_tokens === 'number' ? raw.cache_read_input_tokens : fallback?.cacheReadTokens,
++	};
++}
++
+ /**
+  * Phase 6: in-memory record for a provisional Claude session — one
+  * created via {@link ClaudeAgent.createSession} that has NOT yet seen
+@@ -157,10 +229,10 @@ interface IClaudeProvisionalSession {
+  * What is implemented:
+  * - Provider id, descriptor, and protected resources surface so root
+  *   state advertises Claude alongside Copilot CLI.
+- * - GitHub token capture via {@link authenticate} and lazy acquisition
++ * - Director auth-handle capture via {@link authenticate} and lazy acquisition
+  *   of an {@link IClaudeProxyHandle} from {@link IClaudeProxyService}.
+- * - {@link models} observable derived from {@link ICopilotApiService.models}
+- *   filtered to Claude-family entries via {@link isClaudeModel}.
++ * - {@link models} observable derived from the Director-selected Anthropic
++ *   provider route.
+  *
+  * What is stubbed:
+  * - All other {@link IAgent} methods throw `Error('TODO: Phase N')`. The
+@@ -180,7 +252,8 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 	private readonly _models = observableValue<readonly IAgentModelInfo[]>(this, []);
+ 	readonly models: IObservable<readonly IAgentModelInfo[]> = this._models;
+ 
+-	private _githubToken: string | undefined;
++	private _auth: IDirectorAgentHostAuthenticationPublicPayload | undefined;
++	private _authSecret: { readonly handleId: string; readonly expiresAt: number; readonly auth: DirectorAgentHostProviderAuth } | undefined;
+ 	private _proxyHandle: IClaudeProxyHandle | undefined;
+ 
+ 	/**
+@@ -267,7 +340,6 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 
+ 	constructor(
+ 		@ILogService private readonly _logService: ILogService,
+-		@ICopilotApiService private readonly _copilotApiService: ICopilotApiService,
+ 		@IClaudeProxyService private readonly _claudeProxyService: IClaudeProxyService,
+ 		@ISessionDataService private readonly _sessionDataService: ISessionDataService,
+ 		@IClaudeAgentSdkService private readonly _sdkService: IClaudeAgentSdkService,
+@@ -288,12 +360,18 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 	}
+ 
+ 	getProtectedResources(): ProtectedResourceMetadata[] {
+-		return [GITHUB_COPILOT_PROTECTED_RESOURCE];
++		return [{
++			resource: DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE,
++			resource_name: localize('claudeAgent.directorResourceName', "Director Claude"),
++			required: true,
++		}];
+ 	}
+ 
+ 	private _ensureAuthenticated(): IClaudeProxyHandle {
+ 		const handle = this._proxyHandle;
+-		if (!handle) {
++		const secret = this._authSecret;
++		if (!handle || !secret || secret.expiresAt <= Date.now() || secret.handleId !== this._auth?.authHandle.id) {
++			this._clearAuth();
+ 			throw new ProtocolError(
+ 				AHP_AUTH_REQUIRED,
+ 				'Authentication is required to use Claude',
+@@ -304,67 +382,42 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 	}
+ 
+ 	async authenticate(resource: string, token: string): Promise<boolean> {
+-		if (resource !== GITHUB_COPILOT_PROTECTED_RESOURCE.resource) {
++		if (resource !== DIRECTOR_CLAUDE_AGENT_HOST_RESOURCE) {
+ 			return false;
+ 		}
+-		const tokenChanged = this._githubToken !== token;
+-		if (!tokenChanged) {
+-			this._logService.info('[Claude] Auth token unchanged');
+-			return true;
++		const parsed = parseDirectorAgentHostAuthentication(token);
++		if (!parsed || parsed.publicPayload.apiType !== 'anthropic-messages') {
++			this._logService.warn('[Claude] Rejected non-Anthropic Director authentication payload');
++			return false;
+ 		}
+-		// Acquire the new handle BEFORE committing the token or disposing
+-		// the old one. If `start()` throws, leave `_githubToken` and
+-		// `_proxyHandle` untouched so the next `authenticate()` call still
+-		// sees the token as new and retries — otherwise a transient proxy
+-		// startup failure would leave us in a "token recorded, no proxy
+-		// running" state and the retry path would short-circuit as
+-		// "unchanged" and falsely return true.
+-		//
+-		// The proxy server's refcount stays >= 1 throughout this swap
+-		// because the new handle is acquired before the old one is
+-		// disposed; {@link IClaudeProxyService} applies most-recent-token-
+-		// wins on subsequent `start()` calls.
+-		const newHandle = await this._claudeProxyService.start(token);
++		if (parsed.publicPayload.authHandle.expiresAt <= Date.now()) {
++			return false;
++		}
++		const newHandle = await this._claudeProxyService.start({
++			publicPayload: parsed.publicPayload,
++			secretMaterial: parsed.secretMaterial,
++		});
+ 		const oldHandle = this._proxyHandle;
+ 		this._proxyHandle = newHandle;
+-		this._githubToken = token;
+-		this._logService.info('[Claude] Auth token updated');
++		this._auth = parsed.publicPayload;
++		this._authSecret = {
++			handleId: parsed.publicPayload.authHandle.id,
++			expiresAt: parsed.publicPayload.authHandle.expiresAt,
++			auth: parsed.secretMaterial,
++		};
++		this._logService.info('[Claude] Director auth updated');
+ 		oldHandle?.dispose();
+ 		void this._refreshModels();
+ 		return true;
+ 	}
+ 
+ 	private async _refreshModels(): Promise<void> {
+-		const tokenAtStart = this._githubToken;
+-		if (!tokenAtStart) {
++		const auth = this._auth;
++		if (!auth) {
+ 			this._models.set([], undefined);
+ 			return;
+ 		}
+-		try {
+-			const all = await this._copilotApiService.models(tokenAtStart);
+-			// Stale-write guard: if `authenticate()` rotated the token
+-			// while we were awaiting the model list, a newer refresh has
+-			// already published the right value — don't overwrite it.
+-			if (this._githubToken !== tokenAtStart) {
+-				return;
+-			}
+-			// Stable sort surfaces the CAPI-flagged chat-default model
+-			// first. The picker treats `models[0]` as the de facto
+-			// default (modelPicker.ts:144 — `_selectedModel ?? models[0]`)
+-			// since `IAgentModelInfo` carries no explicit `isDefault`
+-			// bit. Stable comparator returns 0 for equal-priority models
+-			// so CAPI's ordering wins on ties.
+-			const filtered = all
+-				.filter(isClaudeModel)
+-				.sort((a, b) => Number(b.is_chat_default) - Number(a.is_chat_default))
+-				.map(m => toAgentModelInfo(m, this.id));
+-			this._models.set(filtered, undefined);
+-		} catch (err) {
+-			this._logService.error(err, '[Claude] Failed to refresh models');
+-			if (this._githubToken === tokenAtStart) {
+-				this._models.set([], undefined);
+-			}
+-		}
++		this._models.set([toAgentModelInfo(auth, this.id)], undefined);
+ 	}
+ 
+ 	// #endregion
+@@ -541,7 +594,7 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 			// for the create-time → first-send window. Mirrors
+ 			// CopilotAgent's pattern at `copilotAgent.ts:777` where
+ 			// `provisional.model` is the source of truth at materialize.
+-			model: provisional.model?.id,
++			model: provisional.model?.id ?? this._auth?.modelId,
+ 			effort: resolveClaudeEffort(provisional.model),
+ 			// Plan S3.6: prefer the live state-manager value so a
+ 			// `SessionConfigChanged` arriving between createSession and
+@@ -992,18 +1045,15 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 		return this._sessions.get(AgentSession.id(session));
+ 	}
+ 
+-	/**
+-	 * Full transcript reconstruction from the SDK event log lands in
+-	 * Phase 13; the bare method shape is required by {@link IAgent}.
+-	 */
+-	getSessionMessages(_session: URI): Promise<readonly Turn[]> {
+-		// Phase 5 has nothing to reconstruct: there is no SDK Query
+-		// running yet and no event log on disk has been read. The agent
+-		// service surfaces in-memory provisional turns until Phase 13
+-		// implements transcript reconstruction from the SDK event log.
+-		// A fresh array per call avoids leaking mutations across
+-		// subscribers.
+-		return Promise.resolve([]);
++	async getSessionMessages(session: URI): Promise<readonly Turn[]> {
++		const sessionId = AgentSession.id(session);
++		try {
++			const messages = await this._sdkService.getSessionMessages(sessionId);
++			return transcriptMessagesToTurns(messages);
++		} catch (err) {
++			this._logService.warn(`[Claude] Failed to restore transcript for ${sessionId}`, err);
++			return [];
++		}
+ 	}
+ 
+ 	async listSessions(): Promise<IAgentSessionMetadata[]> {
+@@ -1309,9 +1359,14 @@ export class ClaudeAgent extends Disposable implements IAgent {
+ 		}
+ 		this._provisionalSessions.clear();
+ 		super.dispose();
++		this._clearAuth();
++	}
++
++	private _clearAuth(): void {
+ 		this._proxyHandle?.dispose();
+ 		this._proxyHandle = undefined;
+-		this._githubToken = undefined;
++		this._auth = undefined;
++		this._authSecret = undefined;
+ 		this._models.set([], undefined);
+ 	}
+ }
+diff --git a/src/vs/platform/agentHost/node/claude/claudeAgentSdkService.ts b/src/vs/platform/agentHost/node/claude/claudeAgentSdkService.ts
+index bc410cfa68afa07e7b3881763da4aa6d8d61aed5..16a8a816e4d3be6a07c581f52f8059fb511edc3d 100644
+--- a/src/vs/platform/agentHost/node/claude/claudeAgentSdkService.ts
++++ b/src/vs/platform/agentHost/node/claude/claudeAgentSdkService.ts
+@@ -3,7 +3,7 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+ 
+-import type { ListSessionsOptions, Options, SDKSessionInfo, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
++import type { GetSessionMessagesOptions, ListSessionsOptions, Options, SDKSessionInfo, SessionMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
+ import * as fs from 'fs';
+ import { pathToFileURL } from 'url';
+ import { join, resolve } from '../../../../base/common/path.js';
+@@ -45,6 +45,8 @@ export interface IClaudeAgentSdkService {
+ 	 */
+ 	getSessionInfo(sessionId: string): Promise<SDKSessionInfo | undefined>;
+ 
++	getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<readonly SessionMessage[]>;
++
+ 	/**
+ 	 * Pre-warms the SDK subprocess and runs the init handshake. Returns
+ 	 * a {@link WarmQuery} whose `.query(promptIterable)` binds the
+@@ -72,6 +74,7 @@ export interface IClaudeAgentSdkService {
+ export interface IClaudeSdkBindings {
+ 	listSessions(options?: ListSessionsOptions): Promise<SDKSessionInfo[]>;
+ 	getSessionInfo(sessionId: string): Promise<SDKSessionInfo | undefined>;
++	getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<SessionMessage[]>;
+ 	startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery>;
+ }
+ 
+@@ -117,6 +120,11 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
+ 		return sdk.getSessionInfo(sessionId);
+ 	}
+ 
++	async getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<readonly SessionMessage[]> {
++		const sdk = await this._getSdk();
++		return sdk.getSessionMessages(sessionId, options);
++	}
++
+ 	async startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery> {
+ 		const sdk = await this._getSdk();
+ 		return sdk.startup(params);
+diff --git a/src/vs/platform/agentHost/node/claude/claudeProxyService.ts b/src/vs/platform/agentHost/node/claude/claudeProxyService.ts
+index 3b4f73d9aa715f57d4803ea6bd966e0fc5693cca..f7994f30505fb1b48641d30f28f9cef5f734f6b8 100644
+--- a/src/vs/platform/agentHost/node/claude/claudeProxyService.ts
++++ b/src/vs/platform/agentHost/node/claude/claudeProxyService.ts
+@@ -4,19 +4,13 @@
+  *--------------------------------------------------------------------------------------------*/
+ 
+ import type Anthropic from '@anthropic-ai/sdk';
+-import type { CCAModel } from '@vscode/copilot-api';
+ import type * as http from 'http';
+ import { once } from 'events';
+ import { AddressInfo } from 'net';
+ import { IDisposable } from '../../../../base/common/lifecycle.js';
+ import { createDecorator } from '../../../instantiation/common/instantiation.js';
+ import { ILogService } from '../../../log/common/log.js';
+-import {
+-	COPILOT_API_ERROR_STATUS_STREAMING,
+-	CopilotApiError,
+-	ICopilotApiService,
+-	type ICopilotApiServiceRequestOptions,
+-} from '../shared/copilotApiService.js';
++import type { DirectorAgentHostProviderAuth, IDirectorAgentHostAuthenticationPublicPayload } from '../../common/directorAgentHostBridge.js';
+ import { filterSupportedBetas } from './anthropicBetas.js';
+ import {
+ 	buildErrorEnvelope,
+@@ -24,93 +18,43 @@ import {
+ 	writeJsonError,
+ 	writeUpstreamJsonError,
+ } from './anthropicErrors.js';
+-import { tryParseClaudeModelId } from './claudeModelId.js';
+ import { parseProxyBearer } from './claudeProxyAuth.js';
+ 
+-// #region Public types
+-
+-/**
+- * Handle returned by {@link IClaudeProxyService.start}. Refcounts the
+- * underlying server: when every handle is disposed, the listener closes,
+- * the token slot clears, and the nonce is destroyed. The next `start()`
+- * call rebinds with a new port and a fresh nonce.
+- *
+- * **Subprocess ownership invariant.** Callers that hand `baseUrl` /
+- * `nonce` to a Claude SDK subprocess MUST kill that subprocess before
+- * calling `dispose()`. The subprocess cannot outlive the handle —
+- * after `dispose()` the proxy may rebind on a different port and the
+- * subprocess would silently lose its endpoint.
+- */
+ export interface IClaudeProxyHandle extends IDisposable {
+-	/** e.g. `http://127.0.0.1:54321` — no trailing slash. */
+ 	readonly baseUrl: string;
+-	/** 256-bit hex string. Combine with a session id as `Bearer <nonce>.<sessionId>`. */
+ 	readonly nonce: string;
+ }
+ 
++export interface IClaudeProxyStartOptions {
++	readonly publicPayload: IDirectorAgentHostAuthenticationPublicPayload;
++	readonly secretMaterial: DirectorAgentHostProviderAuth;
++}
++
+ export interface IClaudeProxyService {
+ 	readonly _serviceBrand: undefined;
+-
+-	/**
+-	 * Start the proxy (if not already running) and return a refcounted
+-	 * handle. The supplied `githubToken` becomes the active token for
+-	 * outbound CAPI requests; if multiple callers hold handles
+-	 * concurrently, the most recent token wins (single-tenant assumption,
+-	 * see roadmap section 6).
+-	 */
+-	start(githubToken: string): Promise<IClaudeProxyHandle>;
+-
+-	/**
+-	 * Force-close the proxy regardless of refcount and abort any
+-	 * in-flight requests. Idempotent. Subsequent `start()` calls rebind.
+-	 */
++	start(options: IClaudeProxyStartOptions | string): Promise<IClaudeProxyHandle>;
+ 	dispose(): void;
+ }
+ 
+ export const IClaudeProxyService = createDecorator<IClaudeProxyService>('claudeProxyService');
+ 
+-// #endregion
+-
+-// #region Internal state
+-
+-/**
+- * Per-request bookkeeping. `clientGone` distinguishes a client-driven
+- * disconnect (socket already closed — write nothing) from a service-
+- * driven `dispose()` (socket still open — `res.destroy()` to unblock
+- * the client) when the abort signal fires.
+- */
+ interface IInFlight {
+ 	readonly ac: AbortController;
+ 	readonly res: http.ServerResponse;
+ 	clientGone: boolean;
+ }
+ 
+-/**
+- * Process-wide proxy state. Created lazily on first `start()` and torn
+- * down when refcount → 0 (or `dispose()` is called explicitly).
+- */
+ interface IProxyRuntime {
+ 	readonly server: http.Server;
+ 	readonly baseUrl: string;
+ 	readonly nonce: string;
+ 	readonly inFlight: Set<IInFlight>;
+-	githubToken: string;
++	auth: IClaudeProxyStartOptions;
+ 	refcount: number;
+ }
+ 
+-// #endregion
+-
+-// #region Implementation
+-
+-const KNOWN_CLAUDE_VENDORS = new Set(['anthropic']);
+-const ANTHROPIC_MESSAGES_ENDPOINT = '/v1/messages';
+ const PROXY_USER_FACING_NAME = 'ClaudeProxyService';
+ 
+-/**
+- * Build the 256-bit hex nonce embedded in the `Bearer <nonce>.<sessionId>`
+- * token. Web Crypto is available in Node 18+ (used elsewhere in this
+- * folder via `generateUuid`).
+- */
+ function generateNonce(): string {
+ 	const bytes = new Uint8Array(32);
+ 	crypto.getRandomValues(bytes);
+@@ -121,16 +65,6 @@ function generateNonce(): string {
+ 	return out;
+ }
+ 
+-/**
+- * Local HTTP proxy that speaks the Anthropic Messages API on the inbound
+- * side and {@link ICopilotApiService} on the outbound side. The Claude
+- * Agent SDK connects via `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
+- * and sees this as a real Anthropic endpoint.
+- *
+- * Lifecycle is refcounted via {@link IClaudeProxyHandle}; see
+- * {@link IClaudeProxyService.start} and the subprocess-ownership
+- * invariant on `IClaudeProxyHandle`.
+- */
+ export class ClaudeProxyService implements IClaudeProxyService {
+ 
+ 	declare readonly _serviceBrand: undefined;
+@@ -141,31 +75,30 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 
+ 	constructor(
+ 		@ILogService private readonly _logService: ILogService,
+-		@ICopilotApiService private readonly _copilotApiService: ICopilotApiService,
++		_copilotApiService?: unknown,
+ 	) { }
+ 
+-	async start(githubToken: string): Promise<IClaudeProxyHandle> {
++	async start(options: IClaudeProxyStartOptions | string): Promise<IClaudeProxyHandle> {
+ 		if (this._disposed) {
+ 			throw new Error('ClaudeProxyService has been disposed');
+ 		}
++		if (typeof options === 'string') {
++			throw new Error('ClaudeProxyService requires Director auth payload');
++		}
++		if (options.publicPayload.apiType !== 'anthropic-messages') {
++			throw new Error(`ClaudeProxyService requires an Anthropic Messages Director provider, got ${options.publicPayload.apiType}`);
++		}
+ 
+-		const runtime = await this._ensureRuntime(githubToken);
+-		// Re-check after the await: dispose() may have run while
+-		// _ensureRuntime was awaiting the bind, in which case the
+-		// runtime we received is already torn down (see
+-		// _ensureRuntime) — but a fresh start() in between is also
+-		// possible, so verify the active runtime hasn't moved.
++		const runtime = await this._ensureRuntime(options);
+ 		if (this._disposed || this._runtime !== runtime) {
+ 			throw new Error('ClaudeProxyService has been disposed');
+ 		}
+-		// Late-binding token update covers the case where multiple
+-		// concurrent callers awaited the same _ensureRuntime — last
+-		// caller's token wins, matching the single-tenant contract.
+-		runtime.githubToken = githubToken;
++
++		runtime.auth = options;
+ 		runtime.refcount++;
+ 
+ 		let disposed = false;
+-		const handle: IClaudeProxyHandle = {
++		return {
+ 			baseUrl: runtime.baseUrl,
+ 			nonce: runtime.nonce,
+ 			dispose: () => {
+@@ -176,7 +109,6 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 				this._releaseHandle(runtime);
+ 			},
+ 		};
+-		return handle;
+ 	}
+ 
+ 	dispose(): void {
+@@ -187,29 +119,15 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		this._teardownRuntime();
+ 	}
+ 
+-	/**
+-	 * Returns the shared runtime, binding a new server if there isn't
+-	 * one yet. Concurrent callers share the same in-flight bind via
+-	 * {@link _starting}; this prevents two listeners from being
+-	 * created when {@link start} is invoked twice before the first
+-	 * bind resolves.
+-	 *
+-	 * If {@link dispose} runs while the bind is in flight, the
+-	 * just-bound server is torn down here and the awaiting caller
+-	 * sees a rejected promise.
+-	 */
+-	private _ensureRuntime(githubToken: string): Promise<IProxyRuntime> {
++	private _ensureRuntime(auth: IClaudeProxyStartOptions): Promise<IProxyRuntime> {
+ 		if (this._runtime) {
+ 			return Promise.resolve(this._runtime);
+ 		}
+ 		if (!this._starting) {
+ 			this._starting = (async () => {
+ 				try {
+-					const rt = await this._startServer(githubToken);
++					const rt = await this._startServer(auth);
+ 					if (this._disposed) {
+-						// dispose() ran while we were binding — the
+-						// teardown noop'd because _runtime was still
+-						// undefined, so close what we just created.
+ 						rt.server.closeAllConnections();
+ 						rt.server.close();
+ 						throw new Error('ClaudeProxyService has been disposed');
+@@ -225,8 +143,6 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 	}
+ 
+ 	private _releaseHandle(runtime: IProxyRuntime): void {
+-		// If `dispose()` (or a later `start()`) already replaced the
+-		// runtime, the handle's refcount no longer applies.
+ 		if (this._runtime !== runtime) {
+ 			return;
+ 		}
+@@ -242,9 +158,6 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 			return;
+ 		}
+ 		this._runtime = undefined;
+-		// Abort in-flight requests so the catch handlers run and
+-		// destroy still-open responses; closeAllConnections() then
+-		// frees the listening socket immediately.
+ 		for (const entry of runtime.inFlight) {
+ 			entry.ac.abort();
+ 		}
+@@ -256,7 +169,7 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		});
+ 	}
+ 
+-	private async _startServer(githubToken: string): Promise<IProxyRuntime> {
++	private async _startServer(auth: IClaudeProxyStartOptions): Promise<IProxyRuntime> {
+ 		const nonce = generateNonce();
+ 		const inFlight = new Set<IInFlight>();
+ 		const httpModule = await import('http');
+@@ -276,38 +189,26 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 			server.close();
+ 			throw new Error(`${PROXY_USER_FACING_NAME} failed to bind: unexpected address ${String(address)}`);
+ 		}
+-		const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
+-		this._logService.info(`[${PROXY_USER_FACING_NAME}] listening on ${baseUrl}`);
+ 
+ 		const runtime: IProxyRuntime = {
+ 			server,
+-			baseUrl,
++			baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}`,
+ 			nonce,
+ 			inFlight,
+-			githubToken,
++			auth,
+ 			refcount: 0,
+ 		};
++		this._logService.info(`[${PROXY_USER_FACING_NAME}] listening on ${runtime.baseUrl}`);
+ 
+-		// Attach the request handler only after `runtime` is fully
+-		// built. Node's single-threaded event loop guarantees no
+-		// `request` event can be parsed and dispatched between
+-		// `listen` resolving and this synchronous registration, so
+-		// the handler can safely close over `runtime` as a `const`.
+ 		server.on('request', (req, res) => {
+ 			this._handleRequest(req, res, runtime).catch(err => {
+-				// Last-resort safety net. All known throw paths are
+-				// already handled inside `_handleRequest`.
+ 				this._logService.error(`[${PROXY_USER_FACING_NAME}] unhandled request error: ${stringifyError(err)}`);
+ 				if (!res.headersSent) {
+ 					try {
+ 						writeJsonError(res, 500, 'api_error', 'Internal proxy error');
+-					} catch {
+-						// nothing else we can do
+-					}
+-				} else if (!res.writableEnded) {
+-					try {
+-						res.end();
+ 					} catch { /* ignore */ }
++				} else if (!res.writableEnded) {
++					try { res.end(); } catch { /* ignore */ }
+ 				}
+ 			});
+ 		});
+@@ -315,18 +216,11 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		return runtime;
+ 	}
+ 
+-	// #region Dispatch
+-
+-	private async _handleRequest(
+-		req: http.IncomingMessage,
+-		res: http.ServerResponse,
+-		runtime: IProxyRuntime,
+-	): Promise<void> {
++	private async _handleRequest(req: http.IncomingMessage, res: http.ServerResponse, runtime: IProxyRuntime): Promise<void> {
+ 		const method = req.method ?? 'GET';
+ 		const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+ 		this._logService.trace(`[${PROXY_USER_FACING_NAME}] ${method} ${pathname}`);
+ 
+-		// Health check is the only unauthenticated route.
+ 		if (method === 'GET' && pathname === '/') {
+ 			res.writeHead(200, { 'Content-Type': 'text/plain' });
+ 			res.end('ok');
+@@ -340,73 +234,42 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		}
+ 
+ 		if (method === 'GET' && pathname === '/v1/models') {
+-			await this._handleModels(res, runtime);
++			this._handleModels(res, runtime);
+ 			return;
+ 		}
+-
+ 		if (method === 'POST' && pathname === '/v1/messages') {
+ 			await this._handleMessages(req, res, runtime);
+ 			return;
+ 		}
+-
+ 		if (method === 'POST' && pathname === '/v1/messages/count_tokens') {
+-			writeJsonError(res, 501, 'api_error', 'count_tokens not supported by CAPI');
++			writeJsonError(res, 501, 'api_error', 'count_tokens not supported by Director Claude proxy');
+ 			return;
+ 		}
+ 
+ 		writeJsonError(res, 404, 'not_found_error', `No route for ${method} ${pathname}`);
+ 	}
+ 
+-	// #endregion
+-
+-	// #region GET /v1/models
+-
+-	private async _handleModels(res: http.ServerResponse, runtime: IProxyRuntime): Promise<void> {
+-		let models: CCAModel[];
+-		try {
+-			models = await this._copilotApiService.models(runtime.githubToken);
+-		} catch (err) {
+-			this._writeUpstreamErrorResponse(res, err);
+-			return;
+-		}
+-
+-		const data: Anthropic.ModelInfo[] = [];
+-		for (const m of models) {
+-			if (!isAnthropicMessagesModel(m)) {
+-				continue;
+-			}
+-			const parsed = tryParseClaudeModelId(m.id);
+-			const sdkId = parsed ? parsed.toSdkModelId() : m.id;
+-			data.push({
+-				id: sdkId,
+-				type: 'model',
+-				display_name: m.name || sdkId,
+-				created_at: '1970-01-01T00:00:00Z',
+-				capabilities: null,
+-				max_input_tokens: null,
+-				max_tokens: null,
+-			});
+-		}
+-
+-		const body = {
++	private _handleModels(res: http.ServerResponse, runtime: IProxyRuntime): void {
++		const auth = runtime.auth.publicPayload;
++		const data: Anthropic.ModelInfo[] = [{
++			id: auth.modelId,
++			type: 'model',
++			display_name: auth.modelDisplayName || auth.modelId,
++			created_at: '1970-01-01T00:00:00Z',
++			capabilities: null,
++			max_input_tokens: auth.maxInputTokens ?? null,
++			max_tokens: auth.maxTokens ?? null,
++		}];
++		res.writeHead(200, { 'Content-Type': 'application/json' });
++		res.end(JSON.stringify({
+ 			data,
+ 			has_more: false,
+-			first_id: data.length > 0 ? data[0].id : null,
+-			last_id: data.length > 0 ? data[data.length - 1].id : null,
+-		};
+-		res.writeHead(200, { 'Content-Type': 'application/json' });
+-		res.end(JSON.stringify(body));
++			first_id: data[0]?.id ?? null,
++			last_id: data.at(-1)?.id ?? null,
++		}));
+ 	}
+ 
+-	// #endregion
+-
+-	// #region POST /v1/messages
+-
+-	private async _handleMessages(
+-		req: http.IncomingMessage,
+-		res: http.ServerResponse,
+-		runtime: IProxyRuntime,
+-	): Promise<void> {
++	private async _handleMessages(req: http.IncomingMessage, res: http.ServerResponse, runtime: IProxyRuntime): Promise<void> {
+ 		let bodyString: string;
+ 		try {
+ 			bodyString = await readRequestBody(req);
+@@ -428,26 +291,11 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		}
+ 
+ 		const body = parsed as Record<string, unknown>;
+-		const sdkModelId = body.model;
+-		if (typeof sdkModelId !== 'string' || sdkModelId.length === 0) {
+-			writeJsonError(res, 400, 'invalid_request_error', 'Missing required field: model');
+-			return;
+-		}
+ 		if (!Array.isArray(body.messages)) {
+ 			writeJsonError(res, 400, 'invalid_request_error', 'Missing required field: messages');
+ 			return;
+ 		}
+-
+-		const parsedModel = tryParseClaudeModelId(sdkModelId);
+-		if (!parsedModel) {
+-			writeJsonError(res, 404, 'not_found_error', `Unknown model: ${sdkModelId}`);
+-			return;
+-		}
+-		const endpointModelId = parsedModel.toEndpointModelId();
+-		body.model = endpointModelId;
+-
+-		const stream = body.stream === true;
+-		const headers = buildOutboundHeaders(req.headers);
++		body.model = runtime.auth.publicPayload.modelId;
+ 
+ 		const entry: IInFlight = {
+ 			ac: new AbortController(),
+@@ -460,26 +308,11 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 			entry.ac.abort();
+ 		};
+ 		res.on('close', onClose);
+-
+ 		try {
+-			if (stream) {
+-				await this._streamMessages(
+-					body as unknown as Anthropic.MessageCreateParamsStreaming,
+-					headers,
+-					res,
+-					entry,
+-					runtime,
+-					sdkModelId,
+-				);
++			if (body.stream === true) {
++				await this._streamMessages(body, req.headers, res, entry, runtime);
+ 			} else {
+-				await this._sendNonStreamingMessage(
+-					body as unknown as Anthropic.MessageCreateParamsNonStreaming,
+-					headers,
+-					res,
+-					entry,
+-					runtime,
+-					sdkModelId,
+-				);
++				await this._sendNonStreamingMessage(body, req.headers, res, entry, runtime);
+ 			}
+ 		} finally {
+ 			res.removeListener('close', onClose);
+@@ -488,17 +321,20 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 	}
+ 
+ 	private async _sendNonStreamingMessage(
+-		body: Anthropic.MessageCreateParamsNonStreaming,
+-		headers: Record<string, string>,
++		body: Record<string, unknown>,
++		inboundHeaders: http.IncomingHttpHeaders,
+ 		res: http.ServerResponse,
+ 		entry: IInFlight,
+ 		runtime: IProxyRuntime,
+-		originalSdkModelId: string,
+ 	): Promise<void> {
+-		const options: ICopilotApiServiceRequestOptions = { headers, signal: entry.ac.signal };
+-		let message: Anthropic.Message;
++		let response: Response;
+ 		try {
+-			message = await this._copilotApiService.messages(runtime.githubToken, body, options);
++			response = await fetch(buildDirectorAnthropicUrl(runtime.auth.publicPayload.baseURL, '/v1/messages'), {
++				method: 'POST',
++				headers: buildOutboundHeaders(inboundHeaders, runtime.auth),
++				body: JSON.stringify(body),
++				signal: entry.ac.signal,
++			});
+ 		} catch (err) {
+ 			if (entry.ac.signal.aborted) {
+ 				if (!entry.clientGone && !res.writableEnded) {
+@@ -509,32 +345,30 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 			this._writeUpstreamErrorResponse(res, err);
+ 			return;
+ 		}
+-
+-		// Rewrite outbound `model` to SDK format. Failure to re-parse
+-		// shouldn't normally happen because we just translated it on
+-		// the way in, but log + passthrough rather than dropping.
+-		const outboundModel = rewriteModelToSdk(message.model, this._logService) ?? originalSdkModelId;
+-		const responseBody: Anthropic.Message = { ...message, model: outboundModel };
+-
++		if (!response.ok) {
++			await this._writeFetchErrorResponse(res, response);
++			return;
++		}
+ 		res.writeHead(200, { 'Content-Type': 'application/json' });
+-		res.end(JSON.stringify(responseBody));
++		res.end(await response.text());
+ 	}
+ 
+ 	private async _streamMessages(
+-		body: Anthropic.MessageCreateParamsStreaming,
+-		headers: Record<string, string>,
++		body: Record<string, unknown>,
++		inboundHeaders: http.IncomingHttpHeaders,
+ 		res: http.ServerResponse,
+ 		entry: IInFlight,
+ 		runtime: IProxyRuntime,
+-		_originalSdkModelId: string,
+ 	): Promise<void> {
+-		const options: ICopilotApiServiceRequestOptions = { headers, signal: entry.ac.signal };
+-		let stream: AsyncGenerator<Anthropic.MessageStreamEvent>;
++		let response: Response;
+ 		try {
+-			stream = this._copilotApiService.messages(runtime.githubToken, body, options);
++			response = await fetch(buildDirectorAnthropicUrl(runtime.auth.publicPayload.baseURL, '/v1/messages'), {
++				method: 'POST',
++				headers: buildOutboundHeaders(inboundHeaders, runtime.auth),
++				body: JSON.stringify(body),
++				signal: entry.ac.signal,
++			});
+ 		} catch (err) {
+-			// Synchronous throws from the generator factory (rare —
+-			// CAPI errors come from the first iteration).
+ 			if (entry.ac.signal.aborted) {
+ 				if (!entry.clientGone && !res.writableEnded) {
+ 					res.destroy();
+@@ -544,24 +378,15 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 			this._writeUpstreamErrorResponse(res, err);
+ 			return;
+ 		}
+-
+-		// Pull the first event before committing to a 200 response so
+-		// we can surface a pre-stream error as a regular JSON error.
+-		let first: IteratorResult<Anthropic.MessageStreamEvent>;
+-		try {
+-			first = await stream.next();
+-		} catch (err) {
+-			if (entry.ac.signal.aborted) {
+-				if (!entry.clientGone && !res.writableEnded) {
+-					res.destroy();
+-				}
+-				return;
+-			}
+-			this._writeUpstreamErrorResponse(res, err);
++		if (!response.ok) {
++			await this._writeFetchErrorResponse(res, response);
++			return;
++		}
++		if (!response.body) {
++			writeJsonError(res, 502, 'api_error', 'Director provider returned an empty stream');
+ 			return;
+ 		}
+ 
+-		// Commit to streaming response now.
+ 		res.writeHead(200, {
+ 			'Content-Type': 'text/event-stream',
+ 			'Cache-Control': 'no-cache',
+@@ -570,58 +395,14 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 		res.flushHeaders();
+ 		req_setNoDelay(res);
+ 
+-		const writeFrame = async (event: Anthropic.MessageStreamEvent): Promise<boolean> => {
+-			const transformed = rewriteEventModel(event, this._logService);
+-			const frame = `event: ${transformed.type}\ndata: ${JSON.stringify(transformed)}\n\n`;
+-			const ok = res.write(frame);
+-			if (!ok) {
+-				try {
+-					await once(res, 'drain', { signal: entry.ac.signal });
+-				} catch {
+-					// signal aborted while waiting on drain — bail out
+-					return false;
+-				}
+-			}
+-			return true;
+-		};
+-
++		const reader = response.body.getReader();
+ 		try {
+-			if (!first.done) {
+-				const ok = await writeFrame(first.value);
+-				if (!ok) {
+-					return;
+-				}
+-			}
+ 			while (true) {
+-				let next: IteratorResult<Anthropic.MessageStreamEvent>;
+-				try {
+-					next = await stream.next();
+-				} catch (err) {
+-					if (entry.ac.signal.aborted) {
+-						if (!entry.clientGone && !res.writableEnded) {
+-							res.destroy();
+-						}
+-						return;
+-					}
+-					// Mid-stream error: emit Anthropic SSE error frame, then end.
+-					const envelope = err instanceof CopilotApiError
+-						? err.envelope
+-						: buildErrorEnvelope('api_error', stringifyError(err));
+-					if (!res.writableEnded) {
+-						try {
+-							res.write(formatSseErrorFrame(envelope));
+-						} catch { /* socket may have died */ }
+-						try {
+-							res.end();
+-						} catch { /* ignore */ }
+-					}
+-					return;
+-				}
++				const next = await reader.read();
+ 				if (next.done) {
+ 					break;
+ 				}
+-				const ok = await writeFrame(next.value);
+-				if (!ok) {
++				if (!await writeChunk(res, next.value, entry.ac.signal)) {
+ 					return;
+ 				}
+ 			}
+@@ -629,98 +410,49 @@ export class ClaudeProxyService implements IClaudeProxyService {
+ 				res.end();
+ 			}
+ 		} catch (err) {
+-			// Defense in depth — should not be reached.
+-			this._logService.warn(`[${PROXY_USER_FACING_NAME}] stream loop unexpected error: ${stringifyError(err)}`);
+-			if (!res.writableEnded) {
++			if (!entry.ac.signal.aborted && !res.writableEnded) {
++				try {
++					res.write(formatSseErrorFrame(buildErrorEnvelope('api_error', stringifyError(err))));
++				} catch { /* ignore */ }
+ 				try { res.end(); } catch { /* ignore */ }
+ 			}
++		} finally {
++			reader.releaseLock();
+ 		}
+ 	}
+ 
+-	// #endregion
+-
+-	// #region Error helpers
+-
+ 	private _writeUpstreamErrorResponse(res: http.ServerResponse, err: unknown): void {
+ 		if (res.headersSent) {
+-			// Headers are already sent — caller should have routed to
+-			// the SSE error path. This is a defensive log.
+ 			this._logService.warn(`[${PROXY_USER_FACING_NAME}] cannot write upstream error after headers sent: ${stringifyError(err)}`);
+ 			if (!res.writableEnded) {
+ 				try { res.end(); } catch { /* ignore */ }
+ 			}
+ 			return;
+ 		}
+-		if (err instanceof CopilotApiError) {
+-			// Mid-stream sentinel doesn't map to a meaningful HTTP
+-			// status before headers are sent. Coerce to 502 so we
+-			// don't ship a 520 with a JSON body that violates HTTP
+-			// semantics for the consumer.
+-			const status = err.status === COPILOT_API_ERROR_STATUS_STREAMING ? 502 : err.status;
+-			writeUpstreamJsonError(res, status, err.envelope);
+-			return;
+-		}
+ 		writeJsonError(res, 502, 'api_error', err instanceof Error ? err.message : String(err));
+ 	}
+ 
+-	// #endregion
+-}
+-
+-// #endregion
+-
+-// #region Helpers
+-
+-function isAnthropicMessagesModel(m: CCAModel): boolean {
+-	if (!KNOWN_CLAUDE_VENDORS.has(m.vendor.toLowerCase())) {
+-		return false;
+-	}
+-	return Array.isArray(m.supported_endpoints) && m.supported_endpoints.includes(ANTHROPIC_MESSAGES_ENDPOINT);
+-}
+-
+-function rewriteModelToSdk(modelId: string, logService: ILogService): string | undefined {
+-	const parsed = tryParseClaudeModelId(modelId);
+-	if (!parsed) {
+-		logService.warn(`[${PROXY_USER_FACING_NAME}] outbound model ID could not be parsed for SDK rewrite: ${modelId}`);
+-		return undefined;
++	private async _writeFetchErrorResponse(res: http.ServerResponse, response: Response): Promise<void> {
++		const text = await response.text().catch(() => '');
++		let parsed: unknown;
++		try {
++			parsed = text ? JSON.parse(text) : undefined;
++		} catch {
++			parsed = undefined;
++		}
++		const envelope = parsed && typeof parsed === 'object' && 'error' in parsed
++			? parsed
++			: buildErrorEnvelope('api_error', text || response.statusText || 'Director provider request failed');
++		writeUpstreamJsonError(res, response.status, envelope as Anthropic.ErrorResponse);
+ 	}
+-	return parsed.toSdkModelId();
+ }
+ 
+-/**
+- * Pure-function rewrite of `model` fields on `Anthropic.MessageStreamEvent`
+- * objects from CAPI (endpoint format) to SDK (hyphenated) format. Only
+- * `message_start.message.model` carries a model ID in the streaming
+- * taxonomy; other event types pass through unchanged.
+- */
+-function rewriteEventModel(
+-	event: Anthropic.MessageStreamEvent,
+-	logService: ILogService,
+-): Anthropic.MessageStreamEvent {
+-	if (event.type !== 'message_start') {
+-		return event;
+-	}
+-	const sdkModel = rewriteModelToSdk(event.message.model, logService);
+-	if (sdkModel === undefined || sdkModel === event.message.model) {
+-		return event;
+-	}
+-	return {
+-		...event,
+-		message: { ...event.message, model: sdkModel },
++function buildOutboundHeaders(inbound: http.IncomingHttpHeaders, auth: IClaudeProxyStartOptions): Record<string, string> {
++	const out: Record<string, string> = {
++		'Content-Type': 'application/json',
+ 	};
+-}
+-
+-/**
+- * Build the headers we forward to {@link ICopilotApiService.messages}
+- * from the inbound request. Drops everything except `anthropic-version`
+- * (verbatim) and `anthropic-beta` (filtered through
+- * {@link filterSupportedBetas}).
+- */
+-function buildOutboundHeaders(inbound: http.IncomingHttpHeaders): Record<string, string> {
+-	const out: Record<string, string> = {};
+ 	const version = inbound['anthropic-version'];
+-	if (typeof version === 'string' && version.length > 0) {
+-		out['anthropic-version'] = version;
+-	}
++	out['anthropic-version'] = typeof version === 'string' && version.length > 0 ? version : '2023-06-01';
+ 	const beta = inbound['anthropic-beta'];
+ 	if (typeof beta === 'string' && beta.length > 0) {
+ 		const filtered = filterSupportedBetas(beta);
+@@ -728,9 +460,23 @@ function buildOutboundHeaders(inbound: http.IncomingHttpHeaders): Record<string,
+ 			out['anthropic-beta'] = filtered;
+ 		}
+ 	}
++	if (auth.secretMaterial.kind === 'bearer') {
++		out['Authorization'] = `Bearer ${auth.secretMaterial.accessToken}`;
++	} else {
++		out['x-api-key'] = auth.secretMaterial.value;
++	}
+ 	return out;
+ }
+ 
++function buildDirectorAnthropicUrl(baseURL: string | undefined, path: string): string {
++	const base = (baseURL || 'https://api.anthropic.com').replace(/\/+$/, '');
++	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
++	if (base.endsWith('/v1') && normalizedPath.startsWith('/v1/')) {
++		return `${base}${normalizedPath.slice('/v1'.length)}`;
++	}
++	return `${base}${normalizedPath}`;
++}
++
+ function readRequestBody(req: http.IncomingMessage): Promise<string> {
+ 	return new Promise((resolve, reject) => {
+ 		const chunks: Buffer[] = [];
+@@ -740,14 +486,24 @@ function readRequestBody(req: http.IncomingMessage): Promise<string> {
+ 	});
+ }
+ 
++async function writeChunk(res: http.ServerResponse, chunk: Uint8Array, signal: AbortSignal): Promise<boolean> {
++	const ok = res.write(Buffer.from(chunk));
++	if (!ok) {
++		try {
++			await once(res, 'drain', { signal });
++		} catch {
++			return false;
++		}
++	}
++	return true;
++}
++
+ function req_setNoDelay(res: http.ServerResponse): void {
+ 	const socket = res.socket;
+ 	if (socket && typeof socket.setNoDelay === 'function') {
+ 		try {
+ 			socket.setNoDelay(true);
+-		} catch {
+-			// not all socket implementations support it (mocks etc.)
+-		}
++		} catch { /* ignore */ }
+ 	}
+ }
+ 
+@@ -757,5 +513,3 @@ function stringifyError(err: unknown): string {
+ 	}
+ 	return String(err);
+ }
+-
+-// #endregion
+diff --git a/src/vs/platform/agentHost/node/director/directorAgent.ts b/src/vs/platform/agentHost/node/director/directorAgent.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0bfcad6cc1c6ccc70ae89686aa6af63ca5d65491
+--- /dev/null
++++ b/src/vs/platform/agentHost/node/director/directorAgent.ts
+@@ -0,0 +1,394 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import { disposableTimeout } from '../../../../base/common/async.js';
++import { Emitter } from '../../../../base/common/event.js';
++import { Disposable, type IDisposable } from '../../../../base/common/lifecycle.js';
++import { basename } from '../../../../base/common/resources.js';
++import { URI } from '../../../../base/common/uri.js';
++import { generateUuid } from '../../../../base/common/uuid.js';
++import { localize } from '../../../../nls.js';
++import { ILogService } from '../../../log/common/log.js';
++import { AgentSession, type AgentSignal, type IAgent, type IAgentCreateSessionConfig, type IAgentCreateSessionResult, type IAgentDescriptor, type IAgentMaterializeSessionEvent, type IAgentModelInfo, type IAgentResolveSessionConfigParams, type IAgentSessionConfigCompletionsParams, type IAgentSessionMetadata } from '../../common/agentService.js';
++import { DIRECTOR_AGENT_HOST_PROVIDER, DIRECTOR_AGENT_HOST_RESOURCE, parseDirectorAgentHostAuthentication, type DirectorAgentHostProviderAuth, type IDirectorAgentHostAuthenticationPublicPayload } from '../../common/directorAgentHostBridge.js';
++import { type MessageAttachment, type ModelSelection, PolicyState, type ProtectedResourceMetadata } from '../../common/state/protocol/state.js';
++import { type ResolveSessionConfigResult, type SessionConfigCompletionsResult } from '../../common/state/protocol/commands.js';
++import { ActionType } from '../../common/state/sessionActions.js';
++import { ResponsePartKind, SessionInputResponseKind, SessionStatus, type PendingMessage, type SessionInputAnswer, type ToolCallResult, type Turn } from '../../common/state/sessionState.js';
++import { observableValue } from '../../../../base/common/observable.js';
++import { AgentEngine } from '../../../../workbench/contrib/directorCode/common/agentEngine/agentEngine.js';
++import { createProvider } from '../../../../workbench/contrib/directorCode/common/agentEngine/providers/providerFactory.js';
++import type { AgentEvent } from '../../../../workbench/contrib/directorCode/common/agentEngine/agentEngineTypes.js';
++import type { ApiType, ProviderAuth } from '../../../../workbench/contrib/directorCode/common/agentEngine/providers/providerTypes.js';
++
++interface IDirectorAgentSessionRecord {
++	readonly session: URI;
++	readonly createdAt: number;
++	readonly workingDirectory?: URI;
++	readonly project?: { readonly uri: URI; readonly displayName: string };
++	model?: ModelSelection;
++	title?: string;
++	modifiedAt: number;
++	status: SessionStatus;
++	activity?: string;
++	materialized: boolean;
++	abortController?: AbortController;
++}
++
++function defaultProject(workingDirectory: URI | undefined): { readonly uri: URI; readonly displayName: string } | undefined {
++	if (!workingDirectory) {
++		return undefined;
++	}
++	return {
++		uri: workingDirectory,
++		displayName: basename(workingDirectory) || workingDirectory.fsPath || workingDirectory.path,
++	};
++}
++
++function toUsage(event: Extract<AgentEvent, { type: 'result' }>, model: string) {
++	return {
++		inputTokens: event.usage.input_tokens,
++		outputTokens: event.usage.output_tokens,
++		cacheReadTokens: event.usage.cache_read_input_tokens,
++		model,
++	};
++}
++
++export class DirectorAgent extends Disposable implements IAgent {
++	readonly id = DIRECTOR_AGENT_HOST_PROVIDER;
++
++	private readonly _onDidSessionProgress = this._register(new Emitter<AgentSignal>());
++	readonly onDidSessionProgress = this._onDidSessionProgress.event;
++
++	private readonly _onDidMaterializeSession = this._register(new Emitter<IAgentMaterializeSessionEvent>());
++	readonly onDidMaterializeSession = this._onDidMaterializeSession.event;
++
++	private readonly _models = observableValue<readonly IAgentModelInfo[]>('directorAgentHostModels', []);
++	readonly models = this._models;
++
++	private readonly _sessions = new Map<string, IDirectorAgentSessionRecord>();
++	private _auth: IDirectorAgentHostAuthenticationPublicPayload | undefined;
++	private _authSecret: { readonly handleId: string; readonly expiresAt: number; readonly auth: DirectorAgentHostProviderAuth } | undefined;
++	private _authSecretExpiry: IDisposable | undefined;
++
++	constructor(
++		@ILogService private readonly _logService: ILogService,
++	) {
++		super();
++		this._publishModels();
++	}
++
++	getDescriptor(): IAgentDescriptor {
++		return {
++			provider: this.id,
++			displayName: localize('directorAgentHost.displayName', "Director"),
++			description: localize('directorAgentHost.description', "Director local agent backed by the configured Director provider"),
++		};
++	}
++
++	getProtectedResources(): ProtectedResourceMetadata[] {
++		return [{
++			resource: DIRECTOR_AGENT_HOST_RESOURCE,
++			resource_name: 'Director Code',
++			required: true,
++		}];
++	}
++
++	async authenticate(resource: string, token: string): Promise<boolean> {
++		if (resource !== DIRECTOR_AGENT_HOST_RESOURCE) {
++			return false;
++		}
++		const parsed = parseDirectorAgentHostAuthentication(token);
++		if (!parsed) {
++			this._logService.warn('[DirectorAgentHost] Rejected malformed Director authentication payload');
++			return false;
++		}
++		this._auth = parsed.publicPayload;
++		this._authSecret = {
++			handleId: parsed.publicPayload.authHandle.id,
++			expiresAt: parsed.publicPayload.authHandle.expiresAt,
++			auth: parsed.secretMaterial,
++		};
++		this._authSecretExpiry?.dispose();
++		this._authSecretExpiry = disposableTimeout(() => this._clearAuth(parsed.publicPayload.authHandle.id), Math.max(0, parsed.publicPayload.authHandle.expiresAt - Date.now()));
++		this._publishModels();
++		return true;
++	}
++
++	async createSession(config?: IAgentCreateSessionConfig): Promise<IAgentCreateSessionResult> {
++		const session = config?.session ?? AgentSession.uri(this.id, generateUuid());
++		const rawId = AgentSession.id(session);
++		const workingDirectory = config?.workingDirectory;
++		const project = defaultProject(workingDirectory);
++		const now = Date.now();
++		this._sessions.set(rawId, {
++			session,
++			createdAt: now,
++			modifiedAt: now,
++			workingDirectory,
++			project,
++			model: config?.model ?? this._defaultModelSelection(),
++			title: undefined,
++			status: SessionStatus.Idle,
++			materialized: false,
++		});
++		return { session, project, workingDirectory, provisional: true };
++	}
++
++	async listSessions(): Promise<IAgentSessionMetadata[]> {
++		return [...this._sessions.values()].map(record => this._toMetadata(record));
++	}
++
++	async getSessionMetadata(session: URI): Promise<IAgentSessionMetadata | undefined> {
++		const record = this._sessions.get(AgentSession.id(session));
++		return record ? this._toMetadata(record) : undefined;
++	}
++
++	async resolveSessionConfig(params: IAgentResolveSessionConfigParams): Promise<ResolveSessionConfigResult> {
++		const model = this._defaultModelSelection();
++		return {
++			schema: { type: 'object', properties: {} },
++			values: {
++				...(params.config ?? {}),
++				...(model ? { model: model.id } : {}),
++			},
++		};
++	}
++
++	async sessionConfigCompletions(_params: IAgentSessionConfigCompletionsParams): Promise<SessionConfigCompletionsResult> {
++		return { items: [] };
++	}
++
++	async sendMessage(session: URI, prompt: string, _attachments?: readonly MessageAttachment[], turnId?: string): Promise<void> {
++		const record = this._sessions.get(AgentSession.id(session));
++		if (!record) {
++			throw new Error(`Director AgentHost session not found: ${session.toString()}`);
++		}
++		const auth = this._auth;
++		const authSecret = this._getAuthSecret();
++		if (!auth || !authSecret) {
++			throw new Error('Configure a Director provider before sending Director AgentHost messages.');
++		}
++		const activeTurnId = turnId ?? generateUuid();
++		if (!record.materialized) {
++			record.materialized = true;
++			this._onDidMaterializeSession.fire({
++				session,
++				workingDirectory: record.workingDirectory,
++				project: record.project,
++			});
++		}
++
++		record.status = SessionStatus.InProgress;
++		record.activity = localize('directorAgentHost.activity', "Thinking");
++		record.modifiedAt = Date.now();
++		this._fireAction(session, { type: ActionType.SessionActivityChanged, session: session.toString(), activity: record.activity });
++
++		const abortController = new AbortController();
++		record.abortController = abortController;
++		const modelId = record.model?.id ?? auth.modelId;
++		let markdownPartId: string | undefined;
++
++		try {
++			const provider = createProvider(auth.apiType as ApiType, {
++				auth: authSecret as ProviderAuth,
++				baseURL: auth.baseURL,
++				geminiKeyInUrl: auth.geminiKeyInUrl,
++				capabilities: auth.capabilities,
++			});
++			const engine = new AgentEngine({
++				cwd: record.workingDirectory?.fsPath ?? '',
++				model: modelId,
++				provider,
++				tools: [],
++				systemPrompt: localize('directorAgentHost.systemPrompt', "You are Director, an AI coding assistant. Answer directly and do not claim to have used tools that are not available in this AgentHost bridge."),
++				maxTurns: auth.maxTurns ?? 1,
++				maxTokens: auth.maxTokens ?? 8192,
++				maxInputTokens: auth.maxInputTokens,
++				abortSignal: abortController.signal,
++			});
++
++			for await (const event of engine.submitMessage(prompt)) {
++				if (abortController.signal.aborted) {
++					break;
++				}
++				markdownPartId = this._mapEngineEvent(session, activeTurnId, modelId, event, markdownPartId);
++			}
++
++			record.status = SessionStatus.Idle;
++			record.activity = undefined;
++			record.modifiedAt = Date.now();
++			record.title ??= prompt.trim().slice(0, 80) || localize('directorAgentHost.defaultTitle', "Director session");
++			this._fireAction(session, { type: ActionType.SessionTitleChanged, session: session.toString(), title: record.title });
++			this._fireAction(session, { type: ActionType.SessionActivityChanged, session: session.toString(), activity: undefined });
++		} catch (error) {
++			record.status = SessionStatus.Error;
++			record.activity = undefined;
++			record.modifiedAt = Date.now();
++			const message = error instanceof Error ? error.message : String(error);
++			this._fireAction(session, {
++				type: ActionType.SessionError,
++				session: session.toString(),
++				turnId: activeTurnId,
++				error: { errorType: 'DirectorAgentHostError', message },
++			});
++			this._fireAction(session, { type: ActionType.SessionActivityChanged, session: session.toString(), activity: undefined });
++			throw error;
++		} finally {
++			record.abortController = undefined;
++		}
++	}
++
++	async getSessionMessages(_session: URI): Promise<readonly Turn[]> {
++		return [];
++	}
++
++	async disposeSession(session: URI): Promise<void> {
++		const record = this._sessions.get(AgentSession.id(session));
++		record?.abortController?.abort();
++		this._sessions.delete(AgentSession.id(session));
++	}
++
++	async abortSession(session: URI): Promise<void> {
++		const record = this._sessions.get(AgentSession.id(session));
++		record?.abortController?.abort();
++	}
++
++	async changeModel(session: URI, model: ModelSelection): Promise<void> {
++		const record = this._sessions.get(AgentSession.id(session));
++		if (record) {
++			record.model = model;
++			record.modifiedAt = Date.now();
++		}
++	}
++
++	respondToPermissionRequest(_requestId: string, _approved: boolean): void { }
++	respondToUserInputRequest(_requestId: string, _response: SessionInputResponseKind, _answers?: Record<string, SessionInputAnswer>): void { }
++	setPendingMessages(_session: URI, _steeringMessage: PendingMessage | undefined, _queuedMessages: readonly PendingMessage[]): void { }
++	async setClientCustomizations(): Promise<[]> { return []; }
++	setClientTools(_session: URI, _clientId: string): void { }
++	onClientToolCallComplete(_session: URI, _toolCallId: string, _result: ToolCallResult): void { }
++	setCustomizationEnabled(_uri: string, _enabled: boolean): void { }
++	async shutdown(): Promise<void> { }
++
++	override dispose(): void {
++		this._clearAuth();
++		super.dispose();
++	}
++
++	private _mapEngineEvent(session: URI, turnId: string, modelId: string, event: AgentEvent, markdownPartId: string | undefined): string | undefined {
++		if (event.type === 'text_delta' && event.text) {
++			const partId = markdownPartId ?? generateUuid();
++			if (!markdownPartId) {
++				this._fireAction(session, {
++					type: ActionType.SessionResponsePart,
++					session: session.toString(),
++					turnId,
++					part: { kind: ResponsePartKind.Markdown, id: partId, content: '' },
++				});
++			}
++			this._fireAction(session, {
++				type: ActionType.SessionDelta,
++				session: session.toString(),
++				turnId,
++				partId,
++				content: event.text,
++			});
++			return partId;
++		}
++		if (event.type === 'assistant' && event.renderText && !markdownPartId) {
++			const text = event.message.content
++				.filter(block => block.type === 'text')
++				.map(block => block.text)
++				.join('');
++			if (text) {
++				const partId = generateUuid();
++				this._fireAction(session, {
++					type: ActionType.SessionResponsePart,
++					session: session.toString(),
++					turnId,
++					part: { kind: ResponsePartKind.Markdown, id: partId, content: text },
++				});
++				return partId;
++			}
++		}
++		if (event.type === 'result') {
++			this._fireAction(session, {
++				type: ActionType.SessionUsage,
++				session: session.toString(),
++				turnId,
++				usage: toUsage(event, modelId),
++			});
++			this._fireAction(session, {
++				type: ActionType.SessionTurnComplete,
++				session: session.toString(),
++				turnId,
++			});
++		}
++		return markdownPartId;
++	}
++
++	private _toMetadata(record: IDirectorAgentSessionRecord): IAgentSessionMetadata {
++		return {
++			session: record.session,
++			startTime: record.createdAt,
++			modifiedTime: record.modifiedAt,
++			project: record.project,
++			summary: record.title,
++			status: record.status,
++			activity: record.activity,
++			model: record.model,
++			workingDirectory: record.workingDirectory,
++		};
++	}
++
++	private _defaultModelSelection(): ModelSelection | undefined {
++		if (!this._auth) {
++			return undefined;
++		}
++		return { id: this._auth.modelId };
++	}
++
++	private _publishModels(): void {
++		const auth = this._auth;
++		this._models.set([{
++			provider: this.id,
++			id: auth?.modelId ?? 'director-default',
++			name: auth?.modelDisplayName ?? auth?.modelId ?? localize('directorAgentHost.defaultModel', "Director default"),
++			supportsVision: !!auth?.capabilities?.vision,
++			maxContextWindow: auth?.maxInputTokens,
++			policyState: auth ? PolicyState.Enabled : PolicyState.Unconfigured,
++			_meta: auth ? {
++				directorProviderInstanceId: auth.instanceId,
++				directorProviderKind: auth.providerKind,
++				directorAuthVariant: auth.authVariant,
++			} : undefined,
++		}], undefined);
++	}
++
++	private _fireAction(session: URI, action: Extract<AgentSignal, { kind: 'action' }>['action']): void {
++		this._onDidSessionProgress.fire({ kind: 'action', session, action });
++	}
++
++	private _getAuthSecret(): DirectorAgentHostProviderAuth | undefined {
++		const authSecret = this._authSecret;
++		if (!authSecret || authSecret.expiresAt <= Date.now() || authSecret.handleId !== this._auth?.authHandle.id) {
++			this._clearAuth();
++			return undefined;
++		}
++		return authSecret.auth;
++	}
++
++	private _clearAuth(handleId?: string): void {
++		if (handleId && this._authSecret?.handleId !== handleId) {
++			return;
++		}
++		this._authSecretExpiry?.dispose();
++		this._authSecretExpiry = undefined;
++		this._auth = undefined;
++		this._authSecret = undefined;
++		this._publishModels();
++	}
++}
+diff --git a/src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts b/src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts
+index ef2bf89d8845d06749e51767d1e6acd4f58e20c1..7a50bad1ef2f12cd7e14c0661af48c32866bfbe3 100644
+--- a/src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts
++++ b/src/vs/platform/agentHost/test/common/ahpJsonlLogger.test.ts
+@@ -106,6 +106,78 @@ suite('AhpJsonlLogger', () => {
+ 		}
+ 	});
+ 
++	test('redacts authenticate tokens and auth headers before writing JSONL', async () => {
++		const fileService = store.add(new FileService(new NullLogService()));
++		store.add(fileService.registerProvider('file', store.add(new InMemoryFileSystemProvider())));
++
++		const logger = store.add(new AhpJsonlLogger(
++			{ logsHome: URI.file('/logs'), connectionId: 'redact', transport: 'websocket' },
++			fileService,
++			new NullLogService(),
++		));
++
++		logger.log({
++			jsonrpc: '2.0',
++			id: 1,
++			method: 'authenticate',
++			params: {
++				resource: 'https://director-code.local/agenthost',
++				token: JSON.stringify({
++					auth: { kind: 'api-key', value: 'sk-secret' },
++					secretMaterial: { kind: 'bearer', accessToken: 'access-secret', refreshToken: 'refresh-secret' },
++					headers: {
++						Authorization: 'Bearer bearer-secret',
++						'x-api-key': 'header-secret',
++					},
++				}),
++			},
++		}, 'c2s');
++		await logger.flush();
++
++		const content = (await fileService.readFile(logger.resource)).value.toString();
++		assert.ok(!content.includes('sk-secret'));
++		assert.ok(!content.includes('access-secret'));
++		assert.ok(!content.includes('refresh-secret'));
++		assert.ok(!content.includes('bearer-secret'));
++		assert.ok(!content.includes('header-secret'));
++		const parsed = JSON.parse(content.trim());
++		assert.strictEqual(parsed.params.token, '<redacted>');
++	});
++
++	test('redacts Director bridge secret paths in generic IPC and AHP payloads', async () => {
++		const fileService = store.add(new FileService(new NullLogService()));
++		store.add(fileService.registerProvider('file', store.add(new InMemoryFileSystemProvider())));
++
++		const logger = store.add(new AhpJsonlLogger(
++			{ logsHome: URI.file('/logs'), connectionId: 'director-redact', transport: 'ipc' },
++			fileService,
++			new NullLogService(),
++		));
++
++		logger.log({
++			jsonrpc: '2.0',
++			method: 'session/configChanged',
++			params: {
++				env: {
++					ANTHROPIC_AUTH_TOKEN: 'nonce-secret.session-secret',
++				},
++				proxyNonce: 'nonce-secret',
++				baseURL: 'https://secret-provider.example/v1',
++				requestHeaders: {
++					'X-Custom-Auth': 'custom-secret',
++					Authorization: 'Bearer header-secret',
++				},
++				text: 'ANTHROPIC_AUTH_TOKEN=env-secret Authorization: Bearer inline-secret',
++			},
++		}, 's2c');
++		await logger.flush();
++
++		const content = (await fileService.readFile(logger.resource)).value.toString();
++		for (const secret of ['nonce-secret', 'session-secret', 'secret-provider.example', 'custom-secret', 'header-secret', 'env-secret', 'inline-secret']) {
++			assert.ok(!content.includes(secret), `${secret} should be redacted`);
++		}
++	});
++
+ 	test('rotates JSONL files and keeps bounded history', async () => {
+ 		const fileService = store.add(new FileService(new NullLogService()));
+ 		store.add(fileService.registerProvider('file', store.add(new InMemoryFileSystemProvider())));
+diff --git a/src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts b/src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts
+index 3e215586145bd586b73c643c4fe99bbcff867fcb..d3781df57522a029d1443fda6f436f0611b02b33 100644
+--- a/src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts
++++ b/src/vs/platform/agentHost/test/electron-browser/localAhpJsonlLogging.test.ts
+@@ -38,7 +38,7 @@ suite('localAhpJsonlLogging', () => {
+ 		const { fileService, logger } = makeLogger();
+ 
+ 		const target = {
+-			async authenticate(params: { resource: string; token: string }) { return { authenticated: params.token.length > 0 }; },
++			async authenticate(params: { resource: string; token: string }) { return { authenticated: params.token.length > 0, echoedAuthorization: 'Bearer result-secret' }; },
+ 			async listSessions() { return ['a', 'b']; },
+ 			async createSession(config: unknown) { return URI.parse(`agent-host://session/1?cfg=${JSON.stringify(config)}`); },
+ 			async disposeTerminal() { return undefined; },
+@@ -49,7 +49,7 @@ suite('localAhpJsonlLogging', () => {
+ 
+ 		const wrapped = wrapAgentServiceWithAhpLogging(target, logger);
+ 
+-		await wrapped.authenticate({ resource: 'https://example.com', token: 'secret' });
++		await wrapped.authenticate({ resource: 'https://example.com', token: 'secret', headers: { Authorization: 'Bearer header-secret' } } as never);
+ 		await wrapped.listSessions();
+ 		await wrapped.createSession({ kind: 'demo' } as never);
+ 		await wrapped.disposeTerminal(URI.parse('agent-host://terminal/1'));
+@@ -83,7 +83,8 @@ suite('localAhpJsonlLogging', () => {
+ 			{ dir: 'c2s', id: undefined, method: 'dispatchAction', hasResult: false, hasError: false },
+ 		]);
+ 
+-		assert.deepStrictEqual(entries[0].params, [{ resource: 'https://example.com', token: '<redacted>' }]);
++		assert.deepStrictEqual(entries[0].params, [{ resource: 'https://example.com', token: '<redacted>', headers: { Authorization: '<redacted>' } }]);
++		assert.ok(!JSON.stringify(entries).includes('secret'));
+ 		assert.strictEqual(entries[7].result, null);
+ 	});
+ });
+diff --git a/src/vs/platform/agentHost/test/node/claudeAgent.integrationTest.ts b/src/vs/platform/agentHost/test/node/claudeAgent.integrationTest.ts
+index b8ffc91c2b94545c498a1caa707b9677e8271363..7bb7feb9668c568da87258a5b7cea60d8682ed43 100644
+--- a/src/vs/platform/agentHost/test/node/claudeAgent.integrationTest.ts
++++ b/src/vs/platform/agentHost/test/node/claudeAgent.integrationTest.ts
+@@ -34,7 +34,7 @@
+  */
+ 
+ import type Anthropic from '@anthropic-ai/sdk';
+-import type { Options, PermissionResult, Query, SDKMessage, SDKResultSuccess, SDKSessionInfo, SDKSystemMessage, SDKUserMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
++import type { Options, PermissionResult, Query, SDKMessage, SDKResultSuccess, SDKSessionInfo, SDKSystemMessage, SDKUserMessage, SessionMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
+ import type { CCAModel } from '@vscode/copilot-api';
+ import assert from 'assert';
+ import type * as http from 'http';
+@@ -328,6 +328,10 @@ class ProxyRoundTripSdkService implements IClaudeAgentSdkService {
+ 		return undefined;
+ 	}
+ 
++	async getSessionMessages(_sessionId: string): Promise<readonly SessionMessage[]> {
++		return [];
++	}
++
+ 	async startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery> {
+ 		this.capturedStartupOptions.push(params.options);
+ 
+diff --git a/src/vs/platform/agentHost/test/node/claudeAgent.test.ts b/src/vs/platform/agentHost/test/node/claudeAgent.test.ts
+index 491482815e6d9e426f085124630800730b820d86..5138bccbb6c54d3b9eac070eb7acfc9de562868f 100644
+--- a/src/vs/platform/agentHost/test/node/claudeAgent.test.ts
++++ b/src/vs/platform/agentHost/test/node/claudeAgent.test.ts
+@@ -4,7 +4,7 @@
+  *--------------------------------------------------------------------------------------------*/
+ 
+ import type Anthropic from '@anthropic-ai/sdk';
+-import type { Options, PermissionMode, Query, SDKMessage, SDKSessionInfo, SDKUserMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
++import type { Options, PermissionMode, Query, SDKMessage, SDKSessionInfo, SDKUserMessage, SessionMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
+ import type { CCAModel } from '@vscode/copilot-api';
+ 
+ import assert from 'assert';
+@@ -46,7 +46,7 @@ import { AgentHostStateManager } from '../../node/agentHostStateManager.js';
+ import { ClaudeAgent } from '../../node/claude/claudeAgent.js';
+ import { ClaudeAgentSession } from '../../node/claude/claudeAgentSession.js';
+ import { ClaudeAgentSdkService, IClaudeAgentSdkService, IClaudeSdkBindings } from '../../node/claude/claudeAgentSdkService.js';
+-import { IClaudeProxyHandle, IClaudeProxyService } from '../../node/claude/claudeProxyService.js';
++import { IClaudeProxyHandle, IClaudeProxyService, type IClaudeProxyStartOptions } from '../../node/claude/claudeProxyService.js';
+ import { resolvePromptToContentBlocks } from '../../node/claude/claudePromptResolver.js';
+ import { ICopilotApiService, type ICopilotApiServiceRequestOptions } from '../../node/shared/copilotApiService.js';
+ import { AgentService } from '../../node/agentService.js';
+@@ -56,6 +56,7 @@ import { createNoopGitService, createNullSessionDataService, createSessionDataSe
+ 
+ interface IStartCall {
+ 	readonly token: string;
++	readonly options: IClaudeProxyStartOptions;
+ }
+ 
+ class FakeClaudeProxyService implements IClaudeProxyService {
+@@ -64,11 +65,14 @@ class FakeClaudeProxyService implements IClaudeProxyService {
+ 	readonly startCalls: IStartCall[] = [];
+ 	disposeCount = 0;
+ 
+-	async start(token: string): Promise<IClaudeProxyHandle> {
+-		this.startCalls.push({ token });
++	async start(options: IClaudeProxyStartOptions | string): Promise<IClaudeProxyHandle> {
++		if (typeof options === 'string') {
++			throw new Error('FakeClaudeProxyService requires Director auth payload');
++		}
++		this.startCalls.push({ token: options.publicPayload.authHandle.id, options });
+ 		return {
+ 			baseUrl: 'http://127.0.0.1:0',
+-			nonce: `nonce-for-${token}`,
++			nonce: `nonce-for-${options.publicPayload.authHandle.id}`,
+ 			dispose: () => { this.disposeCount++; },
+ 		};
+ 	}
+@@ -139,6 +143,7 @@ class FakeClaudeAgentSdkService implements IClaudeAgentSdkService {
+ 
+ 	/** All warm queries produced by {@link startup}. Last entry is the most recent. */
+ 	readonly warmQueries: FakeWarmQuery[] = [];
++	sessionMessages: readonly SessionMessage[] = [];
+ 
+ 	/**
+ 	 * Programmable rejection for {@link listSessions}. Set per test to
+@@ -174,6 +179,10 @@ class FakeClaudeAgentSdkService implements IClaudeAgentSdkService {
+ 		return this.sessionList.find(s => s.sessionId === sessionId);
+ 	}
+ 
++	async getSessionMessages(_sessionId: string): Promise<readonly SessionMessage[]> {
++		return this.sessionMessages;
++	}
++
+ 	async startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery> {
+ 		this.startupCallCount++;
+ 		this.capturedStartupOptions.push(params.options);
+@@ -722,8 +731,12 @@ suite('ClaudeAgent', () => {
+ 		// Replace start() with a fake that records every invocation
+ 		// (whether or not it succeeds) and fails the first attempt only.
+ 		let failNext = true;
+-		proxy.start = async (token: string) => {
+-			proxy.startCalls.push({ token });
++		proxy.start = async (options: IClaudeProxyStartOptions | string) => {
++			if (typeof options === 'string') {
++				throw new Error('FakeClaudeProxyService requires Director auth payload');
++			}
++			const token = options.publicPayload.authHandle.id;
++			proxy.startCalls.push({ token, options });
+ 			if (failNext) {
+ 				failNext = false;
+ 				throw new Error('proxy bind failed');
+@@ -2136,20 +2149,52 @@ suite('ClaudeAgent', () => {
+ 	});
+ 
+ 	test('getSessionMessages returns an empty transcript for any session', async () => {
+-		// Phase 5 doesn't reconstruct transcripts. Real history reconstruction
+-		// from the SDK event log lands in Phase 13; the bare method shape is
+-		// required by IAgent so callers can subscribe before any messages
+-		// exist. Returning `[]` is correct: the agent service supplies its
+-		// own provisional turns from in-memory state until this method
+-		// surfaces the persisted log. We assert the result is also a fresh
+-		// array (not a shared sentinel) so future implementations can't
+-		// leak mutations.
++		// No SDK transcript means no restored content. The agent must not
++		// synthesize fake history.
+ 		const { agent } = createTestContext(disposables);
+ 		const a = await agent.getSessionMessages(URI.parse('claude:/unknown-1'));
+ 		const b = await agent.getSessionMessages(URI.parse('claude:/unknown-2'));
+ 		assert.deepStrictEqual({ a, b, distinct: a !== b }, { a: [], b: [], distinct: true });
+ 	});
+ 
++	test('getSessionMessages restores user/assistant markdown transcript from SDK messages', async () => {
++		const { agent, sdk } = createTestContext(disposables);
++		sdk.sessionMessages = [
++			{
++				type: 'user',
++				uuid: 'u1',
++				session_id: 'restored',
++				parent_tool_use_id: null,
++				message: { role: 'user', content: [{ type: 'text', text: 'hello' }] },
++			},
++			{
++				type: 'assistant',
++				uuid: 'a1',
++				session_id: 'restored',
++				parent_tool_use_id: null,
++				message: { role: 'assistant', content: [{ type: 'text', text: 'hi there' }], usage: { input_tokens: 3, output_tokens: 4 } },
++			},
++		];
++
++		const turns = await agent.getSessionMessages(URI.parse('claude:/restored'));
++
++		assert.deepStrictEqual({
++			turnCount: turns.length,
++			userText: turns[0]?.userMessage.text,
++			responseKind: turns[0]?.responseParts[0]?.kind,
++			responseText: turns[0]?.responseParts[0] && 'content' in turns[0].responseParts[0] ? turns[0].responseParts[0].content : undefined,
++			inputTokens: turns[0]?.usage?.inputTokens,
++			outputTokens: turns[0]?.usage?.outputTokens,
++		}, {
++			turnCount: 1,
++			userText: 'hello',
++			responseKind: ResponsePartKind.Markdown,
++			responseText: 'hi there',
++			inputTokens: 3,
++			outputTokens: 4,
++		});
++	});
++
+ 	test('listSessions returns SDK entries decorated with the per-session DB overlay', async () => {
+ 		// Plan section 3.3.2: the SDK is the source of truth; the per-session DB
+ 		// is a pure overlay/cache. We seed two SDK entries and a single
+@@ -2510,6 +2555,7 @@ suite('ClaudeAgent', () => {
+ 		importBehavior = {
+ 			listSessions: async () => [{ sessionId: 's', summary: 's', lastModified: 1 }],
+ 			getSessionInfo: async () => undefined,
++			getSessionMessages: async () => [],
+ 			startup: async () => { throw new Error('TestableClaudeAgentSdkService: startup not modeled'); },
+ 		};
+ 		const result1 = await svc.listSessions();
+@@ -2610,7 +2656,7 @@ suite('ClaudeAgent', () => {
+ 
+ 		class RecordingProxyService implements IClaudeProxyService {
+ 			declare readonly _serviceBrand: undefined;
+-			async start(_token: string): Promise<IClaudeProxyHandle> {
++			async start(_options: IClaudeProxyStartOptions): Promise<IClaudeProxyHandle> {
+ 				return {
+ 					baseUrl: 'http://127.0.0.1:0',
+ 					nonce: 'n',
+diff --git a/src/vs/platform/agentHost/test/node/directorAgent.test.ts b/src/vs/platform/agentHost/test/node/directorAgent.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..2fceefccdead1806333eeca9bfb9a4c5ca01631f
+--- /dev/null
++++ b/src/vs/platform/agentHost/test/node/directorAgent.test.ts
+@@ -0,0 +1,104 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Director-Code Contributors. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import * as assert from 'assert';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
++import { URI } from '../../../../base/common/uri.js';
++import { NullLogService } from '../../../log/common/log.js';
++import { AgentSession } from '../../common/agentService.js';
++import { DIRECTOR_AGENT_HOST_PROVIDER, DIRECTOR_AGENT_HOST_RESOURCE, parseDirectorAgentHostAuthentication, serializeDirectorAgentHostAuthentication } from '../../common/directorAgentHostBridge.js';
++import { PolicyState } from '../../common/state/protocol/state.js';
++import { DirectorAgent } from '../../node/director/directorAgent.js';
++
++suite('DirectorAgent', () => {
++	ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('serializeDirectorAgentHostAuthentication uses a bounded handle and redacted public payload', () => {
++		const token = serializeDirectorAgentHostAuthentication({
++			version: 1,
++			instanceId: 'anthropic-default',
++			providerKind: 'anthropic',
++			providerDisplayName: 'Anthropic',
++			apiType: 'anthropic-messages',
++			authVariant: 'default',
++			auth: { kind: 'api-key', value: 'sk-test' },
++			modelId: 'claude-test',
++		}, 1000);
++
++		const raw = JSON.parse(token);
++		assert.strictEqual(raw.auth.value, '<redacted>');
++		assert.strictEqual(raw.secretMaterial.value, 'sk-test');
++		assert.strictEqual(raw.authHandle.kind, 'api-key');
++		assert.strictEqual(raw.authHandle.createdAt, 1000);
++		assert.strictEqual(raw.authHandle.expiresAt, 1000 + 5 * 60 * 1000);
++
++		const parsed = parseDirectorAgentHostAuthentication(token, 2000);
++		assert.strictEqual(parsed?.secretMaterial.kind, 'api-key');
++		assert.deepStrictEqual(parsed?.publicPayload.auth, { kind: 'api-key', value: '<redacted>' });
++		assert.strictEqual(parseDirectorAgentHostAuthentication(token, raw.authHandle.expiresAt), undefined);
++	});
++
++	test('publishes Director provider metadata and an unconfigured model before auth', () => {
++		const agent = new DirectorAgent(new NullLogService());
++		assert.strictEqual(agent.id, DIRECTOR_AGENT_HOST_PROVIDER);
++		assert.strictEqual(agent.getDescriptor().provider, DIRECTOR_AGENT_HOST_PROVIDER);
++		assert.deepStrictEqual(agent.getProtectedResources().map(resource => resource.resource), [DIRECTOR_AGENT_HOST_RESOURCE]);
++		assert.strictEqual(agent.models.get()[0].policyState, PolicyState.Unconfigured);
++		agent.dispose();
++	});
++
++	test('authenticate projects Director provider/model without exposing a separate provider store', async () => {
++		const agent = new DirectorAgent(new NullLogService());
++		const accepted = await agent.authenticate(DIRECTOR_AGENT_HOST_RESOURCE, serializeDirectorAgentHostAuthentication({
++			version: 1,
++			instanceId: 'anthropic-default',
++			providerKind: 'anthropic',
++			providerDisplayName: 'Anthropic',
++			apiType: 'anthropic-messages',
++			authVariant: 'default',
++			auth: { kind: 'api-key', value: 'sk-test' },
++			modelId: 'claude-test',
++			modelDisplayName: 'Claude Test',
++			maxInputTokens: 200000,
++		}));
++		assert.strictEqual(accepted, true);
++		assert.deepStrictEqual(agent.models.get().map(model => ({
++			id: model.id,
++			name: model.name,
++			provider: model.provider,
++			policyState: model.policyState,
++			maxContextWindow: model.maxContextWindow,
++			meta: model._meta,
++		})), [{
++			id: 'claude-test',
++			name: 'Claude Test',
++			provider: DIRECTOR_AGENT_HOST_PROVIDER,
++			policyState: PolicyState.Enabled,
++			maxContextWindow: 200000,
++			meta: {
++				directorProviderInstanceId: 'anthropic-default',
++				directorProviderKind: 'anthropic',
++				directorAuthVariant: 'default',
++			},
++		}]);
++		assert.ok(!JSON.stringify(agent.models.get()).includes('sk-test'));
++		agent.dispose();
++	});
++
++	test('createSession returns provisional metadata and listSessions shares the same backend identity', async () => {
++		const agent = new DirectorAgent(new NullLogService());
++		const workingDirectory = URI.file('/workspace/project');
++		const created = await agent.createSession({ workingDirectory });
++		assert.strictEqual(created.provisional, true);
++		assert.strictEqual(AgentSession.provider(created.session), DIRECTOR_AGENT_HOST_PROVIDER);
++		assert.strictEqual(created.workingDirectory?.toString(), workingDirectory.toString());
++		const sessions = await agent.listSessions();
++		assert.strictEqual(sessions.length, 1);
++		assert.strictEqual(sessions[0].session.toString(), created.session.toString());
++		assert.strictEqual(sessions[0].workingDirectory?.toString(), workingDirectory.toString());
++		assert.strictEqual(sessions[0].project?.uri.toString(), workingDirectory.toString());
++		agent.dispose();
++	});
++});
 diff --git a/src/vs/platform/agentHost/test/node/mockAgent.ts b/src/vs/platform/agentHost/test/node/mockAgent.ts
 index 71258ee8e9106e05494d689473a533a5444fe715..1c48abc3cab8014f7e2df04d7e93e524e38288e4 100644
 --- a/src/vs/platform/agentHost/test/node/mockAgent.ts
@@ -265,6 +2741,76 @@ index 71258ee8e9106e05494d689473a533a5444fe715..1c48abc3cab8014f7e2df04d7e93e524
  		return [];
  	}
  
+diff --git a/src/vs/platform/agentHost/test/node/webSocketTransport.test.ts b/src/vs/platform/agentHost/test/node/webSocketTransport.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b78e84fa1be80f42ec48b07e8fe0a5b33a50c675
+--- /dev/null
++++ b/src/vs/platform/agentHost/test/node/webSocketTransport.test.ts
+@@ -0,0 +1,64 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import assert from 'assert';
++import { EventEmitter } from 'events';
++import { URI } from '../../../../base/common/uri.js';
++import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
++import { FileService } from '../../../files/common/fileService.js';
++import { InMemoryFileSystemProvider } from '../../../files/common/inMemoryFilesystemProvider.js';
++import { NullLogService } from '../../../log/common/log.js';
++import { AhpJsonlLogger } from '../../common/ahpJsonlLogger.js';
++import { WebSocketProtocolTransport } from '../../node/webSocketTransport.js';
++
++suite('WebSocketProtocolTransport', () => {
++	const store = ensureNoDisposablesAreLeakedInTestSuite();
++
++	test('redacts authenticate payloads in websocket AHP logs without mutating wire messages', async () => {
++		const fileService = store.add(new FileService(new NullLogService()));
++		store.add(fileService.registerProvider('file', store.add(new InMemoryFileSystemProvider())));
++		const logger = store.add(new AhpJsonlLogger(
++			{ logsHome: URI.file('/logs'), connectionId: 'ws-redact', transport: 'websocket' },
++			fileService,
++			new NullLogService(),
++		));
++		const ws = new class extends EventEmitter {
++			readonly readyState = 1;
++			readonly sent: string[] = [];
++			send(message: string) { this.sent.push(message); }
++			close() { this.emit('close'); }
++		}();
++		const transport = store.add(new WebSocketProtocolTransport(ws as never, { OPEN: 1 } as never, logger));
++
++		const inbound = {
++			jsonrpc: '2.0',
++			id: 1,
++			method: 'authenticate',
++			params: {
++				resource: 'https://director-code.local/agenthost',
++				token: 'director-secret',
++				headers: { Authorization: 'Bearer inbound-secret', 'x-api-key': 'header-secret' },
++			},
++		};
++		ws.emit('message', JSON.stringify(inbound));
++		transport.send({
++			jsonrpc: '2.0',
++			id: 2,
++			method: 'authenticate',
++			params: { resource: 'x', token: 'outbound-secret' },
++		} as never);
++		await logger.flush();
++
++		assert.ok(ws.sent[0].includes('outbound-secret'));
++		const content = (await fileService.readFile(logger.resource)).value.toString();
++		assert.ok(!content.includes('director-secret'));
++		assert.ok(!content.includes('inbound-secret'));
++		assert.ok(!content.includes('header-secret'));
++		assert.ok(!content.includes('outbound-secret'));
++		const entries = content.split('\n').filter(Boolean).map(line => JSON.parse(line));
++		assert.strictEqual(entries[0].params.token, '<redacted>');
++		assert.strictEqual(entries[1].params.token, '<redacted>');
++	});
++});
 diff --git a/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts b/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts
 index 5cec86ba5414063a9029bbc3ca8f89a4c6d4d023..9d8eaaffee4c1655f29653ed2b561f963242397e 100644
 --- a/src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts
@@ -22151,10 +24697,10 @@ index 0000000000000000000000000000000000000000..2aa2b846b5464c210480ccaf160c54ea
 +] as const;
 diff --git a/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..f801dd1ebeb92f5cdfdca622d4c4c191fa60e36b
+index 0000000000000000000000000000000000000000..f4988c6ffe27ea17e8c725aa2bf0a7ea5febd42a
 --- /dev/null
 +++ b/src/vs/workbench/contrib/directorCode/common/agentEngine/directorSessionsPolicy.ts
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,198 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Director-Code Contributors. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -22209,9 +24755,7 @@ index 0000000000000000000000000000000000000000..f801dd1ebeb92f5cdfdca622d4c4c191
 +		hasDirectorProvider: options.hasDirectorProvider,
 +		hasReadyDirectorProvider: options.hasReadyDirectorProvider,
 +		hasEligibleAnthropicProvider: options.hasEligibleAnthropicProvider,
-+		// Segment 1 is only the safety facade. Claude runtime is enabled by the
-+		// later Director AgentHost provider/proxy bridge, so creation stays closed.
-+		canCreateClaudeCode: false,
++		canCreateClaudeCode: options.hasEligibleAnthropicProvider,
 +		showSetupGatedClaudeCode: true,
 +		setupCommandId: DIRECTOR_OPEN_SETTINGS_COMMAND_ID,
 +		setupRequiredMessage: !options.hasReadyDirectorProvider
